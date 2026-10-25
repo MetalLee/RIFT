@@ -1,0 +1,216 @@
+{
+  "date": "2026-10-25",
+  "reviewer": "independent E1 review agent",
+  "scope": [
+    "E1.1",
+    "E1.2",
+    "E1.3",
+    "E1.4",
+    "E1.5"
+  ],
+  "excluded": [
+    "E1.6",
+    "Claude native execution",
+    "autonomous model-driven Lead evidence"
+  ],
+  "checks": [
+    {
+      "command": "pnpm exec tsc --noEmit",
+      "exitCode": 0,
+      "status": "pass"
+    },
+    {
+      "command": "pnpm exec vitest run tests/acceptance/e1-independent.test.ts tests/acceptance/e1-analysis-gates.test.ts",
+      "exitCode": 0,
+      "testFiles": 2,
+      "tests": 15,
+      "passed": 15,
+      "durationSeconds": 7.07,
+      "status": "pass"
+    },
+    {
+      "command": "pnpm exec tsx scripts/e1-acceptance-probe.ts",
+      "exitCode": 0,
+      "status": "pass",
+      "boundary": "Dry invocation only: confirms script imports and --run safeguard. It does not verify native models. Native execution is delegated to the parent agent."
+    },
+    {
+      "command": "Independent read-only node:sqlite + SHA-256 + Git evidence audit (no model calls)",
+      "exitCode": 0,
+      "status": "pass",
+      "checks": 76,
+      "failures": [],
+      "evidence": "docs/evidence/e1-native-independent-audit.json"
+    },
+    {
+      "source": "docs/evidence/e1-automated-tests.json",
+      "status": "pass",
+      "testFiles": 21,
+      "tests": 106,
+      "passed": 106,
+      "failed": 0,
+      "boundary": "Independently parsed parent-run Vitest JSON; did not rerun the suite during final audit."
+    }
+  ],
+  "controlledActivationCoverage": [
+    "Real SQLite: forty queued tasks, six developer slots, eight available developer roles; no duplicate role occupancy and all forty complete",
+    "Real SQLite: global budget across simultaneous workspaces, identical paths in distinct repositories do not conflict, cancellation isolates sibling workflow",
+    "Real SQLite: failed cleanup retains slot and common-repository path ownership; another repository remains schedulable",
+    "Real SQLite: cycle and stale replan edits roll back; queued requests survive dependency/priority replan; running inputs remain immutable",
+    "Real SQLite: busy high-priority workflow does not starve another workspace",
+    "Real SQLite: arbitrary role names dispatch and historical Run provider snapshots remain immutable after revision",
+    "Real SQLite: cannot retire roles pinned by either planned tasks or explicit queued dispatch requests",
+    "Real filesystem and SQLite metadata lease: path aliases serialize repository operations while an independent repository proceeds",
+    "Host with controlled Agent factory: simultaneous workspaces receive distinct Lead identities and cancellation does not target the sibling Lead"
+  ],
+  "realGitCoverage": [
+    "Clean analysis checkout succeeds without integration",
+    "Tracked analysis edits are blocked",
+    "Untracked analysis output is blocked",
+    "Committed analysis output is blocked",
+    "Empty analysis commit is blocked even though file diff is empty",
+    "Ignored analysis output is blocked",
+    "All mutation cases preserve evidence, refuse workflow finish, keep main and integration refs unchanged, and release confirmed activation cleanup"
+  ],
+  "findings": [
+    {
+      "id": "E1-REVIEW-01",
+      "severity": "blocking",
+      "status": "fixed-and-verified",
+      "problem": "Role configuration could retire or repurpose a developer pinned by an unstarted task or queued request, leaving that task permanently unschedulable.",
+      "verification": "Independent queued-role retirement test passes for both Task.roleId and queued payload.roleId."
+    },
+    {
+      "id": "E1-REVIEW-02",
+      "severity": "blocking",
+      "status": "fixed-and-verified",
+      "problem": "Analysis completion previously skipped all actual Git checks, allowing a batch to report success after unreviewed writes.",
+      "verification": "Six independent real Git cases verify HEAD equality and clean tracked/untracked/ignored state before success."
+    },
+    {
+      "id": "E1-REVIEW-03",
+      "severity": "evidence-boundary",
+      "status": "verified",
+      "problem": "Workflow batches add an analysis parent between the Lead and child. Official DSH depth/capacity behavior must be verified by the implementation agent's live-service probe and the parent agent's native probe.",
+      "verification": "Official DSH service probe and native Codex Workflow batch completed. Native task has one ledger Run, two exact item results, dshRunId correlation, confirmed cleanup before analysis.verified, and a clean unchanged checkout. This does not establish native DSH spawn model execution."
+    },
+    {
+      "id": "E1-REVIEW-04",
+      "severity": "evidence-boundary",
+      "status": "documented",
+      "problem": "External binding model metadata is not an external-provider model switch. Actual provider model selection requires profile configuration and native evidence."
+    },
+    {
+      "id": "E1-REVIEW-05",
+      "severity": "evidence-boundary",
+      "status": "documented",
+      "problem": "All eight hashes captured in the native implementation manifest match current files. The manifest did not capture analysis-reuse.ts, scheduler.ts, role configuration or every source file; no retroactive all-source hash guarantee is claimed."
+    }
+  ],
+  "nativeEvidence": {
+    "status": "pass",
+    "report": "docs/evidence/e1-native-acceptance.json",
+    "independentAudit": "docs/evidence/e1-native-independent-audit.json",
+    "ledger": {
+      "workspaces": 2,
+      "workflows": 2,
+      "tasks": 5,
+      "runs": 9,
+      "artifacts": 18,
+      "integrations": 4,
+      "operations": 9
+    },
+    "artifacts": {
+      "verified": 18,
+      "hash": "SHA-256",
+      "byteLengthsAndResultIdentity": "all match SQLite and stored files"
+    },
+    "implementation": {
+      "captured": 8,
+      "matching": 8,
+      "scope": "Only the original native manifest files"
+    },
+    "concurrency": {
+      "nativeDevelopmentCount": 4,
+      "commonInFlightStart": "2026-10-25T10:42:27.871Z",
+      "commonInFlightEnd": "2026-10-25T10:42:42.738Z",
+      "commonInFlightMilliseconds": 14867,
+      "serialReviewCount": 4
+    },
+    "acceptedChains": [
+      {
+        "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+        "baseline": "33ef29fa98581fb80498fba0530e9e40229bf281",
+        "chain": [
+          {
+            "taskId": "east-beta",
+            "sourceHead": "544f6338395ff7e5576464262ea5e48ff503b1f5",
+            "previousAccepted": "33ef29fa98581fb80498fba0530e9e40229bf281",
+            "candidateHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+            "reviewRunId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5"
+          },
+          {
+            "taskId": "east-alpha",
+            "sourceHead": "08239dd193423ce6f8aad9aecf81cdb5b73524fe",
+            "previousAccepted": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+            "candidateHead": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+            "reviewRunId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c"
+          }
+        ],
+        "finalHead": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01"
+      },
+      {
+        "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+        "baseline": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51",
+        "chain": [
+          {
+            "taskId": "west-beta",
+            "sourceHead": "dfd29322a20e5df8166c2e3685f868dd5ce0890a",
+            "previousAccepted": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51",
+            "candidateHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+            "reviewRunId": "run-307be9dc-081b-4140-a473-e30e438ba297"
+          },
+          {
+            "taskId": "west-alpha",
+            "sourceHead": "18d729ba240a0f7db24b3fbb41e598ccbbcf8084",
+            "previousAccepted": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+            "candidateHead": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+            "reviewRunId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd"
+          }
+        ],
+        "finalHead": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8"
+      }
+    ],
+    "batch": {
+      "taskId": "east-analysis-batch",
+      "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+      "officialWorkflowRunId": "cca4daa5-9b0e-4b78-97a3-4ada983fda17",
+      "items": [
+        {
+          "id": "alpha",
+          "text": "alpha:11"
+        },
+        {
+          "id": "beta",
+          "text": "beta:22"
+        }
+      ],
+      "head": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+      "cleanupStatus": "confirmed",
+      "slotReleasedAt": "2026-10-25T10:44:51.742Z",
+      "writerReleased": true
+    },
+    "cleanup": "All nine Runs succeeded with confirmed cleanup and released slots; both workflows completed; original host-lock diagnostic is absent.",
+    "boundaries": [
+      "Live DSH Leads were programmatically driven; no autonomous Lead model turn is claimed.",
+      "Four accepted native developer activation intervals overlap for 14,867 ms; individual tool execution overlap is not measured.",
+      "Two native batch items returned supplied literal text alpha:11 and beta:22; this is a minimal batch execution smoke test, not an assessment of analysis quality.",
+      "Native evidence uses Codex gpt-6-astra for development/review. No Claude was run. DSH spawn option forwarding remains controlled-service evidence.",
+      "Multi-workspace native execution used two separate repositories. Shared repository lock behavior is covered by real filesystem and cross-process SQLite lock tests.",
+      "E1.6 remains outside scope."
+    ]
+  },
+  "status": "pass",
+  "finalizedAt": "2026-10-25T10:50:23.473Z",
+  "unresolvedBlockingFindings": []
+}

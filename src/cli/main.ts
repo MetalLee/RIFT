@@ -17,6 +17,7 @@ const help = `RIFT 0.1.0 — local DSH plugin management
   rift role configure --workspace ID --file roles.json
   rift run --workspace ID --goal TEXT [--no-lead]
   rift plan --workflow ID --file plan.json
+  rift replan --workflow ID --file replan.json
   rift status --workflow ID
   rift logs --run ID
   rift cancel --run ID | --task ID | --workflow ID
@@ -26,7 +27,7 @@ const help = `RIFT 0.1.0 — local DSH plugin management
   rift report --workflow ID
 All commands accept --home PATH and --json. Writes accept --key KEY for repeatable requests.
 serve owns its DSH Host; other commands only connect to that Host.
-Real Claude POC is not yet verified; this build is a development preview.`;
+See docs/e1-acceptance.md for current E1 verification and provider coverage.`;
 function readArgs() { try { return parseArgs({allowPositionals:true,options:{home:{type:'string'},profile:{type:'string'},port:{type:'string'},patch:{type:'string'},name:{type:'string'},repo:{type:'string'},base:{type:'string'},workspace:{type:'string'},workflow:{type:'string'},run:{type:'string'},task:{type:'string'},goal:{type:'string'},file:{type:'string'},reason:{type:'string'},version:{type:'string'},key:{type:'string'},json:{type:'boolean'},help:{type:'boolean'},'no-lead':{type:'boolean'}}}); } catch(error) { console.error(JSON.stringify({error:publicError(error)})); process.exit(1); } }
 const args=readArgs();
 const home=path.resolve(args.values.home??process.env.RIFT_HOME??'.rift');
@@ -63,7 +64,7 @@ async function main():Promise<unknown>{
   }
   if(command==='role'&&subcommand==='configure')return request('PUT',`/v1/workspaces/${encodeURIComponent(required('workspace'))}/roles`,JSON.parse(await readFile(required('file'),'utf8')));
   if(command==='run')return request('POST','/v1/workflows',{workspaceId:required('workspace'),goal:required('goal'),startLead:!args.values['no-lead']});
-  if(command==='plan')return request('POST',`/v1/workflows/${encodeURIComponent(required('workflow'))}/plan`,JSON.parse(await readFile(required('file'),'utf8')));
+  if(command==='plan'||command==='replan')return request('POST',`/v1/workflows/${encodeURIComponent(required('workflow'))}/${command}`,JSON.parse(await readFile(required('file'),'utf8')));
   if(command==='status')return request('GET',`/v1/workflows/${encodeURIComponent(required('workflow'))}`);
   if(command==='logs')return request('GET',`/v1/runs/${encodeURIComponent(required('run'))}/logs`);
   if(command==='report')return request('GET',`/v1/workflows/${encodeURIComponent(required('workflow'))}/report`);

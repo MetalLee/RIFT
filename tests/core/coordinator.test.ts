@@ -70,7 +70,7 @@ describe('persistent task coordinator',()=>{
       const run=f.store.run(call.run.id);expect(run.resultArtifactId).toBeTruthy();
       const artifact=f.store.require<{relativePath:string;sha256:string;byteSize:number}>('SELECT * FROM artifacts WHERE id=?',run.resultArtifactId!);
       const data=readFileSync(join(directory,artifact.relativePath));expect(data.toString()).not.toContain('super-sensitive-secret-value');expect(data.toString()).toContain('[REDACTED]');expect(createHash('sha256').update(data).digest('hex')).toBe(artifact.sha256);expect(data.length).toBe(artifact.byteSize);
-      await f.coordinator.shutdown();stores.splice(stores.indexOf(f.store),1);f.store.close();const reopened=new RiftStore(join(directory,'rift.db'));try{expect(reopened.run(call.run.id).resultArtifactId).toBe(run.resultArtifactId);expect(reopened.get<{version:number}>('SELECT MAX(version) AS version FROM schema_migrations')!.version).toBe(2);}finally{reopened.close();}
+      await f.coordinator.shutdown();stores.splice(stores.indexOf(f.store),1);f.store.close();const reopened=new RiftStore(join(directory,'rift.db'));try{expect(reopened.run(call.run.id).resultArtifactId).toBe(run.resultArtifactId);expect(reopened.get<{version:number}>('SELECT MAX(version) AS version FROM schema_migrations')!.version).toBe(3);}finally{reopened.close();}
     }finally{if(stores.includes(f.store)){stores.splice(stores.indexOf(f.store),1);f.store.close();}rmSync(directory,{recursive:true});}
   });
   it('times out one execution without cancelling its completed sibling',async()=>{
@@ -102,5 +102,24 @@ describe('persistent task coordinator',()=>{
     const f=fixture({neverCleanup:true,cleanupTimeoutMs:35});f.plan([{id:'a'},{id:'b'}]);f.dispatch('a');f.dispatch('b');await tick();
     const started=Date.now();await f.coordinator.cancelWorkflow('workflow');await f.coordinator.shutdown();expect(Date.now()-started).toBeLessThan(1000);
     expect(f.coordinator.status('workflow').slots.total).toBe(2);expect(f.coordinator.status('workflow').runs.every(run=>run.cleanupStatus==='unknown'&&run.slotReleasedAt===null)).toBe(true);expect(f.store.events('workflow').filter(event=>event.type==='cleanup.unknown')).toHaveLength(2);
+  });
+  it('adds new dependencies and tasks in one revision while preserving queued request IDs',async()=>{
+    const f=fixture();f.plan([{id:'a'}]);f.coordinator.pause('workflow');const request=f.dispatch('a');
+    const tasks=f.coordinator.replan({workflowId:'workflow',expectedRevision:1,updates:[{taskId:'a',expectedVersion:0,dependsOn:['new']}],tasks:[{id:'new',kind:'analysis',title:'new',instructions:'new dependency',expectedPaths:['new']}]});
+    expect(tasks.map(task=>task.id)).toEqual(['a','new']);expect(f.store.workflow('workflow').planRevision).toBe(2);
+    expect(f.store.operation(request.id)).toMatchObject({phase:'queued',payload:{planRevision:2,expectedVersion:1}});
+    f.dispatch('new');f.coordinator.resume('workflow');await tick();expect(f.calls.map(call=>call.run.taskId)).toEqual(['new']);
+    f.complete(0);await tick();expect(f.calls[1]!.run.taskId).toBe('a');f.complete(1);await tick();await f.coordinator.shutdown();
+  });
+  it('rolls back invalid additions together with dependency edits',async()=>{
+    const f=fixture();f.plan([{id:'a'}]);f.coordinator.pause('workflow');const request=f.dispatch('a');
+    expect(()=>f.coordinator.replan({workflowId:'workflow',expectedRevision:1,updates:[{taskId:'a',expectedVersion:0,dependsOn:['new']}],tasks:[{id:'new',kind:'analysis',title:'',instructions:'invalid',expectedPaths:['new']}]})).toThrow();
+    expect(f.store.workflow('workflow').planRevision).toBe(1);expect(f.store.task('a').version).toBe(0);expect(f.store.all('SELECT * FROM task_dependencies')).toHaveLength(0);expect(f.store.operation(request.id).payload.planRevision).toBe(1);await f.coordinator.shutdown();
+  });
+  it('enforces global capacity in SQLite even when a caller bypasses the scheduler',async()=>{
+    const f=fixture();f.plan([{id:'a'},{id:'b'},{id:'c'}]);f.dispatch('a');f.dispatch('b');await tick();
+    f.store.exec("INSERT INTO roles(id,workspace_id,name,purpose,kind,provider_binding_id,prompt,revision) VALUES('third','ws','third','developer','subagent','claude','third',1)");
+    expect(()=>f.store.exec("INSERT INTO runs(id,task_id,role_id,purpose,task_attempt,status,provider_snapshot,deadline,created_at) VALUES('overflow','c','third','develop',1,'preparing','{}','later','now')")).toThrow(/capacity/i);
+    expect(f.store.all('SELECT * FROM runs')).toHaveLength(2);await f.coordinator.shutdown();
   });
 });

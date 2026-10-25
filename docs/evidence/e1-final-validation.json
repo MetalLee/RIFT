@@ -1,0 +1,250 @@
+{
+  "date": "2026-10-25T10:54:21.564Z",
+  "timezone": "Asia/Hong_Kong",
+  "scope": [
+    "E1.1",
+    "E1.2",
+    "E1.3",
+    "E1.4",
+    "E1.5"
+  ],
+  "deferred": [
+    "E1.6"
+  ],
+  "claude": "not loaded or executed this round",
+  "packageVersion": "0.1.0",
+  "commands": [
+    {
+      "command": "pnpm install --frozen-lockfile",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm peers check",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm build",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec vitest run --reporter=default --reporter=json --outputFile=docs/evidence/e1-automated-tests.json",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec tsx scripts/e1-workflow-service-probe.ts",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec tsx scripts/e1-acceptance-probe.ts --run",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec tsx scripts/lead-tools-probe.ts --codex-only",
+      "exitCode": 0
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec tsx scripts/e1-spawn-service-probe.ts",
+      "exitCode": 0
+    }
+  ],
+  "automated": {
+    "files": 21,
+    "passed": 106,
+    "failed": 0,
+    "pending": 0
+  },
+  "native": {
+    "status": "pass",
+    "startedAt": "2026-10-25T10:42:22.008Z",
+    "endedAt": "2026-10-25T10:44:52.654Z",
+    "workflows": 2,
+    "businessRuns": 9,
+    "artifacts": 18,
+    "nativeExecutions": 10,
+    "boundary": {
+      "lead": "real live DSH Agents; management/tools driven by this deterministic script, no Lead model call",
+      "development": "official native Codex provider",
+      "review": "official native Codex provider plus real Git checks",
+      "analysisReuse": "official DSH Workflow engine with native Codex child activations",
+      "claude": "not loaded or executed",
+      "concurrency": "records actual provider acceptance and in-flight intervals; does not claim simultaneous individual tool execution"
+    }
+  },
+  "profile": {
+    "status": "pass",
+    "providers": [
+      "spawn",
+      "codex-dev",
+      "codex-review"
+    ],
+    "tools": [
+      "rift_plan_submit",
+      "rift_plan_replan",
+      "rift_task_dispatch",
+      "rift_wait",
+      "rift_status",
+      "rift_task_retry",
+      "rift_integration_request",
+      "rift_workflow_finish"
+    ],
+    "modelCalls": 0
+  },
+  "nativeSourceManifest": {
+    "matched": true,
+    "files": [
+      {
+        "file": "scripts/e1-acceptance-probe.ts",
+        "recorded": "c6f48917fcffbab57a6200121a11687fe0e71f72c9987b294de04f693a49f833",
+        "current": "c6f48917fcffbab57a6200121a11687fe0e71f72c9987b294de04f693a49f833",
+        "matches": true
+      },
+      {
+        "file": "profiles/rift.codex.patch.yml",
+        "recorded": "53beb26161ec4c51b20bed7ac8740acdf1663799e9ee5aab6563a1f2519235dc",
+        "current": "53beb26161ec4c51b20bed7ac8740acdf1663799e9ee5aab6563a1f2519235dc",
+        "matches": true
+      },
+      {
+        "file": "src/api/host-service.ts",
+        "recorded": "e4f15dc2b179b7b613527ee5690f04c0f1b5e9d60fc3da15b7da9a19c2d3c38a",
+        "current": "e4f15dc2b179b7b613527ee5690f04c0f1b5e9d60fc3da15b7da9a19c2d3c38a",
+        "matches": true
+      },
+      {
+        "file": "src/task/coordinator.ts",
+        "recorded": "2994adcbad1856be7c0bf07c1333a5742845e63a6af864cae4338c255228f54f",
+        "current": "2994adcbad1856be7c0bf07c1333a5742845e63a6af864cae4338c255228f54f",
+        "matches": true
+      },
+      {
+        "file": "src/task/activation-bridge.ts",
+        "recorded": "2a9f966cda63e3ab0228e82d5e13e7409b18c514cd01b33b24cedf36b59849d2",
+        "current": "2a9f966cda63e3ab0228e82d5e13e7409b18c514cd01b33b24cedf36b59849d2",
+        "matches": true
+      },
+      {
+        "file": "src/git/integration.ts",
+        "recorded": "0559d4a9f34f8ad7e6ff833efc063cd24e486b046d77fd486cb6481553587379",
+        "current": "0559d4a9f34f8ad7e6ff833efc063cd24e486b046d77fd486cb6481553587379",
+        "matches": true
+      },
+      {
+        "file": "src/storage/database.ts",
+        "recorded": "af996867f9485f477e90d719f7c993b91284ccd0e6b2772e71046edf53c5a05d",
+        "current": "af996867f9485f477e90d719f7c993b91284ccd0e6b2772e71046edf53c5a05d",
+        "matches": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "recorded": "335cabcd29c735ec2758225071a32e783ccc03ca69a17e4d0c60b5bf571ed20f",
+        "current": "335cabcd29c735ec2758225071a32e783ccc03ca69a17e4d0c60b5bf571ed20f",
+        "matches": true
+      }
+    ],
+    "boundary": "Only the eight files captured at native probe start are compared. sourceHashes is the complete final current-file snapshot, not a retroactive native manifest."
+  },
+  "evidence": {
+    "e1-automated-tests.json": "bc0c7774dc6d02efb4b6239a8c9bb8186b9138e9bf62a095311d46c13d45e902",
+    "e1-independent-review.json": "c1795a13aeb2e22421e461e780999e904994aa5c96152e8142b556a86b09b5d0",
+    "e1-native-acceptance.json": "802f2759e4eb46e14993591c83ef9bc5cc108d936fe04b34af61b9c96239148b",
+    "e1-native-independent-audit.json": "30c730a921b12993b756874e3ec61aa2d069c8205e12b090e876fb982b3aa6bd",
+    "e1-profile-tools.json": "289fc7d6769117721f46682285cc58636c07053be8ad140188bb21d284c28a26",
+    "e1-workflow-service.json": "189ebcabb5a462a94689d515f0c0ec050a19b3271fb3a2fa39abd10acd847a90",
+    "e1-spawn-service.json": "efed044bc218d4f11b7e374d7ccffdef24d0bab530a22ace7e635ec8ad081006"
+  },
+  "sourceHashes": {
+    "migrations/0001_initial.sql": "dc97ecb0a52693377f926349cfa1377ab177d4dccb430a35aa4937595cc8dfac",
+    "migrations/0002_result_artifact.sql": "e6a07ba25a1ee069c9a846ce676b54ce7a1f29116719a59fb55eb3c1a5b8848d",
+    "migrations/0003_scalable_scheduler.sql": "d11b83287de01c0f8ec9ba4945124c926604fef3f0ee2cf34c636e15f513f32d",
+    "package.json": "7df4e7174ff4abb05cf323baa83cbfdbece4e85478e923caafdc6233db6ffedd",
+    "pnpm-lock.yaml": "335cabcd29c735ec2758225071a32e783ccc03ca69a17e4d0c60b5bf571ed20f",
+    "pnpm-workspace.yaml": "ef244ead99fcf9f87c58215940daa50ec1d460196a171a7338a8f024ae3ba8a7",
+    "profiles/rift.codex.patch.yml": "53beb26161ec4c51b20bed7ac8740acdf1663799e9ee5aab6563a1f2519235dc",
+    "profiles/rift.patch.yml": "805928ff2451514b82e65019a069b14d2a1fe14d1a719c2218b04cb3582e0463",
+    "scripts/e1-acceptance-probe.ts": "c6f48917fcffbab57a6200121a11687fe0e71f72c9987b294de04f693a49f833",
+    "scripts/e1-spawn-service-probe.ts": "b5d0b7d01124241b132d41027bcfc68c3f840f777aaeea85c907526e11163dd4",
+    "scripts/e1-workflow-service-probe.ts": "9ae790fd98ff23562588b63cf5e955573d2af40df296208c7cf85d40b4e28b31",
+    "scripts/lead-catalog-probe.ts": "f729901808f1253689a9f33ce4f7fa3987deb7ed0911c74df3b0e62df047253b",
+    "scripts/lead-tools-probe.ts": "f72751146658af343def51d513dc6359abf50d0551047161501834ebf0e5d7c8",
+    "scripts/provider-parallel-probe.ts": "97c5308c75f609285821fc43f4f878d074b767a5e9e19160c72fda0fdeb70672",
+    "scripts/recovery-acceptance-probe.ts": "397824d27ed0cdeb1598344d14e063688ed719ce5cfef730c2da29e516077f42",
+    "scripts/review-rework-probe.ts": "601b26159b55714ffc7238fee884c70f3962932bdd62e92c4e2a6cbd3176d2df",
+    "scripts/runtime-probe.ts": "882f720efce3f4d98105a02012d1570b2bbb36ead52696c3c361fb71e5ffa6c3",
+    "scripts/workflow-acceptance-probe.ts": "a6b20948f97f4c83730f40c8444bae3c02bf1408d711878838e705591e2d2182",
+    "src/api/host-service.ts": "e4f15dc2b179b7b613527ee5690f04c0f1b5e9d60fc3da15b7da9a19c2d3c38a",
+    "src/api/local-api.ts": "ac5b45174cf3e107a07f4c4710f9a06c8d85aceb643efb8fd3e29ec867880899",
+    "src/api/schemas.ts": "efc106344013c8e047697db32bdbe53e4df61d999681d11d0d0176bf9d29c48d",
+    "src/api/security.ts": "fbc2f0d0133381185c3429870f8393d2bcd3d31026bb63a589fcd51ae1da502c",
+    "src/cli/main.ts": "8a35b3141710ed4af38c1b644e393cf4185e809394457bc214187904509fece1",
+    "src/contracts/index.ts": "10db07dcff8171079e82e3989d97623c86ec954f0421c470f564cfefdcda04b6",
+    "src/git/index.ts": "863ace646b1f450f72f74e8d24fdb60436d997df22f44f2ef17c6a7ff6c32191",
+    "src/git/integration.ts": "0559d4a9f34f8ad7e6ff833efc063cd24e486b046d77fd486cb6481553587379",
+    "src/git/process.ts": "3e067961b1f0dface9eedf40a81753030207d4732936162ebc48f65b164051db",
+    "src/git/quality-gate.ts": "82e6bb7824eb8653f368c3bbf67dfcffa78c4c7d55603cee71835c6b18ff8768",
+    "src/git/types.ts": "e03680ded2a10c70ec3718e893464198b1f65f5e854cd0c0c15be8ae5ea0de07",
+    "src/git/worktree-binding.ts": "53929e37dc34983daba7ea0316cae5a50222339478f39b102a146a53fa240283",
+    "src/index.ts": "8484da0e2468c11500127052ffc2a3f3124c5c79218434243f501cd67d480ff3",
+    "src/project/agent-roles.ts": "efdb0175ca9b3c78c5422ec90caf7dcf979fb9bce912927f487e7c88df202c4e",
+    "src/project/index.ts": "31217bf253140e3d99949a6506f57a417772e09d675de0a6470580e9a547b60c",
+    "src/project/provider-bindings.ts": "4e9631f2de5114578f9363ebdb66a71327f67bbf4adcad164380ec79d249eb1e",
+    "src/project/workspace.ts": "011de21cbbe7b0aababc2fcb1acce1bb6e54896a55863eca7f69a12306b3d10a",
+    "src/storage/artifacts.ts": "2840b478c080cddc518432d606290ed4f4c48cb7796f1fa6c73dad04e809bd6a",
+    "src/storage/database.ts": "af996867f9485f477e90d719f7c993b91284ccd0e6b2772e71046edf53c5a05d",
+    "src/storage/index.ts": "61474677fde10da186dac2af58979d90fcb3e46a8c2ee3a5f935ed3e99a87ff4",
+    "src/storage/schema.ts": "0421416915c87b87f3a510a905f36008694c173e9bd8f8e8ee04b82e0f6bb28f",
+    "src/task/activation-bridge.ts": "2a9f966cda63e3ab0228e82d5e13e7409b18c514cd01b33b24cedf36b59849d2",
+    "src/task/analysis-reuse.ts": "927769ad0a4c63f0584a5cf41daed58d85b6fddfaf8ac7ebc3ef28a2336eee87",
+    "src/task/coordinator.ts": "2994adcbad1856be7c0bf07c1333a5742845e63a6af864cae4338c255228f54f",
+    "src/task/index.ts": "504ab2b53abc423e53453a6329d485fc239db0be237987c2c1491216a9410197",
+    "src/task/recovery.ts": "23e264f3327598e58b3eedaa9405ca490cef11ea3335e6ab2f1d8f525feb2157",
+    "src/task/results.ts": "8eb157d17486fbbde3ca437a7650838c35912783a4fabd898f69337ab5adad21",
+    "src/task/scheduler.ts": "e06aa9c902b660388c1efe58f02c8affe6844ef50ea60678c9f6af0d3d57badb",
+    "src/task/task-store.ts": "43270d3f5a29a04764054072f7f97162d8ac846b5792030622ed0683bf206204",
+    "src/tools/rift-tools.ts": "e3b1d68fe24d585173c6a1ff392147ec1eb813f2246cab2957b2e6db441553da",
+    "tests/acceptance/activation-boundary.test.ts": "da77ff777da0a0df30de958463257819bfc1cdda6c5b04d584433a75962a5f6e",
+    "tests/acceptance/cli.test.ts": "ff3e7512930ebf321dbb1235f7ac1711d9321d9c2c3e95368a01fcd147880e48",
+    "tests/acceptance/command-timeout.test.ts": "e40664819676611ecd5b55bde9024c7bcf43878194aa6db28ea512ca4c7606fe",
+    "tests/acceptance/coordinator-faults.test.ts": "c7b9284c867f8809cbc8d4b113aa44ee6b966d7417468976dae02f5abcc94216",
+    "tests/acceptance/e1-analysis-gates.test.ts": "7b59d1daa11d3de150d556d7b3b68a7e0d64f2ec88a3c0bf3419ad9be70db042",
+    "tests/acceptance/e1-independent.test.ts": "380921321a930d397e9d3367df2fcadfad9cc2df627202fcb0cea6349a8256c1",
+    "tests/acceptance/e1-management.test.ts": "6aca83a42158c313d60068be44b115055ef023b7cb293d340a6f15b242fbedb1",
+    "tests/acceptance/filesystem-boundaries.test.ts": "211ffc92994c93920106e9de27c3bbf0bd3c56b0521a14d15dbd630c7a91d33c",
+    "tests/acceptance/fixtures.ts": "acf12a30e6eb1a47bf94c08dc3dc46704c8379d5911efdf862b6d47f0deae918",
+    "tests/acceptance/git-gates.test.ts": "f6022fdc373737ba6d10e349d2a579b8f539c31667f255216a7647ec3dea57de",
+    "tests/acceptance/lead-lifecycle.test.ts": "f01599b880ceeb176c2c54bc1cb36419f228b55d6e6426e0d6f52560b933a231",
+    "tests/acceptance/management-security.test.ts": "65efd1f6f60e117825e7f8591e7c07b9e9f4f046d17b5bca76737cf0daaaa789",
+    "tests/acceptance/persistence.test.ts": "1ef670c34784004a9c1da3c4b1b730082f7e7644c5775835607af75579300efb",
+    "tests/acceptance/review-result.test.ts": "0a9f3b87d16c398efd25b97fdb23397ff480d5d45ebc75325a3773a78f7ec89a",
+    "tests/core/coordinator.test.ts": "1df85cc6cff6e05475fe398f3056b6d3dc3365c289958c4d86bb966daf78a6e8",
+    "tests/core/provider-config.test.ts": "047b6c6e16b705860c7104b17018152603fbba160c52babd5bf24f095b8c5c5b",
+    "tests/core/roles-and-reuse.test.ts": "f6068dabbfb1bf19037ec0fd8e378ff469164e74a2f871823fc27c267b961b87",
+    "tests/core/scheduler-migration.test.ts": "113ac05ecdebd44d51908e88efbae8bd65aae1f8053d97618bfb27384e6f9024",
+    "tests/git/core-integration.test.ts": "0608fda91a7626135b98c9090898cfc8d3fbd346f2284c4d7670a43281ea3290",
+    "tests/git/integration.test.ts": "33f7143f07dcaa5ddf723420da41b982feb4933fcde05bb6a49da9bad80354dc",
+    "tests/git/metadata-lock.test.ts": "80b6c2cb3db20edab1fae5a4bda5f70a6e55c7086f17ec9d4cdce2db8589a355",
+    "tests/git/quality-gate.test.ts": "a19caddbbf50f5aaf8b75b9b21ea71a9f1debb258df66cbf39011ee2342c5580",
+    "tsconfig.build.json": "a121848bfb3d8db53a334df8bc85ddc99c7a4739cbfa0b51914cdce353c116c8",
+    "tsconfig.json": "1a5a88e899a12e3401f8b8ace86ac3251e0e879066a1953cff75b49e8c3f8293",
+    "vitest.config.ts": "cd8d2a407957efa7921413830c2b28f71b4c7e8f286cf4867fb6c3b6b623d949"
+  },
+  "preCommitVerification": {
+    "at": "2026-10-25T13:31:57.206Z",
+    "change": "Removed an extra blank line at EOF in two test files; no behavior or product source changes.",
+    "files": [
+      "tests/acceptance/e1-independent.test.ts",
+      "tests/core/roles-and-reuse.test.ts"
+    ],
+    "command": "pnpm exec vitest run tests/acceptance/e1-independent.test.ts tests/core/roles-and-reuse.test.ts",
+    "exitCode": 0,
+    "passed": 16,
+    "failed": 0
+  }
+}

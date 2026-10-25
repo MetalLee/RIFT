@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { startLocalApi } from '../../src/api/local-api.js';
@@ -49,5 +49,20 @@ describe('P2.9/P3.6 independent thin CLI acceptance', () => {
       expect(JSON.parse(failure.stderr)).toMatchObject({ error: { code: expect.any(String), message: expect.any(String) } });
       expect(failure.stderr).not.toContain('at file:');
     }
+  });
+
+  it('submits dynamic dependency updates through the replan command without dropping versions', async () => {
+    const temporary = await mkdtemp(path.join(tmpdir(), 'rift e1 cli '));
+    const body = { expectedRevision: 3, updates: [{ taskId: 'later', expectedVersion: 2, dependsOn: ['earlier'], priority: 5 }] };
+    const inputFile = path.join(temporary, 'replan.json'); await writeFile(inputFile, JSON.stringify(body));
+    const handle = async (method: string, pathname: string, input: unknown, key?: string) => {
+      expect({ method, pathname, input, key }).toEqual({ method: 'POST', pathname: '/v1/workflows/workflow-one/replan', input: body, key: 'replan-key' });
+      return { accepted: true };
+    };
+    const api = await startLocalApi({ handle }, { home: temporary, port: 0 });
+    try {
+      const result = await cli('replan', '--home', temporary, '--workflow', 'workflow-one', '--file', inputFile, '--key', 'replan-key', '--json');
+      expect(JSON.parse(result.stdout)).toEqual({ accepted: true });
+    } finally { await api.close(); await rm(temporary, { recursive: true, force: true }); }
   });
 });

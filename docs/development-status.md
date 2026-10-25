@@ -1,4 +1,14 @@
-# P0–P3 开发交付记录
+# RIFT 开发交付记录
+
+## E1 最新交付（2026-10-25）
+
+**E1.1–E1.5 done，E1.6 deferred。** 按用户要求由三个 Astra 高思考强度子 agent 分工实现及独立验收，主 agent 集成；未使用 Claude。全局可配置预算、多工作区隔离、自由角色、动态 DAG/公平调度和一次 analysis Run 内官方 Workflow 复用已交付。完整接口见 [E1 指南](e1-guide.md)，任务与检查见 [E1 验收](e1-acceptance.md)。
+
+最终 21 文件、106/106 测试通过，类型检查、构建、冻结安装和 peer 检查通过。18:42:22–18:44:52 香港时间的真实 Codex-only 验收完成双工作区、4 开发同时在途、4 精确候选审查和两项官方 Workflow 分析，2 Workflow 全部完成；Lead 由程序驱动，未冒充自主模型编排。独立检视修复角色退休导致队列卡住和 analysis 缺少实际 Git 写入门禁两项问题。
+
+主要文件：`migrations/0003_scalable_scheduler.sql`、`src/task/{coordinator,scheduler,analysis-reuse,activation-bridge}.ts`、`src/project/*`、`src/git/*`、`src/api/*`、`src/tools/rift-tools.ts`、`src/cli/main.ts`、`profiles/rift.codex.patch.yml`。证据汇总：[e1-final-validation.json](evidence/e1-final-validation.json)。未发布新版本；以下 0.1.0 记录保留为 P0–P3 历史。
+
+## P0–P3 历史交付
 
 日期：2026-10-25。版本：**0.1.0**。**P0–P3 的 MVP 验收通过**。三个子 agent 按用户要求使用 Astra、高思考强度：两个负责实现，一个独立检视和验收；主 agent 负责业务入口、真实 Lead 编排、集成和整体调度。
 

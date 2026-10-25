@@ -2,9 +2,11 @@
 
 **Parallel minds. One workspace.**
 
-RIFT 是运行在 DeepSeek Harness（DSH）中的多智能体开发协作插件。给定一个 Git 仓库和开发目标，它会由 Lead 拆分任务，让两个 Developer 在独立的 Git worktree 中开发，再经过项目检查和 Reviewer 审查，将成果汇入集成分支。
+RIFT 是运行在 DeepSeek Harness（DSH）中的多智能体开发协作插件。给定 Git 仓库和开发目标，由 Lead 拆分任务，让可配置数量的 Developer 在独立 Git worktree 中开发，再经过项目检查和 Reviewer 审查，将成果汇入集成分支。
 
 当前版本为 **0.1.0**，P0–P3 MVP 已完成验收。2026-10-25 的验收记录包含 72/72 自动测试、真实模型编排、拒审返工、冲突处理、暂停/取消与崩溃恢复；实测环境与范围见[运行时兼容记录](docs/runtime-compatibility.md)和[独立验收报告](docs/acceptance-report.md)。
+
+当前源码已扩展 E1.1–E1.5：全局可配置配额、多工作区并发、自由角色、动态 DAG 与公平调度，以及一次 Run 内的官方 Workflow 批量分析。新配置和不加载 Claude 的启动步骤见 [E1 使用指南](docs/e1-guide.md)，当前检查结果见 [E1 验收报告](docs/e1-acceptance.md)。E1.6 的 SSE/Web UI 暂缓；未发布新版本。
 
 ## 工作方式
 
@@ -14,7 +16,7 @@ RIFT 是运行在 DeepSeek Harness（DSH）中的多智能体开发协作插件�
 | Developer A / B | Claude Code，`claude-opus-5-5` | 在各自的任务 worktree 中实现变更 |
 | Reviewer | Codex，`gpt-6.1-sol` | 在独立 checkout 中审查精确的候选提交 |
 
-同一时间全局只运行一个 Workflow，最多两个开发和一个审查同时执行。开发可以并行，候选检查、审查与集成串行；审查可以与其他任务的开发重叠。有依赖或写入路径重叠的任务会等待调度。
+每个工作区最多一个活跃 Workflow，多个工作区共享 Host 的开发预算。原 profile 默认两个开发，Codex 专用 profile 默认四个开发；审查和集成仍全局串行。审查可以与其他任务开发重叠，有依赖或同仓库写入路径重叠的任务会等待调度。
 
 开发结果通过检查和审查后，RIFT 更新目标仓库中的 `refs/heads/rift/...` 集成分支。你可以在流程完成后查看差异，再自行合并到业务分支。
 

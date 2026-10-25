@@ -1,5 +1,7 @@
 # RIFT Codex 开发启动说明
 
+**最新状态与优先约束（2026-10-25）：** E1.1–E1.5 已交付；继续前先读 [E1 验收](e1-acceptance.md) 和 [E1 指南](e1-guide.md)。当前用户要求暂不使用 Claude，E1.6（SSE/Web UI）先不开发。本轮三个 Astra 高思考强度子 agent 的实现与检视已结束，106 项测试和真实 Codex-only 双工作区/四开发/官方 Workflow 批量分析通过。下方首次开发及后续提示词属于历史基线，其中“全局一个 Workflow、固定两个 Developer、E1 留后”不再代表当前 E1 契约；未知清理占用、官方 Provider/live parent、精确 SHA 接受及不重放不变量继续适用。
+
 版本：0.3。下方首次开发提示词保留为历史基线。当前 `0.1.0` 已完成 P0–P3 MVP 验收；继续工作时先读 `development-status.md`、`runtime-compatibility.md`、`poc-results.md` 和 `acceptance-report.md`，不要重新创建已完成模块或重复配置认证。Codex Sol/Astra 与 Claude Opus 5.5 均有真实证据；最终完整 LLM Lead/Astra 闭环、Sol 拒审返工、精确提交集成、OS 崩溃恢复及原生暂停/取消均通过。默认 Lead 已修正为 `deepseek-official/deepseek-flash`。后续按新的用户需求选择 E1/E2，不将历史失败或初期 skipped 当作当前阻塞。
 
 ## 首次开发提示词

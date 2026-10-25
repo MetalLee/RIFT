@@ -1,6 +1,7 @@
 import { lstat, mkdir, realpath, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
+import { DatabaseSync } from 'node:sqlite';
 import { git, gitOk } from './process.js';
 import type { RepositoryInfo } from './types.js';
 
@@ -46,8 +47,23 @@ export async function assertSafeFiles(root: string, files: string[]): Promise<vo
 export async function checkoutClean(cwd: string): Promise<boolean> { return (await gitOk(cwd, ['status', '--porcelain=v1', '--untracked-files=all', '--ignored'])).length === 0; }
 const metadataTails = new Map<string, Promise<unknown>>();
 export async function withMetadataLock<T>(commonGitDir: string, operation: () => Promise<T>): Promise<T> {
-  const previous = metadataTails.get(commonGitDir) ?? Promise.resolve();
-  const next = previous.catch(() => undefined).then(operation);
-  metadataTails.set(commonGitDir, next);
-  try { return await next; } finally { if (metadataTails.get(commonGitDir) === next) metadataTails.delete(commonGitDir); }
+  const directory=await realpath(commonGitDir);
+  const identity=process.platform==='win32'?directory.toLowerCase():directory;
+  const previous = metadataTails.get(identity) ?? Promise.resolve();
+  const next = previous.catch(() => undefined).then(async()=>{
+    // SQLite's OS-backed lease also serializes separate RIFT hosts sharing a
+    // repository. A dead process releases it without unsafe stale-lock deletion.
+    const lease=new DatabaseSync(path.join(directory,'rift-metadata.lock.db'));
+    try{
+      lease.exec('PRAGMA busy_timeout=0;');
+      const deadline=Date.now()+30_000;
+      for(;;){try{lease.exec('BEGIN EXCLUSIVE');break;}catch(error){
+        if(!/locked|busy/i.test(String(error))||Date.now()>=deadline)throw error;
+        await new Promise(resolve=>setTimeout(resolve,20));
+      }}
+      return await operation();
+    }finally{lease.close();}
+  });
+  metadataTails.set(identity, next);
+  try { return await next; } finally { if (metadataTails.get(identity) === next) metadataTails.delete(identity); }
 }

@@ -1,0 +1,597 @@
+{
+  "auditedAt": "2026-10-25T10:49:26.449Z",
+  "mode": "Independent read-only SQLite, artifact-byte and Git inspection; zero model calls",
+  "sourceReport": "docs/evidence/e1-native-acceptance.json",
+  "sourceReportSha256": "802f2759e4eb46e14993591c83ef9bc5cc108d936fe04b34af61b9c96239148b",
+  "root": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7",
+  "checks": [
+    {
+      "name": "report-pass-and-original-copy",
+      "status": "pass"
+    },
+    {
+      "name": "eight-recorded-source-hashes-match",
+      "status": "pass"
+    },
+    {
+      "name": "sqlite-integrity",
+      "status": "pass"
+    },
+    {
+      "name": "sqlite-foreign-keys",
+      "status": "pass"
+    },
+    {
+      "name": "expected-cardinality",
+      "status": "pass"
+    },
+    {
+      "name": "terminal-states",
+      "status": "pass"
+    },
+    {
+      "name": "all-nine-cleanup-confirmed",
+      "status": "pass"
+    },
+    {
+      "name": "distinct-leads",
+      "status": "pass"
+    },
+    {
+      "name": "report-db-workflow-9cddb951-1d27-472c-8b48-97cf55a226aa-workflow",
+      "status": "pass"
+    },
+    {
+      "name": "report-db-workflow-9cddb951-1d27-472c-8b48-97cf55a226aa-tasks",
+      "status": "pass"
+    },
+    {
+      "name": "report-db-workflow-9cddb951-1d27-472c-8b48-97cf55a226aa-runs",
+      "status": "pass"
+    },
+    {
+      "name": "report-db-workflow-9cddb951-1d27-472c-8b48-97cf55a226aa-operations",
+      "status": "pass"
+    },
+    {
+      "name": "report-db-events-workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+      "status": "pass"
+    },
+    {
+      "name": "report-db-workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75-workflow",
+      "status": "pass"
+    },
+    {
+      "name": "report-db-workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75-tasks",
+      "status": "pass"
+    },
+    {
+      "name": "report-db-workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75-runs",
+      "status": "pass"
+    },
+    {
+      "name": "report-db-workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75-operations",
+      "status": "pass"
+    },
+    {
+      "name": "report-db-events-workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-c28726eb-09c4-4cc7-bca5-ced956b58f69",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-c2617968-087a-4873-a099-2e7b4e3ed9dd",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-9b269e59-de62-4a7b-b065-f206cc510c65",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-fdeecb0a-94e9-4ac2-849d-89c8688eba50",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-cd0e864e-257c-4cda-a25d-280f0cf1abf0",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-7fb1574c-e165-4332-8617-cb7cec97636a",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-9de4c8ab-f65b-4568-82d6-6d060daad4b3",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-6f917a60-4dce-4947-9f1b-210b57b9f3d0",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-1496417a-91ac-469b-9c86-891ac702ea40",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-2adbd71a-fa28-476d-9c97-5f6f373d4338",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-51aefda0-72a9-410b-9d68-68450148382f",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-0a974f91-e768-47f8-8d9b-24eaecb19cb6",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-2d5a0efc-1d7a-416f-8f94-f09ff0e86c2e",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-22e2ad67-2889-48cd-91ff-9da1cc745dff",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-08b6259e-2b58-4239-b099-cddd2312445e",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-e280de23-748f-45b6-8948-23d44479bb10",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-66180057-0b62-440f-8b7d-b246ddbb9e08",
+      "status": "pass"
+    },
+    {
+      "name": "artifact-artifact-d6a1a52d-ba38-4f9c-8c40-2aed6539e76e",
+      "status": "pass"
+    },
+    {
+      "name": "automated-106-of-106",
+      "status": "pass"
+    },
+    {
+      "name": "journal-integration-2ece33c3-7e84-4153-9197-05274e302509",
+      "status": "pass"
+    },
+    {
+      "name": "chain-integration-2ece33c3-7e84-4153-9197-05274e302509",
+      "status": "pass"
+    },
+    {
+      "name": "native-review-integration-2ece33c3-7e84-4153-9197-05274e302509",
+      "status": "pass"
+    },
+    {
+      "name": "checks-integration-2ece33c3-7e84-4153-9197-05274e302509",
+      "status": "pass"
+    },
+    {
+      "name": "checkout-D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\candidates\\f4a42e92b2f360005706a2a9",
+      "status": "pass"
+    },
+    {
+      "name": "checkout-D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\reviews\\f4a42e92b2f360005706a2a9",
+      "status": "pass"
+    },
+    {
+      "name": "journal-integration-52b8460e-55e0-4f1b-aac0-828701294596",
+      "status": "pass"
+    },
+    {
+      "name": "chain-integration-52b8460e-55e0-4f1b-aac0-828701294596",
+      "status": "pass"
+    },
+    {
+      "name": "native-review-integration-52b8460e-55e0-4f1b-aac0-828701294596",
+      "status": "pass"
+    },
+    {
+      "name": "checks-integration-52b8460e-55e0-4f1b-aac0-828701294596",
+      "status": "pass"
+    },
+    {
+      "name": "checkout-D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\candidates\\62d901e1786296097ee531be",
+      "status": "pass"
+    },
+    {
+      "name": "checkout-D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\reviews\\62d901e1786296097ee531be",
+      "status": "pass"
+    },
+    {
+      "name": "head-workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+      "status": "pass"
+    },
+    {
+      "name": "original-workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+      "status": "pass"
+    },
+    {
+      "name": "marker-east-alpha",
+      "status": "pass"
+    },
+    {
+      "name": "marker-east-beta",
+      "status": "pass"
+    },
+    {
+      "name": "journal-integration-600396c2-3365-471c-aa62-8e2a41ac3919",
+      "status": "pass"
+    },
+    {
+      "name": "chain-integration-600396c2-3365-471c-aa62-8e2a41ac3919",
+      "status": "pass"
+    },
+    {
+      "name": "native-review-integration-600396c2-3365-471c-aa62-8e2a41ac3919",
+      "status": "pass"
+    },
+    {
+      "name": "checks-integration-600396c2-3365-471c-aa62-8e2a41ac3919",
+      "status": "pass"
+    },
+    {
+      "name": "checkout-D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\candidates\\2f5269732bd8d83cfcb3740e",
+      "status": "pass"
+    },
+    {
+      "name": "checkout-D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\reviews\\2f5269732bd8d83cfcb3740e",
+      "status": "pass"
+    },
+    {
+      "name": "journal-integration-c4018215-86b3-4acd-8dc6-2219101989c4",
+      "status": "pass"
+    },
+    {
+      "name": "chain-integration-c4018215-86b3-4acd-8dc6-2219101989c4",
+      "status": "pass"
+    },
+    {
+      "name": "native-review-integration-c4018215-86b3-4acd-8dc6-2219101989c4",
+      "status": "pass"
+    },
+    {
+      "name": "checks-integration-c4018215-86b3-4acd-8dc6-2219101989c4",
+      "status": "pass"
+    },
+    {
+      "name": "checkout-D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\candidates\\62b09f9b9823bef654ee0639",
+      "status": "pass"
+    },
+    {
+      "name": "checkout-D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\reviews\\62b09f9b9823bef654ee0639",
+      "status": "pass"
+    },
+    {
+      "name": "head-workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+      "status": "pass"
+    },
+    {
+      "name": "original-workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+      "status": "pass"
+    },
+    {
+      "name": "marker-west-alpha",
+      "status": "pass"
+    },
+    {
+      "name": "marker-west-beta",
+      "status": "pass"
+    },
+    {
+      "name": "four-native-inflight-overlap",
+      "status": "pass"
+    },
+    {
+      "name": "serial-reviews",
+      "status": "pass"
+    },
+    {
+      "name": "batch-one-task-one-run",
+      "status": "pass"
+    },
+    {
+      "name": "batch-two-exact-results",
+      "status": "pass"
+    },
+    {
+      "name": "batch-clean",
+      "status": "pass"
+    },
+    {
+      "name": "batch-cleanup-verify-success-order",
+      "status": "pass"
+    },
+    {
+      "name": "host-cleanup-and-lock-absent",
+      "status": "pass"
+    }
+  ],
+  "failures": [],
+  "implementation": [
+    {
+      "file": "scripts/e1-acceptance-probe.ts",
+      "expected": "c6f48917fcffbab57a6200121a11687fe0e71f72c9987b294de04f693a49f833",
+      "actual": "c6f48917fcffbab57a6200121a11687fe0e71f72c9987b294de04f693a49f833",
+      "match": true
+    },
+    {
+      "file": "profiles/rift.codex.patch.yml",
+      "expected": "53beb26161ec4c51b20bed7ac8740acdf1663799e9ee5aab6563a1f2519235dc",
+      "actual": "53beb26161ec4c51b20bed7ac8740acdf1663799e9ee5aab6563a1f2519235dc",
+      "match": true
+    },
+    {
+      "file": "src/api/host-service.ts",
+      "expected": "e4f15dc2b179b7b613527ee5690f04c0f1b5e9d60fc3da15b7da9a19c2d3c38a",
+      "actual": "e4f15dc2b179b7b613527ee5690f04c0f1b5e9d60fc3da15b7da9a19c2d3c38a",
+      "match": true
+    },
+    {
+      "file": "src/task/coordinator.ts",
+      "expected": "2994adcbad1856be7c0bf07c1333a5742845e63a6af864cae4338c255228f54f",
+      "actual": "2994adcbad1856be7c0bf07c1333a5742845e63a6af864cae4338c255228f54f",
+      "match": true
+    },
+    {
+      "file": "src/task/activation-bridge.ts",
+      "expected": "2a9f966cda63e3ab0228e82d5e13e7409b18c514cd01b33b24cedf36b59849d2",
+      "actual": "2a9f966cda63e3ab0228e82d5e13e7409b18c514cd01b33b24cedf36b59849d2",
+      "match": true
+    },
+    {
+      "file": "src/git/integration.ts",
+      "expected": "0559d4a9f34f8ad7e6ff833efc063cd24e486b046d77fd486cb6481553587379",
+      "actual": "0559d4a9f34f8ad7e6ff833efc063cd24e486b046d77fd486cb6481553587379",
+      "match": true
+    },
+    {
+      "file": "src/storage/database.ts",
+      "expected": "af996867f9485f477e90d719f7c993b91284ccd0e6b2772e71046edf53c5a05d",
+      "actual": "af996867f9485f477e90d719f7c993b91284ccd0e6b2772e71046edf53c5a05d",
+      "match": true
+    },
+    {
+      "file": "pnpm-lock.yaml",
+      "expected": "335cabcd29c735ec2758225071a32e783ccc03ca69a17e4d0c60b5bf571ed20f",
+      "actual": "335cabcd29c735ec2758225071a32e783ccc03ca69a17e4d0c60b5bf571ed20f",
+      "match": true
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "artifact-c28726eb-09c4-4cc7-bca5-ced956b58f69",
+      "runId": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+      "type": "input",
+      "sha256": "acccade83f51c95035af81f1c08d26ac31ec5fe7269ee7561f6b2dcaca498667",
+      "byteSize": 1298,
+      "verified": true
+    },
+    {
+      "id": "artifact-c2617968-087a-4873-a099-2e7b4e3ed9dd",
+      "runId": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+      "type": "input",
+      "sha256": "2ad011d44d333e13ddb40d78c1da6a89ef35c7c61520094a1e90552540204dae",
+      "byteSize": 1298,
+      "verified": true
+    },
+    {
+      "id": "artifact-9b269e59-de62-4a7b-b065-f206cc510c65",
+      "runId": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+      "type": "input",
+      "sha256": "dcf98f951df480c74d27a01a464a789ec269f7a5c76eddb6faff5a29dd0f88af",
+      "byteSize": 1290,
+      "verified": true
+    },
+    {
+      "id": "artifact-fdeecb0a-94e9-4ac2-849d-89c8688eba50",
+      "runId": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+      "type": "input",
+      "sha256": "a998762e4e8b0d360c563c894f3142c74309baab27488bff28247f94cccb6982",
+      "byteSize": 1290,
+      "verified": true
+    },
+    {
+      "id": "artifact-cd0e864e-257c-4cda-a25d-280f0cf1abf0",
+      "runId": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+      "type": "result",
+      "sha256": "41ae2ba08eae10793d2785e0b2b2b5eaabc2c67195916eb7c5b0ee38f2722c36",
+      "byteSize": 367,
+      "verified": true
+    },
+    {
+      "id": "artifact-7fb1574c-e165-4332-8617-cb7cec97636a",
+      "runId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5",
+      "type": "input",
+      "sha256": "a8fb8af63121d8d5cc4228fc35f13b4e9f3ec9cfcdcf6f8b9bce53578d995003",
+      "byteSize": 3704,
+      "verified": true
+    },
+    {
+      "id": "artifact-9de4c8ab-f65b-4568-82d6-6d060daad4b3",
+      "runId": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+      "type": "result",
+      "sha256": "d76ac44414b32f603a1954303f07fa299bd881ff0e7e37ef8455e05cb38dd6a6",
+      "byteSize": 380,
+      "verified": true
+    },
+    {
+      "id": "artifact-6f917a60-4dce-4947-9f1b-210b57b9f3d0",
+      "runId": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+      "type": "result",
+      "sha256": "63b2b34cd80c97ec0a91ad42bafbf61cf1909b434ca7d5d8e33f29f8e314cf53",
+      "byteSize": 415,
+      "verified": true
+    },
+    {
+      "id": "artifact-1496417a-91ac-469b-9c86-891ac702ea40",
+      "runId": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+      "type": "result",
+      "sha256": "0e1453a53066a751b549b856d8d3ffbeb80b60b7b979739fefe948d388ebf68a",
+      "byteSize": 408,
+      "verified": true
+    },
+    {
+      "id": "artifact-2adbd71a-fa28-476d-9c97-5f6f373d4338",
+      "runId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5",
+      "type": "result",
+      "sha256": "e84ee072aa02a697c764210390010b63270d718d4036822f7e64dd5b4b0a21de",
+      "byteSize": 185,
+      "verified": true
+    },
+    {
+      "id": "artifact-51aefda0-72a9-410b-9d68-68450148382f",
+      "runId": "run-307be9dc-081b-4140-a473-e30e438ba297",
+      "type": "input",
+      "sha256": "d355eb9f2b999230f960da4c5d66578edf0276a403ccca2af2331fd82932d5b3",
+      "byteSize": 3752,
+      "verified": true
+    },
+    {
+      "id": "artifact-0a974f91-e768-47f8-8d9b-24eaecb19cb6",
+      "runId": "run-307be9dc-081b-4140-a473-e30e438ba297",
+      "type": "result",
+      "sha256": "3014f01cc2dc205f62696f694af5bc2f17fe33009d3d78ef1c3e45d085e66e1d",
+      "byteSize": 185,
+      "verified": true
+    },
+    {
+      "id": "artifact-2d5a0efc-1d7a-416f-8f94-f09ff0e86c2e",
+      "runId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c",
+      "type": "input",
+      "sha256": "b9eb6a761b24126409d5d71f316677b03dea29f107608191c66803bedbfb7bc0",
+      "byteSize": 3731,
+      "verified": true
+    },
+    {
+      "id": "artifact-22e2ad67-2889-48cd-91ff-9da1cc745dff",
+      "runId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c",
+      "type": "result",
+      "sha256": "7d8a075ba263d2c020e478375e9bbe6e0e84b8aa6702faac8e6e4cee17787c6a",
+      "byteSize": 186,
+      "verified": true
+    },
+    {
+      "id": "artifact-08b6259e-2b58-4239-b099-cddd2312445e",
+      "runId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd",
+      "type": "input",
+      "sha256": "9a5185a703e9065219ed78eb12a21bd13e4ef6e5ca3055d1fcb062b5daacf9d4",
+      "byteSize": 3759,
+      "verified": true
+    },
+    {
+      "id": "artifact-e280de23-748f-45b6-8948-23d44479bb10",
+      "runId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd",
+      "type": "result",
+      "sha256": "60c92c672d37480cc939123b70a148f638e85a9de8cb155f3535b70436c3b722",
+      "byteSize": 186,
+      "verified": true
+    },
+    {
+      "id": "artifact-66180057-0b62-440f-8b7d-b246ddbb9e08",
+      "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+      "type": "input",
+      "sha256": "e3685895a2d41f5ca850d9fb089f161a3d78cf95bc355c92b74cb54c3433eeb2",
+      "byteSize": 1104,
+      "verified": true
+    },
+    {
+      "id": "artifact-d6a1a52d-ba38-4f9c-8c40-2aed6539e76e",
+      "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+      "type": "result",
+      "sha256": "0cd9406b0e4533abed4d7c081f224acef823edb3f5c9c9c365d02538494b3d74",
+      "byteSize": 346,
+      "verified": true
+    }
+  ],
+  "counts": {
+    "workspaces": 2,
+    "workflows": 2,
+    "tasks": 5,
+    "runs": 9,
+    "artifacts": 18,
+    "integrations": 4,
+    "operations": 9
+  },
+  "automated": {
+    "files": 21,
+    "total": 106,
+    "passed": 106,
+    "failed": 0
+  },
+  "status": "pass",
+  "acceptedChains": [
+    {
+      "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+      "baseline": "33ef29fa98581fb80498fba0530e9e40229bf281",
+      "chain": [
+        {
+          "taskId": "east-beta",
+          "sourceHead": "544f6338395ff7e5576464262ea5e48ff503b1f5",
+          "previousAccepted": "33ef29fa98581fb80498fba0530e9e40229bf281",
+          "candidateHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+          "reviewRunId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5"
+        },
+        {
+          "taskId": "east-alpha",
+          "sourceHead": "08239dd193423ce6f8aad9aecf81cdb5b73524fe",
+          "previousAccepted": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+          "candidateHead": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+          "reviewRunId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c"
+        }
+      ],
+      "finalHead": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01"
+    },
+    {
+      "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+      "baseline": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51",
+      "chain": [
+        {
+          "taskId": "west-beta",
+          "sourceHead": "dfd29322a20e5df8166c2e3685f868dd5ce0890a",
+          "previousAccepted": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51",
+          "candidateHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+          "reviewRunId": "run-307be9dc-081b-4140-a473-e30e438ba297"
+        },
+        {
+          "taskId": "west-alpha",
+          "sourceHead": "18d729ba240a0f7db24b3fbb41e598ccbbcf8084",
+          "previousAccepted": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+          "candidateHead": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+          "reviewRunId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd"
+        }
+      ],
+      "finalHead": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8"
+    }
+  ],
+  "concurrency": {
+    "nativeDevelopmentCount": 4,
+    "commonInFlightStart": "2026-10-25T10:42:27.871Z",
+    "commonInFlightEnd": "2026-10-25T10:42:42.738Z",
+    "commonInFlightMilliseconds": 14867,
+    "serialReviewCount": 4
+  },
+  "batch": {
+    "taskId": "east-analysis-batch",
+    "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+    "officialWorkflowRunId": "cca4daa5-9b0e-4b78-97a3-4ada983fda17",
+    "items": [
+      {
+        "id": "alpha",
+        "text": "alpha:11"
+      },
+      {
+        "id": "beta",
+        "text": "beta:22"
+      }
+    ],
+    "head": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+    "cleanupStatus": "confirmed",
+    "slotReleasedAt": "2026-10-25T10:44:51.742Z",
+    "writerReleased": true
+  },
+  "completedAt": "2026-10-25T10:49:56.925Z"
+}

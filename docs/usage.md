@@ -1,5 +1,7 @@
 # RIFT 使用说明
 
+**E1 更新（2026-10-25）：** 多工作区、更多 Developer、自由角色、重规划和批量分析已接入。新功能配置与不加载 Claude 的启动命令见 [E1 指南](e1-guide.md)，验证边界见 [E1 验收](e1-acceptance.md)。下文 Claude 默认 profile 和 P0–P3 真实探针保留作历史兼容说明，本轮未执行 Claude。
+
 版本为 `0.1.0`，P0–P3 的 MVP 范围验收与 72/72 自动测试已通过。最终真实 LLM Lead/Astra 流程无人干预地完成四任务、精确审查和串行集成；另有真实拒审返工、冲突、并行取消与崩溃恢复证据。已测模型组合及边界见 [POC 结果](poc-results.md)，不将不同范围的探针扩大为所有模型和权限组合的保证。
 
 ## 安装与检查
@@ -121,7 +123,7 @@ node dist/cli/main.js logs --home D:\RiftHome --run <runId> --json
 node dist/cli/main.js report --home D:\RiftHome --workflow <workflowId> --json
 ```
 
-Workspace 自动配置 Lead、Developer A/B 和 Reviewer。Lead 只能调用七个 `rift_*` 协作工具。Developer 在独立 attempt worktree 执行；成功开发自动进入串行集成队列，检查及精确候选审查后才更新 `refs/heads/rift/...`。不会 push 或更新用户默认分支。
+Workspace 按开发预算自动配置 Developer，加上 Lead 和 Reviewer。Lead 只能调用八个 `rift_*` 协作工具（新增 `rift_plan_replan`）。Developer 在独立 attempt worktree 执行；成功开发自动进入串行集成队列，检查及精确候选审查后才更新 `refs/heads/rift/...`。不会 push 或更新用户默认分支。
 
 `--no-lead` 只创建业务 Workflow，不调用模型，适合管理测试。`plan --workflow ID --file plan.json` 接受 `expectedRevision`、`tasks`；任务需声明 `kind/title/instructions/expectedPaths`，可指定 `id/roleName/dependsOn/acceptanceCriteria`。开发派发由 Lead 工具或本地 API 请求。
 

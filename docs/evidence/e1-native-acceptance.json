@@ -1,0 +1,3519 @@
+{
+  "startedAt": "2026-10-25T10:42:22.008Z",
+  "root": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7",
+  "status": "pass",
+  "boundary": {
+    "lead": "real live DSH Agents; management/tools driven by this deterministic script, no Lead model call",
+    "development": "official native Codex provider",
+    "review": "official native Codex provider plus real Git checks",
+    "analysisReuse": "official DSH Workflow engine with native Codex child activations",
+    "claude": "not loaded or executed",
+    "concurrency": "records actual provider acceptance and in-flight intervals; does not claim simultaneous individual tool execution"
+  },
+  "versions": {
+    "node": "v24.16.0",
+    "dsh": "0.2.1-rc.3"
+  },
+  "workspaces": [
+    {
+      "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+      "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+      "leadSessionId": "rift-lead-46e63df6-b072-4ee1-ab61-dca0deadf88b",
+      "repository": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\中文 east 仓库",
+      "baseline": "33ef29fa98581fb80498fba0530e9e40229bf281"
+    },
+    {
+      "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+      "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+      "leadSessionId": "rift-lead-a1fd718e-5dbb-4b2b-ae7d-77bcbee0afa2",
+      "repository": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\中文 west 仓库",
+      "baseline": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51"
+    }
+  ],
+  "overlapSamples": [
+    {
+      "at": "2026-10-25T10:42:27.950Z",
+      "active": [
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "id": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "purpose": "develop",
+          "childId": "08cdb17e-6b9d-47b0-9de7-c57d76317c0a",
+          "startedAt": "2026-10-25T10:42:27.871Z"
+        },
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "id": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "purpose": "develop",
+          "childId": "6f0ef50d-bd04-4eae-ba2a-da138b2defd0",
+          "startedAt": "2026-10-25T10:42:27.637Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "id": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "purpose": "develop",
+          "childId": "93c7d61b-24e5-405b-8c23-70d1507b6606",
+          "startedAt": "2026-10-25T10:42:27.866Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "id": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "purpose": "develop",
+          "childId": "d88cb51d-117f-4e4b-b50e-d0756466c74a",
+          "startedAt": "2026-10-25T10:42:27.749Z"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-25T10:42:28.054Z",
+      "active": [
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "id": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "purpose": "develop",
+          "childId": "08cdb17e-6b9d-47b0-9de7-c57d76317c0a",
+          "startedAt": "2026-10-25T10:42:27.871Z"
+        },
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "id": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "purpose": "develop",
+          "childId": "6f0ef50d-bd04-4eae-ba2a-da138b2defd0",
+          "startedAt": "2026-10-25T10:42:27.637Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "id": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "purpose": "develop",
+          "childId": "93c7d61b-24e5-405b-8c23-70d1507b6606",
+          "startedAt": "2026-10-25T10:42:27.866Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "id": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "purpose": "develop",
+          "childId": "d88cb51d-117f-4e4b-b50e-d0756466c74a",
+          "startedAt": "2026-10-25T10:42:27.749Z"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-25T10:42:28.158Z",
+      "active": [
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "id": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "purpose": "develop",
+          "childId": "08cdb17e-6b9d-47b0-9de7-c57d76317c0a",
+          "startedAt": "2026-10-25T10:42:27.871Z"
+        },
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "id": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "purpose": "develop",
+          "childId": "6f0ef50d-bd04-4eae-ba2a-da138b2defd0",
+          "startedAt": "2026-10-25T10:42:27.637Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "id": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "purpose": "develop",
+          "childId": "93c7d61b-24e5-405b-8c23-70d1507b6606",
+          "startedAt": "2026-10-25T10:42:27.866Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "id": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "purpose": "develop",
+          "childId": "d88cb51d-117f-4e4b-b50e-d0756466c74a",
+          "startedAt": "2026-10-25T10:42:27.749Z"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-25T10:42:28.276Z",
+      "active": [
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "id": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "purpose": "develop",
+          "childId": "08cdb17e-6b9d-47b0-9de7-c57d76317c0a",
+          "startedAt": "2026-10-25T10:42:27.871Z"
+        },
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "id": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "purpose": "develop",
+          "childId": "6f0ef50d-bd04-4eae-ba2a-da138b2defd0",
+          "startedAt": "2026-10-25T10:42:27.637Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "id": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "purpose": "develop",
+          "childId": "93c7d61b-24e5-405b-8c23-70d1507b6606",
+          "startedAt": "2026-10-25T10:42:27.866Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "id": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "purpose": "develop",
+          "childId": "d88cb51d-117f-4e4b-b50e-d0756466c74a",
+          "startedAt": "2026-10-25T10:42:27.749Z"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-25T10:42:28.380Z",
+      "active": [
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "id": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "purpose": "develop",
+          "childId": "08cdb17e-6b9d-47b0-9de7-c57d76317c0a",
+          "startedAt": "2026-10-25T10:42:27.871Z"
+        },
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "id": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "purpose": "develop",
+          "childId": "6f0ef50d-bd04-4eae-ba2a-da138b2defd0",
+          "startedAt": "2026-10-25T10:42:27.637Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "id": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "purpose": "develop",
+          "childId": "93c7d61b-24e5-405b-8c23-70d1507b6606",
+          "startedAt": "2026-10-25T10:42:27.866Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "id": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "purpose": "develop",
+          "childId": "d88cb51d-117f-4e4b-b50e-d0756466c74a",
+          "startedAt": "2026-10-25T10:42:27.749Z"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-25T10:42:28.484Z",
+      "active": [
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "id": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "purpose": "develop",
+          "childId": "08cdb17e-6b9d-47b0-9de7-c57d76317c0a",
+          "startedAt": "2026-10-25T10:42:27.871Z"
+        },
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "id": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "purpose": "develop",
+          "childId": "6f0ef50d-bd04-4eae-ba2a-da138b2defd0",
+          "startedAt": "2026-10-25T10:42:27.637Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "id": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "purpose": "develop",
+          "childId": "93c7d61b-24e5-405b-8c23-70d1507b6606",
+          "startedAt": "2026-10-25T10:42:27.866Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "id": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "purpose": "develop",
+          "childId": "d88cb51d-117f-4e4b-b50e-d0756466c74a",
+          "startedAt": "2026-10-25T10:42:27.749Z"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-25T10:42:28.590Z",
+      "active": [
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "id": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "purpose": "develop",
+          "childId": "08cdb17e-6b9d-47b0-9de7-c57d76317c0a",
+          "startedAt": "2026-10-25T10:42:27.871Z"
+        },
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "id": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "purpose": "develop",
+          "childId": "6f0ef50d-bd04-4eae-ba2a-da138b2defd0",
+          "startedAt": "2026-10-25T10:42:27.637Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "id": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "purpose": "develop",
+          "childId": "93c7d61b-24e5-405b-8c23-70d1507b6606",
+          "startedAt": "2026-10-25T10:42:27.866Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "id": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "purpose": "develop",
+          "childId": "d88cb51d-117f-4e4b-b50e-d0756466c74a",
+          "startedAt": "2026-10-25T10:42:27.749Z"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-25T10:42:28.702Z",
+      "active": [
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "id": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "purpose": "develop",
+          "childId": "08cdb17e-6b9d-47b0-9de7-c57d76317c0a",
+          "startedAt": "2026-10-25T10:42:27.871Z"
+        },
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "id": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "purpose": "develop",
+          "childId": "6f0ef50d-bd04-4eae-ba2a-da138b2defd0",
+          "startedAt": "2026-10-25T10:42:27.637Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "id": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "purpose": "develop",
+          "childId": "93c7d61b-24e5-405b-8c23-70d1507b6606",
+          "startedAt": "2026-10-25T10:42:27.866Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "id": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "purpose": "develop",
+          "childId": "d88cb51d-117f-4e4b-b50e-d0756466c74a",
+          "startedAt": "2026-10-25T10:42:27.749Z"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-25T10:42:28.806Z",
+      "active": [
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "id": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "purpose": "develop",
+          "childId": "08cdb17e-6b9d-47b0-9de7-c57d76317c0a",
+          "startedAt": "2026-10-25T10:42:27.871Z"
+        },
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "id": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "purpose": "develop",
+          "childId": "6f0ef50d-bd04-4eae-ba2a-da138b2defd0",
+          "startedAt": "2026-10-25T10:42:27.637Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "id": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "purpose": "develop",
+          "childId": "93c7d61b-24e5-405b-8c23-70d1507b6606",
+          "startedAt": "2026-10-25T10:42:27.866Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "id": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "purpose": "develop",
+          "childId": "d88cb51d-117f-4e4b-b50e-d0756466c74a",
+          "startedAt": "2026-10-25T10:42:27.749Z"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-25T10:42:28.910Z",
+      "active": [
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "id": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "purpose": "develop",
+          "childId": "08cdb17e-6b9d-47b0-9de7-c57d76317c0a",
+          "startedAt": "2026-10-25T10:42:27.871Z"
+        },
+        {
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "id": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "purpose": "develop",
+          "childId": "6f0ef50d-bd04-4eae-ba2a-da138b2defd0",
+          "startedAt": "2026-10-25T10:42:27.637Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "id": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "purpose": "develop",
+          "childId": "93c7d61b-24e5-405b-8c23-70d1507b6606",
+          "startedAt": "2026-10-25T10:42:27.866Z"
+        },
+        {
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "id": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "purpose": "develop",
+          "childId": "d88cb51d-117f-4e4b-b50e-d0756466c74a",
+          "startedAt": "2026-10-25T10:42:27.749Z"
+        }
+      ]
+    }
+  ],
+  "checkpoints": [
+    {
+      "label": "four-native-developers-and-review",
+      "at": "2026-10-25T10:44:36.964Z",
+      "status": "pass"
+    },
+    {
+      "label": "official-workflow-batch-analysis",
+      "at": "2026-10-25T10:44:52.247Z",
+      "status": "pass"
+    }
+  ],
+  "implementation": {
+    "scripts/e1-acceptance-probe.ts": "c6f48917fcffbab57a6200121a11687fe0e71f72c9987b294de04f693a49f833",
+    "profiles/rift.codex.patch.yml": "53beb26161ec4c51b20bed7ac8740acdf1663799e9ee5aab6563a1f2519235dc",
+    "src/api/host-service.ts": "e4f15dc2b179b7b613527ee5690f04c0f1b5e9d60fc3da15b7da9a19c2d3c38a",
+    "src/task/coordinator.ts": "2994adcbad1856be7c0bf07c1333a5742845e63a6af864cae4338c255228f54f",
+    "src/task/activation-bridge.ts": "2a9f966cda63e3ab0228e82d5e13e7409b18c514cd01b33b24cedf36b59849d2",
+    "src/git/integration.ts": "0559d4a9f34f8ad7e6ff833efc063cd24e486b046d77fd486cb6481553587379",
+    "src/storage/database.ts": "af996867f9485f477e90d719f7c993b91284ccd0e6b2772e71046edf53c5a05d",
+    "pnpm-lock.yaml": "335cabcd29c735ec2758225071a32e783ccc03ca69a17e4d0c60b5bf571ed20f"
+  },
+  "providers": [
+    "spawn",
+    "codex-dev",
+    "codex-review"
+  ],
+  "models": {
+    "developer": "gpt-6-astra",
+    "reviewer": "gpt-6-astra"
+  },
+  "dispatches": [
+    {
+      "id": "request-f348d6e1-2635-4feb-abeb-339a8bebea80",
+      "kind": "dispatch",
+      "dedupeKey": "dispatch-east-alpha",
+      "entityId": "east-alpha",
+      "phase": "started",
+      "payload": {
+        "expectedVersion": 0,
+        "planRevision": 1,
+        "runId": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947"
+      },
+      "createdAt": "2026-10-25T10:42:24.565Z"
+    },
+    {
+      "id": "request-fd93a10b-a453-41de-946d-ed75a73fb6c0",
+      "kind": "dispatch",
+      "dedupeKey": "dispatch-east-beta",
+      "entityId": "east-beta",
+      "phase": "started",
+      "payload": {
+        "expectedVersion": 0,
+        "planRevision": 1,
+        "runId": "run-4e6b9afe-950d-44fd-a89c-70087313cf00"
+      },
+      "createdAt": "2026-10-25T10:42:24.571Z"
+    },
+    {
+      "id": "request-5cdaa68c-801a-4eca-83af-5dd66c250abc",
+      "kind": "dispatch",
+      "dedupeKey": "dispatch-west-alpha",
+      "entityId": "west-alpha",
+      "phase": "started",
+      "payload": {
+        "expectedVersion": 0,
+        "planRevision": 1,
+        "runId": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f"
+      },
+      "createdAt": "2026-10-25T10:42:24.576Z"
+    },
+    {
+      "id": "request-01ba3884-c227-4e2c-bd07-2e2a95741c08",
+      "kind": "dispatch",
+      "dedupeKey": "dispatch-west-beta",
+      "entityId": "west-beta",
+      "phase": "started",
+      "payload": {
+        "expectedVersion": 0,
+        "planRevision": 1,
+        "runId": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd"
+      },
+      "createdAt": "2026-10-25T10:42:24.581Z"
+    }
+  ],
+  "analysisBatch": {
+    "task": {
+      "id": "east-analysis-batch",
+      "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+      "roleId": null,
+      "kind": "analysis",
+      "title": "Batch inspect accepted marker metadata",
+      "instructions": "Answer the batch items read-only. Do not create or modify any files or commits.",
+      "expectedPaths": [],
+      "acceptanceCriteria": [],
+      "status": "succeeded",
+      "attempt": 1,
+      "version": 2,
+      "acceptedCommit": null,
+      "sourceHead": null,
+      "blockingReason": null,
+      "analysisItems": [
+        {
+          "id": "alpha",
+          "prompt": "Return the literal concise text alpha:11. This is analysis only; do not use shell, files or tools."
+        },
+        {
+          "id": "beta",
+          "prompt": "Return the literal concise text beta:22. This is analysis only; do not use shell, files or tools."
+        }
+      ],
+      "priority": 0
+    },
+    "runs": [
+      {
+        "id": "run-193c6d69-d1af-463d-b354-f345cc445558",
+        "taskId": "east-analysis-batch",
+        "roleId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:developer-a",
+        "purpose": "develop",
+        "taskAttempt": 1,
+        "status": "succeeded",
+        "providerSnapshot": {
+          "role": {
+            "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:developer-a",
+            "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+            "name": "developer-a",
+            "enabled": 1,
+            "purpose": "developer",
+            "kind": "subagent",
+            "providerBindingId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-dev",
+            "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+            "revision": 1
+          },
+          "binding": {
+            "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-dev",
+            "providerName": "codex-dev",
+            "packageVersion": "0.2.1-rc.3",
+            "configRevision": 1,
+            "capabilities": {
+              "agentOptions": false,
+              "agentPreset": false,
+              "outputSchema": false,
+              "depthLimit": false
+            },
+            "credentialRefs": [
+              "native:codex"
+            ],
+            "runtime": null,
+            "model": null,
+            "spawn": null
+          }
+        },
+        "dshChildId": "rift-analysis-32808334-f08d-48d0-a9ea-c0e5cfa0472a",
+        "dshRunId": "cca4daa5-9b0e-4b78-97a3-4ada983fda17",
+        "stopReason": "completed",
+        "cleanupStatus": "confirmed",
+        "slotReleasedAt": "2026-10-25T10:44:51.742Z",
+        "deadline": "2026-10-25T10:48:36.966Z",
+        "result": {
+          "schemaVersion": 1,
+          "taskId": "east-analysis-batch",
+          "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+          "outcome": "completed",
+          "summary": "{\"workflowRunId\":\"cca4daa5-9b0e-4b78-97a3-4ada983fda17\",\"items\":[{\"id\":\"alpha\",\"text\":\"alpha:11\"},{\"id\":\"beta\",\"text\":\"beta:22\"}]}",
+          "changedPaths": [],
+          "checksClaimed": [],
+          "blockingReasons": []
+        },
+        "createdAt": "2026-10-25T10:44:36.966Z",
+        "startedAt": "2026-10-25T10:44:37.305Z",
+        "endedAt": "2026-10-25T10:44:51.739Z",
+        "resultArtifactId": "artifact-d6a1a52d-ba38-4f9c-8c40-2aed6539e76e"
+      }
+    ],
+    "events": [
+      {
+        "eventSeq": 88,
+        "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+        "taskId": "east-analysis-batch",
+        "runId": null,
+        "requestId": "request-7b29d812-5cae-4608-8c90-2f873a50f5e4",
+        "type": "dispatch.queued",
+        "payload": {},
+        "occurredAt": "2026-10-25T10:44:36.966Z"
+      },
+      {
+        "eventSeq": 89,
+        "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+        "taskId": "east-analysis-batch",
+        "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+        "requestId": "request-7b29d812-5cae-4608-8c90-2f873a50f5e4",
+        "type": "dispatch.started",
+        "payload": {},
+        "occurredAt": "2026-10-25T10:44:36.967Z"
+      },
+      {
+        "eventSeq": 90,
+        "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+        "taskId": "east-analysis-batch",
+        "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+        "requestId": "request-7b29d812-5cae-4608-8c90-2f873a50f5e4",
+        "type": "dispatch_reserved",
+        "payload": {},
+        "occurredAt": "2026-10-25T10:44:36.967Z"
+      },
+      {
+        "eventSeq": 91,
+        "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+        "taskId": "east-analysis-batch",
+        "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+        "requestId": null,
+        "type": "run.input_prepared",
+        "payload": {
+          "artifactId": "artifact-66180057-0b62-440f-8b7d-b246ddbb9e08",
+          "promptSha256": "e3685895a2d41f5ca850d9fb089f161a3d78cf95bc355c92b74cb54c3433eeb2",
+          "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\worktrees\\8b1267938fe648a618363d77",
+          "baseCommit": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+          "sourceHead": null,
+          "candidateHead": null
+        },
+        "occurredAt": "2026-10-25T10:44:37.301Z"
+      },
+      {
+        "eventSeq": 92,
+        "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+        "taskId": "east-analysis-batch",
+        "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+        "requestId": null,
+        "type": "analysis.workflow_started",
+        "payload": {
+          "workflowRunId": "cca4daa5-9b0e-4b78-97a3-4ada983fda17",
+          "parentSessionId": "rift-analysis-32808334-f08d-48d0-a9ea-c0e5cfa0472a",
+          "itemIds": [
+            "alpha",
+            "beta"
+          ],
+          "maxConcurrentChildren": 1
+        },
+        "occurredAt": "2026-10-25T10:44:37.304Z"
+      },
+      {
+        "eventSeq": 93,
+        "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+        "taskId": "east-analysis-batch",
+        "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+        "requestId": null,
+        "type": "activation_accepted",
+        "payload": {
+          "childId": "rift-analysis-32808334-f08d-48d0-a9ea-c0e5cfa0472a"
+        },
+        "occurredAt": "2026-10-25T10:44:37.305Z"
+      },
+      {
+        "eventSeq": 94,
+        "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+        "taskId": "east-analysis-batch",
+        "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+        "requestId": null,
+        "type": "result_recorded",
+        "payload": {
+          "status": "succeeded",
+          "stopReason": "completed",
+          "result": {
+            "schemaVersion": 1,
+            "taskId": "east-analysis-batch",
+            "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+            "outcome": "completed",
+            "summary": "{\"workflowRunId\":\"cca4daa5-9b0e-4b78-97a3-4ada983fda17\",\"items\":[{\"id\":\"alpha\",\"text\":\"alpha:11\"},{\"id\":\"beta\",\"text\":\"beta:22\"}]}",
+            "changedPaths": [],
+            "checksClaimed": [],
+            "blockingReasons": []
+          },
+          "artifactId": "artifact-d6a1a52d-ba38-4f9c-8c40-2aed6539e76e"
+        },
+        "occurredAt": "2026-10-25T10:44:51.740Z"
+      },
+      {
+        "eventSeq": 95,
+        "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+        "taskId": "east-analysis-batch",
+        "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+        "requestId": null,
+        "type": "cleanup.confirmed",
+        "payload": {},
+        "occurredAt": "2026-10-25T10:44:51.742Z"
+      },
+      {
+        "eventSeq": 96,
+        "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+        "taskId": "east-analysis-batch",
+        "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+        "requestId": null,
+        "type": "analysis.verified",
+        "payload": {
+          "headCommit": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01"
+        },
+        "occurredAt": "2026-10-25T10:44:52.131Z"
+      },
+      {
+        "eventSeq": 97,
+        "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+        "taskId": "east-analysis-batch",
+        "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+        "requestId": "request-7b29d812-5cae-4608-8c90-2f873a50f5e4",
+        "type": "dispatch.completed",
+        "payload": {},
+        "occurredAt": "2026-10-25T10:44:52.131Z"
+      },
+      {
+        "eventSeq": 98,
+        "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+        "taskId": "east-analysis-batch",
+        "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+        "requestId": null,
+        "type": "task.succeeded",
+        "payload": {},
+        "occurredAt": "2026-10-25T10:44:52.131Z"
+      }
+    ]
+  },
+  "business": [
+    {
+      "status": {
+        "workflow": {
+          "id": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+          "goal": "Create two verified east markers and analyze accepted results.",
+          "leadSessionId": "rift-lead-46e63df6-b072-4ee1-ab61-dca0deadf88b",
+          "planRevision": 2,
+          "version": 3,
+          "status": "completed",
+          "integrationRef": "refs/heads/rift/workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e/workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "baseCommit": "33ef29fa98581fb80498fba0530e9e40229bf281",
+          "summary": "Independent E1 native evidence verified: exact native reviews, trusted checks, accepted marker contents, confirmed cleanup.",
+          "lastScheduled": 9
+        },
+        "roles": [
+          {
+            "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:developer-a",
+            "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+            "name": "developer-a",
+            "enabled": 1,
+            "purpose": "developer",
+            "kind": "subagent",
+            "providerBindingId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-dev",
+            "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+            "revision": 1
+          },
+          {
+            "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:developer-b",
+            "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+            "name": "developer-b",
+            "enabled": 1,
+            "purpose": "developer",
+            "kind": "subagent",
+            "providerBindingId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-dev",
+            "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+            "revision": 1
+          },
+          {
+            "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:developer-c",
+            "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+            "name": "developer-c",
+            "enabled": 1,
+            "purpose": "developer",
+            "kind": "subagent",
+            "providerBindingId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-dev",
+            "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+            "revision": 1
+          },
+          {
+            "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:developer-d",
+            "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+            "name": "developer-d",
+            "enabled": 1,
+            "purpose": "developer",
+            "kind": "subagent",
+            "providerBindingId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-dev",
+            "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+            "revision": 1
+          },
+          {
+            "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:lead",
+            "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+            "name": "lead",
+            "enabled": 1,
+            "purpose": "lead",
+            "kind": "dsh-lead",
+            "providerBindingId": null,
+            "prompt": "Coordinate a durable plan, parallel independent developers and exact-commit acceptance. Do not claim success before workflow_finish succeeds.",
+            "revision": 1
+          },
+          {
+            "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:reviewer",
+            "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+            "name": "reviewer",
+            "enabled": 1,
+            "purpose": "reviewer",
+            "kind": "subagent",
+            "providerBindingId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-review",
+            "prompt": "Review the exact candidate commit read-only. Never edit or commit. Return one JSON object matching resultSchema; approve only when all acceptance criteria pass.",
+            "revision": 1
+          }
+        ],
+        "tasks": [
+          {
+            "id": "east-alpha",
+            "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+            "roleId": null,
+            "kind": "change",
+            "title": "east alpha marker",
+            "instructions": "Write exactly \"east:alpha\\n\" to marker-alpha.txt in your assigned cwd. Do not edit any other file, do not run git commit. Return only one JSON object matching the supplied resultSchema with exact taskId/runId.",
+            "expectedPaths": [
+              "marker-alpha.txt"
+            ],
+            "acceptanceCriteria": [
+              "marker-alpha.txt contains exactly east:alpha plus a newline; no unrelated edits."
+            ],
+            "status": "succeeded",
+            "attempt": 1,
+            "version": 4,
+            "acceptedCommit": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+            "sourceHead": "08239dd193423ce6f8aad9aecf81cdb5b73524fe",
+            "blockingReason": null,
+            "analysisItems": null,
+            "priority": 0,
+            "dependencyStatus": "ready"
+          },
+          {
+            "id": "east-beta",
+            "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+            "roleId": null,
+            "kind": "change",
+            "title": "east beta marker",
+            "instructions": "Write exactly \"east:beta\\n\" to marker-beta.txt in your assigned cwd. Do not edit any other file, do not run git commit. Return only one JSON object matching the supplied resultSchema with exact taskId/runId.",
+            "expectedPaths": [
+              "marker-beta.txt"
+            ],
+            "acceptanceCriteria": [
+              "marker-beta.txt contains exactly east:beta plus a newline; no unrelated edits."
+            ],
+            "status": "succeeded",
+            "attempt": 1,
+            "version": 4,
+            "acceptedCommit": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+            "sourceHead": "544f6338395ff7e5576464262ea5e48ff503b1f5",
+            "blockingReason": null,
+            "analysisItems": null,
+            "priority": 0,
+            "dependencyStatus": "ready"
+          },
+          {
+            "id": "east-analysis-batch",
+            "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+            "roleId": null,
+            "kind": "analysis",
+            "title": "Batch inspect accepted marker metadata",
+            "instructions": "Answer the batch items read-only. Do not create or modify any files or commits.",
+            "expectedPaths": [],
+            "acceptanceCriteria": [],
+            "status": "succeeded",
+            "attempt": 1,
+            "version": 2,
+            "acceptedCommit": null,
+            "sourceHead": null,
+            "blockingReason": null,
+            "analysisItems": [
+              {
+                "id": "alpha",
+                "prompt": "Return the literal concise text alpha:11. This is analysis only; do not use shell, files or tools."
+              },
+              {
+                "id": "beta",
+                "prompt": "Return the literal concise text beta:22. This is analysis only; do not use shell, files or tools."
+              }
+            ],
+            "priority": 0,
+            "dependencyStatus": "ready"
+          }
+        ],
+        "runs": [
+          {
+            "id": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+            "taskId": "east-alpha",
+            "roleId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:developer-a",
+            "purpose": "develop",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:developer-a",
+                "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+                "name": "developer-a",
+                "enabled": 1,
+                "purpose": "developer",
+                "kind": "subagent",
+                "providerBindingId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-dev",
+                "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+                "revision": 1
+              },
+              "binding": {
+                "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-dev",
+                "providerName": "codex-dev",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:codex"
+                ],
+                "runtime": null,
+                "model": null,
+                "spawn": null
+              }
+            },
+            "dshChildId": "08cdb17e-6b9d-47b0-9de7-c57d76317c0a",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T10:42:44.486Z",
+            "deadline": "2026-10-25T10:46:24.567Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "east-alpha",
+              "runId": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+              "outcome": "completed",
+              "summary": "Created marker-alpha.txt with exactly east:alpha followed by a newline.",
+              "changedPaths": [
+                "marker-alpha.txt"
+              ],
+              "checksClaimed": [
+                "Verified exact 11-byte content with LF newline.",
+                "Verified git status shows only marker-alpha.txt added."
+              ],
+              "blockingReasons": []
+            },
+            "createdAt": "2026-10-25T10:42:24.567Z",
+            "startedAt": "2026-10-25T10:42:27.871Z",
+            "endedAt": "2026-10-25T10:42:44.484Z",
+            "resultArtifactId": "artifact-9de4c8ab-f65b-4568-82d6-6d060daad4b3"
+          },
+          {
+            "id": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+            "taskId": "east-beta",
+            "roleId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:developer-b",
+            "purpose": "develop",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:developer-b",
+                "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+                "name": "developer-b",
+                "enabled": 1,
+                "purpose": "developer",
+                "kind": "subagent",
+                "providerBindingId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-dev",
+                "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+                "revision": 1
+              },
+              "binding": {
+                "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-dev",
+                "providerName": "codex-dev",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:codex"
+                ],
+                "runtime": null,
+                "model": null,
+                "spawn": null
+              }
+            },
+            "dshChildId": "6f0ef50d-bd04-4eae-ba2a-da138b2defd0",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T10:42:42.741Z",
+            "deadline": "2026-10-25T10:46:24.573Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "east-beta",
+              "runId": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+              "outcome": "completed",
+              "summary": "Created marker-beta.txt with exactly east:beta followed by LF. No other files edited; no commit run.",
+              "changedPaths": [
+                "marker-beta.txt"
+              ],
+              "checksClaimed": [
+                "Verified exact file bytes equal UTF-8 east:beta\\n, without BOM."
+              ],
+              "blockingReasons": []
+            },
+            "createdAt": "2026-10-25T10:42:24.573Z",
+            "startedAt": "2026-10-25T10:42:27.637Z",
+            "endedAt": "2026-10-25T10:42:42.738Z",
+            "resultArtifactId": "artifact-cd0e864e-257c-4cda-a25d-280f0cf1abf0"
+          },
+          {
+            "id": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5",
+            "taskId": "east-beta",
+            "roleId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:reviewer",
+            "purpose": "review",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:reviewer",
+                "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+                "name": "reviewer",
+                "enabled": 1,
+                "purpose": "reviewer",
+                "kind": "subagent",
+                "providerBindingId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-review",
+                "prompt": "Review the exact candidate commit read-only. Never edit or commit. Return one JSON object matching resultSchema; approve only when all acceptance criteria pass.",
+                "revision": 1
+              },
+              "binding": {
+                "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-review",
+                "providerName": "codex-review",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:codex"
+                ],
+                "runtime": null,
+                "model": null,
+                "spawn": null
+              }
+            },
+            "dshChildId": "e56d736d-b38a-49b5-a8a2-fab6882a3c8c",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T10:43:12.181Z",
+            "deadline": "2026-10-25T10:46:44.045Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "east-beta",
+              "runId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5",
+              "verdict": "approve",
+              "reviewedCommit": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+              "findings": []
+            },
+            "createdAt": "2026-10-25T10:42:44.045Z",
+            "startedAt": "2026-10-25T10:42:44.416Z",
+            "endedAt": "2026-10-25T10:43:12.179Z",
+            "resultArtifactId": "artifact-2adbd71a-fa28-476d-9c97-5f6f373d4338"
+          },
+          {
+            "id": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c",
+            "taskId": "east-alpha",
+            "roleId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:reviewer",
+            "purpose": "review",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:reviewer",
+                "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+                "name": "reviewer",
+                "enabled": 1,
+                "purpose": "reviewer",
+                "kind": "subagent",
+                "providerBindingId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-review",
+                "prompt": "Review the exact candidate commit read-only. Never edit or commit. Return one JSON object matching resultSchema; approve only when all acceptance criteria pass.",
+                "revision": 1
+              },
+              "binding": {
+                "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-review",
+                "providerName": "codex-review",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:codex"
+                ],
+                "runtime": null,
+                "model": null,
+                "spawn": null
+              }
+            },
+            "dshChildId": "4ea0fdaa-adcf-4ec9-8b01-98b4df680f67",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T10:44:11.261Z",
+            "deadline": "2026-10-25T10:47:45.375Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "east-alpha",
+              "runId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c",
+              "verdict": "approve",
+              "reviewedCommit": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+              "findings": []
+            },
+            "createdAt": "2026-10-25T10:43:45.375Z",
+            "startedAt": "2026-10-25T10:43:47.620Z",
+            "endedAt": "2026-10-25T10:44:11.259Z",
+            "resultArtifactId": "artifact-22e2ad67-2889-48cd-91ff-9da1cc745dff"
+          },
+          {
+            "id": "run-193c6d69-d1af-463d-b354-f345cc445558",
+            "taskId": "east-analysis-batch",
+            "roleId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:developer-a",
+            "purpose": "develop",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:developer-a",
+                "workspaceId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e",
+                "name": "developer-a",
+                "enabled": 1,
+                "purpose": "developer",
+                "kind": "subagent",
+                "providerBindingId": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-dev",
+                "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+                "revision": 1
+              },
+              "binding": {
+                "id": "workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e:codex-dev",
+                "providerName": "codex-dev",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:codex"
+                ],
+                "runtime": null,
+                "model": null,
+                "spawn": null
+              }
+            },
+            "dshChildId": "rift-analysis-32808334-f08d-48d0-a9ea-c0e5cfa0472a",
+            "dshRunId": "cca4daa5-9b0e-4b78-97a3-4ada983fda17",
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T10:44:51.742Z",
+            "deadline": "2026-10-25T10:48:36.966Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "east-analysis-batch",
+              "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+              "outcome": "completed",
+              "summary": "{\"workflowRunId\":\"cca4daa5-9b0e-4b78-97a3-4ada983fda17\",\"items\":[{\"id\":\"alpha\",\"text\":\"alpha:11\"},{\"id\":\"beta\",\"text\":\"beta:22\"}]}",
+              "changedPaths": [],
+              "checksClaimed": [],
+              "blockingReasons": []
+            },
+            "createdAt": "2026-10-25T10:44:36.966Z",
+            "startedAt": "2026-10-25T10:44:37.305Z",
+            "endedAt": "2026-10-25T10:44:51.739Z",
+            "resultArtifactId": "artifact-d6a1a52d-ba38-4f9c-8c40-2aed6539e76e"
+          }
+        ],
+        "worktrees": [
+          {
+            "id": "east-alpha:1",
+            "taskId": "east-alpha",
+            "attempt": 1,
+            "kind": "task",
+            "path": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\worktrees\\4fbf23d26eeb73fef7381ac3",
+            "branch": "rift/ccc335c0b3829007130d75f0/aebda94417f0416e4456bf05/1",
+            "baseCommit": "33ef29fa98581fb80498fba0530e9e40229bf281",
+            "headCommit": "08239dd193423ce6f8aad9aecf81cdb5b73524fe",
+            "writerRunId": null,
+            "status": "active"
+          },
+          {
+            "id": "east-beta:1",
+            "taskId": "east-beta",
+            "attempt": 1,
+            "kind": "task",
+            "path": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\worktrees\\1d0e29718e83836c517222f9",
+            "branch": "rift/ccc335c0b3829007130d75f0/939e507b6caeec2370c6980d/1",
+            "baseCommit": "33ef29fa98581fb80498fba0530e9e40229bf281",
+            "headCommit": "544f6338395ff7e5576464262ea5e48ff503b1f5",
+            "writerRunId": null,
+            "status": "active"
+          },
+          {
+            "id": "east-analysis-batch:1",
+            "taskId": "east-analysis-batch",
+            "attempt": 1,
+            "kind": "task",
+            "path": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\worktrees\\8b1267938fe648a618363d77",
+            "branch": "rift/ccc335c0b3829007130d75f0/7251f5698bf1b96915212ccf/1",
+            "baseCommit": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+            "headCommit": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+            "writerRunId": null,
+            "status": "active"
+          }
+        ],
+        "operations": [
+          {
+            "id": "request-f348d6e1-2635-4feb-abeb-339a8bebea80",
+            "kind": "dispatch",
+            "dedupeKey": "dispatch-east-alpha",
+            "entityId": "east-alpha",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 0,
+              "planRevision": 1,
+              "runId": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947"
+            },
+            "createdAt": "2026-10-25T10:42:24.565Z"
+          },
+          {
+            "id": "request-fd93a10b-a453-41de-946d-ed75a73fb6c0",
+            "kind": "dispatch",
+            "dedupeKey": "dispatch-east-beta",
+            "entityId": "east-beta",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 0,
+              "planRevision": 1,
+              "runId": "run-4e6b9afe-950d-44fd-a89c-70087313cf00"
+            },
+            "createdAt": "2026-10-25T10:42:24.571Z"
+          },
+          {
+            "id": "request-1d435412-fb5a-4f35-a3bd-c4d193b76a6d",
+            "kind": "integration",
+            "dedupeKey": "auto-integration:east-beta:1",
+            "entityId": "east-beta",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 2,
+              "planRevision": 1,
+              "sourceHead": "544f6338395ff7e5576464262ea5e48ff503b1f5",
+              "integrationId": "integration-2ece33c3-7e84-4153-9197-05274e302509",
+              "runId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5"
+            },
+            "createdAt": "2026-10-25T10:42:43.351Z"
+          },
+          {
+            "id": "request-ccdea436-bf93-4ca9-8929-be9a3cc75be5",
+            "kind": "integration",
+            "dedupeKey": "auto-integration:east-alpha:1",
+            "entityId": "east-alpha",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 2,
+              "planRevision": 1,
+              "sourceHead": "08239dd193423ce6f8aad9aecf81cdb5b73524fe",
+              "integrationId": "integration-52b8460e-55e0-4f1b-aac0-828701294596",
+              "runId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c"
+            },
+            "createdAt": "2026-10-25T10:42:45.103Z"
+          },
+          {
+            "id": "request-7b29d812-5cae-4608-8c90-2f873a50f5e4",
+            "kind": "dispatch",
+            "dedupeKey": "dispatch-east-analysis-batch",
+            "entityId": "east-analysis-batch",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 0,
+              "planRevision": 2,
+              "runId": "run-193c6d69-d1af-463d-b354-f345cc445558"
+            },
+            "createdAt": "2026-10-25T10:44:36.966Z"
+          }
+        ],
+        "integrations": [
+          {
+            "id": "integration-2ece33c3-7e84-4153-9197-05274e302509",
+            "taskId": "east-beta",
+            "sourceHead": "544f6338395ff7e5576464262ea5e48ff503b1f5",
+            "expectedTargetHead": "33ef29fa98581fb80498fba0530e9e40229bf281",
+            "candidateHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+            "checkIds": [
+              "545aacfa-26f8-44e1-8416-b4847ddd89f5",
+              "d92d2bbe-fe2b-4424-a947-a005117e1218"
+            ],
+            "reviewRunId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5",
+            "status": "accepted",
+            "candidate": {
+              "integrationId": "integration-2ece33c3-7e84-4153-9197-05274e302509",
+              "sourceHead": "544f6338395ff7e5576464262ea5e48ff503b1f5",
+              "candidateHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+              "expectedTargetHead": "33ef29fa98581fb80498fba0530e9e40229bf281",
+              "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\reviews\\f4a42e92b2f360005706a2a9",
+              "checkIds": [
+                "545aacfa-26f8-44e1-8416-b4847ddd89f5",
+                "d92d2bbe-fe2b-4424-a947-a005117e1218"
+              ]
+            },
+            "error": null
+          },
+          {
+            "id": "integration-52b8460e-55e0-4f1b-aac0-828701294596",
+            "taskId": "east-alpha",
+            "sourceHead": "08239dd193423ce6f8aad9aecf81cdb5b73524fe",
+            "expectedTargetHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+            "candidateHead": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+            "checkIds": [
+              "7e6983da-f0df-436c-8863-cd7a646b850b",
+              "530206ce-a97a-4cf9-b401-dd22669c7df4"
+            ],
+            "reviewRunId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c",
+            "status": "accepted",
+            "candidate": {
+              "integrationId": "integration-52b8460e-55e0-4f1b-aac0-828701294596",
+              "sourceHead": "08239dd193423ce6f8aad9aecf81cdb5b73524fe",
+              "candidateHead": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+              "expectedTargetHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+              "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\reviews\\62d901e1786296097ee531be",
+              "checkIds": [
+                "7e6983da-f0df-436c-8863-cd7a646b850b",
+                "530206ce-a97a-4cf9-b401-dd22669c7df4"
+              ]
+            },
+            "error": null
+          }
+        ],
+        "limits": {
+          "developers": 4,
+          "total": 5,
+          "maxTasks": 1000,
+          "maxReplans": 100,
+          "agingMs": 60000
+        },
+        "globalSlots": {
+          "developers": 0,
+          "reviewers": 0,
+          "total": 0
+        },
+        "slots": {
+          "developers": 0,
+          "reviewers": 0,
+          "total": 0
+        },
+        "eventSeq": 99
+      },
+      "events": [
+        {
+          "eventSeq": 1,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "workflow.created",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:24.008Z"
+        },
+        {
+          "eventSeq": 2,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "lead.attached",
+          "payload": {
+            "sessionId": "rift-lead-46e63df6-b072-4ee1-ab61-dca0deadf88b"
+          },
+          "occurredAt": "2026-10-25T10:42:24.016Z"
+        },
+        {
+          "eventSeq": 3,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "plan.accepted",
+          "payload": {
+            "revision": 1,
+            "taskIds": [
+              "east-alpha",
+              "east-beta"
+            ],
+            "acceptanceCriteria": []
+          },
+          "occurredAt": "2026-10-25T10:42:24.017Z"
+        },
+        {
+          "eventSeq": 7,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": null,
+          "requestId": "request-f348d6e1-2635-4feb-abeb-339a8bebea80",
+          "type": "dispatch.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:24.566Z"
+        },
+        {
+          "eventSeq": 8,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "requestId": "request-f348d6e1-2635-4feb-abeb-339a8bebea80",
+          "type": "dispatch.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:24.567Z"
+        },
+        {
+          "eventSeq": 9,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "requestId": "request-f348d6e1-2635-4feb-abeb-339a8bebea80",
+          "type": "dispatch_reserved",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:24.567Z"
+        },
+        {
+          "eventSeq": 10,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": null,
+          "requestId": "request-fd93a10b-a453-41de-946d-ed75a73fb6c0",
+          "type": "dispatch.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:24.571Z"
+        },
+        {
+          "eventSeq": 11,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "requestId": "request-fd93a10b-a453-41de-946d-ed75a73fb6c0",
+          "type": "dispatch.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:24.573Z"
+        },
+        {
+          "eventSeq": 12,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "requestId": "request-fd93a10b-a453-41de-946d-ed75a73fb6c0",
+          "type": "dispatch_reserved",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:24.573Z"
+        },
+        {
+          "eventSeq": 19,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-c28726eb-09c4-4cc7-bca5-ced956b58f69",
+            "promptSha256": "acccade83f51c95035af81f1c08d26ac31ec5fe7269ee7561f6b2dcaca498667",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\worktrees\\4fbf23d26eeb73fef7381ac3",
+            "baseCommit": "33ef29fa98581fb80498fba0530e9e40229bf281",
+            "sourceHead": null,
+            "candidateHead": null
+          },
+          "occurredAt": "2026-10-25T10:42:25.138Z"
+        },
+        {
+          "eventSeq": 21,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-9b269e59-de62-4a7b-b065-f206cc510c65",
+            "promptSha256": "dcf98f951df480c74d27a01a464a789ec269f7a5c76eddb6faff5a29dd0f88af",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\worktrees\\1d0e29718e83836c517222f9",
+            "baseCommit": "33ef29fa98581fb80498fba0530e9e40229bf281",
+            "sourceHead": null,
+            "candidateHead": null
+          },
+          "occurredAt": "2026-10-25T10:42:25.193Z"
+        },
+        {
+          "eventSeq": 23,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "6f0ef50d-bd04-4eae-ba2a-da138b2defd0"
+          },
+          "occurredAt": "2026-10-25T10:42:27.637Z"
+        },
+        {
+          "eventSeq": 26,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "08cdb17e-6b9d-47b0-9de7-c57d76317c0a"
+          },
+          "occurredAt": "2026-10-25T10:42:27.871Z"
+        },
+        {
+          "eventSeq": 27,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "east-beta",
+              "runId": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+              "outcome": "completed",
+              "summary": "Created marker-beta.txt with exactly east:beta followed by LF. No other files edited; no commit run.",
+              "changedPaths": [
+                "marker-beta.txt"
+              ],
+              "checksClaimed": [
+                "Verified exact file bytes equal UTF-8 east:beta\\n, without BOM."
+              ],
+              "blockingReasons": []
+            },
+            "artifactId": "artifact-cd0e864e-257c-4cda-a25d-280f0cf1abf0"
+          },
+          "occurredAt": "2026-10-25T10:42:42.739Z"
+        },
+        {
+          "eventSeq": 28,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:42.741Z"
+        },
+        {
+          "eventSeq": 29,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "requestId": "request-fd93a10b-a453-41de-946d-ed75a73fb6c0",
+          "type": "dispatch.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:43.350Z"
+        },
+        {
+          "eventSeq": 30,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": "run-4e6b9afe-950d-44fd-a89c-70087313cf00",
+          "requestId": null,
+          "type": "source.collected",
+          "payload": {
+            "sourceHead": "544f6338395ff7e5576464262ea5e48ff503b1f5",
+            "diff": "diff --git a/marker-beta.txt b/marker-beta.txt\nnew file mode 100644\nindex 0000000..10cfe12\n--- /dev/null\n+++ b/marker-beta.txt\n@@ -0,0 +1 @@\n+east:beta",
+            "changedPaths": [
+              "marker-beta.txt"
+            ],
+            "taskAttempt": 1,
+            "eligibleForIntegration": true
+          },
+          "occurredAt": "2026-10-25T10:42:43.350Z"
+        },
+        {
+          "eventSeq": 31,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": null,
+          "requestId": "request-1d435412-fb5a-4f35-a3bd-c4d193b76a6d",
+          "type": "integration.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:43.351Z"
+        },
+        {
+          "eventSeq": 32,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": null,
+          "requestId": "request-1d435412-fb5a-4f35-a3bd-c4d193b76a6d",
+          "type": "integration.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:43.352Z"
+        },
+        {
+          "eventSeq": 33,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": null,
+          "requestId": "request-1d435412-fb5a-4f35-a3bd-c4d193b76a6d",
+          "type": "candidate.prepared",
+          "payload": {
+            "integrationId": "integration-2ece33c3-7e84-4153-9197-05274e302509",
+            "sourceHead": "544f6338395ff7e5576464262ea5e48ff503b1f5",
+            "candidateHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+            "expectedTargetHead": "33ef29fa98581fb80498fba0530e9e40229bf281",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\reviews\\f4a42e92b2f360005706a2a9",
+            "checkIds": [
+              "545aacfa-26f8-44e1-8416-b4847ddd89f5",
+              "d92d2bbe-fe2b-4424-a947-a005117e1218"
+            ]
+          },
+          "occurredAt": "2026-10-25T10:42:44.045Z"
+        },
+        {
+          "eventSeq": 34,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5",
+          "requestId": "request-1d435412-fb5a-4f35-a3bd-c4d193b76a6d",
+          "type": "review.reserved",
+          "payload": {
+            "candidateHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383"
+          },
+          "occurredAt": "2026-10-25T10:42:44.046Z"
+        },
+        {
+          "eventSeq": 35,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-7fb1574c-e165-4332-8617-cb7cec97636a",
+            "promptSha256": "a8fb8af63121d8d5cc4228fc35f13b4e9f3ec9cfcdcf6f8b9bce53578d995003",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\reviews\\f4a42e92b2f360005706a2a9",
+            "baseCommit": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+            "sourceHead": "544f6338395ff7e5576464262ea5e48ff503b1f5",
+            "candidateHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383"
+          },
+          "occurredAt": "2026-10-25T10:42:44.055Z"
+        },
+        {
+          "eventSeq": 36,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "e56d736d-b38a-49b5-a8a2-fab6882a3c8c"
+          },
+          "occurredAt": "2026-10-25T10:42:44.416Z"
+        },
+        {
+          "eventSeq": 37,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "east-alpha",
+              "runId": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+              "outcome": "completed",
+              "summary": "Created marker-alpha.txt with exactly east:alpha followed by a newline.",
+              "changedPaths": [
+                "marker-alpha.txt"
+              ],
+              "checksClaimed": [
+                "Verified exact 11-byte content with LF newline.",
+                "Verified git status shows only marker-alpha.txt added."
+              ],
+              "blockingReasons": []
+            },
+            "artifactId": "artifact-9de4c8ab-f65b-4568-82d6-6d060daad4b3"
+          },
+          "occurredAt": "2026-10-25T10:42:44.485Z"
+        },
+        {
+          "eventSeq": 38,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:44.486Z"
+        },
+        {
+          "eventSeq": 39,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "requestId": "request-f348d6e1-2635-4feb-abeb-339a8bebea80",
+          "type": "dispatch.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:45.102Z"
+        },
+        {
+          "eventSeq": 40,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": "run-5a14611e-b2b7-42d5-9e44-b35ac7f5f947",
+          "requestId": null,
+          "type": "source.collected",
+          "payload": {
+            "sourceHead": "08239dd193423ce6f8aad9aecf81cdb5b73524fe",
+            "diff": "diff --git a/marker-alpha.txt b/marker-alpha.txt\nnew file mode 100644\nindex 0000000..ac10a47\n--- /dev/null\n+++ b/marker-alpha.txt\n@@ -0,0 +1 @@\n+east:alpha",
+            "changedPaths": [
+              "marker-alpha.txt"
+            ],
+            "taskAttempt": 1,
+            "eligibleForIntegration": true
+          },
+          "occurredAt": "2026-10-25T10:42:45.103Z"
+        },
+        {
+          "eventSeq": 41,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": null,
+          "requestId": "request-ccdea436-bf93-4ca9-8929-be9a3cc75be5",
+          "type": "integration.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:45.103Z"
+        },
+        {
+          "eventSeq": 52,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "east-beta",
+              "runId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5",
+              "verdict": "approve",
+              "reviewedCommit": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+              "findings": []
+            },
+            "artifactId": "artifact-2adbd71a-fa28-476d-9c97-5f6f373d4338"
+          },
+          "occurredAt": "2026-10-25T10:43:12.180Z"
+        },
+        {
+          "eventSeq": 53,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:43:12.181Z"
+        },
+        {
+          "eventSeq": 54,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": null,
+          "requestId": "request-1d435412-fb5a-4f35-a3bd-c4d193b76a6d",
+          "type": "publication.intent",
+          "payload": {
+            "integrationId": "integration-2ece33c3-7e84-4153-9197-05274e302509",
+            "sourceHead": "544f6338395ff7e5576464262ea5e48ff503b1f5",
+            "candidateHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+            "expectedTargetHead": "33ef29fa98581fb80498fba0530e9e40229bf281",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\reviews\\f4a42e92b2f360005706a2a9",
+            "checkIds": [
+              "545aacfa-26f8-44e1-8416-b4847ddd89f5",
+              "d92d2bbe-fe2b-4424-a947-a005117e1218"
+            ]
+          },
+          "occurredAt": "2026-10-25T10:43:12.181Z"
+        },
+        {
+          "eventSeq": 55,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5",
+          "requestId": "request-1d435412-fb5a-4f35-a3bd-c4d193b76a6d",
+          "type": "integration.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:43:12.524Z"
+        },
+        {
+          "eventSeq": 56,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-beta",
+          "runId": null,
+          "requestId": "request-1d435412-fb5a-4f35-a3bd-c4d193b76a6d",
+          "type": "integration.accepted",
+          "payload": {
+            "integrationId": "integration-2ece33c3-7e84-4153-9197-05274e302509",
+            "acceptedCommit": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383"
+          },
+          "occurredAt": "2026-10-25T10:43:12.524Z"
+        },
+        {
+          "eventSeq": 67,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": null,
+          "requestId": "request-ccdea436-bf93-4ca9-8929-be9a3cc75be5",
+          "type": "integration.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:43:44.647Z"
+        },
+        {
+          "eventSeq": 68,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": null,
+          "requestId": "request-ccdea436-bf93-4ca9-8929-be9a3cc75be5",
+          "type": "candidate.prepared",
+          "payload": {
+            "integrationId": "integration-52b8460e-55e0-4f1b-aac0-828701294596",
+            "sourceHead": "08239dd193423ce6f8aad9aecf81cdb5b73524fe",
+            "candidateHead": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+            "expectedTargetHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\reviews\\62d901e1786296097ee531be",
+            "checkIds": [
+              "7e6983da-f0df-436c-8863-cd7a646b850b",
+              "530206ce-a97a-4cf9-b401-dd22669c7df4"
+            ]
+          },
+          "occurredAt": "2026-10-25T10:43:45.374Z"
+        },
+        {
+          "eventSeq": 69,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c",
+          "requestId": "request-ccdea436-bf93-4ca9-8929-be9a3cc75be5",
+          "type": "review.reserved",
+          "payload": {
+            "candidateHead": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01"
+          },
+          "occurredAt": "2026-10-25T10:43:45.375Z"
+        },
+        {
+          "eventSeq": 70,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-2d5a0efc-1d7a-416f-8f94-f09ff0e86c2e",
+            "promptSha256": "b9eb6a761b24126409d5d71f316677b03dea29f107608191c66803bedbfb7bc0",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\reviews\\62d901e1786296097ee531be",
+            "baseCommit": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+            "sourceHead": "08239dd193423ce6f8aad9aecf81cdb5b73524fe",
+            "candidateHead": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01"
+          },
+          "occurredAt": "2026-10-25T10:43:45.384Z"
+        },
+        {
+          "eventSeq": 71,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "4ea0fdaa-adcf-4ec9-8b01-98b4df680f67"
+          },
+          "occurredAt": "2026-10-25T10:43:47.620Z"
+        },
+        {
+          "eventSeq": 72,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "east-alpha",
+              "runId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c",
+              "verdict": "approve",
+              "reviewedCommit": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+              "findings": []
+            },
+            "artifactId": "artifact-22e2ad67-2889-48cd-91ff-9da1cc745dff"
+          },
+          "occurredAt": "2026-10-25T10:44:11.260Z"
+        },
+        {
+          "eventSeq": 73,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:44:11.261Z"
+        },
+        {
+          "eventSeq": 74,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": null,
+          "requestId": "request-ccdea436-bf93-4ca9-8929-be9a3cc75be5",
+          "type": "publication.intent",
+          "payload": {
+            "integrationId": "integration-52b8460e-55e0-4f1b-aac0-828701294596",
+            "sourceHead": "08239dd193423ce6f8aad9aecf81cdb5b73524fe",
+            "candidateHead": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+            "expectedTargetHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\reviews\\62d901e1786296097ee531be",
+            "checkIds": [
+              "7e6983da-f0df-436c-8863-cd7a646b850b",
+              "530206ce-a97a-4cf9-b401-dd22669c7df4"
+            ]
+          },
+          "occurredAt": "2026-10-25T10:44:11.262Z"
+        },
+        {
+          "eventSeq": 75,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c",
+          "requestId": "request-ccdea436-bf93-4ca9-8929-be9a3cc75be5",
+          "type": "integration.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:44:11.603Z"
+        },
+        {
+          "eventSeq": 76,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-alpha",
+          "runId": null,
+          "requestId": "request-ccdea436-bf93-4ca9-8929-be9a3cc75be5",
+          "type": "integration.accepted",
+          "payload": {
+            "integrationId": "integration-52b8460e-55e0-4f1b-aac0-828701294596",
+            "acceptedCommit": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01"
+          },
+          "occurredAt": "2026-10-25T10:44:11.603Z"
+        },
+        {
+          "eventSeq": 87,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "plan.accepted",
+          "payload": {
+            "revision": 2,
+            "taskIds": [
+              "east-analysis-batch"
+            ],
+            "acceptanceCriteria": []
+          },
+          "occurredAt": "2026-10-25T10:44:36.965Z"
+        },
+        {
+          "eventSeq": 88,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-analysis-batch",
+          "runId": null,
+          "requestId": "request-7b29d812-5cae-4608-8c90-2f873a50f5e4",
+          "type": "dispatch.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:44:36.966Z"
+        },
+        {
+          "eventSeq": 89,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-analysis-batch",
+          "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+          "requestId": "request-7b29d812-5cae-4608-8c90-2f873a50f5e4",
+          "type": "dispatch.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:44:36.967Z"
+        },
+        {
+          "eventSeq": 90,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-analysis-batch",
+          "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+          "requestId": "request-7b29d812-5cae-4608-8c90-2f873a50f5e4",
+          "type": "dispatch_reserved",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:44:36.967Z"
+        },
+        {
+          "eventSeq": 91,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-analysis-batch",
+          "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-66180057-0b62-440f-8b7d-b246ddbb9e08",
+            "promptSha256": "e3685895a2d41f5ca850d9fb089f161a3d78cf95bc355c92b74cb54c3433eeb2",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\worktrees\\8b1267938fe648a618363d77",
+            "baseCommit": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+            "sourceHead": null,
+            "candidateHead": null
+          },
+          "occurredAt": "2026-10-25T10:44:37.301Z"
+        },
+        {
+          "eventSeq": 92,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-analysis-batch",
+          "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+          "requestId": null,
+          "type": "analysis.workflow_started",
+          "payload": {
+            "workflowRunId": "cca4daa5-9b0e-4b78-97a3-4ada983fda17",
+            "parentSessionId": "rift-analysis-32808334-f08d-48d0-a9ea-c0e5cfa0472a",
+            "itemIds": [
+              "alpha",
+              "beta"
+            ],
+            "maxConcurrentChildren": 1
+          },
+          "occurredAt": "2026-10-25T10:44:37.304Z"
+        },
+        {
+          "eventSeq": 93,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-analysis-batch",
+          "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "rift-analysis-32808334-f08d-48d0-a9ea-c0e5cfa0472a"
+          },
+          "occurredAt": "2026-10-25T10:44:37.305Z"
+        },
+        {
+          "eventSeq": 94,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-analysis-batch",
+          "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "east-analysis-batch",
+              "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+              "outcome": "completed",
+              "summary": "{\"workflowRunId\":\"cca4daa5-9b0e-4b78-97a3-4ada983fda17\",\"items\":[{\"id\":\"alpha\",\"text\":\"alpha:11\"},{\"id\":\"beta\",\"text\":\"beta:22\"}]}",
+              "changedPaths": [],
+              "checksClaimed": [],
+              "blockingReasons": []
+            },
+            "artifactId": "artifact-d6a1a52d-ba38-4f9c-8c40-2aed6539e76e"
+          },
+          "occurredAt": "2026-10-25T10:44:51.740Z"
+        },
+        {
+          "eventSeq": 95,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-analysis-batch",
+          "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:44:51.742Z"
+        },
+        {
+          "eventSeq": 96,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-analysis-batch",
+          "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+          "requestId": null,
+          "type": "analysis.verified",
+          "payload": {
+            "headCommit": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01"
+          },
+          "occurredAt": "2026-10-25T10:44:52.131Z"
+        },
+        {
+          "eventSeq": 97,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-analysis-batch",
+          "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+          "requestId": "request-7b29d812-5cae-4608-8c90-2f873a50f5e4",
+          "type": "dispatch.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:44:52.131Z"
+        },
+        {
+          "eventSeq": 98,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": "east-analysis-batch",
+          "runId": "run-193c6d69-d1af-463d-b354-f345cc445558",
+          "requestId": null,
+          "type": "task.succeeded",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:44:52.131Z"
+        },
+        {
+          "eventSeq": 99,
+          "workflowId": "workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "workflow.completed",
+          "payload": {
+            "summary": "Independent E1 native evidence verified: exact native reviews, trusted checks, accepted marker contents, confirmed cleanup."
+          },
+          "occurredAt": "2026-10-25T10:44:52.446Z"
+        }
+      ],
+      "integratedHead": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+      "baselineUnchanged": true
+    },
+    {
+      "status": {
+        "workflow": {
+          "id": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+          "goal": "Create two verified west markers and analyze accepted results.",
+          "leadSessionId": "rift-lead-a1fd718e-5dbb-4b2b-ae7d-77bcbee0afa2",
+          "planRevision": 1,
+          "version": 2,
+          "status": "completed",
+          "integrationRef": "refs/heads/rift/workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645/workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "baseCommit": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51",
+          "summary": "Independent E1 native evidence verified: exact native reviews, trusted checks, accepted marker contents, confirmed cleanup.",
+          "lastScheduled": 8
+        },
+        "roles": [
+          {
+            "id": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:developer-a",
+            "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+            "name": "developer-a",
+            "enabled": 1,
+            "purpose": "developer",
+            "kind": "subagent",
+            "providerBindingId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:codex-dev",
+            "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+            "revision": 1
+          },
+          {
+            "id": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:developer-b",
+            "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+            "name": "developer-b",
+            "enabled": 1,
+            "purpose": "developer",
+            "kind": "subagent",
+            "providerBindingId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:codex-dev",
+            "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+            "revision": 1
+          },
+          {
+            "id": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:developer-c",
+            "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+            "name": "developer-c",
+            "enabled": 1,
+            "purpose": "developer",
+            "kind": "subagent",
+            "providerBindingId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:codex-dev",
+            "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+            "revision": 1
+          },
+          {
+            "id": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:developer-d",
+            "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+            "name": "developer-d",
+            "enabled": 1,
+            "purpose": "developer",
+            "kind": "subagent",
+            "providerBindingId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:codex-dev",
+            "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+            "revision": 1
+          },
+          {
+            "id": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:lead",
+            "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+            "name": "lead",
+            "enabled": 1,
+            "purpose": "lead",
+            "kind": "dsh-lead",
+            "providerBindingId": null,
+            "prompt": "Coordinate a durable plan, parallel independent developers and exact-commit acceptance. Do not claim success before workflow_finish succeeds.",
+            "revision": 1
+          },
+          {
+            "id": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:reviewer",
+            "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+            "name": "reviewer",
+            "enabled": 1,
+            "purpose": "reviewer",
+            "kind": "subagent",
+            "providerBindingId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:codex-review",
+            "prompt": "Review the exact candidate commit read-only. Never edit or commit. Return one JSON object matching resultSchema; approve only when all acceptance criteria pass.",
+            "revision": 1
+          }
+        ],
+        "tasks": [
+          {
+            "id": "west-alpha",
+            "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+            "roleId": null,
+            "kind": "change",
+            "title": "west alpha marker",
+            "instructions": "Write exactly \"west:alpha\\n\" to marker-alpha.txt in your assigned cwd. Do not edit any other file, do not run git commit. Return only one JSON object matching the supplied resultSchema with exact taskId/runId.",
+            "expectedPaths": [
+              "marker-alpha.txt"
+            ],
+            "acceptanceCriteria": [
+              "marker-alpha.txt contains exactly west:alpha plus a newline; no unrelated edits."
+            ],
+            "status": "succeeded",
+            "attempt": 1,
+            "version": 4,
+            "acceptedCommit": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+            "sourceHead": "18d729ba240a0f7db24b3fbb41e598ccbbcf8084",
+            "blockingReason": null,
+            "analysisItems": null,
+            "priority": 0,
+            "dependencyStatus": "ready"
+          },
+          {
+            "id": "west-beta",
+            "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+            "roleId": null,
+            "kind": "change",
+            "title": "west beta marker",
+            "instructions": "Write exactly \"west:beta\\n\" to marker-beta.txt in your assigned cwd. Do not edit any other file, do not run git commit. Return only one JSON object matching the supplied resultSchema with exact taskId/runId.",
+            "expectedPaths": [
+              "marker-beta.txt"
+            ],
+            "acceptanceCriteria": [
+              "marker-beta.txt contains exactly west:beta plus a newline; no unrelated edits."
+            ],
+            "status": "succeeded",
+            "attempt": 1,
+            "version": 4,
+            "acceptedCommit": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+            "sourceHead": "dfd29322a20e5df8166c2e3685f868dd5ce0890a",
+            "blockingReason": null,
+            "analysisItems": null,
+            "priority": 0,
+            "dependencyStatus": "ready"
+          }
+        ],
+        "runs": [
+          {
+            "id": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+            "taskId": "west-alpha",
+            "roleId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:developer-a",
+            "purpose": "develop",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:developer-a",
+                "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+                "name": "developer-a",
+                "enabled": 1,
+                "purpose": "developer",
+                "kind": "subagent",
+                "providerBindingId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:codex-dev",
+                "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+                "revision": 1
+              },
+              "binding": {
+                "id": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:codex-dev",
+                "providerName": "codex-dev",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:codex"
+                ],
+                "runtime": null,
+                "model": null,
+                "spawn": null
+              }
+            },
+            "dshChildId": "93c7d61b-24e5-405b-8c23-70d1507b6606",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T10:42:50.172Z",
+            "deadline": "2026-10-25T10:46:24.578Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "west-alpha",
+              "runId": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+              "outcome": "completed",
+              "summary": "Created marker-alpha.txt containing exactly west:alpha followed by LF.",
+              "changedPaths": [
+                "marker-alpha.txt"
+              ],
+              "checksClaimed": [
+                "Verified exact 11-byte content.",
+                "Verified only marker-alpha.txt is changed; no staged or tracked changes.",
+                "No git commit performed."
+              ],
+              "blockingReasons": []
+            },
+            "createdAt": "2026-10-25T10:42:24.578Z",
+            "startedAt": "2026-10-25T10:42:27.866Z",
+            "endedAt": "2026-10-25T10:42:50.169Z",
+            "resultArtifactId": "artifact-1496417a-91ac-469b-9c86-891ac702ea40"
+          },
+          {
+            "id": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+            "taskId": "west-beta",
+            "roleId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:developer-b",
+            "purpose": "develop",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:developer-b",
+                "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+                "name": "developer-b",
+                "enabled": 1,
+                "purpose": "developer",
+                "kind": "subagent",
+                "providerBindingId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:codex-dev",
+                "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+                "revision": 1
+              },
+              "binding": {
+                "id": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:codex-dev",
+                "providerName": "codex-dev",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:codex"
+                ],
+                "runtime": null,
+                "model": null,
+                "spawn": null
+              }
+            },
+            "dshChildId": "d88cb51d-117f-4e4b-b50e-d0756466c74a",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T10:42:45.413Z",
+            "deadline": "2026-10-25T10:46:24.583Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "west-beta",
+              "runId": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+              "outcome": "completed",
+              "summary": "Created marker-beta.txt containing exactly west:beta followed by a newline.",
+              "changedPaths": [
+                "marker-beta.txt"
+              ],
+              "checksClaimed": [
+                "Verified exact bytes: 77-65-73-74-3A-62-65-74-61-0A.",
+                "Verified git status shows only marker-beta.txt changed.",
+                "No git commit performed."
+              ],
+              "blockingReasons": []
+            },
+            "createdAt": "2026-10-25T10:42:24.583Z",
+            "startedAt": "2026-10-25T10:42:27.749Z",
+            "endedAt": "2026-10-25T10:42:45.410Z",
+            "resultArtifactId": "artifact-6f917a60-4dce-4947-9f1b-210b57b9f3d0"
+          },
+          {
+            "id": "run-307be9dc-081b-4140-a473-e30e438ba297",
+            "taskId": "west-beta",
+            "roleId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:reviewer",
+            "purpose": "review",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:reviewer",
+                "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+                "name": "reviewer",
+                "enabled": 1,
+                "purpose": "reviewer",
+                "kind": "subagent",
+                "providerBindingId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:codex-review",
+                "prompt": "Review the exact candidate commit read-only. Never edit or commit. Return one JSON object matching resultSchema; approve only when all acceptance criteria pass.",
+                "revision": 1
+              },
+              "binding": {
+                "id": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:codex-review",
+                "providerName": "codex-review",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:codex"
+                ],
+                "runtime": null,
+                "model": null,
+                "spawn": null
+              }
+            },
+            "dshChildId": "3139b8af-7499-432e-a0bb-fc31ad8c9e09",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T10:43:44.300Z",
+            "deadline": "2026-10-25T10:47:13.350Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "west-beta",
+              "runId": "run-307be9dc-081b-4140-a473-e30e438ba297",
+              "verdict": "approve",
+              "reviewedCommit": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+              "findings": []
+            },
+            "createdAt": "2026-10-25T10:43:13.350Z",
+            "startedAt": "2026-10-25T10:43:15.837Z",
+            "endedAt": "2026-10-25T10:43:44.298Z",
+            "resultArtifactId": "artifact-0a974f91-e768-47f8-8d9b-24eaecb19cb6"
+          },
+          {
+            "id": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd",
+            "taskId": "west-alpha",
+            "roleId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:reviewer",
+            "purpose": "review",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:reviewer",
+                "workspaceId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645",
+                "name": "reviewer",
+                "enabled": 1,
+                "purpose": "reviewer",
+                "kind": "subagent",
+                "providerBindingId": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:codex-review",
+                "prompt": "Review the exact candidate commit read-only. Never edit or commit. Return one JSON object matching resultSchema; approve only when all acceptance criteria pass.",
+                "revision": 1
+              },
+              "binding": {
+                "id": "workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645:codex-review",
+                "providerName": "codex-review",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:codex"
+                ],
+                "runtime": null,
+                "model": null,
+                "spawn": null
+              }
+            },
+            "dshChildId": "dcc23897-e397-4fcf-86fa-e3b6c5ea11a1",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T10:44:36.606Z",
+            "deadline": "2026-10-25T10:48:12.332Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "west-alpha",
+              "runId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd",
+              "verdict": "approve",
+              "reviewedCommit": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+              "findings": []
+            },
+            "createdAt": "2026-10-25T10:44:12.332Z",
+            "startedAt": "2026-10-25T10:44:12.743Z",
+            "endedAt": "2026-10-25T10:44:36.604Z",
+            "resultArtifactId": "artifact-e280de23-748f-45b6-8948-23d44479bb10"
+          }
+        ],
+        "worktrees": [
+          {
+            "id": "west-alpha:1",
+            "taskId": "west-alpha",
+            "attempt": 1,
+            "kind": "task",
+            "path": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\worktrees\\2e4f38ff006663bd2c944fe5",
+            "branch": "rift/e861e662e18184612a7bb441/3920ad2e26856bd9acf4cf29/1",
+            "baseCommit": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51",
+            "headCommit": "18d729ba240a0f7db24b3fbb41e598ccbbcf8084",
+            "writerRunId": null,
+            "status": "active"
+          },
+          {
+            "id": "west-beta:1",
+            "taskId": "west-beta",
+            "attempt": 1,
+            "kind": "task",
+            "path": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\worktrees\\8a16c2c3041fcfa4c96546ee",
+            "branch": "rift/e861e662e18184612a7bb441/1a9c92135682a473b3867842/1",
+            "baseCommit": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51",
+            "headCommit": "dfd29322a20e5df8166c2e3685f868dd5ce0890a",
+            "writerRunId": null,
+            "status": "active"
+          }
+        ],
+        "operations": [
+          {
+            "id": "request-5cdaa68c-801a-4eca-83af-5dd66c250abc",
+            "kind": "dispatch",
+            "dedupeKey": "dispatch-west-alpha",
+            "entityId": "west-alpha",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 0,
+              "planRevision": 1,
+              "runId": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f"
+            },
+            "createdAt": "2026-10-25T10:42:24.576Z"
+          },
+          {
+            "id": "request-01ba3884-c227-4e2c-bd07-2e2a95741c08",
+            "kind": "dispatch",
+            "dedupeKey": "dispatch-west-beta",
+            "entityId": "west-beta",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 0,
+              "planRevision": 1,
+              "runId": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd"
+            },
+            "createdAt": "2026-10-25T10:42:24.581Z"
+          },
+          {
+            "id": "request-7aed2b5f-8e80-4959-a30b-f72203e846be",
+            "kind": "integration",
+            "dedupeKey": "auto-integration:west-beta:1",
+            "entityId": "west-beta",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 2,
+              "planRevision": 1,
+              "sourceHead": "dfd29322a20e5df8166c2e3685f868dd5ce0890a",
+              "integrationId": "integration-600396c2-3365-471c-aa62-8e2a41ac3919",
+              "runId": "run-307be9dc-081b-4140-a473-e30e438ba297"
+            },
+            "createdAt": "2026-10-25T10:42:46.107Z"
+          },
+          {
+            "id": "request-e0fdf4ef-7026-4115-ba92-7f34f0cbf61a",
+            "kind": "integration",
+            "dedupeKey": "auto-integration:west-alpha:1",
+            "entityId": "west-alpha",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 2,
+              "planRevision": 1,
+              "sourceHead": "18d729ba240a0f7db24b3fbb41e598ccbbcf8084",
+              "integrationId": "integration-c4018215-86b3-4acd-8dc6-2219101989c4",
+              "runId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd"
+            },
+            "createdAt": "2026-10-25T10:42:50.790Z"
+          }
+        ],
+        "integrations": [
+          {
+            "id": "integration-600396c2-3365-471c-aa62-8e2a41ac3919",
+            "taskId": "west-beta",
+            "sourceHead": "dfd29322a20e5df8166c2e3685f868dd5ce0890a",
+            "expectedTargetHead": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51",
+            "candidateHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+            "checkIds": [
+              "45f7c6dc-c814-49cd-8bf8-41cf7fa25f39",
+              "36481e99-c3f2-4f4c-8ff0-c52959b0d8b3"
+            ],
+            "reviewRunId": "run-307be9dc-081b-4140-a473-e30e438ba297",
+            "status": "accepted",
+            "candidate": {
+              "integrationId": "integration-600396c2-3365-471c-aa62-8e2a41ac3919",
+              "sourceHead": "dfd29322a20e5df8166c2e3685f868dd5ce0890a",
+              "candidateHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+              "expectedTargetHead": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51",
+              "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\reviews\\2f5269732bd8d83cfcb3740e",
+              "checkIds": [
+                "45f7c6dc-c814-49cd-8bf8-41cf7fa25f39",
+                "36481e99-c3f2-4f4c-8ff0-c52959b0d8b3"
+              ]
+            },
+            "error": null
+          },
+          {
+            "id": "integration-c4018215-86b3-4acd-8dc6-2219101989c4",
+            "taskId": "west-alpha",
+            "sourceHead": "18d729ba240a0f7db24b3fbb41e598ccbbcf8084",
+            "expectedTargetHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+            "candidateHead": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+            "checkIds": [
+              "9fdbf7ba-84a8-45a8-806d-08152de6e0a2",
+              "24d8039b-8295-44e6-b788-f9900e06726e"
+            ],
+            "reviewRunId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd",
+            "status": "accepted",
+            "candidate": {
+              "integrationId": "integration-c4018215-86b3-4acd-8dc6-2219101989c4",
+              "sourceHead": "18d729ba240a0f7db24b3fbb41e598ccbbcf8084",
+              "candidateHead": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+              "expectedTargetHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+              "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\reviews\\62b09f9b9823bef654ee0639",
+              "checkIds": [
+                "9fdbf7ba-84a8-45a8-806d-08152de6e0a2",
+                "24d8039b-8295-44e6-b788-f9900e06726e"
+              ]
+            },
+            "error": null
+          }
+        ],
+        "limits": {
+          "developers": 4,
+          "total": 5,
+          "maxTasks": 1000,
+          "maxReplans": 100,
+          "agingMs": 60000
+        },
+        "globalSlots": {
+          "developers": 0,
+          "reviewers": 0,
+          "total": 0
+        },
+        "slots": {
+          "developers": 0,
+          "reviewers": 0,
+          "total": 0
+        },
+        "eventSeq": 100
+      },
+      "events": [
+        {
+          "eventSeq": 4,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "workflow.created",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:24.559Z"
+        },
+        {
+          "eventSeq": 5,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "lead.attached",
+          "payload": {
+            "sessionId": "rift-lead-a1fd718e-5dbb-4b2b-ae7d-77bcbee0afa2"
+          },
+          "occurredAt": "2026-10-25T10:42:24.563Z"
+        },
+        {
+          "eventSeq": 6,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "plan.accepted",
+          "payload": {
+            "revision": 1,
+            "taskIds": [
+              "west-alpha",
+              "west-beta"
+            ],
+            "acceptanceCriteria": []
+          },
+          "occurredAt": "2026-10-25T10:42:24.564Z"
+        },
+        {
+          "eventSeq": 13,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": null,
+          "requestId": "request-5cdaa68c-801a-4eca-83af-5dd66c250abc",
+          "type": "dispatch.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:24.576Z"
+        },
+        {
+          "eventSeq": 14,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "requestId": "request-5cdaa68c-801a-4eca-83af-5dd66c250abc",
+          "type": "dispatch.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:24.578Z"
+        },
+        {
+          "eventSeq": 15,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "requestId": "request-5cdaa68c-801a-4eca-83af-5dd66c250abc",
+          "type": "dispatch_reserved",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:24.578Z"
+        },
+        {
+          "eventSeq": 16,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": null,
+          "requestId": "request-01ba3884-c227-4e2c-bd07-2e2a95741c08",
+          "type": "dispatch.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:24.581Z"
+        },
+        {
+          "eventSeq": 17,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "requestId": "request-01ba3884-c227-4e2c-bd07-2e2a95741c08",
+          "type": "dispatch.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:24.583Z"
+        },
+        {
+          "eventSeq": 18,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "requestId": "request-01ba3884-c227-4e2c-bd07-2e2a95741c08",
+          "type": "dispatch_reserved",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:24.583Z"
+        },
+        {
+          "eventSeq": 20,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-c2617968-087a-4873-a099-2e7b4e3ed9dd",
+            "promptSha256": "2ad011d44d333e13ddb40d78c1da6a89ef35c7c61520094a1e90552540204dae",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\worktrees\\2e4f38ff006663bd2c944fe5",
+            "baseCommit": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51",
+            "sourceHead": null,
+            "candidateHead": null
+          },
+          "occurredAt": "2026-10-25T10:42:25.158Z"
+        },
+        {
+          "eventSeq": 22,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-fdeecb0a-94e9-4ac2-849d-89c8688eba50",
+            "promptSha256": "a998762e4e8b0d360c563c894f3142c74309baab27488bff28247f94cccb6982",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\worktrees\\8a16c2c3041fcfa4c96546ee",
+            "baseCommit": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51",
+            "sourceHead": null,
+            "candidateHead": null
+          },
+          "occurredAt": "2026-10-25T10:42:25.201Z"
+        },
+        {
+          "eventSeq": 24,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "d88cb51d-117f-4e4b-b50e-d0756466c74a"
+          },
+          "occurredAt": "2026-10-25T10:42:27.749Z"
+        },
+        {
+          "eventSeq": 25,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "93c7d61b-24e5-405b-8c23-70d1507b6606"
+          },
+          "occurredAt": "2026-10-25T10:42:27.866Z"
+        },
+        {
+          "eventSeq": 42,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "west-beta",
+              "runId": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+              "outcome": "completed",
+              "summary": "Created marker-beta.txt containing exactly west:beta followed by a newline.",
+              "changedPaths": [
+                "marker-beta.txt"
+              ],
+              "checksClaimed": [
+                "Verified exact bytes: 77-65-73-74-3A-62-65-74-61-0A.",
+                "Verified git status shows only marker-beta.txt changed.",
+                "No git commit performed."
+              ],
+              "blockingReasons": []
+            },
+            "artifactId": "artifact-6f917a60-4dce-4947-9f1b-210b57b9f3d0"
+          },
+          "occurredAt": "2026-10-25T10:42:45.411Z"
+        },
+        {
+          "eventSeq": 43,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:45.413Z"
+        },
+        {
+          "eventSeq": 44,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "requestId": "request-01ba3884-c227-4e2c-bd07-2e2a95741c08",
+          "type": "dispatch.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:46.106Z"
+        },
+        {
+          "eventSeq": 45,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": "run-d2b6e6cc-d75d-423b-93bf-677ef8df5cfd",
+          "requestId": null,
+          "type": "source.collected",
+          "payload": {
+            "sourceHead": "dfd29322a20e5df8166c2e3685f868dd5ce0890a",
+            "diff": "diff --git a/marker-beta.txt b/marker-beta.txt\nnew file mode 100644\nindex 0000000..6ae2477\n--- /dev/null\n+++ b/marker-beta.txt\n@@ -0,0 +1 @@\n+west:beta",
+            "changedPaths": [
+              "marker-beta.txt"
+            ],
+            "taskAttempt": 1,
+            "eligibleForIntegration": true
+          },
+          "occurredAt": "2026-10-25T10:42:46.106Z"
+        },
+        {
+          "eventSeq": 46,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": null,
+          "requestId": "request-7aed2b5f-8e80-4959-a30b-f72203e846be",
+          "type": "integration.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:46.107Z"
+        },
+        {
+          "eventSeq": 47,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "west-alpha",
+              "runId": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+              "outcome": "completed",
+              "summary": "Created marker-alpha.txt containing exactly west:alpha followed by LF.",
+              "changedPaths": [
+                "marker-alpha.txt"
+              ],
+              "checksClaimed": [
+                "Verified exact 11-byte content.",
+                "Verified only marker-alpha.txt is changed; no staged or tracked changes.",
+                "No git commit performed."
+              ],
+              "blockingReasons": []
+            },
+            "artifactId": "artifact-1496417a-91ac-469b-9c86-891ac702ea40"
+          },
+          "occurredAt": "2026-10-25T10:42:50.170Z"
+        },
+        {
+          "eventSeq": 48,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:50.172Z"
+        },
+        {
+          "eventSeq": 49,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "requestId": "request-5cdaa68c-801a-4eca-83af-5dd66c250abc",
+          "type": "dispatch.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:50.789Z"
+        },
+        {
+          "eventSeq": 50,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": "run-b75e7b9e-b13e-4354-8f99-0f3de2826b8f",
+          "requestId": null,
+          "type": "source.collected",
+          "payload": {
+            "sourceHead": "18d729ba240a0f7db24b3fbb41e598ccbbcf8084",
+            "diff": "diff --git a/marker-alpha.txt b/marker-alpha.txt\nnew file mode 100644\nindex 0000000..0a59894\n--- /dev/null\n+++ b/marker-alpha.txt\n@@ -0,0 +1 @@\n+west:alpha",
+            "changedPaths": [
+              "marker-alpha.txt"
+            ],
+            "taskAttempt": 1,
+            "eligibleForIntegration": true
+          },
+          "occurredAt": "2026-10-25T10:42:50.789Z"
+        },
+        {
+          "eventSeq": 51,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": null,
+          "requestId": "request-e0fdf4ef-7026-4115-ba92-7f34f0cbf61a",
+          "type": "integration.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:42:50.790Z"
+        },
+        {
+          "eventSeq": 57,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": null,
+          "requestId": "request-7aed2b5f-8e80-4959-a30b-f72203e846be",
+          "type": "integration.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:43:12.526Z"
+        },
+        {
+          "eventSeq": 58,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": null,
+          "requestId": "request-7aed2b5f-8e80-4959-a30b-f72203e846be",
+          "type": "candidate.prepared",
+          "payload": {
+            "integrationId": "integration-600396c2-3365-471c-aa62-8e2a41ac3919",
+            "sourceHead": "dfd29322a20e5df8166c2e3685f868dd5ce0890a",
+            "candidateHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+            "expectedTargetHead": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\reviews\\2f5269732bd8d83cfcb3740e",
+            "checkIds": [
+              "45f7c6dc-c814-49cd-8bf8-41cf7fa25f39",
+              "36481e99-c3f2-4f4c-8ff0-c52959b0d8b3"
+            ]
+          },
+          "occurredAt": "2026-10-25T10:43:13.349Z"
+        },
+        {
+          "eventSeq": 59,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": "run-307be9dc-081b-4140-a473-e30e438ba297",
+          "requestId": "request-7aed2b5f-8e80-4959-a30b-f72203e846be",
+          "type": "review.reserved",
+          "payload": {
+            "candidateHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4"
+          },
+          "occurredAt": "2026-10-25T10:43:13.350Z"
+        },
+        {
+          "eventSeq": 60,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": "run-307be9dc-081b-4140-a473-e30e438ba297",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-51aefda0-72a9-410b-9d68-68450148382f",
+            "promptSha256": "d355eb9f2b999230f960da4c5d66578edf0276a403ccca2af2331fd82932d5b3",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\reviews\\2f5269732bd8d83cfcb3740e",
+            "baseCommit": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+            "sourceHead": "dfd29322a20e5df8166c2e3685f868dd5ce0890a",
+            "candidateHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4"
+          },
+          "occurredAt": "2026-10-25T10:43:13.361Z"
+        },
+        {
+          "eventSeq": 61,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": "run-307be9dc-081b-4140-a473-e30e438ba297",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "3139b8af-7499-432e-a0bb-fc31ad8c9e09"
+          },
+          "occurredAt": "2026-10-25T10:43:15.837Z"
+        },
+        {
+          "eventSeq": 62,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": "run-307be9dc-081b-4140-a473-e30e438ba297",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "west-beta",
+              "runId": "run-307be9dc-081b-4140-a473-e30e438ba297",
+              "verdict": "approve",
+              "reviewedCommit": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+              "findings": []
+            },
+            "artifactId": "artifact-0a974f91-e768-47f8-8d9b-24eaecb19cb6"
+          },
+          "occurredAt": "2026-10-25T10:43:44.298Z"
+        },
+        {
+          "eventSeq": 63,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": "run-307be9dc-081b-4140-a473-e30e438ba297",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:43:44.300Z"
+        },
+        {
+          "eventSeq": 64,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": null,
+          "requestId": "request-7aed2b5f-8e80-4959-a30b-f72203e846be",
+          "type": "publication.intent",
+          "payload": {
+            "integrationId": "integration-600396c2-3365-471c-aa62-8e2a41ac3919",
+            "sourceHead": "dfd29322a20e5df8166c2e3685f868dd5ce0890a",
+            "candidateHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+            "expectedTargetHead": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\reviews\\2f5269732bd8d83cfcb3740e",
+            "checkIds": [
+              "45f7c6dc-c814-49cd-8bf8-41cf7fa25f39",
+              "36481e99-c3f2-4f4c-8ff0-c52959b0d8b3"
+            ]
+          },
+          "occurredAt": "2026-10-25T10:43:44.301Z"
+        },
+        {
+          "eventSeq": 65,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": "run-307be9dc-081b-4140-a473-e30e438ba297",
+          "requestId": "request-7aed2b5f-8e80-4959-a30b-f72203e846be",
+          "type": "integration.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:43:44.645Z"
+        },
+        {
+          "eventSeq": 66,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-beta",
+          "runId": null,
+          "requestId": "request-7aed2b5f-8e80-4959-a30b-f72203e846be",
+          "type": "integration.accepted",
+          "payload": {
+            "integrationId": "integration-600396c2-3365-471c-aa62-8e2a41ac3919",
+            "acceptedCommit": "3d4d903b0dc955efc5ab7da43823c3483a2491a4"
+          },
+          "occurredAt": "2026-10-25T10:43:44.645Z"
+        },
+        {
+          "eventSeq": 77,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": null,
+          "requestId": "request-e0fdf4ef-7026-4115-ba92-7f34f0cbf61a",
+          "type": "integration.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:44:11.605Z"
+        },
+        {
+          "eventSeq": 78,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": null,
+          "requestId": "request-e0fdf4ef-7026-4115-ba92-7f34f0cbf61a",
+          "type": "candidate.prepared",
+          "payload": {
+            "integrationId": "integration-c4018215-86b3-4acd-8dc6-2219101989c4",
+            "sourceHead": "18d729ba240a0f7db24b3fbb41e598ccbbcf8084",
+            "candidateHead": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+            "expectedTargetHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\reviews\\62b09f9b9823bef654ee0639",
+            "checkIds": [
+              "9fdbf7ba-84a8-45a8-806d-08152de6e0a2",
+              "24d8039b-8295-44e6-b788-f9900e06726e"
+            ]
+          },
+          "occurredAt": "2026-10-25T10:44:12.332Z"
+        },
+        {
+          "eventSeq": 79,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd",
+          "requestId": "request-e0fdf4ef-7026-4115-ba92-7f34f0cbf61a",
+          "type": "review.reserved",
+          "payload": {
+            "candidateHead": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8"
+          },
+          "occurredAt": "2026-10-25T10:44:12.333Z"
+        },
+        {
+          "eventSeq": 80,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-08b6259e-2b58-4239-b099-cddd2312445e",
+            "promptSha256": "9a5185a703e9065219ed78eb12a21bd13e4ef6e5ca3055d1fcb062b5daacf9d4",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\reviews\\62b09f9b9823bef654ee0639",
+            "baseCommit": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+            "sourceHead": "18d729ba240a0f7db24b3fbb41e598ccbbcf8084",
+            "candidateHead": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8"
+          },
+          "occurredAt": "2026-10-25T10:44:12.343Z"
+        },
+        {
+          "eventSeq": 81,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "dcc23897-e397-4fcf-86fa-e3b6c5ea11a1"
+          },
+          "occurredAt": "2026-10-25T10:44:12.743Z"
+        },
+        {
+          "eventSeq": 82,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "west-alpha",
+              "runId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd",
+              "verdict": "approve",
+              "reviewedCommit": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+              "findings": []
+            },
+            "artifactId": "artifact-e280de23-748f-45b6-8948-23d44479bb10"
+          },
+          "occurredAt": "2026-10-25T10:44:36.604Z"
+        },
+        {
+          "eventSeq": 83,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:44:36.606Z"
+        },
+        {
+          "eventSeq": 84,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": null,
+          "requestId": "request-e0fdf4ef-7026-4115-ba92-7f34f0cbf61a",
+          "type": "publication.intent",
+          "payload": {
+            "integrationId": "integration-c4018215-86b3-4acd-8dc6-2219101989c4",
+            "sourceHead": "18d729ba240a0f7db24b3fbb41e598ccbbcf8084",
+            "candidateHead": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+            "expectedTargetHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+            "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\reviews\\62b09f9b9823bef654ee0639",
+            "checkIds": [
+              "9fdbf7ba-84a8-45a8-806d-08152de6e0a2",
+              "24d8039b-8295-44e6-b788-f9900e06726e"
+            ]
+          },
+          "occurredAt": "2026-10-25T10:44:36.607Z"
+        },
+        {
+          "eventSeq": 85,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd",
+          "requestId": "request-e0fdf4ef-7026-4115-ba92-7f34f0cbf61a",
+          "type": "integration.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T10:44:36.926Z"
+        },
+        {
+          "eventSeq": 86,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": "west-alpha",
+          "runId": null,
+          "requestId": "request-e0fdf4ef-7026-4115-ba92-7f34f0cbf61a",
+          "type": "integration.accepted",
+          "payload": {
+            "integrationId": "integration-c4018215-86b3-4acd-8dc6-2219101989c4",
+            "acceptedCommit": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8"
+          },
+          "occurredAt": "2026-10-25T10:44:36.926Z"
+        },
+        {
+          "eventSeq": 100,
+          "workflowId": "workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "workflow.completed",
+          "payload": {
+            "summary": "Independent E1 native evidence verified: exact native reviews, trusted checks, accepted marker contents, confirmed cleanup."
+          },
+          "occurredAt": "2026-10-25T10:44:52.641Z"
+        }
+      ],
+      "integratedHead": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+      "baselineUnchanged": true
+    }
+  ],
+  "gitOperations": [
+    {
+      "integrationId": "integration-2ece33c3-7e84-4153-9197-05274e302509",
+      "taskId": "east-beta",
+      "integrationRef": "refs/heads/rift/workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e/workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+      "sourceHead": "544f6338395ff7e5576464262ea5e48ff503b1f5",
+      "expectedTargetHead": "33ef29fa98581fb80498fba0530e9e40229bf281",
+      "candidatePath": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\candidates\\f4a42e92b2f360005706a2a9",
+      "reviewPath": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\reviews\\f4a42e92b2f360005706a2a9",
+      "phase": "ref_published",
+      "candidateHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+      "checks": [
+        {
+          "id": "545aacfa-26f8-44e1-8416-b4847ddd89f5",
+          "commandId": "markers",
+          "candidateHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+          "exitCode": 0,
+          "stdout": "All present markers verified\n",
+          "stderr": "",
+          "truncated": false,
+          "startedAt": "2026-10-25T10:42:43.760Z",
+          "finishedAt": "2026-10-25T10:42:43.802Z"
+        },
+        {
+          "id": "d92d2bbe-fe2b-4424-a947-a005117e1218",
+          "commandId": "whitespace",
+          "candidateHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+          "exitCode": 0,
+          "stdout": "",
+          "stderr": "",
+          "truncated": false,
+          "startedAt": "2026-10-25T10:42:43.874Z",
+          "finishedAt": "2026-10-25T10:42:43.909Z"
+        }
+      ],
+      "review": {
+        "schemaVersion": 1,
+        "taskId": "east-beta",
+        "runId": "run-fb6730af-a2f8-45e1-92f9-e7afd3ca70a5",
+        "verdict": "approve",
+        "reviewedCommit": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+        "findings": []
+      }
+    },
+    {
+      "integrationId": "integration-52b8460e-55e0-4f1b-aac0-828701294596",
+      "taskId": "east-alpha",
+      "integrationRef": "refs/heads/rift/workspace-8172fa08-2746-41b7-8b0f-b73999aeab2e/workflow-9cddb951-1d27-472c-8b48-97cf55a226aa",
+      "sourceHead": "08239dd193423ce6f8aad9aecf81cdb5b73524fe",
+      "expectedTargetHead": "9a61bd2c82aa4867f1f2cdbf6de2b611ddae7383",
+      "candidatePath": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\candidates\\62d901e1786296097ee531be",
+      "reviewPath": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\ccc335c0b3829007130d75f0\\reviews\\62d901e1786296097ee531be",
+      "phase": "ref_published",
+      "candidateHead": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+      "checks": [
+        {
+          "id": "7e6983da-f0df-436c-8863-cd7a646b850b",
+          "commandId": "markers",
+          "candidateHead": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+          "exitCode": 0,
+          "stdout": "All present markers verified\n",
+          "stderr": "",
+          "truncated": false,
+          "startedAt": "2026-10-25T10:43:45.097Z",
+          "finishedAt": "2026-10-25T10:43:45.140Z"
+        },
+        {
+          "id": "530206ce-a97a-4cf9-b401-dd22669c7df4",
+          "commandId": "whitespace",
+          "candidateHead": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+          "exitCode": 0,
+          "stdout": "",
+          "stderr": "",
+          "truncated": false,
+          "startedAt": "2026-10-25T10:43:45.209Z",
+          "finishedAt": "2026-10-25T10:43:45.241Z"
+        }
+      ],
+      "review": {
+        "schemaVersion": 1,
+        "taskId": "east-alpha",
+        "runId": "run-28b43fb3-33dc-45e5-9fee-fadfe72dd65c",
+        "verdict": "approve",
+        "reviewedCommit": "9d7a428f33427e9300d3d2b7ceffdf9b67f9eb01",
+        "findings": []
+      }
+    },
+    {
+      "integrationId": "integration-600396c2-3365-471c-aa62-8e2a41ac3919",
+      "taskId": "west-beta",
+      "integrationRef": "refs/heads/rift/workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645/workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+      "sourceHead": "dfd29322a20e5df8166c2e3685f868dd5ce0890a",
+      "expectedTargetHead": "ecaf17d4bdc08ab630f8b50edf3f239fd13a6b51",
+      "candidatePath": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\candidates\\2f5269732bd8d83cfcb3740e",
+      "reviewPath": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\reviews\\2f5269732bd8d83cfcb3740e",
+      "phase": "ref_published",
+      "candidateHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+      "checks": [
+        {
+          "id": "45f7c6dc-c814-49cd-8bf8-41cf7fa25f39",
+          "commandId": "markers",
+          "candidateHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+          "exitCode": 0,
+          "stdout": "All present markers verified\n",
+          "stderr": "",
+          "truncated": false,
+          "startedAt": "2026-10-25T10:43:13.015Z",
+          "finishedAt": "2026-10-25T10:43:13.062Z"
+        },
+        {
+          "id": "36481e99-c3f2-4f4c-8ff0-c52959b0d8b3",
+          "commandId": "whitespace",
+          "candidateHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+          "exitCode": 0,
+          "stdout": "",
+          "stderr": "",
+          "truncated": false,
+          "startedAt": "2026-10-25T10:43:13.169Z",
+          "finishedAt": "2026-10-25T10:43:13.207Z"
+        }
+      ],
+      "review": {
+        "schemaVersion": 1,
+        "taskId": "west-beta",
+        "runId": "run-307be9dc-081b-4140-a473-e30e438ba297",
+        "verdict": "approve",
+        "reviewedCommit": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+        "findings": []
+      }
+    },
+    {
+      "integrationId": "integration-c4018215-86b3-4acd-8dc6-2219101989c4",
+      "taskId": "west-alpha",
+      "integrationRef": "refs/heads/rift/workspace-1b365eda-ea34-4a0d-b89e-d3e479ba4645/workflow-446bf67f-5fd9-49b6-aa95-ac078df86a75",
+      "sourceHead": "18d729ba240a0f7db24b3fbb41e598ccbbcf8084",
+      "expectedTargetHead": "3d4d903b0dc955efc5ab7da43823c3483a2491a4",
+      "candidatePath": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\candidates\\62b09f9b9823bef654ee0639",
+      "reviewPath": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-acceptance-7nKba7\\business-home\\workspaces\\e861e662e18184612a7bb441\\reviews\\62b09f9b9823bef654ee0639",
+      "phase": "ref_published",
+      "candidateHead": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+      "checks": [
+        {
+          "id": "9fdbf7ba-84a8-45a8-806d-08152de6e0a2",
+          "commandId": "markers",
+          "candidateHead": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+          "exitCode": 0,
+          "stdout": "All present markers verified\n",
+          "stderr": "",
+          "truncated": false,
+          "startedAt": "2026-10-25T10:44:12.048Z",
+          "finishedAt": "2026-10-25T10:44:12.091Z"
+        },
+        {
+          "id": "24d8039b-8295-44e6-b788-f9900e06726e",
+          "commandId": "whitespace",
+          "candidateHead": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+          "exitCode": 0,
+          "stdout": "",
+          "stderr": "",
+          "truncated": false,
+          "startedAt": "2026-10-25T10:44:12.160Z",
+          "finishedAt": "2026-10-25T10:44:12.191Z"
+        }
+      ],
+      "review": {
+        "schemaVersion": 1,
+        "taskId": "west-alpha",
+        "runId": "run-b514203e-8fe8-457a-92bc-0bbbdff049fd",
+        "verdict": "approve",
+        "reviewedCommit": "f54c0fe0a83febb0d858b0f1efab9f203462e3a8",
+        "findings": []
+      }
+    }
+  ],
+  "hostCleanup": "pass",
+  "runtimeUnload": "pass",
+  "databaseLockReleased": true,
+  "endedAt": "2026-10-25T10:44:52.654Z",
+  "exitCode": 0
+}

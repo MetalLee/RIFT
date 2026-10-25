@@ -75,7 +75,9 @@ describe('A01/A07/A13-A18 independent fake activation fault acceptance', () => {
       expect(h.coordinator.status(h.workflow.id).slots.total).toBe(1);
       expect(h.starts.length).toBe(2);
       const other = seedWorkspace(h.store, 'other');
-      expect(() => h.coordinator.createWorkflow({ workspaceId: other.workspace.id, goal: 'second', integrationRef: 'refs/heads/rift/other', baseCommit: sha('base') })).toThrow(/one workflow/);
+      expect(() => h.coordinator.createWorkflow({ workspaceId: h.workflow.workspaceId, goal: 'same workspace', integrationRef: 'refs/heads/rift/same', baseCommit: sha('base') })).toThrow(/workspace already owns/);
+      const sibling = h.coordinator.createWorkflow({ workspaceId: other.workspace.id, goal: 'second', integrationRef: 'refs/heads/rift/other', baseCommit: sha('base') });
+      expect(h.coordinator.status(sibling.id).globalSlots.total).toBe(1);
     } finally { await h.close(); }
   });
 

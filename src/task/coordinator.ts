@@ -1,16 +1,19 @@
 import { invariant, RiftError, type ActivationBridge, type ActivationHandle, type Candidate, type DevelopmentResult, type GitService, type Operation, type PlanTask, type ReviewResult, type Role, type Run, type Task, type TaskEvent, type Workflow, type Worktree } from '../contracts/index.js';
 import { id, now, RiftStore } from '../storage/database.js';
-import { dependencyStatus, normalizeExpectedPaths, pathsOverlap, validateDag } from './scheduler.js';
+import { dependencyStatus, normalizeExpectedPaths, pathsOverlap, validateDag, schedulerLimits, schedulingOrder, validatePriority, type SchedulerLimits } from './scheduler.js';
 import { parseResult } from './results.js';
 import { redact } from '../api/security.js';
 import { saveResultArtifact } from '../storage/artifacts.js';
 import { createHash } from 'node:crypto';
+import { realpathSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 interface Active { controller:AbortController; handle?:ActivationHandle; cleanup?:Promise<boolean>; cancelled:boolean; cancelReason?:string }
 interface IntegrationRecord { id:string; taskId:string; status:string; candidate:Candidate|null; reviewRunId:string|null; error:string|null }
-export interface CoordinatorOptions { store:RiftStore; bridge:ActivationBridge; git:GitService; runTimeoutMs?:number;cleanupTimeoutMs?:number }
+export interface CoordinatorOptions { store:RiftStore; bridge:ActivationBridge; git:GitService; runTimeoutMs?:number;cleanupTimeoutMs?:number; limits?:Partial<SchedulerLimits> }
 export interface CreateWorkflowInput { id?:string; workspaceId:string; goal:string; integrationRef:string; baseCommit:string; leadSessionId?:string }
-export interface DispatchInput {taskId:string;idempotencyKey:string;expectedVersion:number;roleName?:'developer-a'|'developer-b'}
+export interface DispatchInput {taskId:string;idempotencyKey:string;expectedVersion:number;roleName?:string}
+export interface ReplanInput {workflowId:string;expectedRevision:number;updates:{taskId:string;expectedVersion:number;dependsOn?:string[];priority?:number}[];tasks?:PlanTask[]}
 export interface WaitInput {workflowId:string;runIds?:string[];requestIds?:string[];afterEventSeq?:number;timeoutMs?:number}
 const terminalRuns=new Set(['succeeded','failed','cancelled','interrupted']);
 const terminalWorkflows=new Set(['completed','failed','cancelled']);
@@ -28,7 +31,14 @@ export class TaskCoordinator {
   private pumping=false;
   private stopping=false;
   private integrationBusy=false;
-  constructor(options:CoordinatorOptions) {this.store=options.store;this.bridge=options.bridge;this.git=options.git;this.runTimeoutMs=options.runTimeoutMs??30*60_000;this.cleanupTimeoutMs=options.cleanupTimeoutMs??10_000;}
+  constructor(options:CoordinatorOptions) {this.store=options.store;this.bridge=options.bridge;this.git=options.git;this.runTimeoutMs=options.runTimeoutMs??30*60_000;this.cleanupTimeoutMs=options.cleanupTimeoutMs??10_000;
+    if(options.limits){const limits=schedulerLimits(options.limits);this.store.transaction(()=>{
+      const occupied=this.store.all<Run>('SELECT * FROM runs WHERE slot_released_at IS NULL');
+      invariant(occupied.length<=limits.total&&occupied.filter(run=>run.purpose!=='review').length<=limits.developers,'LIMITS_IN_USE','New limits cannot be lower than retained execution slots.');
+      this.store.exec('UPDATE scheduler_limits SET developers=?,total=?,max_tasks=?,max_replans=?,aging_ms=? WHERE id=1',limits.developers,limits.total,limits.maxTasks,limits.maxReplans,limits.agingMs);
+    });}
+  }
+  get limits():SchedulerLimits {return this.store.require<SchedulerLimits>('SELECT developers,total,max_tasks,max_replans,aging_ms FROM scheduler_limits WHERE id=1');}
 
   createWorkflow(input:CreateWorkflowInput):Workflow {
     invariant(!this.stopping,'HOST_STOPPING','Host is shutting down and cannot accept new work.');
@@ -37,8 +47,9 @@ export class TaskCoordinator {
     invariant(input.goal.trim()&&/^refs\/heads\/rift\/[A-Za-z0-9_./-]+$/.test(input.integrationRef)&&/^[0-9a-f]{40,64}$/.test(input.baseCommit),'INVALID_WORKFLOW','Workflow needs a goal, rift integration branch and exact base commit.');
     return this.store.transaction(()=>{
       if(input.id) {const prior=this.store.get<Workflow>('SELECT * FROM workflows WHERE id=?',input.id);if(prior){invariant(prior.workspaceId===input.workspaceId&&prior.goal===input.goal&&prior.baseCommit===input.baseCommit&&prior.integrationRef===input.integrationRef,'IDEMPOTENCY_CONFLICT','Workflow ID was used for different input.');return prior;}}
-      invariant(!this.store.get('SELECT id FROM workflows WHERE status NOT IN (\'completed\',\'failed\',\'cancelled\') LIMIT 1')&&!this.store.get('SELECT id FROM runs WHERE slot_released_at IS NULL LIMIT 1')&&!this.store.get('SELECT id FROM integrations WHERE status IN (\'preparing\',\'reviewing\',\'publishing\',\'cleanup_unknown\') LIMIT 1'),'WORKFLOW_CAPACITY','Only one workflow may own active work or unconfirmed cleanup.');
-      invariant(this.store.all<Role>('SELECT * FROM roles WHERE workspace_id=?',input.workspaceId).length===4,'ROLES_NOT_CONFIGURED','Configure all four roles before starting a workflow.');
+      invariant(!this.store.get("SELECT id FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','failed','cancelled') LIMIT 1",input.workspaceId)&&!this.store.get('SELECT r.id FROM runs r JOIN tasks t ON t.id=r.task_id JOIN workflows w ON w.id=t.workflow_id WHERE w.workspace_id=? AND r.slot_released_at IS NULL LIMIT 1',input.workspaceId)&&!this.store.get("SELECT i.id FROM integrations i JOIN tasks t ON t.id=i.task_id JOIN workflows w ON w.id=t.workflow_id WHERE w.workspace_id=? AND i.status IN ('preparing','reviewing','publishing','cleanup_unknown') LIMIT 1",input.workspaceId),'WORKFLOW_CAPACITY','This workspace already owns active work or unconfirmed cleanup.');
+      const roles=this.store.all<Role>('SELECT * FROM roles WHERE workspace_id=? AND enabled=1',input.workspaceId);
+      invariant(['lead','developer','reviewer'].every(purpose=>roles.some(role=>role.purpose===purpose)),'ROLES_NOT_CONFIGURED','Configure a Lead, at least one Developer and a Reviewer before starting a workflow.');
       const workflowId=input.id??id('workflow');
       this.store.exec('INSERT INTO workflows(id,workspace_id,goal,lead_session_id,status,integration_ref,base_commit) VALUES(?,?,?,?,?,?,?)',workflowId,input.workspaceId,input.goal,input.leadSessionId??null,'planning',input.integrationRef,input.baseCommit);
       this.store.event(workflowId,'workflow.created');return this.store.workflow(workflowId);
@@ -50,20 +61,24 @@ export class TaskCoordinator {
       const workflow=this.store.workflow(input.workflowId);
       invariant(!terminalWorkflows.has(workflow.status),'INVALID_STATE','Cannot plan a terminal workflow.');
       invariant(workflow.planRevision===input.expectedRevision,'VERSION_CONFLICT','Plan revision changed.');
-      invariant(workflow.planRevision<6,'REPLAN_BUDGET','Workflow allows at most five replans.');
+      invariant(workflow.planRevision<=this.limits.maxReplans,'REPLAN_BUDGET','Workflow exhausted its configured replan budget.');
       const existing=this.store.all<Task>('SELECT * FROM tasks WHERE workflow_id=?',workflow.id);
-      invariant(input.tasks.length>0&&existing.length+input.tasks.length<=10,'PLAN_LIMIT','A workflow may contain at most ten tasks.');
+      invariant(input.tasks.length>0&&existing.length+input.tasks.length<=this.limits.maxTasks,'PLAN_LIMIT','Workflow exceeds its configured task limit.');
       const fresh=input.tasks.map(task=>({...task,id:task.id??id('task'),expectedPaths:normalizeExpectedPaths(task.expectedPaths),acceptanceCriteria:[...new Set([...(input.acceptanceCriteria??[]),...(task.acceptanceCriteria??[])])]}));
       invariant(fresh.every(task=>/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(task.id)),'INVALID_ID','Task IDs must be safe identifiers.');
       const graph=existing.map(task=>({id:task.id,dependsOn:this.store.all<{dependsOnTaskId:string}>('SELECT depends_on_task_id FROM task_dependencies WHERE task_id=?',task.id).map(dep=>dep.dependsOnTaskId)}));
       validateDag([...graph,...fresh.map(task=>({id:task.id,dependsOn:task.dependsOn??[]}))]);
       for(const task of fresh){
         invariant(task.title.trim()&&task.instructions.trim()&&['change','analysis'].includes(task.kind),'INVALID_TASK','Task title, instructions and kind are required.');
-        const roleId=task.roleName?this.store.require<Role>('SELECT * FROM roles WHERE workspace_id=? AND name=?',workflow.workspaceId,task.roleName).id:null;
-        this.store.exec('INSERT INTO tasks(id,workflow_id,role_id,kind,title,instructions,expected_paths,acceptance_criteria,status) VALUES(?,?,?,?,?,?,?,?,?)',task.id,workflow.id,roleId,task.kind,task.title,task.instructions,JSON.stringify(task.expectedPaths),JSON.stringify(task.acceptanceCriteria??[]),'pending');
+        const roleId=task.roleName?this.store.require<Role>("SELECT * FROM roles WHERE workspace_id=? AND name=? AND purpose='developer' AND enabled=1",workflow.workspaceId,task.roleName).id:null;
+        validatePriority(task.priority??0);
+        if(task.analysisItems!==undefined){invariant(task.kind==='analysis'&&Array.isArray(task.analysisItems)&&task.analysisItems.length>0&&task.analysisItems.length<=32&&new Set(task.analysisItems.map(item=>item.id)).size===task.analysisItems.length&&task.analysisItems.every(item=>typeof item.id==='string'&&/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(item.id)&&typeof item.prompt==='string'&&item.prompt.trim()),'INVALID_ANALYSIS_ITEMS','Analysis batches require 1 to 32 unique safe item IDs and nonempty prompts on an analysis task.');}
+
+        this.store.exec('INSERT INTO tasks(id,workflow_id,role_id,kind,title,instructions,expected_paths,acceptance_criteria,status,priority,analysis_items) VALUES(?,?,?,?,?,?,?,?,?,?,?)',task.id,workflow.id,roleId,task.kind,task.title,task.instructions,JSON.stringify(task.expectedPaths),JSON.stringify(task.acceptanceCriteria??[]),'pending',task.priority??0,task.analysisItems?JSON.stringify(task.analysisItems):null);
       }
       for(const task of fresh)for(const dep of task.dependsOn??[])this.store.exec('INSERT INTO task_dependencies(task_id,depends_on_task_id) VALUES(?,?)',task.id,dep);
       this.store.exec('UPDATE workflows SET plan_revision=plan_revision+1,version=version+1,status=? WHERE id=?',workflow.status==='paused'?'paused':'running',workflow.id);
+      this.refreshQueuedRequests(workflow.id);
       this.store.event(workflow.id,'plan.accepted',{revision:workflow.planRevision+1,taskIds:fresh.map(task=>task.id),acceptanceCriteria:input.acceptanceCriteria??[]});
       return this.store.all<Task>('SELECT * FROM tasks WHERE workflow_id=? ORDER BY rowid',workflow.id);
     });
@@ -71,6 +86,62 @@ export class TaskCoordinator {
   dispatch(input:DispatchInput):Operation {
     const operation=this.enqueue('dispatch',input.taskId,input.idempotencyKey,input.expectedVersion,undefined,input.roleName);
     this.pump();return this.store.operation(operation.id);
+  }
+  /** Change the future graph atomically; already running or accepted work is immutable. */
+  replan(input:ReplanInput):Task[] {
+    invariant(!this.stopping,'HOST_STOPPING','Host is shutting down and cannot replan.');
+    const result=this.store.transaction(()=>{
+      const workflow=this.store.workflow(input.workflowId);
+      invariant(!terminalWorkflows.has(workflow.status),'INVALID_STATE','Cannot replan a terminal workflow.');
+      invariant(workflow.planRevision===input.expectedRevision,'VERSION_CONFLICT','Plan revision changed.');
+      invariant(workflow.planRevision>0&&workflow.planRevision<=this.limits.maxReplans,'REPLAN_BUDGET','Workflow exhausted its configured replan budget.');
+      invariant(input.updates.length>0||(input.tasks?.length??0)>0,'INVALID_REPLAN','Replan must change or add tasks.');
+      invariant(new Set(input.updates.map(update=>update.taskId)).size===input.updates.length,'DUPLICATE_TASK','A task may be updated only once per replan.');
+      const updates=new Map(input.updates.map(update=>[update.taskId,update]));
+      const existing=this.store.all<Task>('SELECT * FROM tasks WHERE workflow_id=?',workflow.id);
+      for(const update of input.updates){
+        const task=this.store.task(update.taskId);
+        invariant(task.workflowId===workflow.id,'CROSS_WORKFLOW','Replan task belongs to another workflow.');
+        invariant(task.version===update.expectedVersion,'VERSION_CONFLICT','Task version changed.');
+        invariant(['pending','ready'].includes(task.status)||(task.status==='blocked'&&task.blockingReason==='DEPENDENCY_BLOCKED'),'TASK_ALREADY_STARTED','Only tasks awaiting their first execution may be replanned.');
+        invariant(!this.store.get('SELECT id FROM runs WHERE task_id=? LIMIT 1',task.id),'TASK_ALREADY_STARTED','Execution history makes task inputs immutable.');
+        if(update.priority!==undefined)validatePriority(update.priority);
+        if(update.dependsOn!==undefined)invariant(new Set(update.dependsOn).size===update.dependsOn.length,'INVALID_DEPENDENCY','Dependencies must be unique.');
+      }
+      const additions=(input.tasks??[]).map(task=>({...task,id:task.id??id('task')}));
+      validateDag([...existing.map(task=>({id:task.id,dependsOn:updates.get(task.id)?.dependsOn??this.dependencies(task).map(dependency=>dependency.id)})),...additions.map(task=>({id:task.id,dependsOn:task.dependsOn??[]}))]);
+      // Additions and edits share a transaction and exactly one plan revision.
+      if(additions.length)this.submitPlan({workflowId:workflow.id,expectedRevision:workflow.planRevision,tasks:additions.map(task=>({...task,dependsOn:[]}))});
+      for(const update of input.updates){
+        const task=this.store.task(update.taskId);
+        if(update.dependsOn!==undefined){this.store.exec('DELETE FROM task_dependencies WHERE task_id=?',task.id);for(const dep of update.dependsOn)this.store.exec('INSERT INTO task_dependencies(task_id,depends_on_task_id) VALUES(?,?)',task.id,dep);}
+        this.store.exec('UPDATE tasks SET priority=?,status=?,blocking_reason=NULL,version=version+1 WHERE id=?',update.priority??task.priority??0,'pending',task.id);
+      }
+      for(const task of additions)for(const dep of task.dependsOn??[])this.store.exec('INSERT INTO task_dependencies(task_id,depends_on_task_id) VALUES(?,?)',task.id,dep);
+      if(!additions.length)this.store.exec('UPDATE workflows SET plan_revision=plan_revision+1,version=version+1 WHERE id=?',workflow.id);
+      this.refreshQueuedRequests(workflow.id);
+      this.store.event(workflow.id,'plan.replanned',{revision:workflow.planRevision+1,updates:input.updates,addedTaskIds:additions.map(task=>task.id)});
+      return this.store.all<Task>('SELECT * FROM tasks WHERE workflow_id=? ORDER BY rowid',workflow.id);
+    });
+    this.pump();return result;
+  }
+  private refreshQueuedRequests(workflowId:string):void {
+    const workflow=this.store.workflow(workflowId);
+    for(const operation of this.store.all<Operation>("SELECT o.* FROM operations o JOIN tasks t ON t.id=o.entity_id WHERE t.workflow_id=? AND o.phase='queued'",workflowId)){
+      operation.payload.planRevision=workflow.planRevision;operation.payload.expectedVersion=this.store.task(operation.entityId).version;
+      this.store.exec('UPDATE operations SET payload=? WHERE id=?',JSON.stringify(operation.payload),operation.id);
+    }
+  }
+  private sameRepository(left:Task,right:Task):boolean {
+    const canonical=(task:Task)=>{let directory=this.store.workspace(this.store.workflow(task.workflowId).workspaceId).commonGitDir;try{directory=realpathSync.native(directory);}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;directory=resolve(directory);}directory=directory.replaceAll('\\','/').replace(/\/$/,'');return process.platform==='win32'?directory.toLowerCase():directory;};
+    return canonical(left)===canonical(right);
+  }
+  private markScheduled(workflowId:string):void {
+    this.store.exec('UPDATE scheduler_limits SET dispatch_sequence=dispatch_sequence+1 WHERE id=1');
+    this.store.exec('UPDATE workflows SET last_scheduled=(SELECT dispatch_sequence FROM scheduler_limits WHERE id=1) WHERE id=?',workflowId);
+  }
+  private queued(kind:Operation['kind']):Operation[] {
+    return schedulingOrder(this.store.all<Operation&{priority:number;lastScheduled:number;sequence:number}>("SELECT o.*,t.priority,w.last_scheduled,o.rowid AS sequence FROM operations o JOIN tasks t ON t.id=o.entity_id JOIN workflows w ON w.id=t.workflow_id WHERE o.kind=? AND o.phase='queued'",kind),this.limits.agingMs);
   }
   requestIntegration(input:{taskId:string;sourceHead:string;idempotencyKey:string;expectedVersion:number}):Operation {
     const operation=this.enqueue('integration',input.taskId,input.idempotencyKey,input.expectedVersion,input.sourceHead);
@@ -88,7 +159,7 @@ export class TaskCoordinator {
       const duplicate=this.store.get<Operation>('SELECT * FROM operations WHERE kind=? AND entity_id=? AND phase IN (\'queued\',\'started\')',kind,taskId);
       invariant(!duplicate,'DUPLICATE_REQUEST','Task already has an unfinished request.');
       invariant(kind==='dispatch'?['pending','ready'].includes(task.status):task.kind==='change'&&task.status==='validating'&&task.sourceHead===sourceHead,'INVALID_STATE','Task is not eligible for this request.');
-      const role=roleName?this.store.require<Role>('SELECT * FROM roles WHERE workspace_id=? AND name=?',workflow.workspaceId,roleName):undefined;
+      const role=roleName?this.store.require<Role>("SELECT * FROM roles WHERE workspace_id=? AND name=? AND purpose='developer' AND enabled=1",workflow.workspaceId,roleName):undefined;
       const payload:Operation['payload']={expectedVersion,planRevision:workflow.planRevision};
       if(role)payload.roleId=role.id;if(sourceHead)payload.sourceHead=sourceHead;
       const requestId=id('request');
@@ -111,13 +182,15 @@ export class TaskCoordinator {
       if(dependency==='blocked'){this.operationPhase(operation,'blocked','DEPENDENCY_BLOCKED');this.store.exec('UPDATE tasks SET status=?,blocking_reason=?,version=version+1 WHERE id=?','blocked','DEPENDENCY_BLOCKED',task.id);return;}
       if(dependency==='waiting')return;
       const occupied=this.store.all<Run>('SELECT * FROM runs WHERE slot_released_at IS NULL');
-      if(occupied.length>=3||occupied.filter(run=>run.purpose!=='review').length>=2||occupied.some(run=>run.taskId===task.id))return;
-      if(occupied.some(run=>run.purpose!=='review'&&pathsOverlap(task.expectedPaths,this.store.task(run.taskId).expectedPaths)))return;
-      const roles=this.store.all<Role>('SELECT * FROM roles WHERE workspace_id=? AND name IN (\'developer-a\',\'developer-b\') ORDER BY name',workflow.workspaceId);
+      if(occupied.length>=this.limits.total||occupied.filter(run=>run.purpose!=='review').length>=this.limits.developers||occupied.some(run=>run.taskId===task.id))return;
+      if(occupied.some(run=>run.purpose!=='review'&&this.sameRepository(task,this.store.task(run.taskId))&&pathsOverlap(task.expectedPaths,this.store.task(run.taskId).expectedPaths)))return;
+      const roles=this.store.all<Role>("SELECT * FROM roles WHERE workspace_id=? AND purpose='developer' AND enabled=1 ORDER BY name",workflow.workspaceId);
       const requestedRole=operation.payload.roleId??task.roleId;
+      if(requestedRole&&!roles.some(role=>role.id===requestedRole)){this.operationPhase(operation,'blocked','ROLE_UNAVAILABLE');return;}
       const role=roles.find(candidate=>(!requestedRole||candidate.id===requestedRole)&&!occupied.some(run=>run.roleId===candidate.id));
       if(!role)return;
       const run=this.createRun(task,role,task.attempt===1?'develop':'repair');
+      this.markScheduled(workflow.id);
       operation.payload.runId=run.id;
       this.store.exec('UPDATE tasks SET status=?,version=version+1,blocking_reason=NULL WHERE id=?','running',task.id);
       this.operationPhase(operation,'started');this.store.event(workflow.id,'dispatch_reserved',{}, {taskId:task.id,runId:run.id,requestId:operation.id});return run;
@@ -133,14 +206,16 @@ export class TaskCoordinator {
   private pump():void {
     if(this.stopping||this.pumping)return;this.pumping=true;
     try {
-      for(const operation of this.store.all<Operation>('SELECT * FROM operations WHERE kind=\'dispatch\' AND phase=\'queued\' ORDER BY created_at,id')) {
-        const run=this.reserve(operation);if(run)this.track(this.executeDevelopment(run,operation).catch(error=>this.unexpected(run,error)));
-      }
+      // Re-sort after every reservation so a large workflow cannot consume every vacancy.
+      for(;;){let reserved=false;for(const operation of this.queued('dispatch')){
+        const run=this.reserve(operation);if(run){this.track(this.executeDevelopment(run,operation).catch(error=>this.unexpected(run,error)));reserved=true;break;}
+      }if(!reserved)break;}
       if(!this.integrationBusy&&!this.store.get('SELECT id FROM integrations WHERE status IN (\'preparing\',\'reviewing\',\'publishing\',\'cleanup_unknown\') LIMIT 1')) {
-        for(const operation of this.store.all<Operation>('SELECT * FROM operations WHERE kind=\'integration\' AND phase=\'queued\' ORDER BY created_at,id')) {
+        for(const operation of this.queued('integration')) {
           const task=this.store.task(operation.entityId),workflow=this.store.workflow(task.workflowId);
           if(workflow.status!=='running'||this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',task.id))continue;
           if(operation.payload.planRevision!==workflow.planRevision||task.sourceHead!==operation.payload.sourceHead||task.version!==operation.payload.expectedVersion){this.store.transaction(()=>this.operationPhase(operation,'blocked','STALE_REQUEST'));continue;}
+          this.store.transaction(()=>this.markScheduled(workflow.id));
           this.integrationBusy=true;
           this.track(this.executeIntegration(operation).catch(error=>{this.store.transaction(()=>this.operationPhase(this.store.operation(operation.id),'blocked',errorMessage(error)));}).finally(()=>{this.integrationBusy=false;this.pump();}));break;
         }
@@ -209,7 +284,16 @@ export class TaskCoordinator {
       if(completed.cleanupStatus!=='confirmed'){this.store.transaction(()=>{this.blockTask(task.id,'CLEANUP_UNKNOWN');this.operationPhase(this.store.operation(operation.id),'blocked','CLEANUP_UNKNOWN');});return;}
       if(completed.status==='cancelled'){this.store.transaction(()=>{this.store.exec('UPDATE tasks SET status=?,blocking_reason=?,version=version+1 WHERE id=?','cancelled','CANCELLED',task.id);this.operationPhase(this.store.operation(operation.id),'cancelled');});return;}
       if(!result||result.outcome!=='completed'){this.store.transaction(()=>{this.blockTask(task.id,result?.blockingReasons.join('; ')||completed.stopReason||'EXECUTION_FAILED');this.operationPhase(this.store.operation(operation.id),'blocked','EXECUTION_FAILED');});return;}
-      if(task.kind==='analysis'){this.store.transaction(()=>{this.store.exec('UPDATE tasks SET status=?,version=version+1 WHERE id=?','succeeded',task.id);this.operationPhase(this.store.operation(operation.id),'completed');this.store.event(task.workflowId,'task.succeeded',{}, {taskId:task.id,runId:run.id});});return;}
+      if(task.kind==='analysis'){
+        const evidence=this.git.verifyAnalysis?await this.git.verifyAnalysis({...this.context(this.store.task(task.id)),run:completed,worktree}):undefined;
+        this.store.transaction(()=>{
+          const latest=this.store.task(task.id);
+          if(latest.status==='cancelled'||terminalWorkflows.has(this.store.workflow(task.workflowId).status)){this.operationPhase(this.store.operation(operation.id),'cancelled');return;}
+          invariant(latest.status==='running'&&latest.attempt===run.taskAttempt,'STALE_ANALYSIS','Analysis no longer owns the current task attempt.');
+          if(evidence)this.store.event(task.workflowId,'analysis.verified',evidence,{taskId:task.id,runId:run.id});
+          this.store.exec('UPDATE tasks SET status=?,version=version+1 WHERE id=?','succeeded',task.id);this.operationPhase(this.store.operation(operation.id),'completed');this.store.event(task.workflowId,'task.succeeded',{}, {taskId:task.id,runId:run.id});
+        });return;
+      }
       const source=await this.git.collectSource({...this.context(this.store.task(task.id)),run:completed,worktree});
       const eligible=this.store.transaction(()=>{
         const latest=this.store.task(task.id),workflow=this.store.workflow(task.workflowId);
@@ -234,7 +318,7 @@ export class TaskCoordinator {
       this.store.transaction(()=>{this.store.exec('UPDATE integrations SET expected_target_head=?,candidate_head=?,check_ids=?,candidate=? WHERE id=?',candidate!.expectedTargetHead,candidate!.candidateHead,JSON.stringify(candidate!.checkIds),JSON.stringify(candidate),integrationId);this.store.event(task.workflowId,'candidate.prepared',candidate,{taskId:task.id,requestId:operation.id});});
       while(this.store.workflow(task.workflowId).status==='paused'&&this.store.task(task.id).status!=='cancelled'&&!this.stopping)await new Promise(resolve=>setTimeout(resolve,25));
       task=this.store.task(task.id);invariant(!this.stopping&&this.store.workflow(task.workflowId).status==='running'&&task.status!=='cancelled','CANCELLED','Integration cancelled before review.');
-      reviewRun=this.store.transaction(()=>{const role=this.store.require<Role>('SELECT * FROM roles WHERE workspace_id=? AND name=?',this.store.workflow(task.workflowId).workspaceId,'reviewer');const run=this.createRun(task,role,'review');this.store.exec('UPDATE integrations SET status=?,review_run_id=? WHERE id=?','reviewing',run.id,integrationId);operation.payload.runId=run.id;this.store.exec('UPDATE operations SET payload=? WHERE id=?',JSON.stringify(operation.payload),operation.id);this.store.event(task.workflowId,'review.reserved',{candidateHead:candidate!.candidateHead},{taskId:task.id,runId:run.id,requestId:operation.id});return run;});
+      reviewRun=this.store.transaction(()=>{const role=this.store.require<Role>("SELECT * FROM roles WHERE workspace_id=? AND purpose='reviewer' AND enabled=1 ORDER BY name LIMIT 1",this.store.workflow(task.workflowId).workspaceId);const run=this.createRun(task,role,'review');this.store.exec('UPDATE integrations SET status=?,review_run_id=? WHERE id=?','reviewing',run.id,integrationId);operation.payload.runId=run.id;this.store.exec('UPDATE operations SET payload=? WHERE id=?',JSON.stringify(operation.payload),operation.id);this.store.event(task.workflowId,'review.reserved',{candidateHead:candidate!.candidateHead},{taskId:task.id,runId:run.id,requestId:operation.id});return run;});
       const state:Active={controller:new AbortController(),cancelled:false};this.active.set(reviewRun.id,state);
       const review=await this.execute(reviewRun,task,candidate.cwd,state,candidate) as ReviewResult|undefined;
       invariant(this.store.run(reviewRun.id).cleanupStatus==='confirmed','CLEANUP_UNKNOWN','Review cleanup is unconfirmed.');
@@ -257,10 +341,11 @@ export class TaskCoordinator {
   }
   private unexpected(run:Run,error:unknown):void {this.store.transaction(()=>{this.recordResult(run.id,'interrupted','INTERNAL_ERROR',{error:errorMessage(error)});this.store.exec('UPDATE runs SET cleanup_status=? WHERE id=? AND slot_released_at IS NULL','unknown',run.id);this.blockTask(run.taskId,errorMessage(error));});}
 
+  private globalSlots():{developers:number;reviewers:number;total:number} {const occupied=this.store.all<Run>('SELECT * FROM runs WHERE slot_released_at IS NULL');return{developers:occupied.filter(run=>run.purpose!=='review').length,reviewers:occupied.filter(run=>run.purpose==='review').length,total:occupied.length};}
   status(workflowId:string) {
     const workflow=this.store.workflow(workflowId),tasks=this.store.all<Task>('SELECT * FROM tasks WHERE workflow_id=? ORDER BY rowid',workflowId);
     const runs=this.store.all<Run>('SELECT r.* FROM runs r JOIN tasks t ON t.id=r.task_id WHERE t.workflow_id=? ORDER BY r.created_at',workflowId),occupied=runs.filter(run=>run.slotReleasedAt===null);
-    return {workflow,roles:this.store.all<Role>('SELECT * FROM roles WHERE workspace_id=? ORDER BY name',workflow.workspaceId),tasks:tasks.map(task=>({...task,dependencyStatus:dependencyStatus(this.dependencies(task))})),runs,worktrees:this.store.all<Worktree>('SELECT w.* FROM worktrees w JOIN tasks t ON t.id=w.task_id WHERE t.workflow_id=?',workflowId),operations:this.store.all<Operation>('SELECT o.* FROM operations o JOIN tasks t ON t.id=o.entity_id WHERE t.workflow_id=? ORDER BY o.created_at,o.id',workflowId),integrations:this.store.all<IntegrationRecord>('SELECT i.* FROM integrations i JOIN tasks t ON t.id=i.task_id WHERE t.workflow_id=?',workflowId),slots:{developers:occupied.filter(run=>run.purpose!=='review').length,reviewers:occupied.filter(run=>run.purpose==='review').length,total:occupied.length},eventSeq:this.store.get<{seq:number}>('SELECT COALESCE(MAX(event_seq),0) AS seq FROM task_events WHERE workflow_id=?',workflowId)!.seq};
+    return {workflow,roles:this.store.all<Role>('SELECT * FROM roles WHERE workspace_id=? ORDER BY name',workflow.workspaceId),tasks:tasks.map(task=>({...task,dependencyStatus:dependencyStatus(this.dependencies(task))})),runs,worktrees:this.store.all<Worktree>('SELECT w.* FROM worktrees w JOIN tasks t ON t.id=w.task_id WHERE t.workflow_id=?',workflowId),operations:this.store.all<Operation>('SELECT o.* FROM operations o JOIN tasks t ON t.id=o.entity_id WHERE t.workflow_id=? ORDER BY o.created_at,o.id',workflowId),integrations:this.store.all<IntegrationRecord>('SELECT i.* FROM integrations i JOIN tasks t ON t.id=i.task_id WHERE t.workflow_id=?',workflowId),limits:this.limits,globalSlots:this.globalSlots(),slots:{developers:occupied.filter(run=>run.purpose!=='review').length,reviewers:occupied.filter(run=>run.purpose==='review').length,total:occupied.length},eventSeq:this.store.get<{seq:number}>('SELECT COALESCE(MAX(event_seq),0) AS seq FROM task_events WHERE workflow_id=?',workflowId)!.seq};
   }
   async wait(input:WaitInput):Promise<{events:TaskEvent[];eventSeq:number;timedOut:boolean;status:ReturnType<TaskCoordinator['status']>}> {
     invariant((input.runIds?.length??0)+(input.requestIds?.length??0)>0,'INVALID_WAIT','wait requires runIds or requestIds.');
@@ -301,7 +386,7 @@ export class TaskCoordinator {
   }
   async cancelWorkflow(workflowId:string):Promise<ReturnType<TaskCoordinator['status']>> {
     this.store.transaction(()=>{const workflow=this.store.workflow(workflowId);invariant(workflow.status!=='completed','INVALID_STATE','Completed workflow cannot be cancelled.');this.store.exec('UPDATE workflows SET status=?,version=version+1 WHERE id=?','cancelled',workflowId);for(const operation of this.store.all<Operation>('SELECT o.* FROM operations o JOIN tasks t ON t.id=o.entity_id WHERE t.workflow_id=? AND o.phase=\'queued\'',workflowId))this.operationPhase(operation,'cancelled');this.store.exec('UPDATE tasks SET status=?,version=version+1 WHERE workflow_id=? AND status<>?','cancelled',workflowId,'succeeded');this.store.event(workflowId,'workflow.cancel_requested');});
-    await Promise.allSettled(this.store.all<Run>('SELECT r.* FROM runs r JOIN tasks t ON t.id=r.task_id WHERE t.workflow_id=? AND r.slot_released_at IS NULL',workflowId).map(run=>this.cancelRun(run.id)));return this.status(workflowId);
+    await Promise.allSettled(this.store.all<Run>('SELECT r.* FROM runs r JOIN tasks t ON t.id=r.task_id WHERE t.workflow_id=? AND r.slot_released_at IS NULL',workflowId).map(run=>this.cancelRun(run.id)));this.pump();return this.status(workflowId);
   }
   finish(input:{workflowId:string;summary:string;expectedVersion?:number}):Workflow {
     return this.store.transaction(()=>{const workflow=this.store.workflow(input.workflowId);if(input.expectedVersion!==undefined)invariant(workflow.version===input.expectedVersion,'VERSION_CONFLICT','Workflow version changed.');invariant(workflow.status==='running'||workflow.status==='paused','INVALID_STATE','Workflow cannot be finished in this state.');const tasks=this.store.all<Task>('SELECT * FROM tasks WHERE workflow_id=?',workflow.id);invariant(tasks.length>0&&tasks.every(task=>task.status==='succeeded'&&(task.kind==='analysis'||task.acceptedCommit)),'UNFINISHED_TASKS','Every task must pass its actual acceptance gate.');invariant(!this.store.get('SELECT r.id FROM runs r JOIN tasks t ON t.id=r.task_id WHERE t.workflow_id=? AND r.slot_released_at IS NULL',workflow.id),'CLEANUP_UNKNOWN','All execution cleanup must be confirmed.');invariant(!this.store.get('SELECT o.id FROM operations o JOIN tasks t ON t.id=o.entity_id WHERE t.workflow_id=? AND o.phase IN (\'queued\',\'started\')',workflow.id),'UNFINISHED_REQUESTS','Workflow still has unfinished queue requests.');this.store.exec('UPDATE workflows SET status=?,summary=?,version=version+1 WHERE id=?','completed',input.summary,workflow.id);this.store.event(workflow.id,'workflow.completed',{summary:input.summary});return this.store.workflow(workflow.id);});

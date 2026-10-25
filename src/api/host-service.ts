@@ -18,7 +18,7 @@ import * as schemas from './schemas.js';
 import { publicError, redact } from './security.js';
 import type { ApiHandler } from './local-api.js';
 
-export interface HostConfig { home: string; port: number; leadProvider: string; leadModel: string; checks: CheckCommand[]; runTimeoutMs?: number }
+export interface HostConfig { home: string; port: number; leadProvider: string; leadModel: string; developerProvider?: string; reviewerProvider?: string; limits?: z.infer<typeof schemas.limitsSchema>; checks: CheckCommand[]; runTimeoutMs?: number }
 export class RiftHostService implements ApiHandler {
   readonly store: RiftStore;
   readonly project: ProjectService;
@@ -30,25 +30,29 @@ export class RiftHostService implements ApiHandler {
   private closing = false;
   constructor(private readonly ctx: Context, readonly config: HostConfig) {
     this.store = new RiftStore(path.join(config.home, 'rift.db'));
+    try {
     this.store.db.exec('CREATE TABLE IF NOT EXISTS management_requests (key TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, status TEXT NOT NULL, response TEXT)');
     this.project = new ProjectService(this.store, this.providerNames);
     this.git = new LocalGitService({ managedRoot: path.join(config.home, 'workspaces'), commands: config.checks });
-    const bridge = new DshActivationBridge(ctx, taskId => this.leads.get(this.store.task(taskId).workflowId)?.agent);
-    this.coordinator = new TaskCoordinator({ store: this.store, bridge, git: this.git, runTimeoutMs: config.runTimeoutMs });
+    const bridge = new DshActivationBridge(ctx, taskId => this.leads.get(this.store.task(taskId).workflowId)?.agent, this.store);
+    this.coordinator = new TaskCoordinator({ store: this.store, bridge, git: this.git, runTimeoutMs: config.runTimeoutMs, limits: config.limits });
+    } catch (error) { this.store.close(); throw error; }
   }
   async initialize(): Promise<void> { await this.coordinator.recover(); }
   private refreshProviders(): void { this.providerNames.clear(); for (const name of this.ctx.subagents.list()) this.providerNames.add(name); }
   private defaults(workspaceId: string): void {
     this.refreshProviders();
-    const bindings: ProviderBinding[] = ['claude-code-dev', 'codex-review'].map(providerName => {
+    const developerProvider = this.config.developerProvider ?? 'claude-code-dev';
+    const reviewerProvider = this.config.reviewerProvider ?? 'codex-review';
+    const bindings: ProviderBinding[] = [...new Set([developerProvider, reviewerProvider])].map(providerName => {
       const provider = this.ctx.subagents.getProvider(providerName);
       if (!provider) throw new RiftError('PROVIDER_UNAVAILABLE', `Profile is missing ${providerName}.`);
-      return { id: `${workspaceId}:${providerName}`, providerName, packageVersion: '0.2.1-rc.3', configRevision: 1, capabilities: { ...provider.capabilities }, credentialRefs: providerName.startsWith('claude') ? ['native:claude', 'env:ANTHROPIC_API_KEY'] : ['native:codex'] };
+      return { id: `${workspaceId}:${providerName}`, providerName, packageVersion: '0.2.1-rc.3', configRevision: 1, capabilities: { ...provider.capabilities }, credentialRefs: providerName.startsWith('claude') ? ['native:claude', 'env:ANTHROPIC_API_KEY'] : providerName === 'spawn' ? ['env:DEEPSEEK_API_KEY'] : ['native:codex'], ...(providerName === 'spawn' ? { runtime: 'dsh' as const, spawn: { provider: this.config.leadProvider, model: this.config.leadModel } } : {}) };
     });
     this.project.configureRoles(workspaceId, bindings, [
-      { name: 'lead', kind: 'dsh-lead', prompt: 'Coordinate a durable plan, parallel independent developers and exact-commit acceptance. Do not claim success before workflow_finish succeeds.', revision: 1 },
-      ...(['developer-a','developer-b'] as const).map(name => ({ name, kind: 'subagent' as const, providerBindingId: bindings[0].id, prompt: 'Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.', revision: 1 })),
-      { name: 'reviewer', kind: 'subagent', providerBindingId: bindings[1].id, prompt: 'Review the exact candidate commit read-only. Never edit or commit. Return one JSON object matching resultSchema; approve only when all acceptance criteria pass.', revision: 1 },
+      { name: 'lead', purpose: 'lead', kind: 'dsh-lead', prompt: 'Coordinate a durable plan, parallel independent developers and exact-commit acceptance. Do not claim success before workflow_finish succeeds.', revision: 1 },
+      ...Array.from({ length: this.coordinator.limits.developers }, (_, index) => index < 26 ? `developer-${String.fromCharCode(97 + index)}` : `developer-${index + 1}`).map(name => ({ name, purpose: 'developer' as const, kind: 'subagent' as const, providerBindingId: `${workspaceId}:${developerProvider}`, prompt: 'Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.', revision: 1 })),
+      { name: 'reviewer', purpose: 'reviewer', kind: 'subagent', providerBindingId: `${workspaceId}:${reviewerProvider}`, prompt: 'Review the exact candidate commit read-only. Never edit or commit. Return one JSON object matching resultSchema; approve only when all acceptance criteria pass.', revision: 1 },
     ]);
   }
   /** Attach the workflow's one live parent without requesting a model turn. */
@@ -82,8 +86,9 @@ export class RiftHostService implements ApiHandler {
     const handle = this.leads.get(workflowId)!;
     const workflow = this.store.workflow(workflowId);
     if (this.closing || ['completed','cancelled','failed'].includes(workflow.status)) throw new RiftError('INVALID_STATE', 'Workflow no longer accepts Lead input.');
-    const prompt = `You are the RIFT Lead for workflow ${workflowId}. Goal: ${workflow.goal}\nUse only RIFT tools. First inspect status. Submit a small explicit DAG and expected write paths. Dispatch two independent tasks BEFORE waiting; queue additional requested tasks. Use returned versions and request IDs. Wait for any results using the cursor, then handle blocked tasks or retry with context (maximum two repairs). Development automatically queues integration. All candidate checks and reviews are enforced by RIFT. Never finish until workflow_finish accepts. Do not invent execution evidence. If blocked by credentials or unknown cleanup, explain the blocker and stop.\n${instruction ?? ''}`;
-    handle.agent.followup({ id: MessageId(randomUUID()), role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: prompt }] });
+    const leadRole = this.store.require<{prompt:string}>("SELECT prompt FROM roles WHERE workspace_id=? AND purpose='lead' AND enabled=1", workflow.workspaceId);
+    const prompt = `You are the RIFT Lead for workflow ${workflowId}. Goal: ${workflow.goal}\nUse only RIFT tools. First inspect status. Submit a small explicit DAG and expected write paths. Read configured roles and global limits from status; dispatch independent tasks up to the available developer budget BEFORE waiting and queue additional requested tasks. Use plan_replan with current versions to update unstarted task dependencies or priority. Batch analysis may use analysisItems; write tasks must remain registered change tasks. Use returned versions and request IDs. Wait for any results using the cursor, then handle blocked tasks or retry with context (maximum two repairs). Development automatically queues integration. All candidate checks and reviews are enforced by RIFT. Never finish until workflow_finish accepts. Do not invent execution evidence. If blocked by credentials or unknown cleanup, explain the blocker and stop.\n${instruction ?? ''}`;
+    handle.agent.followup({ id: MessageId(randomUUID()), role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: `${leadRole.prompt}\n${prompt}` }] });
     return attached;
   }
   async handle(method: string, pathname: string, body: unknown, key?: string): Promise<unknown> {
@@ -120,7 +125,7 @@ export class RiftHostService implements ApiHandler {
       if (input.startLead) await this.startLead(id);
       return this.store.workflow(workflow.id);
     }
-    const match = /^\/v1\/(workspaces|workflows|tasks|runs)\/([^/]+)(?:\/(roles|plan|dispatch|integration|retry|cancel|pause|resume|lead|finish|wait|logs|archive|report))?$/.exec(pathname);
+    const match = /^\/v1\/(workspaces|workflows|tasks|runs)\/([^/]+)(?:\/(roles|plan|replan|dispatch|integration|retry|cancel|pause|resume|lead|finish|wait|logs|archive|report))?$/.exec(pathname);
     if (!match) throw new RiftError('NOT_FOUND','Unknown management route.');
     const [,entity,rawId,action] = match; const id = decodeURIComponent(rawId);
     if (entity === 'workspaces') {
@@ -137,6 +142,7 @@ export class RiftHostService implements ApiHandler {
       if (method === 'GET' && !action) return this.coordinator.status(id);
       if (method === 'GET' && action === 'report') { const report=this.coordinator.status(id);const folder=path.join(this.config.home,'workspaces',report.workflow.workspaceId,'reports');await mkdir(folder,{recursive:true});const file=path.join(folder,`${id}.json`);await writeFile(file,JSON.stringify(report,(_key,item)=>typeof item==='string'?redact(item):item,2));return{file,report}; }
       if (method === 'POST' && action === 'plan') return this.coordinator.submitPlan({workflowId:id,...schemas.planForCoordinator(schemas.planSchema.parse(body))});
+      if (method === 'POST' && action === 'replan') return this.coordinator.replan({workflowId:id,...schemas.replanSchema.parse(body)});
       if (method === 'POST' && action === 'wait') return this.coordinator.wait({workflowId:id,...schemas.waitSchema.parse(body)});
       if (method === 'POST' && action === 'finish') return this.coordinator.finish({workflowId:id,...schemas.finishSchema.parse(body)});
       if (method === 'POST' && action === 'cancel') {
@@ -173,7 +179,7 @@ export class RiftHostService implements ApiHandler {
       providers:this.ctx.subagents.list().map(name=>({name,capabilities:this.ctx.subagents.getProvider(name)?.capabilities})),
       configuration:{credentialReferences:['env:DEEPSEEK_API_KEY','env:ANTHROPIC_API_KEY','native:claude','native:codex'],environmentPresence:{deepseekApiKey:Boolean(process.env.DEEPSEEK_API_KEY),anthropicApiKey:Boolean(process.env.ANTHROPIC_API_KEY)}},
       authentication:{deepseek:'not-verified',claude:'not-verified',codex:'not-verified',verification:'Provider registration, environment-variable presence and an open Desktop app do not verify authentication or model access. Check a real activation probe for the configured instance.'},
-      limits:{workflows:1,developers:2,reviewers:1,total:3},
+      limits:{...this.coordinator.limits,workflowsPerWorkspace:1,reviewers:1},
       unconfirmedRuns:this.store.all("SELECT id,task_id,status,cleanup_status FROM runs WHERE slot_released_at IS NULL"),
       interruptedRequests:this.store.all("SELECT key,status FROM management_requests WHERE status='pending'"),
       restrictions:['External providers use one-shot activations.','Reviewer permission never inherits native sandbox; independent checkout and mutation gate enforce acceptance.','Authentication and model availability require real activation evidence; doctor does not run a model.'],

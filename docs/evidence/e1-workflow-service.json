@@ -1,0 +1,250 @@
+{
+  "date": "2026-10-25T10:43:39.293Z",
+  "mode": "real DSH Workflow/PTC/subagent service; controlled child provider; zero model calls; not native Codex/Claude evidence",
+  "evidenceDirectory": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-workflow-service-bN3dBD",
+  "result": {
+    "batch": "succeeded",
+    "failed": "blocked",
+    "cancelled": "cancelled",
+    "peakConcurrentChildren": 1,
+    "calls": [
+      {
+        "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-workflow-service-bN3dBD\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\9e5834ed238c1b4786a3bb26",
+        "prompt": "Analyze\nSupplied text only\nAnalyze only the supplied text. Do not edit files, invoke tools, or delegate. Return your analysis as text; the host records the task result.\nAnalysis item one:\nFirst analysis",
+        "disposed": true,
+        "childTools": [],
+        "guardDenied": true
+      },
+      {
+        "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-workflow-service-bN3dBD\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\9e5834ed238c1b4786a3bb26",
+        "prompt": "Analyze\nSupplied text only\nAnalyze only the supplied text. Do not edit files, invoke tools, or delegate. Return your analysis as text; the host records the task result.\nAnalysis item two:\nSecond analysis",
+        "disposed": true,
+        "childTools": [],
+        "guardDenied": true
+      },
+      {
+        "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-workflow-service-bN3dBD\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\e5121c42c93409ffafbbdb0a",
+        "prompt": "Analyze\nSupplied text\nAnalyze only the supplied text. Do not edit files, invoke tools, or delegate. Return your analysis as text; the host records the task result.\nAnalysis item bad:\nFAIL-ITEM",
+        "disposed": true,
+        "childTools": [],
+        "guardDenied": true
+      },
+      {
+        "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-workflow-service-bN3dBD\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\f9d9d52ac43e3f26852b339b",
+        "prompt": "Analyze\nSupplied text\nAnalyze only the supplied text. Do not edit files, invoke tools, or delegate. Return your analysis as text; the host records the task result.\nAnalysis item waiting:\nWAIT-ITEM",
+        "disposed": true,
+        "childTools": [],
+        "guardDenied": true
+      }
+    ],
+    "runs": [
+      {
+        "id": "run-e64d30b0-87a2-41df-b5de-4c7009f84624",
+        "taskId": "batch",
+        "roleId": "probe:analyst",
+        "purpose": "develop",
+        "taskAttempt": 1,
+        "status": "succeeded",
+        "providerSnapshot": {
+          "role": {
+            "id": "probe:analyst",
+            "workspaceId": "probe",
+            "name": "analyst",
+            "enabled": 1,
+            "purpose": "developer",
+            "kind": "subagent",
+            "providerBindingId": "controlled",
+            "prompt": "Analyze",
+            "revision": 1
+          },
+          "binding": {
+            "id": "controlled",
+            "providerName": "controlled-analysis",
+            "packageVersion": "controlled-only",
+            "configRevision": 1,
+            "capabilities": {},
+            "credentialRefs": [],
+            "runtime": null,
+            "model": null,
+            "spawn": null
+          }
+        },
+        "dshChildId": "rift-analysis-e4d227fe-c26d-4fb0-aade-4e55d3a818f7",
+        "dshRunId": "470751c3-276e-43fc-8737-fa410e620c7c",
+        "stopReason": "completed",
+        "cleanupStatus": "confirmed",
+        "slotReleasedAt": "2026-10-25T10:43:41.541Z",
+        "deadline": "2026-10-25T10:44:10.913Z",
+        "result": {
+          "schemaVersion": 1,
+          "taskId": "batch",
+          "runId": "run-e64d30b0-87a2-41df-b5de-4c7009f84624",
+          "outcome": "completed",
+          "summary": "{\"workflowRunId\":\"470751c3-276e-43fc-8737-fa410e620c7c\",\"items\":[{\"id\":\"one\",\"text\":\"controlled analysis result\"},{\"id\":\"two\",\"text\":\"controlled analysis result\"}]}",
+          "changedPaths": [],
+          "checksClaimed": [],
+          "blockingReasons": []
+        },
+        "createdAt": "2026-10-25T10:43:40.913Z",
+        "startedAt": "2026-10-25T10:43:41.335Z",
+        "endedAt": "2026-10-25T10:43:41.539Z",
+        "resultArtifactId": "artifact-479fd476-9f03-47ab-93be-ff69e3b2a231"
+      },
+      {
+        "id": "run-207d0410-9c48-4b8d-bf8b-278ca1bd7777",
+        "taskId": "failed",
+        "roleId": "probe:analyst",
+        "purpose": "develop",
+        "taskAttempt": 1,
+        "status": "succeeded",
+        "providerSnapshot": {
+          "role": {
+            "id": "probe:analyst",
+            "workspaceId": "probe",
+            "name": "analyst",
+            "enabled": 1,
+            "purpose": "developer",
+            "kind": "subagent",
+            "providerBindingId": "controlled",
+            "prompt": "Analyze",
+            "revision": 1
+          },
+          "binding": {
+            "id": "controlled",
+            "providerName": "controlled-analysis",
+            "packageVersion": "controlled-only",
+            "configRevision": 1,
+            "capabilities": {},
+            "credentialRefs": [],
+            "runtime": null,
+            "model": null,
+            "spawn": null
+          }
+        },
+        "dshChildId": "rift-analysis-5f024df8-1a11-41d4-a927-2907393aaa4f",
+        "dshRunId": "65e08958-0f28-4d2d-a1ec-6dbdf2d38ee2",
+        "stopReason": "completed",
+        "cleanupStatus": "confirmed",
+        "slotReleasedAt": "2026-10-25T10:43:42.428Z",
+        "deadline": "2026-10-25T10:44:11.915Z",
+        "result": {
+          "schemaVersion": 1,
+          "taskId": "failed",
+          "runId": "run-207d0410-9c48-4b8d-bf8b-278ca1bd7777",
+          "outcome": "blocked",
+          "summary": "{\"workflowRunId\":\"65e08958-0f28-4d2d-a1ec-6dbdf2d38ee2\",\"items\":[{\"id\":\"bad\",\"text\":null}]}",
+          "changedPaths": [],
+          "checksClaimed": [],
+          "blockingReasons": [
+            "Analysis item bad failed."
+          ]
+        },
+        "createdAt": "2026-10-25T10:43:41.915Z",
+        "startedAt": "2026-10-25T10:43:42.270Z",
+        "endedAt": "2026-10-25T10:43:42.426Z",
+        "resultArtifactId": "artifact-8c686c66-5385-4d6f-af20-4ed9b00c46b9"
+      },
+      {
+        "id": "run-e0a8cb6f-a8e8-4824-be00-5c7ea1bcb5e6",
+        "taskId": "cancelled",
+        "roleId": "probe:analyst",
+        "purpose": "develop",
+        "taskAttempt": 1,
+        "status": "cancelled",
+        "providerSnapshot": {
+          "role": {
+            "id": "probe:analyst",
+            "workspaceId": "probe",
+            "name": "analyst",
+            "enabled": 1,
+            "purpose": "developer",
+            "kind": "subagent",
+            "providerBindingId": "controlled",
+            "prompt": "Analyze",
+            "revision": 1
+          },
+          "binding": {
+            "id": "controlled",
+            "providerName": "controlled-analysis",
+            "packageVersion": "controlled-only",
+            "configRevision": 1,
+            "capabilities": {},
+            "credentialRefs": [],
+            "runtime": null,
+            "model": null,
+            "spawn": null
+          }
+        },
+        "dshChildId": "rift-analysis-d628e759-1d06-49fe-90bf-f019c19be3b3",
+        "dshRunId": null,
+        "stopReason": "CANCELLED",
+        "cleanupStatus": "confirmed",
+        "slotReleasedAt": "2026-10-25T10:43:42.890Z",
+        "deadline": "2026-10-25T10:44:12.441Z",
+        "result": {
+          "error": "Run was cancelled."
+        },
+        "createdAt": "2026-10-25T10:43:42.441Z",
+        "startedAt": "2026-10-25T10:43:42.773Z",
+        "endedAt": "2026-10-25T10:43:42.875Z",
+        "resultArtifactId": "artifact-bb32fdcc-46e9-47bc-a548-1df6e743a384"
+      }
+    ],
+    "workflowEvents": [
+      {
+        "eventSeq": 7,
+        "workflowId": "workflow",
+        "taskId": "batch",
+        "runId": "run-e64d30b0-87a2-41df-b5de-4c7009f84624",
+        "requestId": null,
+        "type": "analysis.workflow_started",
+        "payload": {
+          "workflowRunId": "470751c3-276e-43fc-8737-fa410e620c7c",
+          "parentSessionId": "rift-analysis-e4d227fe-c26d-4fb0-aade-4e55d3a818f7",
+          "itemIds": [
+            "one",
+            "two"
+          ],
+          "maxConcurrentChildren": 1
+        },
+        "occurredAt": "2026-10-25T10:43:41.334Z"
+      },
+      {
+        "eventSeq": 18,
+        "workflowId": "workflow",
+        "taskId": "failed",
+        "runId": "run-207d0410-9c48-4b8d-bf8b-278ca1bd7777",
+        "requestId": null,
+        "type": "analysis.workflow_started",
+        "payload": {
+          "workflowRunId": "65e08958-0f28-4d2d-a1ec-6dbdf2d38ee2",
+          "parentSessionId": "rift-analysis-5f024df8-1a11-41d4-a927-2907393aaa4f",
+          "itemIds": [
+            "bad"
+          ],
+          "maxConcurrentChildren": 1
+        },
+        "occurredAt": "2026-10-25T10:43:42.269Z"
+      },
+      {
+        "eventSeq": 28,
+        "workflowId": "workflow",
+        "taskId": "cancelled",
+        "runId": "run-e0a8cb6f-a8e8-4824-be00-5c7ea1bcb5e6",
+        "requestId": null,
+        "type": "analysis.workflow_started",
+        "payload": {
+          "workflowRunId": "4efa567f-648f-40bd-afde-ac6e0cee3974",
+          "parentSessionId": "rift-analysis-d628e759-1d06-49fe-90bf-f019c19be3b3",
+          "itemIds": [
+            "waiting",
+            "never"
+          ],
+          "maxConcurrentChildren": 1
+        },
+        "occurredAt": "2026-10-25T10:43:42.772Z"
+      }
+    ]
+  },
+  "status": "pass"
+}

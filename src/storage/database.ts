@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { RiftError, type Operation, type Role, type Run, type Task, type TaskEvent, type Workflow, type Workspace, type ProviderBinding } from '../contracts/index.js';
 
 type Row = Record<string, unknown>;
-const jsonColumns = new Set(['expectedPaths','acceptanceCriteria','providerSnapshot','result','payload','capabilities','credentialRefs','checkIds','candidate']);
+const jsonColumns = new Set(['expectedPaths','acceptanceCriteria','providerSnapshot','result','payload','capabilities','credentialRefs','checkIds','candidate','spawn','analysisItems']);
 export function decode<T>(row: Row): T {
   const output: Row = {};
   for (const [key, value] of Object.entries(row)) { const name = key.replace(/_([a-z])/g, (_, char: string) => char.toUpperCase()); output[name] = jsonColumns.has(name) && typeof value === 'string' ? JSON.parse(value) : value; }
@@ -29,8 +29,13 @@ export class RiftStore {
       this.db = new DatabaseSync(path);
       this.db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
       const migration = readFileSync(fileURLToPath(new URL('../../migrations/0001_initial.sql', import.meta.url)), 'utf8');
-      this.transaction(() => this.db.exec(migration));
+      if(!this.get("SELECT name FROM sqlite_master WHERE type='table' AND name='schema_migrations'"))this.transaction(() => this.db.exec(migration));
       if(!this.get('SELECT version FROM schema_migrations WHERE version=2'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0002_result_artifact.sql',import.meta.url)),'utf8')));
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=3')){
+        this.db.exec('PRAGMA foreign_keys=OFF; PRAGMA legacy_alter_table=ON;');
+        try{this.transaction(()=>{this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0003_scalable_scheduler.sql',import.meta.url)),'utf8'));if(this.db.prepare('PRAGMA foreign_key_check').all().length)throw new Error('Migration introduced invalid foreign keys.');});}
+        finally{this.db.exec('PRAGMA legacy_alter_table=OFF; PRAGMA foreign_keys=ON;');}
+      }
     } catch (error) { this.releaseLock(); throw error; }
   }
   private acquireLock(path: string): void {

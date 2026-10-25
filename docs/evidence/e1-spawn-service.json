@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-25T10:53:11.859Z",
+  "node": "v24.16.0",
+  "dsh": "0.2.1-rc.3",
+  "mode": "actual official in-process spawn and Agent creation; publication deliberately rejected by agent/created sentinel before prompt acceptance; zero model calls; not native model execution evidence",
+  "evidenceDirectory": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-spawn-service-UFbn4D",
+  "scope": {
+    "globalTools": [
+      "working_directory",
+      "pwsh",
+      "read_image"
+    ],
+    "leadTools": [
+      "rift_plan_submit",
+      "rift_plan_replan",
+      "rift_task_dispatch",
+      "rift_wait",
+      "rift_status",
+      "rift_task_retry",
+      "rift_integration_request",
+      "rift_workflow_finish"
+    ],
+    "children": [
+      {
+        "id": "7be2204c-479b-479e-b586-128728915c58",
+        "tools": [
+          "working_directory",
+          "pwsh",
+          "read_image"
+        ],
+        "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-spawn-service-UFbn4D",
+        "provider": "deepseek-official",
+        "model": "deepseek-flash"
+      },
+      {
+        "id": "b8df440b-e3a9-4232-b461-a94ccb9cdc8f",
+        "tools": [
+          "working_directory",
+          "pwsh",
+          "read_image"
+        ],
+        "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\e1-spawn-service-UFbn4D",
+        "provider": "deepseek-official",
+        "model": "deepseek-flash"
+      }
+    ],
+    "shellTool": "pwsh",
+    "leadCannotUseShell": true,
+    "childrenHaveDevelopmentTools": true,
+    "childrenCannotSeeLeadTools": true
+  },
+  "lifecycle": {
+    "failures": [
+      "Error: RIFT_SPAWN_SCOPE_CAPTURED_BEFORE_MODEL",
+      "Error: RIFT_SPAWN_SCOPE_CAPTURED_BEFORE_MODEL"
+    ],
+    "disposed": [
+      "7be2204c-479b-479e-b586-128728915c58",
+      "b8df440b-e3a9-4232-b461-a94ccb9cdc8f",
+      "scope-lead-cc24d6eb-eaf0-4c2a-9d89-1d0e239478e0"
+    ],
+    "remainingBeforeLeadDispose": [
+      "scope-lead-cc24d6eb-eaf0-4c2a-9d89-1d0e239478e0"
+    ],
+    "remainingAfterLeadDispose": [],
+    "repeatedStartsAtCapacityOne": true
+  },
+  "modelRequests": 0,
+  "unexpectedModelRequestsBlocked": 0,
+  "status": "pass"
+}

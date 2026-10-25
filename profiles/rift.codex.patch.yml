@@ -1,0 +1,62 @@
+- id: sdk-app-startup
+  disabled: true
+- id: sdk-jsonrpc-server
+  disabled: true
+- insert:
+    - id: rift-spawn
+      name: '@deepseek-ai/dsh-subagent-spawn-in-process'
+    - id: rift-ptc-runtime
+      name: '@deepseek-ai/dsh-ptc-runtime-node'
+    - id: rift-workflow-engine
+      name: '@deepseek-ai/dsh-workflow-ptc'
+      config:
+        provider: codex-review
+        maxConcurrentAgents: 1
+        maxTotalAgents: 32
+    - id: rift-subagents
+      name: '@deepseek-ai/dsh-subagent'
+      config:
+        maxActiveSubagents: !!js Number(process.env.RIFT_TOTAL_LIMIT || (Number(process.env.RIFT_DEVELOPERS || 4) + 1))
+        maxDepth: 1
+    - id: rift-codex-dev
+      name: '@deepseek-ai/dsh-subagent-codex'
+      config:
+        providerName: codex-dev
+        permissionMode: never
+        model: !!js >-
+          (() => {
+            const model = process.env.RIFT_CODEX_DEVELOPER_MODEL ?? 'gpt-6-astra';
+            if (!['gpt-6.1-sol', 'gpt-6-astra'].includes(model)) {
+              throw new Error('RIFT_CODEX_DEVELOPER_MODEL must be gpt-6.1-sol or gpt-6-astra.');
+            }
+            return model;
+          })()
+    - id: rift-codex-review
+      name: '@deepseek-ai/dsh-subagent-codex'
+      config:
+        providerName: codex-review
+        permissionMode: never
+        model: !!js >-
+          (() => {
+            const model = process.env.RIFT_CODEX_MODEL ?? 'gpt-6-astra';
+            if (!['gpt-6.1-sol', 'gpt-6-astra'].includes(model)) {
+              throw new Error('RIFT_CODEX_MODEL must be gpt-6.1-sol or gpt-6-astra.');
+            }
+            return model;
+          })()
+    - id: rift
+      name: '../dist/index.js'
+      config:
+        home: !!js process.env.RIFT_HOME || '.rift'
+        port: !!js Number(process.env.RIFT_PORT || 47831)
+        leadProvider: deepseek-official
+        leadModel: !!js process.env.RIFT_LEAD_MODEL || 'deepseek-flash'
+        developerProvider: codex-dev
+        reviewerProvider: codex-review
+        limits:
+          developers: !!js Number(process.env.RIFT_DEVELOPERS || 4)
+          total: !!js Number(process.env.RIFT_TOTAL_LIMIT || (Number(process.env.RIFT_DEVELOPERS || 4) + 1))
+        checks:
+          - id: diff-check
+            executable: git
+            args: ['diff', '--check', 'HEAD^', 'HEAD']

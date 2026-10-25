@@ -76,7 +76,7 @@ describe('A10/A11 independent management identity and HTTP acceptance', () => {
       const policy = restrict.mock.calls[0]![0] as { allow?: string[]; deny?: string[] };
       const inheritedAllowed = (name: string) => policy.allow ? policy.allow.includes(name) : !policy.deny?.includes(name);
       expect(['subagent', 'shell', 'registered-later-delegation'].some(inheritedAllowed)).toBe(false);
-      expect(definitions).toHaveLength(7);
+      expect(definitions).toHaveLength(8);
       const assertPureJson = (value: unknown): void => {
         if (value === null || ['string', 'boolean', 'number'].includes(typeof value)) return;
         if (Array.isArray(value)) { value.forEach(assertPureJson); return; }

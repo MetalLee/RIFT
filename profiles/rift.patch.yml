@@ -3,10 +3,20 @@
 - id: sdk-jsonrpc-server
   disabled: true
 - insert:
+    - id: rift-spawn
+      name: '@deepseek-ai/dsh-subagent-spawn-in-process'
+    - id: rift-ptc-runtime
+      name: '@deepseek-ai/dsh-ptc-runtime-node'
+    - id: rift-workflow-engine
+      name: '@deepseek-ai/dsh-workflow-ptc'
+      config:
+        provider: codex-review
+        maxConcurrentAgents: 1
+        maxTotalAgents: 32
     - id: rift-subagents
       name: '@deepseek-ai/dsh-subagent'
       config:
-        maxActiveSubagents: 3
+        maxActiveSubagents: !!js Number(process.env.RIFT_TOTAL_LIMIT || (Number(process.env.RIFT_DEVELOPERS || 2) + 1))
         maxDepth: 1
     - id: rift-claude
       name: '@deepseek-ai/dsh-subagent-claude-code'
@@ -43,6 +53,11 @@
         port: !!js Number(process.env.RIFT_PORT || 47831)
         leadProvider: deepseek-official
         leadModel: !!js process.env.RIFT_LEAD_MODEL || 'deepseek-flash'
+        developerProvider: !!js process.env.RIFT_DEVELOPER_PROVIDER || 'claude-code-dev'
+        reviewerProvider: codex-review
+        limits:
+          developers: !!js Number(process.env.RIFT_DEVELOPERS || 2)
+          total: !!js Number(process.env.RIFT_TOTAL_LIMIT || (Number(process.env.RIFT_DEVELOPERS || 2) + 1))
         checks:
           - id: diff-check
             executable: git

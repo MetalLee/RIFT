@@ -109,6 +109,17 @@ export class LocalGitService implements GitService {
     if (!diff) throw new Error('EMPTY_CHANGE: final source has no actual diff from its attempt base');
     return { sourceHead, diff, changedPaths };
   }
+  async verifyAnalysis(input:GitContext & {run:Run;worktree:Worktree}):Promise<{headCommit:string}> {
+    const {workspace,task,run,worktree}=input;
+    if(task.kind!=='analysis'||run.cleanupStatus!=='confirmed'||worktree.taskId!==task.id||worktree.attempt!==task.attempt||worktree.writerRunId!==run.id)throw new Error('WORKTREE_OWNERSHIP: analysis requires confirmed cleanup and its exclusive checkout');
+    const cwd=await managedPath(this.managedRoot,worktree.path);
+    const expected=await inspectRepository(workspace.repositoryPath,worktree.baseCommit),actual=await inspectRepository(cwd,worktree.baseCommit);
+    if(actual.commonGitDir!==expected.commonGitDir||actual.rootPath!==await realpath(cwd))throw new Error('WORKTREE_OWNERSHIP: analysis repository mismatch');
+    const headCommit=await gitOk(cwd,['rev-parse','HEAD']);
+    const status=await gitOk(cwd,['status','--porcelain=v1','--untracked-files=all','--ignored']);
+    if(headCommit!==worktree.baseCommit||status)throw new Error(`ANALYSIS_MODIFIED_CHECKOUT: expected HEAD ${worktree.baseCommit}; actual HEAD ${headCommit}; changes preserved for inspection${status?`\n${status}`:''}`);
+    return {headCommit};
+  }
   async prepareCandidate(input: GitContext & { sourceHead: string; integrationId: string }): Promise<Candidate> {
     const { workspace, workflow, task, integrationId } = input;
     const repository = await inspectRepository(workspace.repositoryPath, workflow.baseCommit);
@@ -167,11 +178,13 @@ export class LocalGitService implements GitService {
         await managedPath(this.managedRoot, cwd);
         if (await gitOk(cwd, ['rev-parse', 'HEAD']) !== candidate.candidateHead || !(await checkoutClean(cwd))) throw new Error('REVIEW_MODIFIED_CHECKOUT');
       }
-      const checkedOut = await gitOk(repository.rootPath, ['worktree', 'list', '--porcelain']);
-      if (checkedOut.split('\n').includes(`branch ${this.ref(workflow)}`)) throw new Error('INTEGRATION_REF_CHECKED_OUT');
       operation = { ...operation, phase: 'publish_planned' }; await this.record(workspace, operation);
-      const update = await git(repository.rootPath, ['update-ref', this.ref(workflow), candidate.candidateHead, candidate.expectedTargetHead]);
-      if (update.exitCode !== 0) throw new Error('STALE_TARGET: rebuild candidate and rerun checks/review');
+      await withMetadataLock(repository.commonGitDir,async()=>{
+        const checkedOut = await gitOk(repository.rootPath, ['worktree', 'list', '--porcelain']);
+        if (checkedOut.split('\n').includes(`branch ${this.ref(workflow)}`)) throw new Error('INTEGRATION_REF_CHECKED_OUT');
+        const update = await git(repository.rootPath, ['update-ref', this.ref(workflow), candidate.candidateHead, candidate.expectedTargetHead]);
+        if (update.exitCode !== 0) throw new Error('STALE_TARGET: rebuild candidate and rerun checks/review');
+      });
       published = true;
       operation = { ...operation, phase: 'ref_published' };
       // publish_planned was flushed before update-ref; failure to advance the

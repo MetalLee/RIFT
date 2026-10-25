@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
@@ -17,14 +17,21 @@ import { installLeadTools } from '../src/tools/rift-tools.js';
 import { redact } from '../src/api/security.js';
 
 const command=promisify(execFile);
+const codexOnly=process.argv.includes('--codex-only');
 const evidenceRoot=path.resolve('.runtime-evidence');await mkdir(evidenceRoot,{recursive:true});
 const temporary=await mkdtemp(path.join(evidenceRoot,'lead-tools-'));
 process.env.DSH_HOME=path.join(temporary,'dsh-home');process.env.RIFT_HOME=path.join(temporary,'plugin-home');process.env.RIFT_PORT='0';
 initializeProfileFromDefault('rift-tools-probe','sdk-minimal',process.env.DSH_HOME);
 const report:Record<string,unknown>={date:new Date().toISOString(),node:process.version,platform:process.platform,dsh:'0.2.1-rc.3',mode:'real DSH services and live Agents, zero model calls',evidenceDirectory:temporary};
 let store:RiftStore|undefined,coordinator:TaskCoordinator|undefined,lead:AgentHandle|undefined,other:AgentHandle|undefined;
-const {ctx,shutdown}=await runProfile({environment:loadLayeredEnv('rift-tools-probe'),profile:'rift-tools-probe',patchFiles:[path.resolve('profiles/rift.patch.yml')],args:[]});
+const {ctx,shutdown}=await runProfile({environment:loadLayeredEnv('rift-tools-probe'),profile:'rift-tools-probe',patchFiles:[path.resolve(codexOnly?'profiles/rift.codex.patch.yml':'profiles/rift.patch.yml')],args:[]});
 try {
+  const endpoint=JSON.parse(await readFile(path.join(process.env.RIFT_HOME,'endpoint.json'),'utf8')) as {url:string};
+  const token=(await readFile(path.join(process.env.RIFT_HOME,'management.token'),'utf8')).trim();
+  const response=await fetch(`${endpoint.url}/v1/doctor`,{headers:{Authorization:`Bearer ${token}`}});
+  if(!response.ok)throw new Error('Profile management API is unavailable.');
+  report.profile={status:'pass',codexOnly,doctor:await response.json(),workflowEngineMounted:Boolean(ctx.get('workflowEngine'))};
+  if(codexOnly&&ctx.subagents.list().some(name=>name.includes('claude')))throw new Error('Codex-only smoke must not load Claude.');
   const repo=path.join(temporary,'中文 空格 repository');await mkdir(repo,{recursive:true});
   await command('git',['init','--initial-branch=main',repo]);await command('git',['-C',repo,'config','user.name','RIFT probe']);await command('git',['-C',repo,'config','user.email','rift-probe@example.invalid']);
   await writeFile(path.join(repo,'README.md'),'RIFT live tool-scope probe\n');await command('git',['-C',repo,'add','README.md']);await command('git',['-C',repo,'commit','-m','probe baseline']);
@@ -32,7 +39,7 @@ try {
   const inspected=await git.inspectRepository(repo,'main');store=new RiftStore(path.join(temporary,'business','rift.db'));
   const project=new ProjectService(store,new Set(ctx.subagents.list()));
   project.createWorkspace({id:'probe',name:'probe',rootPath:path.join(temporary,'workspace'),repositoryPath:inspected.rootPath,commonGitDir:inspected.commonGitDir,baseRef:'main'});
-  project.configureRoles('probe',[{id:'claude',providerName:'claude-code-dev',packageVersion:'0.2.1-rc.3',configRevision:1,capabilities:{},credentialRefs:['native:claude']},{id:'codex',providerName:'codex-review',packageVersion:'0.2.1-rc.3',configRevision:1,capabilities:{},credentialRefs:['native:codex']}],[{name:'lead',kind:'dsh-lead',prompt:'Lead probe',revision:1},{name:'developer-a',kind:'subagent',providerBindingId:'claude',prompt:'A',revision:1},{name:'developer-b',kind:'subagent',providerBindingId:'claude',prompt:'B',revision:1},{name:'reviewer',kind:'subagent',providerBindingId:'codex',prompt:'Review',revision:1}]);
+  project.configureRoles('probe',[{id:'developer',providerName:codexOnly?'codex-dev':'claude-code-dev',packageVersion:'0.2.1-rc.3',configRevision:1,capabilities:{},credentialRefs:[codexOnly?'native:codex':'native:claude']},{id:'codex',providerName:'codex-review',packageVersion:'0.2.1-rc.3',configRevision:1,capabilities:{},credentialRefs:['native:codex']}],[{name:'lead',kind:'dsh-lead',prompt:'Lead probe',revision:1},{name:'developer-a',kind:'subagent',providerBindingId:'developer',prompt:'A',revision:1},{name:'developer-b',kind:'subagent',providerBindingId:'developer',prompt:'B',revision:1},{name:'reviewer',kind:'subagent',providerBindingId:'codex',prompt:'Review',revision:1}]);
   let providerStarts=0;
   coordinator=new TaskCoordinator({store,git,bridge:{async start(){providerStarts++;throw new Error('This zero-model probe must never start a provider.');}}});
   const workflow=coordinator.createWorkflow({id:'probe-workflow',workspaceId:'probe',goal:'Validate actual DSH scoped tools without running a model.',integrationRef:'refs/heads/rift/probe',baseCommit:inspected.baseCommit});
@@ -55,7 +62,7 @@ try {
   const inheritedDenied=await execute('rift_probe_inherited_delegate',{},lead.agent);
   const lateDenied=await execute('rift_probe_late_delegate',{},lead.agent);
   const shellDenied=await execute('pwsh',{},lead.agent);
-  const exactSurface=visible.length===7&&visible.every(name=>name.startsWith('rift_')&&name!=='rift_probe_inherited_delegate');
+  const exactSurface=visible.length===8&&visible.every(name=>name.startsWith('rift_')&&name!=='rift_probe_inherited_delegate');
   report.toolScope={status:exactSurface?'pass':'fail',inherited,visible,leadPublished:ctx.agents.get(lead.agent.id)===lead.agent,otherDoesNotSeeRift:!ctx.tools.schemas(other.agent).some(tool=>tool.name==='rift_status')};
   report.statusCall={status:!status.isError?'pass':'fail',outcome:status};
   report.planSchema={status:!plan.isError&&store.task('probe-task').status==='pending'?'pass':'fail',outcome:plan};
@@ -71,4 +78,4 @@ try {
   report.status=Object.values(report).some(value=>value&&typeof value==='object'&&(value as {status?:string}).status==='fail')?'fail':'pass';
   if(report.status==='fail')process.exitCode=1;
 }catch(error){report.status='fail';report.error=redact(String(error));process.exitCode=1;}
-finally {await coordinator?.shutdown();await Promise.allSettled([lead?.dispose(),other?.dispose()]);store?.close();await shutdown.shutdown(Number(process.exitCode??0));await writeFile(path.join(evidenceRoot,'lead-tools-probe.json'),redact(JSON.stringify(report,null,2),1024*1024));console.log(JSON.stringify(report,null,2));}
+finally {await coordinator?.shutdown();await Promise.allSettled([lead?.dispose(),other?.dispose()]);store?.close();await shutdown.shutdown(Number(process.exitCode??0));const serialized=JSON.stringify(report,(_key,value:unknown)=>typeof value==='string'?redact(value,1024*1024):value,2);await writeFile(path.join(evidenceRoot,'lead-tools-probe.json'),serialized);console.log(serialized);}

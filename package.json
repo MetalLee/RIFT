@@ -4,10 +4,20 @@
   "private": true,
   "type": "module",
   "description": "Persistent multi-agent development coordination inside DeepSeek Harness",
-  "engines": { "node": ">=24 <25", "dsh": "0.2.1-rc.3" },
+  "engines": {
+    "node": ">=24 <25",
+    "dsh": "0.2.1-rc.3"
+  },
   "packageManager": "pnpm@11.4.0",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-  "bin": { "rift": "./dist/cli/main.js" },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "rift": "./dist/cli/main.js"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
@@ -19,16 +29,20 @@
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.5",
-    "@deepseek-ai/schemastery": "3.18.5",
     "@deepseek-ai/dsh": "0.2.1-rc.3",
-    "@deepseek-ai/dsh-app-boot": "0.2.1-rc.3",
     "@deepseek-ai/dsh-agent": "0.2.1-rc.3",
-    "@deepseek-ai/dsh-subagent": "0.2.1-rc.3",
-    "@deepseek-ai/dsh-subagent-codex": "0.2.1-rc.3",
-    "@deepseek-ai/dsh-subagent-claude-code": "0.2.1-rc.3",
-    "@deepseek-ai/dsh-tools": "0.2.1-rc.3",
-    "@deepseek-ai/dsh-session": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-app-boot": "0.2.1-rc.3",
     "@deepseek-ai/dsh-llm": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-ptc-runtime-node": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-session": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-subagent": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-subagent-claude-code": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-subagent-codex": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-subagent-spawn-in-process": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-workflow": "0.2.1-rc.3",
+    "@deepseek-ai/dsh-workflow-ptc": "0.2.1-rc.3",
+    "@deepseek-ai/schemastery": "3.18.5",
     "drizzle-orm": "0.45.2",
     "zod": "4.4.3"
   },

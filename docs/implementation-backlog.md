@@ -1,6 +1,6 @@
 # RIFT 分阶段实施任务清单
 
-版本：0.3。依据[技术开发方案](technical-plan.md)和用户最新的并行 MVP 决定编排：一个 Lead、两个 Developer、一个 Reviewer。2026-10-25 的 `0.1.0` 已完成 P0–P3 实现与 MVP 验收，包括完整真实 Lead 编排、精确提交集成及原生恢复/取消。逐项状态见[开发记录](development-status.md)，证据边界见[独立验收](acceptance-report.md)。下表保留验收标准；E1/E2 为后续扩展。旧版 P0–P6 独立 Orchestrator 任务表已由本清单替代。
+版本：0.4。2026-10-25 的 `0.1.0` 已完成 P0–P3 MVP；当前源码继续交付 E1.1–E1.5，E1.6 按用户要求暂缓，本轮未使用 Claude。逐项状态见[开发记录](development-status.md)，新增证据见 [E1 验收](e1-acceptance.md)。下表保留原 MVP 验收标准，E1 的配置契约以 [E1 指南](e1-guide.md) 为准。旧版 P0–P6 独立 Orchestrator 任务表已由本清单替代。
 
 ## P0 验证 DSH 技术可行性
 
@@ -79,14 +79,14 @@ P3 gate：MVP 验收通过才发布首个可用版本。未完成四角色真实
 
 只有 P2/P3 证明基本方案有效后再安排，不列入 MVP 阻塞项。
 
-| ID | 扩展 | 验收方向 |
+| ID | 扩展 | 当前交付与验收 |
 | --- | --- | --- |
-| E1.1 | 扩大 Developer 并发规模 | 在首版两个 Developer 基础上支持更大规模、可配置配额与压力验证；集成仍串行 |
-| E1.2 | 多工作区并发 | 全局预算、共享仓库元数据锁、取消不会串扰 |
-| E1.3 | 自由角色配置 | DSH spawn/Codex/Claude 角色绑定；外部不同模型使用不同 provider 实例 |
-| E1.4 | 高级 DAG 调度 | 基于首版就绪判断与队列，扩展动态依赖重规划、优先级及公平调度 |
-| E1.5 | Workflow 复用 | 一次执行内的批量分析复用 DSH Workflow；写任务先入业务账本，不绕过门禁 |
-| E1.6 | 事件和界面 | 在已有业务事件上增加 SSE、Web UI；不重建底层会话体系 |
+| E1.1 | 扩大 Developer 并发规模 | 已实现全局持久配额、事务/trigger 兜底；40 任务/6 开发受控压力与真实 4 Codex 开发验证；集成仍串行 |
+| E1.2 | 多工作区并发 | 已实现独立 Lead/Workflow、共享预算、跨进程仓库元数据锁和取消隔离 |
+| E1.3 | 自由角色配置 | 已实现 purpose/任意角色名、DSH spawn 与官方外部绑定、配置快照和实例模型冲突校验；Claude 本轮未复测 |
+| E1.4 | 高级 DAG 调度 | 已实现原子动态重规划、版本与环检测、priority/等待老化/工作区轮转 |
+| E1.5 | Workflow 复用 | 已实现一个持久 analysis Run 内顺序批量分析，复用官方 Workflow/PTC；写任务拒绝，实际 Git 只读门禁验收 |
+| E1.6 | 事件和界面 | deferred，用户本轮明确暂不做；SSE/Web UI 均未实现 |
 
 ## E2 有明确需求时扩展 Provider
 

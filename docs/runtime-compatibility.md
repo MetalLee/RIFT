@@ -1,5 +1,9 @@
 # RIFT 运行时兼容记录
 
+**E1 增量（2026-10-25）：** 当前源码增加官方 `@deepseek-ai/dsh-workflow`、`dsh-workflow-ptc`、`dsh-ptc-runtime-node`、`dsh-subagent-spawn-in-process` 四个直接依赖，均锁定 `0.2.1-rc.3`。sdk-minimal 未自带 Workflow engine，两个 profile 已显式装载。E1 的 Codex-only profile、真实 4 开发/双工作区/批量分析和 106 项自动测试通过，见 [E1 验收](e1-acceptance.md)。本轮没有加载或执行 Claude。下文模型兼容与 72 项检查属于原 P0–P3 历史证据。
+
+E1 将配额从固定全局单 Workflow 改为每 Workspace 一个活跃 Workflow，Host 开发/总预算可配置；示例 profile 同步 DSH 子 Agent 容量。官方 `workflowEngine.start()` 没有逐项 cwd 参数，因此批量分析创建对应 task worktree 的 scoped parent，固定脚本顺序调用 child；中间 parent 不运行模型，maxDepth=1 的官方服务与真实 Codex 均已通过。复用不扩展成长期原生 Session。配置与边界见 [E1 指南](e1-guide.md)。
+
 核对日期：2026-10-25。工程版本：`0.1.0`。**P0–P3 的 MVP 验收范围已通过**：最终无人干预的真实 LLM Lead 完整业务流程、官方 Provider 并行/取消、定向拒审返工与 Git 集成、无模型故障窗口、原生双 Claude 崩溃恢复及管理 API 暂停/全取消均有证据。[当前自动测试](evidence/automated-tests.json)为 **72/72 通过**。结论限于本文记录的 Windows、锁定版本和模型组合，不扩大为全部权限或模型矩阵。
 
 ## 锁定环境
