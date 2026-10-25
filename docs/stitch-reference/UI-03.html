@@ -1,0 +1,322 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=Plus+Jakarta+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "inverse-surface": "#2f312e", "outline-variant": "#dbc1b9", "inverse-on-surface": "#f2f1ed", "surface-tint": "#9a4526", "secondary-fixed-dim": "#ccc5be", "on-tertiary-fixed": "#2f1500", "tertiary-fixed": "#ffdcc3", "error-container": "#ffdad6", "primary-fixed-dim": "#ffb59c", "tertiary-container": "#b15f00", "on-secondary": "#ffffff", "on-tertiary-fixed-variant": "#6e3900", "surface-variant": "#e3e2df", "on-surface-variant": "#55433d", "secondary-container": "#e9e1d9", "on-primary-fixed": "#390c00", "primary": "#974324", "on-tertiary-container": "#fffbff", "surface": "#faf9f5", "surface-container-low": "#f4f4f0", "surface-container-high": "#e9e8e4", "tertiary-fixed-dim": "#ffb77d", "surface-container": "#efeeea", "surface-container-lowest": "#ffffff", "on-background": "#1b1c1a", "on-primary-fixed-variant": "#7b2e11", "on-error-container": "#93000a", "outline": "#88726b", "primary-fixed": "#ffdbd0", "on-surface": "#1b1c1a", "on-tertiary": "#ffffff", "on-primary-container": "#fffbff", "on-primary": "#ffffff", "surface-bright": "#faf9f5", "inverse-primary": "#ffb59c", "on-secondary-fixed": "#1e1b16", "primary-container": "#b65a3a", "error": "#ba1a1a", "background": "#faf9f5", "on-error": "#ffffff", "secondary-fixed": "#e9e1d9", "surface-container-highest": "#e3e2df", "secondary": "#625e57", "surface-dim": "#dbdad6", "on-secondary-fixed-variant": "#4a4640", "on-secondary-container": "#68645d", "tertiary": "#8d4b00" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-lg": "2rem", "margin-mobile": "1.25rem", "gutter-mobile": "1rem", "space-sm": "0.75rem", "space-xs": "0.375rem", "gutter": "1.5rem", "margin": "2.5rem", "space-xl": "3.5rem", "space-md": "1.25rem" }, "fontFamily": { "body-sm": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "code-sm": ["JetBrains Mono"], "headline-md": ["Newsreader"], "body-lg": ["Plus Jakarta Sans"], "headline-xl": ["Newsreader"], "headline-lg": ["Newsreader"], "headline-xl-mobile": ["Newsreader"], "headline-sm": ["Newsreader"], "headline-lg-mobile": ["Newsreader"] }, "fontSize": { "body-sm": ["13px", { "lineHeight": "21px", "fontWeight": "400" }], "label-md": ["13px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "600" }], "body-md": ["15px", { "lineHeight": "25px", "fontWeight": "400" }], "label-sm": ["11px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "code-sm": ["13px", { "lineHeight": "20px", "fontWeight": "400" }], "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "500" }], "body-lg": ["17px", { "lineHeight": "29px", "fontWeight": "400" }], "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "400" }], "headline-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.015em", "fontWeight": "400" }], "headline-xl-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "400" }], "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "500" }], "headline-lg-mobile": ["26px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "400" }] } } } };</script></head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed"><aside class="fixed left-0 top-0 h-full w-60 bg-surface-container-low shadow-[0_1px_8px_rgba(0,0,0,0.03)] z-50 flex flex-col justify-between py-4 px-3"><div class="flex flex-col gap-4"><div class="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-surface-container transition-colors cursor-pointer"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div><span class="font-label-md text-label-md text-on-surface tracking-tight">RIFT 界面组</span></div><span class="material-symbols-outlined text-[18px] text-on-surface-variant">unfold_more</span></div><div class="px-1"><button class="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)] hover:bg-surface-container hover:text-on-surface transition-all" type="button"><span class="flex items-center gap-2 font-label-md text-label-md"><span class="material-symbols-outlined text-primary text-[18px]">edit_square</span>新建对话</span><span class="font-code-sm text-label-sm text-on-surface-variant opacity-70">⌘K</span></button></div><nav class="flex flex-col gap-1 mt-2" data-active-classes="bg-secondary-container text-on-secondary-container font-label-md rounded-lg"><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="chat" href="#"><span class="material-symbols-outlined text-[18px]">chat_bubble</span>对话</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="agents" href="#"><span class="material-symbols-outlined text-[18px]">smart_toy</span>智能代理</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="skills" href="#"><span class="material-symbols-outlined text-[18px]">auto_awesome</span>技能扩展</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="repositories" href="#"><span class="material-symbols-outlined text-[18px]">source_environment</span>代码库与工作区</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="tasks" href="#"><span class="material-symbols-outlined text-[18px]">task_alt</span>任务队列</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-[18px]">tune</span>系统设置</a></nav></div><div class="flex flex-col gap-2 px-2 pt-3"><div class="flex items-center justify-between p-2 rounded-lg bg-surface-container/60"><div class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-primary"></div><span class="font-label-sm text-label-sm text-on-surface-variant">本地宿主已就绪</span></div><span class="font-code-sm text-label-sm text-on-surface-variant">v0.9.4</span></div></div></aside><div class="pl-60 min-h-screen flex flex-col"><header class="fixed top-0 left-60 right-0 h-14 bg-surface/85 backdrop-blur-md shadow-[0_1px_6px_rgba(0,0,0,0.02)] z-40 flex items-center justify-between px-6"><div class="flex items-center gap-3"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight font-medium">会话画布</span><span class="font-code-sm text-label-sm text-on-surface-variant px-1.5 py-0.5 rounded bg-surface-container-high">#SES-8419</span></div><div class="flex items-center gap-3"><button class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary-fixed/40 text-on-surface hover:bg-primary-fixed/70 transition-colors" type="button"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span><span class="font-label-sm text-label-sm">Agent 3 运行 · 1 待定</span><span class="material-symbols-outlined text-[16px] text-on-surface-variant">keyboard_arrow_down</span></button><div class="flex items-center gap-1"><button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" title="导出记录" type="button"><span class="material-symbols-outlined text-[18px]">ios_share</span></button><button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" title="清空历史" type="button"><span class="material-symbols-outlined text-[18px]">restart_alt</span></button></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="w-full pt-14 bg-surface flex-1 flex flex-col"><div class="flex flex-col w-full">
+<div class="w-full max-w-4xl mx-auto px-6 py-8 md:py-12 flex flex-col gap-10">
+<!-- Top Breadcrumb & Metadata Navigation -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+<nav class="flex items-center gap-2 font-label-sm text-label-sm text-secondary tracking-wide uppercase">
+<span class="hover:text-primary transition-colors cursor-pointer">RIFT</span>
+<span class="text-outline-variant">/</span>
+<span class="hover:text-primary transition-colors cursor-pointer">系统设置</span>
+<span class="text-outline-variant">/</span>
+<span class="text-on-surface font-semibold">主 Agent 配置</span>
+</nav>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary-container text-on-secondary-container font-code-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+          运行快照 #SNAP-202503-A7
+        </span>
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm">示例环境</span>
+</div>
+</div>
+<!-- Editorial Header Section -->
+
+<!-- Main Configuration Form Canvas -->
+<div class="flex flex-col gap-8">
+<!-- Section 1: Execution Connection Mode -->
+<section class="flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-label-md text-label-md text-on-surface">1. 执行连接模式</span>
+<span class="text-secondary font-body-sm text-body-sm">· 决定推理逻辑与工具调用的执行端点</span>
+</div>
+<span class="font-code-sm text-label-sm text-primary">双模式热拔插 (示例)</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Option A: Direct Cloud Model API (Selected) -->
+<div class="relative flex flex-col justify-between p-6 rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-all cursor-pointer group" id="mode-api-card" onclick="selectExecutionMode('api')">
+<div class="flex items-start justify-between gap-4 mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-fixed/40 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[22px]">cloud_sync</span>
+</div>
+<div>
+<h2 class="font-label-md text-label-md text-on-surface">模型 API 直连</h2>
+<span class="font-code-sm text-label-sm text-primary">Anthropic Claude 原生云端</span>
+</div>
+</div>
+<div class="w-5 h-5 rounded-full bg-primary flex items-center justify-center transition-colors" id="radio-api">
+<div class="w-2 h-2 rounded-full bg-surface-container-lowest"></div>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-secondary leading-relaxed">
+              借助托管端点获得 Claude 3.7 系列最高上下文推理能力与思维链 (CoT) 解析，适合高复杂度策略规划与长文本综合。
+            </p>
+<div class="mt-5 pt-4 flex items-center justify-between text-secondary">
+<span class="font-label-sm text-label-sm">推荐配置 · 低延迟</span>
+<span class="font-code-sm text-label-sm text-on-surface-variant">TLS v1.3 / 安全加密</span>
+</div>
+</div>
+<!-- Option B: Local Host Runtime -->
+<div class="relative flex flex-col justify-between p-6 rounded-xl bg-surface-container-low hover:bg-surface-container-lowest shadow-sm transition-all cursor-pointer group" id="mode-host-card" onclick="selectExecutionMode('host')">
+<div class="flex items-start justify-between gap-4 mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high text-secondary flex items-center justify-center">
+<span class="material-symbols-outlined text-[22px]">developer_board</span>
+</div>
+<div>
+<h2 class="font-label-md text-label-md text-on-surface">本地宿主运行时</h2>
+<span class="font-code-sm text-label-sm text-secondary">Host Runtime (Daemon)</span>
+</div>
+</div>
+<div class="w-5 h-5 rounded-full bg-surface-container-high flex items-center justify-center transition-colors" id="radio-host">
+<div class="w-2 h-2 rounded-full bg-transparent"></div>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-secondary leading-relaxed">
+              指令直通本地环境守护进程 (localhost:8443)，具备完整文件系统访问、本地 Shell 交互以及隔离沙箱代码执行特权。
+            </p>
+<div class="mt-5 pt-4 flex items-center justify-between text-secondary">
+<span class="font-label-sm text-label-sm">高自主权 · 离线感知</span>
+<span class="font-code-sm text-label-sm text-on-surface-variant">Unix Socket / IPC</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Model & Credentials Parameters -->
+<section class="p-6 md:p-8 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-6">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4">
+<div>
+<h2 class="font-label-md text-label-md text-on-surface">2. 模型与端点参数</h2>
+<p class="font-body-sm text-body-sm text-secondary mt-0.5">主协调者将锁定此模型作为第一决策级</p>
+</div>
+<span class="inline-flex items-center gap-1 text-primary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">verified</span>
+            安全认证层已激活 (Keychain)
+          </span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Parameter: Model Selector -->
+<div class="flex flex-col gap-2">
+<label class="font-label-sm text-label-sm text-on-surface flex items-center justify-between">
+<span class="">基础模型 (Model Architecture)</span>
+<span class="text-primary font-normal">默认推荐</span>
+</label>
+<div class="relative">
+<select class="w-full h-11 px-3.5 pr-10 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md shadow-sm appearance-none focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer">
+<option selected="">Claude 3.7 Sonnet (20250219 · 深度混合推理)</option>
+<option>Claude 3.5 Sonnet (v2 · 高效代码协作)</option>
+<option>Claude 3.5 Haiku (极致低延时分发器)</option>
+<option>Custom Fine-Tuned Host Gateway (本地私有端点)</option>
+</select>
+<span class="material-symbols-outlined text-secondary absolute right-3 top-2.5 pointer-events-none text-[20px]">
+                unfold_more
+              </span>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mt-0.5">
+              提供高达 200k 的动态上下文预算，具备主动反思机制。
+            </p>
+</div>
+<!-- Parameter: Key Reference -->
+<div class="flex flex-col gap-2">
+<label class="font-label-sm text-label-sm text-on-surface flex items-center justify-between">
+<span class="">凭证密钥引用 (Credential Key)</span>
+<span class="font-code-sm text-label-sm text-secondary">已关联系统环境</span>
+</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined text-secondary absolute left-3.5 text-[18px]">key</span>
+<input class="w-full h-11 pl-10 pr-24 rounded-lg bg-surface-container text-on-surface font-code-sm text-code-sm shadow-inner focus:outline-none cursor-default" readonly="" type="text" value="$ANTHROPIC_API_KEY (系统托管安全钥匙串)">
+<button class="absolute right-2 px-2.5 py-1 rounded-md bg-surface-container-lowest text-on-surface-variant font-label-sm text-label-sm shadow-sm hover:bg-surface-container-high transition-colors" type="button">
+                更改引用
+              </button>
+</div>
+<p class="font-body-sm text-body-sm text-secondary mt-0.5">
+              凭证不直接明文落盘，由 RIFT 主守护进程通过本地环境变量或凭据链即时获取。
+            </p>
+</div>
+</div>
+<!-- Slider Context and Temperature Config -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+<!-- Context Window Slider -->
+<div class="flex flex-col gap-3 p-4 rounded-lg bg-surface-container-low">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface">最大上下文保留容量 (Context Window)</span>
+<span class="font-code-sm text-label-sm text-primary font-medium" id="context-val">128,000 Tokens</span>
+</div>
+<input class="w-full accent-primary h-1.5 bg-surface-container-high rounded-lg cursor-pointer" max="200000" min="32000" oninput="document.getElementById('context-val').innerText = Number(this.value).toLocaleString() + ' Tokens'" step="16000" type="range" value="128000">
+<div class="flex justify-between font-code-sm text-label-sm text-secondary">
+<span class="">32k</span>
+<span class="">128k (平衡)</span>
+<span class="">200k (极限)</span>
+</div>
+</div>
+<!-- Thinking / Temperature Mode -->
+<div class="flex flex-col justify-between p-4 rounded-lg bg-surface-container-low">
+<div class="flex items-center justify-between">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface">自适应延伸思考 (Extended Thinking)</span>
+<p class="font-body-sm text-body-sm text-secondary">处理多步逻辑推演时分配思考预算</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox">
+<div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-surface-container-lowest after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-container-lowest after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="flex items-center gap-2 mt-2 pt-2 text-secondary font-code-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px] text-primary">psychology</span>
+<span class="">思考预算上限: 16,384 tokens</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Visual Diagnostic & Telemetry Card -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="p-5 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between gap-4">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-secondary">往返响应延迟 (RTT)</span>
+<span class="material-symbols-outlined text-[18px] text-primary">speed</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-md text-headline-md text-on-surface font-semibold">248</span>
+<span class="font-code-sm text-label-sm text-secondary">ms (示例数据)</span>
+</div>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[35%] rounded-full"></div>
+</div>
+</div>
+<div class="p-5 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between gap-4">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-secondary">工具调用吞吐率</span>
+<span class="material-symbols-outlined text-[18px] text-secondary">precision_manufacturing</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-md text-headline-md text-on-surface font-semibold">99.4%</span>
+<span class="font-code-sm text-label-sm text-secondary">成功率</span>
+</div>
+<div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[99.4%] rounded-full"></div>
+</div>
+</div>
+<div class="p-5 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col justify-between gap-4">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-secondary">活跃子代理连通</span>
+<span class="material-symbols-outlined text-[18px] text-secondary">hub</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-md text-headline-md text-on-surface font-semibold">4 / 4</span>
+<span class="font-code-sm text-label-sm text-secondary">通道活跃</span>
+</div>
+<div class="flex items-center gap-1.5 text-secondary font-label-sm text-label-sm">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="">所有协调路由正常</span>
+</div>
+</div>
+</section>
+<!-- Section 4: Snapshot Notice Banner (Warm & Literary) -->
+<section class="p-5 rounded-xl bg-secondary-fixed/50 flex items-start gap-4 shadow-sm">
+<div class="w-8 h-8 rounded-full bg-surface-container-lowest text-primary flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]">history_edu</span>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<h2 class="font-label-md text-label-md text-on-surface">生效规则说明与快照提醒</h2>
+<span class="font-code-sm text-label-sm text-on-surface-variant font-normal">原子性隔离</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+            更改执行连接默认作用于下一次执行任务，当前正在推进的执行会话（<span class="font-code-sm text-label-sm text-on-surface">#SES-8419</span>）将完整保留启动时的参数快照，以确保推理链路与上下文状态的一致性与可复现性。
+          </p>
+</div>
+</section>
+<!-- Section 5: Bottom Floating / Docked Action Bar -->
+<div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 pb-12">
+<div class="flex items-center gap-2 text-secondary font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+<span class="">所有更改即刻写入本地持久化存储 (`~/.rift/master.yaml`)</span>
+</div>
+<div class="flex items-center gap-3 w-full sm:w-auto">
+<!-- Secondary Action: Test Connection -->
+<button class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm hover:bg-surface-container hover:shadow transition-all" id="test-btn" onclick="runConnectionTest()" type="button">
+<span class="material-symbols-outlined text-[18px] text-secondary" id="test-icon">network_check</span>
+<span id="test-text" class="">测试连接 (验证延迟与鉴权)</span>
+</button>
+<!-- Primary Action: Save & Apply -->
+<button class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm hover:bg-primary-container transition-all" id="save-btn" onclick="saveConfiguration()" type="button">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span class="">保存配置并下次生效</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Inline Micro-interaction Logic -->
+<script>
+    function selectExecutionMode(mode) {
+      const apiCard = document.getElementById('mode-api-card');
+      const hostCard = document.getElementById('mode-host-card');
+      const radioApi = document.getElementById('radio-api');
+      const radioHost = document.getElementById('radio-host');
+
+      if (mode === 'api') {
+        apiCard.className = "relative flex flex-col justify-between p-6 rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-all cursor-pointer group";
+        hostCard.className = "relative flex flex-col justify-between p-6 rounded-xl bg-surface-container-low hover:bg-surface-container-lowest shadow-sm transition-all cursor-pointer group";
+        radioApi.className = "w-5 h-5 rounded-full bg-primary flex items-center justify-center transition-colors";
+        radioApi.innerHTML = '<div class="w-2 h-2 rounded-full bg-surface-container-lowest"></div>';
+        radioHost.className = "w-5 h-5 rounded-full bg-surface-container-high flex items-center justify-center transition-colors";
+        radioHost.innerHTML = '<div class="w-2 h-2 rounded-full bg-transparent"></div>';
+      } else {
+        hostCard.className = "relative flex flex-col justify-between p-6 rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-all cursor-pointer group";
+        apiCard.className = "relative flex flex-col justify-between p-6 rounded-xl bg-surface-container-low hover:bg-surface-container-lowest shadow-sm transition-all cursor-pointer group";
+        radioHost.className = "w-5 h-5 rounded-full bg-primary flex items-center justify-center transition-colors";
+        radioHost.innerHTML = '<div class="w-2 h-2 rounded-full bg-surface-container-lowest"></div>';
+        radioApi.className = "w-5 h-5 rounded-full bg-surface-container-high flex items-center justify-center transition-colors";
+        radioApi.innerHTML = '<div class="w-2 h-2 rounded-full bg-transparent"></div>';
+      }
+    }
+
+    function runConnectionTest() {
+      const btn = document.getElementById('test-btn');
+      const icon = document.getElementById('test-icon');
+      const text = document.getElementById('test-text');
+      
+      icon.className = "material-symbols-outlined text-[18px] text-primary animate-spin";
+      icon.innerText = "sync";
+      text.innerText = "正在验证端点握手与鉴权...";
+
+      setTimeout(() => {
+        icon.className = "material-symbols-outlined text-[18px] text-primary";
+        icon.innerText = "check_circle";
+        text.innerText = "验证通过 (RTT 214ms · 鉴权成功)";
+        
+        setTimeout(() => {
+          icon.className = "material-symbols-outlined text-[18px] text-secondary";
+          icon.innerText = "network_check";
+          text.innerText = "测试连接 (验证延迟与鉴权)";
+        }, 3200);
+      }, 1200);
+    }
+
+    function saveConfiguration() {
+      const saveBtn = document.getElementById('save-btn');
+      const originalHtml = saveBtn.innerHTML;
+      
+      saveBtn.innerHTML = `
+        <span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+        <span>正在持久化写入...</span>
+      `;
+      saveBtn.classList.add('opacity-90');
+
+      setTimeout(() => {
+        saveBtn.innerHTML = `
+          <span class="material-symbols-outlined text-[18px]">task_alt</span>
+          <span>已保存 · 下次执行生效</span>
+        `;
+        setTimeout(() => {
+          saveBtn.innerHTML = originalHtml;
+          saveBtn.classList.remove('opacity-90');
+        }, 2500);
+      }, 700);
+    }
+  </script>
+</div></main></div>
+
+</body></html>

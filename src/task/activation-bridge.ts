@@ -6,8 +6,10 @@ import type { ActivationBridge, ActivationHandle } from '../contracts/index.js';
 import { RiftError } from '../contracts/index.js';
 import type { RiftStore } from '../storage/database.js';
 import { startAnalysisBatch } from './analysis-reuse.js';
+import { isPersistentCodexProvider } from '../agent/codex-provider.js';
 
-/** A thin adapter over the official service; never owns a Host or native process. */
+/** Routes registered execution through DSH or the persistent Codex backend.
+ * The coordinator remains the owner of business leases and returned handles. */
 export class DshActivationBridge implements ActivationBridge {
   constructor(private readonly ctx: Context, private readonly parentForTask: (taskId: string) => Agent | undefined, private readonly store?:RiftStore) {}
 
@@ -21,6 +23,10 @@ export class DshActivationBridge implements ActivationBridge {
     const provider=binding && this.ctx.subagents.getProvider(binding.providerName);
     if (!binding || !provider) {
       throw new RiftError('PROVIDER_UNAVAILABLE', 'The exact configured provider instance is not registered.');
+    }
+    if (isPersistentCodexProvider(provider)) {
+      if (!this.store) throw new RiftError('START_NOT_PUBLISHED','Persistent Codex requires the RIFT ledger.');
+      return provider.startTask(this.store,input);
     }
     const spawn=binding.spawn;
     if(spawn && (binding.runtime!=='dsh' || !provider.capabilities.agentOptions || (spawn.agentPreset&&!provider.capabilities.agentPreset)))throw new RiftError('START_NOT_PUBLISHED','Configured DSH spawn options are not supported by the exact registered provider.');

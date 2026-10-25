@@ -1,0 +1,334 @@
+{
+  "mode": "Playwright browser with deterministic API fixtures; no real Host writes",
+  "screens": [
+    {
+      "route": "workspaces",
+      "width": 1280,
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 240,
+        "height": 1024
+      },
+      "topbar": {
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 56
+      },
+      "main": {
+        "x": 248,
+        "y": 56,
+        "width": 1024,
+        "height": 917
+      },
+      "overflow": false,
+      "background": "rgb(250, 249, 245)",
+      "frame": {
+        "x": 280,
+        "y": 182,
+        "width": 960,
+        "height": 751
+      },
+      "primary": "#974324"
+    },
+    {
+      "route": "chat",
+      "width": 1280,
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 240,
+        "height": 1024
+      },
+      "topbar": {
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 56
+      },
+      "main": {
+        "x": 240,
+        "y": 56,
+        "width": 1040,
+        "height": 1247.5
+      },
+      "overflow": false,
+      "background": "rgb(250, 249, 245)",
+      "frame": null,
+      "primary": "#974324"
+    },
+    {
+      "route": "agents",
+      "width": 1280,
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 240,
+        "height": 1024
+      },
+      "topbar": {
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 56
+      },
+      "main": {
+        "x": 248,
+        "y": 56,
+        "width": 1024,
+        "height": 825
+      },
+      "overflow": false,
+      "background": "rgb(250, 249, 245)",
+      "frame": {
+        "x": 272,
+        "y": 218,
+        "width": 976,
+        "height": 438
+      },
+      "primary": "#974324"
+    },
+    {
+      "route": "settings",
+      "width": 1280,
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 240,
+        "height": 1024
+      },
+      "topbar": {
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 56
+      },
+      "main": {
+        "x": 312,
+        "y": 56,
+        "width": 896,
+        "height": 1256
+      },
+      "overflow": false,
+      "background": "rgb(250, 249, 245)",
+      "frame": {
+        "x": 336,
+        "y": 213,
+        "width": 848,
+        "height": 201
+      },
+      "primary": "#974324"
+    },
+    {
+      "route": "skills",
+      "width": 1280,
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 240,
+        "height": 1024
+      },
+      "topbar": {
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 56
+      },
+      "main": {
+        "x": 240,
+        "y": 56,
+        "width": 1040,
+        "height": 1838.5
+      },
+      "overflow": false,
+      "background": "rgb(250, 249, 245)",
+      "frame": {
+        "x": 272,
+        "y": 284,
+        "width": 976,
+        "height": 1510.5
+      },
+      "primary": "#974324"
+    },
+    {
+      "route": "repositories",
+      "width": 1280,
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 240,
+        "height": 1024
+      },
+      "topbar": {
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 56
+      },
+      "main": {
+        "x": 240,
+        "y": 56,
+        "width": 1040,
+        "height": 1387
+      },
+      "overflow": false,
+      "background": "rgb(250, 249, 245)",
+      "frame": null,
+      "primary": "#974324"
+    },
+    {
+      "route": "tasks",
+      "width": 1280,
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 240,
+        "height": 1024
+      },
+      "topbar": {
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 56
+      },
+      "main": {
+        "x": 240,
+        "y": 56,
+        "width": 1040,
+        "height": 1319
+      },
+      "overflow": false,
+      "background": "rgb(250, 249, 245)",
+      "frame": {
+        "x": 272,
+        "y": 262,
+        "width": 976,
+        "height": 1013
+      },
+      "primary": "#974324"
+    },
+    {
+      "route": "activity",
+      "width": 1280,
+      "sidebar": {
+        "x": 0,
+        "y": 0,
+        "width": 240,
+        "height": 1024
+      },
+      "topbar": {
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 56
+      },
+      "main": {
+        "x": 240,
+        "y": 56,
+        "width": 1040,
+        "height": 1032
+      },
+      "overflow": false,
+      "background": "rgb(250, 249, 245)",
+      "frame": {
+        "x": 272,
+        "y": 164,
+        "width": 976,
+        "height": 824
+      },
+      "primary": "#974324"
+    },
+    {
+      "route": "workspaces",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "route": "chat",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "route": "agents",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "route": "settings",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "route": "skills",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "route": "repositories",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "route": "tasks",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "route": "activity",
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "route": "workspaces",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "route": "chat",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "route": "agents",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "route": "settings",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "route": "skills",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "route": "repositories",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "route": "tasks",
+      "width": 768,
+      "overflow": false
+    },
+    {
+      "route": "activity",
+      "width": 768,
+      "overflow": false
+    }
+  ],
+  "checks": [
+    "Creation Sheet is 576px wide; Escape closes and restores focus",
+    "Agent search filters records; shadcn dialog opens/closes",
+    "RadioGroup runtime selection saves the selected connection/model through existing API",
+    "Sidebar new conversation action opens the conversation form",
+    "Conversation menu works; consumed creation requests do not reopen on return",
+    "Skill source and rendered Markdown views preserve the same version",
+    "Mobile Sheet navigation changes route and closes",
+    "Markdown strips executable HTML/URLs and preserves literal fenced code"
+  ],
+  "errors": []
+}

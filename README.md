@@ -1,12 +1,16 @@
 # RIFT 多智能体协作系统
 
+2026-10-26 增量：Codex 聊天与正式任务支持原生持久会话，包含跨进程续接、聊天增量同步和返工记忆。升级迁移、profile 与备份要求见 [原生会话说明](docs/native-sessions.md)。
+
 **Parallel minds. One workspace.**
 
 RIFT 是运行在 DeepSeek Harness（DSH）中的多智能体开发协作插件。给定 Git 仓库和开发目标，由 Lead 拆分任务，让可配置数量的 Developer 在独立 Git worktree 中开发，再经过项目检查和 Reviewer 审查，将成果汇入集成分支。
 
 当前版本为 **0.1.0**，P0–P3 MVP 已完成验收。2026-10-25 的验收记录包含 72/72 自动测试、真实模型编排、拒审返工、冲突处理、暂停/取消与崩溃恢复；实测环境与范围见[运行时兼容记录](docs/runtime-compatibility.md)和[独立验收报告](docs/acceptance-report.md)。
 
-当前源码已扩展 E1.1–E1.5：全局可配置配额、多工作区并发、自由角色、动态 DAG 与公平调度，以及一次 Run 内的官方 Workflow 批量分析。新配置和不加载 Claude 的启动步骤见 [E1 使用指南](docs/e1-guide.md)，当前检查结果见 [E1 验收报告](docs/e1-acceptance.md)。E1.6 的 SSE/Web UI 暂缓；未发布新版本。
+当前源码已完成 E1.1–E1.5 和后续 UI 计划 U0–U8：多工作区聊天、中文成员与 @、DSH/API 和受限原生主 Agent、Skill、多仓库工作目录、任务证据及恢复操作。SSE/Web UI 在本轮交付，原 E1.6 的暂缓记录保留为历史。启动与配置见 [UI 使用指南](docs/ui-guide.md)，当前验证结果见 [UI 验收报告](docs/ui-acceptance.md)；未发布新版本。
+
+构建并启动 Host 后，执行 `node dist/cli/main.js ui --home <同一 home>`，打开返回的一次性链接进入界面。UI 可先创建无仓库工作区开始对话，代码任务再明确选择仓库。旧 CLI 与 [E1 使用指南](docs/e1-guide.md)继续适用。
 
 ## 工作方式
 

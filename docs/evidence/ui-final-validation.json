@@ -1,0 +1,224 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-25T14:58:52.103Z",
+  "status": "pass",
+  "scope": "RIFT UI U0-U8 complete, S1-S8 and X1-X5; current local source, no release/push",
+  "team": {
+    "implementationAgents": 2,
+    "independentReviewer": 1,
+    "model": "gpt-6-astra",
+    "reasoningEffort": "high",
+    "mainAgent": "coordination, integration, actual model and Edge validation, documentation"
+  },
+  "design": "https://stitch.withgoogle.com/projects/1425554633296237378",
+  "environment": {
+    "platform": "win32",
+    "architecture": "x64",
+    "node": "v24.16.0",
+    "pnpm": "11.4.0",
+    "dsh": "0.2.1-rc.3",
+    "codex": "0.164.0"
+  },
+  "checks": [
+    {
+      "command": "pnpm install --frozen-lockfile --strict-peer-dependencies",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm peers check",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm build",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec vitest run --reporter=json --outputFile=docs/evidence/ui-automated-tests.json",
+      "exitCode": 0,
+      "files": 31,
+      "tests": 176,
+      "passed": 176,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0
+    }
+  ],
+  "evidence": [
+    {
+      "file": "u0-native-tools-probe.json",
+      "status": "pass"
+    },
+    {
+      "file": "u0-native-workflow-probe.json",
+      "status": "pass"
+    },
+    {
+      "file": "ui-dsh-workflow-probe.json",
+      "status": "pass"
+    },
+    {
+      "file": "ui-api-connection-probe.json",
+      "status": "pass"
+    },
+    {
+      "file": "ui-code-workflow-probe.json",
+      "status": "pass"
+    },
+    {
+      "file": "ui-browser-acceptance.json",
+      "status": "observations-recorded"
+    },
+    {
+      "file": "ui-built-browser-smoke.json",
+      "status": "observations-recorded"
+    },
+    {
+      "file": "ui-independent-review.json",
+      "status": "passed-independent-review"
+    }
+  ],
+  "independentReview": {
+    "unresolvedP0": 0,
+    "unresolvedP1": 0,
+    "unresolvedP2": 0,
+    "ownedTests": 32,
+    "uiTests": 16
+  },
+  "regressionHistory": [
+    {
+      "result": "Initial full suite: 175 passed, 1 obsolete cleanup assertion failed",
+      "resolution": "Updated the legacy test to assert unknown and retained Run/shared lease/worktree writer before the owned cleanup receipt, confirmed and released only after receipt, task remains blocked, no replay, one dispose, ordered unknown/confirmed events. Production code unchanged. Independently reviewed; full suite rerun passed."
+    }
+  ],
+  "documentationChecks": {
+    "brokenRelativeLinks": 0,
+    "credentialLiteralScan": {
+      "scannedFiles": 133,
+      "matches": 0,
+      "scope": "src, ui/src, docs and dist/ui; actual available environment credential values and test-home management tokens"
+    }
+  },
+  "builtBrowserSmoke": {
+    "freshHome": true,
+    "productionBundle": "dist/ui/assets/index-WmCFWd_A.js",
+    "actualDshTurnCompleted": true,
+    "cleanupConfirmed": true,
+    "presenceAfterCompletion": "idle"
+  },
+  "cleanup": {
+    "testHostsStopped": [
+      14684,
+      5836
+    ],
+    "browserViewportRestored": true,
+    "testUiTabClosed": true,
+    "userStitchTabPreserved": true
+  },
+  "boundaries": [
+    "Native discussion is restricted to the verified Codex 0.164.0 / gpt-6.1-sol catalogue.",
+    "Instruction-only Skills verified; resource/script versions explicitly rejected for execution.",
+    "Output is buffered and redacted at completion; SSE carries actual state/events.",
+    "Unknown cleanup requires an owned receipt or same-machine OS reboot proof; there is no force release.",
+    "External API validation exercised DeepSeek Chat Completions; other endpoints/protocols require explicit verification.",
+    "OS IME composition sessions and formal accessibility certification were not automated."
+  ],
+  "userChangesPreserved": [
+    "DESIGN.md was modified before this task and was not overwritten"
+  ],
+  "sourceSha256": {
+    "migrations/0001_initial.sql": "dc97ecb0a52693377f926349cfa1377ab177d4dccb430a35aa4937595cc8dfac",
+    "migrations/0002_result_artifact.sql": "e6a07ba25a1ee069c9a846ce676b54ce7a1f29116719a59fb55eb3c1a5b8848d",
+    "migrations/0003_scalable_scheduler.sql": "d11b83287de01c0f8ec9ba4945124c926604fef3f0ee2cf34c636e15f513f32d",
+    "migrations/0004_ui_domain.sql": "984bf84712765ea05de7c968e09f9dd87e3236585ba30898a6ff07d820a7d116",
+    "migrations/0005_skills.sql": "c3abfc7f6c01c62ca15b138bac50cbad346d66209dab18462779c6cdd584951b",
+    "migrations/0006_repositories.sql": "9565367f0b0bd4efe73cd86a2e426b63571583fa28b4e41a6200f0d2bb65fffe",
+    "migrations/0007_chat_context_cleanup.sql": "271812a65562b5e1c25bb20419c342838de3eb920b90bedc9d6fbec7eab78d9f",
+    "migrations/0008_api_connections.sql": "56fc2c1780fba74915410b0c88aed149f6ff08e2dfb6fd689a52ea1864eafe6a",
+    "package.json": "6ba63848266dca8be3fc2c974263adcf2b0d2db1c716bcd479bdbd2c698afdc2",
+    "pnpm-lock.yaml": "8a6817887cca402ed4d3433fa19249d789eae23c4e3f8b39770824e180205e87",
+    "pnpm-workspace.yaml": "ef244ead99fcf9f87c58215940daa50ec1d460196a171a7338a8f024ae3ba8a7",
+    "profiles/rift-native-models.json": "fc0afa26e92991ccf249ecd582e2c7cbb7e9d661c9aedfcc9b679920467f4caf",
+    "profiles/rift.codex.patch.yml": "53beb26161ec4c51b20bed7ac8740acdf1663799e9ee5aab6563a1f2519235dc",
+    "profiles/rift.patch.yml": "9f40fef1157a80b597e05cbc4cc3bedfdd8a2f99c4bec4baae15ef13064de90e",
+    "src/agent/boot-identity.ts": "9394ecbd144eb77a482b9bc587d63cd584d3a06aa3835464e77a29faf3555666",
+    "src/agent/connections.ts": "2681a726e645028e9cb2dab7a17332b68f095ad7be72d61790a8ef5c694f4253",
+    "src/agent/native-codex.ts": "b3ddb2fd9cf7e84c3cf878d7365e07139ac356b0342238a6afd9e9ae4f79cc02",
+    "src/agent/runtime-types.ts": "f8b652c7de70e9c511056b79a3403d06c690970b31dbe685d544abb518f1eb55",
+    "src/api/browser-service.ts": "999c34d73efac9e2987db112416aefb55d7a3e598da6e9449cf8f773a01bd4fc",
+    "src/api/host-service.ts": "5f177b7acbcceed6b9ceca1874ffc1e9ada133de12baad3a4af4ac9482bbdcb3",
+    "src/api/local-api.ts": "f54fce810a0096e6560ec7f53e46dff0f64e26bade9afa4952469a59c31ac4f4",
+    "src/api/schemas.ts": "b7a3d65ca50596672daa32d41b44a23c16c76920148b53994fb81d05fdd3d074",
+    "src/api/security.ts": "6ff8f8770b573ab6ec9d89f70d60189d5b7a28b6dd620803a92f01a8567daf8f",
+    "src/api/ui-contracts.ts": "8db7c8a4c3ae58085c8303de0fc0bf0d40cddcf9562716db39085a4aa809b162",
+    "src/api/workspace-views.ts": "22ccd4441f706c8597c3268d0846a4780403958354adc317f36ba97c6f2cf1a0",
+    "src/chat/contracts.ts": "fc45d7dcf954a688221ad153560241fc343ce6521251930df08fc4f07aa04e29",
+    "src/chat/dsh-runtime.ts": "826b5823c4cedada2e9e104d05d5122e8b65d69cf6c1d7663383fdd1f936f0f4",
+    "src/chat/service.ts": "b6f363796243cffc1387ddf51fa6f8bee6369f3c7196b2a06c421c2b037c0b7b",
+    "src/cli/main.ts": "f4cdda31ff2eeb4486dde8b5236bab92ce6966891315ea994e1bd47b4e59d9e7",
+    "src/contracts/index.ts": "82677cde133577c03ebbf1dec4ebc4a2161505e0e188128120bdbc674ce12019",
+    "src/events/workspace-events.ts": "994547c31a03a85302be653e2f8fd349ea7913468d49667e1465dee23e3e9fdb",
+    "src/git/index.ts": "863ace646b1f450f72f74e8d24fdb60436d997df22f44f2ef17c6a7ff6c32191",
+    "src/git/integration.ts": "0559d4a9f34f8ad7e6ff833efc063cd24e486b046d77fd486cb6481553587379",
+    "src/git/process.ts": "3e067961b1f0dface9eedf40a81753030207d4732936162ebc48f65b164051db",
+    "src/git/quality-gate.ts": "82e6bb7824eb8653f368c3bbf67dfcffa78c4c7d55603cee71835c6b18ff8768",
+    "src/git/types.ts": "e03680ded2a10c70ec3718e893464198b1f65f5e854cd0c0c15be8ae5ea0de07",
+    "src/git/worktree-binding.ts": "53929e37dc34983daba7ea0316cae5a50222339478f39b102a146a53fa240283",
+    "src/index.ts": "53fc7d93866069e1db0cc61cc32e9dd45d98f0ed729f1de5e892ef595b1cf18a",
+    "src/project/agent-roles.ts": "87fa8a66472328d2fd84e86c2efe621cf5a347d1c2606970568d57c13dcef8b0",
+    "src/project/browser-agents.ts": "32acbf661a4316a3eaf4afb45c014eb7f444d062e01945d3a8534fcd3bbd28f8",
+    "src/project/index.ts": "095368f97accff3c910875b58306dd98f18bd0723f857dc89d66ee9b4e27a3e3",
+    "src/project/provider-bindings.ts": "4e9631f2de5114578f9363ebdb66a71327f67bbf4adcad164380ec79d249eb1e",
+    "src/project/repositories.ts": "ad7ffc282cc11fe76d21a2a7ebe1d496fda8bf0764236fa9095d2e38130d3ca3",
+    "src/project/workspace.ts": "9cd571d9f84f25195970cde55026e9094979d5ca9ec190e4b92d2879d752510d",
+    "src/skill/service.ts": "a066ddf785de0cecf38ae0ebab2407665dbf76d50b1e30c84fbe798151515c5d",
+    "src/storage/artifacts.ts": "2840b478c080cddc518432d606290ed4f4c48cb7796f1fa6c73dad04e809bd6a",
+    "src/storage/database.ts": "f485b84c8296a23b5bf523a17b70d1bbb4d076d3afbb1b97442ce3fb771d1963",
+    "src/storage/index.ts": "61474677fde10da186dac2af58979d90fcb3e46a8c2ee3a5f935ed3e99a87ff4",
+    "src/storage/schema.ts": "0421416915c87b87f3a510a905f36008694c173e9bd8f8e8ee04b82e0f6bb28f",
+    "src/task/activation-bridge.ts": "2a9f966cda63e3ab0228e82d5e13e7409b18c514cd01b33b24cedf36b59849d2",
+    "src/task/analysis-reuse.ts": "927769ad0a4c63f0584a5cf41daed58d85b6fddfaf8ac7ebc3ef28a2336eee87",
+    "src/task/coordinator.ts": "535e92eb189c2880a0c5131abda4c5a3c57f623f71dcc03293e15d573596a320",
+    "src/task/index.ts": "504ab2b53abc423e53453a6329d485fc239db0be237987c2c1491216a9410197",
+    "src/task/recovery.ts": "23e264f3327598e58b3eedaa9405ca490cef11ea3335e6ab2f1d8f525feb2157",
+    "src/task/results.ts": "8eb157d17486fbbde3ca437a7650838c35912783a4fabd898f69337ab5adad21",
+    "src/task/scheduler.ts": "e06aa9c902b660388c1efe58f02c8affe6844ef50ea60678c9f6af0d3d57badb",
+    "src/task/task-store.ts": "43270d3f5a29a04764054072f7f97162d8ac846b5792030622ed0683bf206204",
+    "src/tools/rift-tools.ts": "e3b1d68fe24d585173c6a1ff392147ec1eb813f2246cab2957b2e6db441553da",
+    "ui/index.html": "a2342d42816e74ea2dd1ad30aa7d71ecf1d74d851fd9e50c40bc5e35e0fd7341",
+    "ui/src/ActivityTurn.tsx": "50ab95e562ff439677ded024c88c0351b3b23e47c0f2d15c5a7306c7c7372f0f",
+    "ui/src/App.tsx": "764f022b30dc053ab90dd9d787787402305b1a9ab40545cd64be99b34ef1f184",
+    "ui/src/ChatScreen.tsx": "bd75c0329f5d9c85ecdffa4760aa059dbab2b5c0329e3a52425cbd276094039c",
+    "ui/src/Configuration.tsx": "6b446361a692649a152e1c3dd45b04b34138182ba529939b5e27feb40ee9c4cd",
+    "ui/src/ConnectionCatalogue.tsx": "9e5bc9cbe2d0de8b4ab1cd440ef156060e67935a6e2e861cbe4a5656a1d35222",
+    "ui/src/IntegrationRecovery.tsx": "e59a594c93e6860031e257bd17d5d0550b2469fc66915a7c33138e1fcee95fe8",
+    "ui/src/MessageBody.tsx": "0b1125c937a21e8b93b4cb5962f4995a69fb34a9c25b04827da2873264995711",
+    "ui/src/RepositoryManager.tsx": "7d3ad55d625b3ba1ec0a66d81c966931a42ff03c12b240d857e71430a6d33b2e",
+    "ui/src/RunRecovery.tsx": "32617ceac9d27076e0c427bb0ddd1141c895bb5f892278affdea5423b7b5220c",
+    "ui/src/SkillLibrary.tsx": "ae880b6c89c408f0c240cc0ceac4e8ce23743a3a8fce454bea10c9f48e777207",
+    "ui/src/TaskActions.tsx": "b30667fa8a8e35e2c1bc6d68d6dba7bc96ba3f92a166bee42fc1299042dcce74",
+    "ui/src/TaskEvidence.tsx": "409a44850f5e0eda64cddc7ec374f183eceb11122aad264a8da3f37a12efd2ae",
+    "ui/src/WorkspaceControls.tsx": "e539b651953697e362d978e8b6cd8b6aec50877462905189fb5b03d5bf2897ee",
+    "ui/src/WorktreeRecovery.tsx": "b289de1f8ccd7be879339e952b0e2a5b5f2e1a48f437c09909f2f681ad2d02d2",
+    "ui/src/api.test.ts": "e21c6780d6f89ad08a32485d6207786ea9033f44e1b6553a4e01a61eec55f0cc",
+    "ui/src/api.ts": "632557ad17378032ec78016a03f0f0a4db72ad836381ca23f05baefd8c722cc4",
+    "ui/src/chat-state.test.ts": "ff99c4f278012e6cb6aaa93df53b167b9bedf498f2f55b78b2f3a69d1d4755eb",
+    "ui/src/chat-state.ts": "9c63c4269d7d88e47c4087563c44798e976a68259d087c79623168d3089ad815",
+    "ui/src/main.tsx": "4469afb6af9b826bee679ed74b80a02eef0522bfc74c381374cd80f63a9405be",
+    "ui/src/pages.tsx": "be0baf895b54597701700a645137899ce391f1dd564c19f3d7404922e8d17d79",
+    "ui/src/state.test.ts": "37a35a563fc61945d1a543a7870b2af777b0f4a389576bad12e66057fbcc4283",
+    "ui/src/state.ts": "156e57ba14cc505c5e59429e0ce2b8ade079b6a109fba76e8c4c14c2c9addb8d",
+    "ui/src/styles.css": "415749b774594532eb0e5ab9bb79c821597658923eb643815d962aa16a3fc9db",
+    "ui/src/task-order.test.ts": "d9bd50a0a781bda2ed816d78aa8eb0402e820706defab6ac248f0bd13f3f2cae",
+    "ui/src/task-order.ts": "798b992bd52a7d9b3245357da2f0f64efd0c2578d95845b92dfef3550ae5e4ce",
+    "ui/src/useMutation.ts": "0406610604869092736f60b6107a00f94cc3c05f77fc3db1d7e12a2394a8fac7",
+    "ui/tsconfig.json": "31726cb11cbe8f2473b1d577f80054a1f090260a1a128990ae0eda4836296b80",
+    "ui/vite.config.ts": "9668ebf4b74982f1d4e278d0b18277fa3a4296200e5fd008afff57a3ffdd9d0b"
+  }
+}

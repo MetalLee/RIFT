@@ -81,7 +81,7 @@ describe('A01/A07/A13-A18 independent fake activation fault acceptance', () => {
     } finally { await h.close(); }
   });
 
-  it('bounds stuck cleanup and preserves occupancy even when dispose resolves after the deadline', async () => {
+  it('bounds stuck cleanup and releases occupancy only after the owned late dispose succeeds', async () => {
     const h = harness(60_000, 30), cleanup = deferred<void>();
     try {
       h.plan([{ id: 'one' }, { id: 'two' }]); h.dispatch('one'); h.dispatch('two');
@@ -89,15 +89,26 @@ describe('A01/A07/A13-A18 independent fake activation fault acceptance', () => {
       h.starts[0]!.cleanupGate = cleanup;
       h.complete(0);
       await expect.poll(() => h.store.run(h.starts[0]!.input.run.id).cleanupStatus).toBe('unknown');
-      expect(h.store.run(h.starts[0]!.input.run.id).slotReleasedAt).toBeNull();
+      const runId=h.starts[0]!.input.run.id;
+      expect(h.store.run(runId).slotReleasedAt).toBeNull();
       h.complete(1);
       await expect.poll(() => h.store.task('two').status).toBe('succeeded');
-      cleanup.resolve();
-      await new Promise(resolve => setTimeout(resolve, 30));
-      expect(h.store.run(h.starts[0]!.input.run.id).cleanupStatus).toBe('unknown');
       expect(h.coordinator.status(h.workflow.id).slots.total).toBe(1);
+      expect(h.store.require<{releasedAt:string|null}>('SELECT released_at FROM execution_leases WHERE owner_id=?',runId).releasedAt).toBeNull();
+      expect(h.store.require<{writerRunId:string|null}>('SELECT writer_run_id FROM worktrees WHERE task_id=?','one').writerRunId).toBe(runId);
+      expect(()=>h.coordinator.reconcileRun(runId,h.store.require<{version:number}>('SELECT version FROM runs WHERE id=?',runId).version)).toThrow(/No owned cleanup receipt/);
+      expect(h.store.task('one').status).toBe('blocked');
+      cleanup.resolve();
+      await expect.poll(() => h.store.run(runId).cleanupStatus).toBe('confirmed');
+      expect(h.store.run(runId).slotReleasedAt).not.toBeNull();
+      expect(h.store.require<{releasedAt:string|null}>('SELECT released_at FROM execution_leases WHERE owner_id=?',runId).releasedAt).not.toBeNull();
+      expect(h.store.require<{writerRunId:string|null}>('SELECT writer_run_id FROM worktrees WHERE task_id=?','one').writerRunId).toBeNull();
+      expect(h.coordinator.status(h.workflow.id).slots.total).toBe(0);
+      expect(h.store.task('one').status).toBe('blocked');
+      expect(h.starts).toHaveLength(2);
       expect(h.starts[0]!.dispose).toHaveBeenCalledTimes(1);
-      expect(h.store.events(h.workflow.id).some(event => event.runId === h.starts[0]!.input.run.id && event.type === 'cleanup.unknown')).toBe(true);
+      const cleanupEvents=h.store.events(h.workflow.id).filter(event=>event.runId===runId&&event.type.startsWith('cleanup.')).map(event=>event.type);
+      expect(cleanupEvents).toEqual(['cleanup.unknown','cleanup.confirmed']);
     } finally { cleanup.resolve(); await h.close(); }
   });
 

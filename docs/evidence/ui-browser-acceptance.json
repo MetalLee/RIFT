@@ -1,0 +1,152 @@
+{
+  "date": "2026-10-25T14:55:54.282Z",
+  "mode": "Interactive real Microsoft Edge UI actions via computer-use; read-only SQLite corroboration; genuine DSH and native model replies",
+  "workspace": {
+    "id": "workspace-7278abae-42dc-4706-8e72-236c96595476",
+    "name": "浏览器验收 · 无仓库",
+    "version": 3
+  },
+  "turns": [
+    {
+      "id": "turn-e812c7c6-cdb0-4395-89da-1ffc0a92458d",
+      "status": "completed",
+      "cleanup_status": "confirmed",
+      "runtime": "dsh",
+      "model": "deepseek-flash"
+    },
+    {
+      "id": "turn-b9ee1937-1f19-400b-adf2-9324b0904ae9",
+      "status": "completed",
+      "cleanup_status": "confirmed",
+      "runtime": "codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "id": "turn-e19c990e-3c84-4c99-aaee-dba7b13afb06",
+      "status": "completed",
+      "cleanup_status": "confirmed",
+      "runtime": "codex",
+      "model": "gpt-6.1-sol"
+    },
+    {
+      "id": "turn-0bfef595-c13b-4872-a95f-a4321668b3fe",
+      "status": "cancelled",
+      "cleanup_status": "confirmed",
+      "runtime": "codex",
+      "model": "gpt-6.1-sol"
+    }
+  ],
+  "messages": [
+    {
+      "role": "user",
+      "content": "请只回复“浏览器对话验收通过”，不要创建任务或调用工具。",
+      "status": "completed"
+    },
+    {
+      "role": "assistant",
+      "content": "浏览器对话验收通过",
+      "status": "completed"
+    },
+    {
+      "role": "user",
+      "content": "请只回复“中文成员定向验收通过”，不要创建任务或调用工具。",
+      "status": "completed"
+    },
+    {
+      "role": "assistant",
+      "content": "中文成员定向验收通过",
+      "status": "completed"
+    },
+    {
+      "role": "user",
+      "content": "请回复一句简短的验收结果，遵循当前已启用的 Skill；不调用工具。",
+      "status": "completed"
+    },
+    {
+      "role": "assistant",
+      "content": "验收结果：已遵循当前启用的 Skill。【共享技能已生效】",
+      "status": "completed"
+    },
+    {
+      "role": "user",
+      "content": "这是停止回复验收：请列出二十条软件界面检查事项，不要调用工具或创建任务。",
+      "status": "cancelled"
+    }
+  ],
+  "repositories": [
+    {
+      "id": "repository-ae806c43-21c0-4982-835c-c8ab13b4a7de",
+      "canonical_path": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\ui-code-workflow-EYadrY\\alpha"
+    },
+    {
+      "id": "repository-2fed45e2-ff5d-4883-8365-2afa4ebcddbd",
+      "canonical_path": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\ui-code-workflow-EYadrY\\beta"
+    }
+  ],
+  "worktrees": [
+    {
+      "repository_id": "repository-ae806c43-21c0-4982-835c-c8ab13b4a7de",
+      "origin": "managed",
+      "path": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\ui-acceptance-home\\workspaces\\c6d6643e00ec48ac6a57765f\\user-worktrees\\377b253e1134cbacf747c737",
+      "branch": "rift/ui-browser-alpha",
+      "status": "active"
+    }
+  ],
+  "connections": [
+    {
+      "name": "浏览器 API 验收",
+      "protocol": "openai-completions",
+      "endpoint": "https://api.deepseek.com",
+      "model": "deepseek-flash",
+      "revision": 1,
+      "verification_status": "passed"
+    }
+  ],
+  "observedChecks": [
+    "one-time bootstrap exchange and fragment removal",
+    "same-tab fresh bootstrap after the final UI build reconnects without manual reload and restores persisted history",
+    "create workspace without a repository",
+    "real default DSH reply and persisted history after reload",
+    "Chinese member creation with Codex model selection",
+    "explicit member routing with Ctrl+Enter",
+    "workspace switch preserves only its own draft/recipient/history",
+    "ordinary Enter inserts newline without sending",
+    "shared Skill import preview, immutable save, effective set and real native reply marker",
+    "two repositories associated independently and managed worktree created with explicit branch",
+    "API connection created with credential reference and real verification succeeds",
+    "stop a real native reply and observe cancelled state"
+  ],
+  "responsiveObservations": [
+    {
+      "width": 320,
+      "page": "chat",
+      "documentScrollWidth": 305
+    },
+    {
+      "width": 390,
+      "page": "repositories with long paths",
+      "documentScrollWidth": 375
+    },
+    {
+      "width": 768,
+      "page": "settings",
+      "documentScrollWidth": 753
+    },
+    {
+      "width": 1440,
+      "page": "chat and Skill detail",
+      "horizontalOverflow": false
+    }
+  ],
+  "screenshots": [
+    "ui-screenshots/chat-320.png",
+    "ui-screenshots/chat-1440.png",
+    "ui-screenshots/skills-1440.png",
+    "ui-screenshots/repositories-390.png",
+    "ui-screenshots/settings-768.png"
+  ],
+  "limits": [
+    "IME composition guards are verified by automatic event logic tests and source review; no claim that an OS input-method composition session was automated.",
+    "Read-only viewport geometry supplements visual inspection; no claim of a formal accessibility certification."
+  ]
+}

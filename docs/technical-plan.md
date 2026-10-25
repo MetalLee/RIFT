@@ -1,5 +1,7 @@
 # RIFT 多智能体协作系统技术开发方案
 
+**2026-10-26 实现增量：** Codex 聊天与正式任务已接入 app-server 持久 thread，RIFT 自有 Provider 负责原生续接，SQLite 保存会话归属与消息同步记录。当前契约见 [Codex 原生持久会话](native-sessions.md)。下文优先官方一次性 Provider、长期会话属后续扩展等条款保留为早期方案背景，不代表当前 Codex 路径。
+
 版本：0.4。日期：2026 年 10 月 25 日。P0–P3 MVP 已验收；当前源码已继续实现 E1.1–E1.5，结果见 [E1 验收](e1-acceptance.md)。本文以下首版条款保留为 MVP 基线，新增契约以 [E1 指南](e1-guide.md) 为准：全局配额可配置、每工作区一个活跃 Workflow、任意角色与 purpose、原子重规划和公平调度、一次 analysis Run 内官方 Workflow 复用。E1.6 暂缓，本轮未使用 Claude。
 
 RIFT 采用 **DeepSeek Harness 作为宿主与 Agent 内核，在其中加载一个 `rift` 插件**。插件只实现项目与角色、持久任务协调、Git 集成与质量门禁三个业务模块。Codex、Claude Code 的执行优先复用 DSH 官方 Provider，LLM API Agent 使用 DSH 本地 Agent。

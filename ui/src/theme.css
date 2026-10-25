@@ -1,0 +1,63 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* shadcn semantic tokens mapped to the existing RIFT palette. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted-surface);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent-surface);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --background: #faf9f5;
+  --foreground: #1b1c1a;
+  --card: #fff;
+  --card-foreground: #1b1c1a;
+  --popover: #fff;
+  --popover-foreground: #1b1c1a;
+  --primary: #974324;
+  --primary-foreground: #fff;
+  --secondary: #f4f4f0;
+  --secondary-foreground: #55433d;
+  --muted-surface: #f4f4f0;
+  --muted-foreground: #68645d;
+  --accent-surface: #e9e1d9;
+  --accent-foreground: #55433d;
+  --destructive: #a53227;
+  --border: #e9e8e4;
+  --input: #d1cec6;
+  --ring: #974324;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
+}
+
+/* Preserve existing layouts while replacing their controls with shadcn. */
+
+
+[data-slot="native-select-wrapper"] { width: 100%; min-width: 0; }
+[data-slot="textarea"] { box-shadow: none; }
+[data-slot="checkbox"] { min-height: 18px; width: 18px; height: 18px; padding: 0; }
+[data-slot="checkbox"][data-state="checked"] { background: var(--primary); color: white; }

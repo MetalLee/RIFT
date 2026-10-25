@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { RiftError, type Operation, type Role, type Run, type Task, type TaskEvent, type Workflow, type Workspace, type ProviderBinding } from '../contracts/index.js';
 
 type Row = Record<string, unknown>;
-const jsonColumns = new Set(['expectedPaths','acceptanceCriteria','providerSnapshot','result','payload','capabilities','credentialRefs','checkIds','candidate','spawn','analysisItems']);
+const jsonColumns = new Set(['expectedPaths','acceptanceCriteria','providerSnapshot','result','payload','capabilities','credentialRefs','checkIds','candidate','spawn','analysisItems','leadConnection','chatConnection','configuration']);
 export function decode<T>(row: Row): T {
   const output: Row = {};
   for (const [key, value] of Object.entries(row)) { const name = key.replace(/_([a-z])/g, (_, char: string) => char.toUpperCase()); output[name] = jsonColumns.has(name) && typeof value === 'string' ? JSON.parse(value) : value; }
@@ -36,6 +36,16 @@ export class RiftStore {
         try{this.transaction(()=>{this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0003_scalable_scheduler.sql',import.meta.url)),'utf8'));if(this.db.prepare('PRAGMA foreign_key_check').all().length)throw new Error('Migration introduced invalid foreign keys.');});}
         finally{this.db.exec('PRAGMA legacy_alter_table=OFF; PRAGMA foreign_keys=ON;');}
       }
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=4'))this.transaction(()=>{this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0004_ui_domain.sql',import.meta.url)),'utf8'));if(this.db.prepare('PRAGMA foreign_key_check').all().length)throw new Error('UI migration introduced invalid foreign keys.');});
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=5'))this.transaction(()=>{this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0005_skills.sql',import.meta.url)),'utf8'));if(this.db.prepare('PRAGMA foreign_key_check').all().length)throw new Error('Skill migration introduced invalid foreign keys.');});
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=6')) {
+        this.db.exec('PRAGMA foreign_keys=OFF; PRAGMA legacy_alter_table=ON;');
+        try { this.transaction(()=>{this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0006_repositories.sql',import.meta.url)),'utf8'));if(this.db.prepare('PRAGMA foreign_key_check').all().length)throw new Error('Repository migration introduced invalid foreign keys.');}); }
+        finally { this.db.exec('PRAGMA legacy_alter_table=OFF; PRAGMA foreign_keys=ON;'); }
+      }
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=7'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0007_chat_context_cleanup.sql',import.meta.url)),'utf8')));
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=8'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0008_api_connections.sql',import.meta.url)),'utf8')));
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=9'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0009_native_sessions.sql',import.meta.url)),'utf8')));
     } catch (error) { this.releaseLock(); throw error; }
   }
   private acquireLock(path: string): void {
@@ -66,10 +76,10 @@ export class RiftStore {
   get<T>(sql: string, ...args: SQLInputValue[]): T | undefined { const row=this.db.prepare(sql).get(...args) as Row|undefined; return row ? decode<T>(row) : undefined; }
   exec(sql: string, ...args: SQLInputValue[]): void { this.db.prepare(sql).run(...args); }
   require<T>(sql:string,...args:SQLInputValue[]):T { const row=this.get<T>(sql,...args); if (!row) throw new RiftError('NOT_FOUND','Requested business record does not exist.'); return row; }
-  workspace(id:string):Workspace { return this.require<Workspace>('SELECT w.*,r.canonical_path AS repository_path,r.common_git_dir,r.base_ref FROM workspaces w JOIN repositories r ON r.workspace_id=w.id WHERE w.id=?',id); }
+  workspace(id:string):Workspace { return this.require<Workspace>("SELECT w.*,COALESCE(r.canonical_path,'') AS repository_path,COALESCE(r.common_git_dir,'') AS common_git_dir,COALESCE(r.base_ref,'') AS base_ref FROM workspaces w LEFT JOIN repositories r ON r.id=COALESCE(w.default_repository_id,(SELECT id FROM repositories WHERE workspace_id=w.id ORDER BY id LIMIT 1)) WHERE w.id=?",id); }
   workflow(id:string):Workflow { return this.require<Workflow>('SELECT * FROM workflows WHERE id=?',id); }
   task(id:string):Task { return this.require<Task>('SELECT * FROM tasks WHERE id=?',id); }
-  run(id:string):Run { return this.require<Run>('SELECT * FROM runs WHERE id=?',id); }
+  run(id:string):Run { const {runtimeBootId:_boot,...run}=this.require<Run & {runtimeBootId:string|null}>('SELECT * FROM runs WHERE id=?',id);return run; }
   role(id:string):Role { return this.require<Role>('SELECT * FROM roles WHERE id=?',id); }
   binding(id:string):ProviderBinding { return this.require<ProviderBinding>('SELECT * FROM provider_bindings WHERE id=?',id); }
   operation(id:string):Operation { return this.require<Operation>('SELECT * FROM operations WHERE id=?',id); }

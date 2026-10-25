@@ -3,7 +3,8 @@
     "target": "ES2023", "module": "NodeNext", "moduleResolution": "NodeNext",
     "strict": true, "esModuleInterop": true, "skipLibCheck": true,
     "resolveJsonModule": true, "declaration": true, "sourceMap": true,
-    "outDir": "dist", "types": ["node"]
+    "outDir": "dist", "types": ["node"],
+    "baseUrl": ".", "paths": { "@/*": ["./ui/src/*"] }
   },
   "include": ["src/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts", "vitest.config.ts"]
 }

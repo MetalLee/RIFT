@@ -11,6 +11,7 @@ export function createWorkspace(store:RiftStore,input:CreateWorkspaceInput):Work
   store.transaction(()=> {
     store.exec('INSERT INTO workspaces(id,name,root_path,status) VALUES(?,?,?,?)',workspaceId,input.name,resolve(input.rootPath),'active');
     store.exec('INSERT INTO repositories(id,workspace_id,canonical_path,common_git_dir,base_ref) VALUES(?,?,?,?,?)',id('repository'),workspaceId,resolve(input.repositoryPath),resolve(input.commonGitDir),input.baseRef);
+    store.exec('UPDATE workspaces SET default_repository_id=(SELECT id FROM repositories WHERE workspace_id=? ORDER BY id LIMIT 1) WHERE id=?',workspaceId,workspaceId);
   });
   return store.workspace(workspaceId);
 }

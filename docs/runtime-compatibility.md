@@ -1,5 +1,19 @@
 # RIFT 运行时兼容记录
 
+## 原生持久会话增量（2026-10-26）
+
+Codex 聊天和正式任务现已使用 app-server 持久 thread，后续通过 `thread/resume` 续接。内置 profile 改用 RIFT 自有 `agent/codex-provider.js`；官方一次性 Provider 仍作为锁定 Codex payload 的依赖来源，源码未修改。聊天按 conversation＋成员隔离并同步未消费公共消息；任务按 task＋角色续接，返工重新绑定 cwd，Reviewer 独立。Windows 任务子进程显式启用 unelevated sandbox，开发 workspace-write、审查 read-only。完整契约、升级和备份要求见 [原生会话说明](native-sessions.md)。
+
+[真实二进制协议探针](evidence/native-session-probe.json)通过跨进程历史恢复、新工具闭包、任务返工和审查隔离；使用本地受控 Responses 接口，未重新认证外部模型质量或代码写入。下文“官方 Provider”“一次性 Session”等表述是 2026-10-25 当时的实现和验收记录。
+
+## UI 增量（2026-10-25）
+
+当前 UI 的对话适配器与原开发/审查 Provider 分开。DSH 对话按 Turn 创建受限 Agent；API 连接通过官方 `@deepseek-ai/dsh-llm-pi-ai@0.2.1-rc.3` 注册不可变 provider，只有显式真实请求成功才显示已验证。已验证外网组合为 DeepSeek Chat Completions / `deepseek-flash`。
+
+原生对话使用官方 DSH subprocess 管理 Codex 0.164.0 app-server 的 JSON-RPC 生命周期。固定、摘要校验的 `profiles/rift-native-models.json` 仅开放 `gpt-6.1-sol`；关闭继承 shell、文件写入、插件、MCP 与委派工具，业务工具由 Host 固定 workspace/Agent/Turn 身份。原生开发/审查仍使用官方 subagent Provider，此处的白名单不改变其模型配置。
+
+真实工具边界探针、Native 与 DSH Lead 自主工作流、API 连接验证、原生双仓代码开发/功能测试/Astra 审查/精确集成均已通过。纯指令 Skill 注入已验证；资源/脚本型 Skill 当前明确不兼容。响应在完成后整体脱敏，状态经 SSE 更新。证据及故障覆盖见 [UI 验收](ui-acceptance.md)与[最终检查](evidence/ui-final-validation.json)。以下 E1 和 P0–P3 内容保留各自当时的测试数与兼容范围。
+
 **E1 增量（2026-10-25）：** 当前源码增加官方 `@deepseek-ai/dsh-workflow`、`dsh-workflow-ptc`、`dsh-ptc-runtime-node`、`dsh-subagent-spawn-in-process` 四个直接依赖，均锁定 `0.2.1-rc.3`。sdk-minimal 未自带 Workflow engine，两个 profile 已显式装载。E1 的 Codex-only profile、真实 4 开发/双工作区/批量分析和 106 项自动测试通过，见 [E1 验收](e1-acceptance.md)。本轮没有加载或执行 Claude。下文模型兼容与 72 项检查属于原 P0–P3 历史证据。
 
 E1 将配额从固定全局单 Workflow 改为每 Workspace 一个活跃 Workflow，Host 开发/总预算可配置；示例 profile 同步 DSH 子 Agent 容量。官方 `workflowEngine.start()` 没有逐项 cwd 参数，因此批量分析创建对应 task worktree 的 scoped parent，固定脚本顺序调用 child；中间 parent 不运行模型，maxDepth=1 的官方服务与真实 Codex 均已通过。复用不扩展成长期原生 Session。配置与边界见 [E1 指南](e1-guide.md)。

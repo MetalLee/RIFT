@@ -1,0 +1,300 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=Plus+Jakarta+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "inverse-surface": "#2f312e", "outline-variant": "#dbc1b9", "inverse-on-surface": "#f2f1ed", "surface-tint": "#9a4526", "secondary-fixed-dim": "#ccc5be", "on-tertiary-fixed": "#2f1500", "tertiary-fixed": "#ffdcc3", "error-container": "#ffdad6", "primary-fixed-dim": "#ffb59c", "tertiary-container": "#b15f00", "on-secondary": "#ffffff", "on-tertiary-fixed-variant": "#6e3900", "surface-variant": "#e3e2df", "on-surface-variant": "#55433d", "secondary-container": "#e9e1d9", "on-primary-fixed": "#390c00", "primary": "#974324", "on-tertiary-container": "#fffbff", "surface": "#faf9f5", "surface-container-low": "#f4f4f0", "surface-container-high": "#e9e8e4", "tertiary-fixed-dim": "#ffb77d", "surface-container": "#efeeea", "surface-container-lowest": "#ffffff", "on-background": "#1b1c1a", "on-primary-fixed-variant": "#7b2e11", "on-error-container": "#93000a", "outline": "#88726b", "primary-fixed": "#ffdbd0", "on-surface": "#1b1c1a", "on-tertiary": "#ffffff", "on-primary-container": "#fffbff", "on-primary": "#ffffff", "surface-bright": "#faf9f5", "inverse-primary": "#ffb59c", "on-secondary-fixed": "#1e1b16", "primary-container": "#b65a3a", "error": "#ba1a1a", "background": "#faf9f5", "on-error": "#ffffff", "secondary-fixed": "#e9e1d9", "surface-container-highest": "#e3e2df", "secondary": "#625e57", "surface-dim": "#dbdad6", "on-secondary-fixed-variant": "#4a4640", "on-secondary-container": "#68645d", "tertiary": "#8d4b00" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-lg": "2rem", "margin-mobile": "1.25rem", "gutter-mobile": "1rem", "space-sm": "0.75rem", "space-xs": "0.375rem", "gutter": "1.5rem", "margin": "2.5rem", "space-xl": "3.5rem", "space-md": "1.25rem" }, "fontFamily": { "body-sm": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "code-sm": ["JetBrains Mono"], "headline-md": ["Newsreader"], "body-lg": ["Plus Jakarta Sans"], "headline-xl": ["Newsreader"], "headline-lg": ["Newsreader"], "headline-xl-mobile": ["Newsreader"], "headline-sm": ["Newsreader"], "headline-lg-mobile": ["Newsreader"] }, "fontSize": { "body-sm": ["13px", { "lineHeight": "21px", "fontWeight": "400" }], "label-md": ["13px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "600" }], "body-md": ["15px", { "lineHeight": "25px", "fontWeight": "400" }], "label-sm": ["11px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "code-sm": ["13px", { "lineHeight": "20px", "fontWeight": "400" }], "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "500" }], "body-lg": ["17px", { "lineHeight": "29px", "fontWeight": "400" }], "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "400" }], "headline-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.015em", "fontWeight": "400" }], "headline-xl-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "400" }], "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "500" }], "headline-lg-mobile": ["26px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "400" }] } } } };</script></head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed"><aside class="fixed left-0 top-0 h-full w-60 bg-surface-container-low shadow-[0_1px_8px_rgba(0,0,0,0.03)] z-50 flex flex-col justify-between py-4 px-3"><div class="flex flex-col gap-4"><div class="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-surface-container transition-colors cursor-pointer"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div><span class="font-label-md text-label-md text-on-surface tracking-tight">RIFT 界面组</span></div><span class="material-symbols-outlined text-[18px] text-on-surface-variant">unfold_more</span></div><div class="px-1"><button class="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)] hover:bg-surface-container hover:text-on-surface transition-all" type="button"><span class="flex items-center gap-2 font-label-md text-label-md"><span class="material-symbols-outlined text-primary text-[18px]">edit_square</span>新建对话</span><span class="font-code-sm text-label-sm text-on-surface-variant opacity-70">⌘K</span></button></div><nav class="flex flex-col gap-1 mt-2" data-active-classes="bg-secondary-container text-on-secondary-container font-label-md rounded-lg"><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="chat" href="#"><span class="material-symbols-outlined text-[18px]">chat_bubble</span>对话</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="agents" href="#"><span class="material-symbols-outlined text-[18px]">smart_toy</span>智能代理</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="skills" href="#"><span class="material-symbols-outlined text-[18px]">auto_awesome</span>技能扩展</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="repositories" href="#"><span class="material-symbols-outlined text-[18px]">source_environment</span>代码库与工作区</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="tasks" href="#"><span class="material-symbols-outlined text-[18px]">task_alt</span>任务队列</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-[18px]">tune</span>系统设置</a></nav></div><div class="flex flex-col gap-2 px-2 pt-3"><div class="flex items-center justify-between p-2 rounded-lg bg-surface-container/60"><div class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-primary"></div><span class="font-label-sm text-label-sm text-on-surface-variant">本地宿主已就绪</span></div><span class="font-code-sm text-label-sm text-on-surface-variant">v0.9.4</span></div></div></aside><div class="pl-60 min-h-screen flex flex-col"><header class="fixed top-0 left-60 right-0 h-14 bg-surface/85 backdrop-blur-md shadow-[0_1px_6px_rgba(0,0,0,0.02)] z-40 flex items-center justify-between px-6"><div class="flex items-center gap-3"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight font-medium">会话画布</span><span class="font-code-sm text-label-sm text-on-surface-variant px-1.5 py-0.5 rounded bg-surface-container-high">#SES-8419</span></div><div class="flex items-center gap-3"><button class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary-fixed/40 text-on-surface hover:bg-primary-fixed/70 transition-colors" type="button"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span><span class="font-label-sm text-label-sm">Agent 3 运行 · 1 待定</span><span class="material-symbols-outlined text-[16px] text-on-surface-variant">keyboard_arrow_down</span></button><div class="flex items-center gap-1"><button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" title="导出记录" type="button"><span class="material-symbols-outlined text-[18px]">ios_share</span></button><button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" title="清空历史" type="button"><span class="material-symbols-outlined text-[18px]">restart_alt</span></button></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="w-full pt-14 bg-surface flex-1 flex flex-col"><div class="flex flex-col w-full">
+<!-- Top Breadcrumb & Status Ribbon -->
+
+<!-- Filter & Segment Ribbon -->
+<div class="px-8 pt-6 pb-4 max-w-7xl mx-auto w-full flex flex-col gap-3.5"><div class="flex flex-wrap items-center justify-between gap-3"><div class="flex items-center gap-2 font-label-sm text-label-sm text-secondary"><span class="hover:text-on-surface cursor-pointer transition-colors">RIFT</span><span class="text-outline-variant font-code-sm text-[11px]">/</span><span class="hover:text-on-surface cursor-pointer transition-colors">工作台</span><span class="text-outline-variant font-code-sm text-[11px]">/</span><span class="text-on-surface font-medium">任务队列</span><span class="font-code-sm text-[11px] text-secondary px-2 py-0.5 rounded-full bg-surface-container ml-1">#wf-20261025-01</span></div><div class="flex items-center gap-3 bg-surface-container-lowest px-3 py-1.5 rounded-xl shadow-xs"><span class="font-label-sm text-label-sm text-secondary">流水线就绪</span><div class="w-24 h-1.5 rounded-full bg-surface-container overflow-hidden flex"><div class="h-full bg-primary rounded-full" style="width: 60%"></div></div><span class="font-code-sm text-label-sm text-primary font-medium">3/5 (60%)</span></div></div><div class="flex flex-wrap items-center justify-between gap-4"><div class="flex items-center gap-1.5 p-1 rounded-xl bg-surface-container-low shadow-sm"><button class="px-3.5 py-1.5 rounded-lg font-label-md text-label-md text-secondary hover:text-on-surface hover:bg-surface-container transition-all" type="button">全部任务 <span class="font-code-sm text-[11px] ml-1 opacity-75">4</span></button><button class="px-3.5 py-1.5 rounded-lg font-label-md text-label-md text-secondary hover:text-on-surface hover:bg-surface-container transition-all flex items-center gap-1.5" type="button"><span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>进行中 <span class="font-code-sm text-[11px] opacity-75">(1)</span></button><button class="px-3.5 py-1.5 rounded-lg font-label-md text-label-md bg-surface-container-lowest text-primary shadow-sm flex items-center gap-1.5" type="button"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>待审查 <span class="px-1.5 py-0.2 rounded-full bg-primary-fixed text-on-primary-fixed font-code-sm text-[11px] font-medium">1</span></button><button class="px-3.5 py-1.5 rounded-lg font-label-md text-label-md text-secondary hover:text-on-surface hover:bg-surface-container transition-all" type="button">已归档 <span class="font-code-sm text-[11px] ml-1 opacity-75">(1)</span></button></div><div class="flex items-center gap-2.5"><button class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm hover:bg-surface-container transition-all" type="button"><span class="material-symbols-outlined text-[17px] text-primary">account_tree</span><span class="">按依赖拓扑排序</span><span class="material-symbols-outlined text-[15px] text-secondary">tune</span></button><button class="p-1.5 rounded-lg bg-surface-container-lowest text-secondary hover:text-on-surface shadow-sm hover:bg-surface-container transition-all" title="刷新序列" type="button"><span class="material-symbols-outlined text-[18px]">sync</span></button></div></div></div>
+<!-- Clean Two-Column Layout -->
+<div class="px-8 pb-16 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- Left Column: Task Feed (7 Cols) -->
+<div class="lg:col-span-7 flex flex-col gap-4">
+<!-- Task #104 (Active Selected Card) -->
+<div class="group relative bg-surface-container-lowest rounded-2xl p-6 shadow-md transition-all cursor-pointer">
+<!-- Subtle Active Left Bar Indicator -->
+<div class="absolute left-0 top-5 bottom-5 w-1.5 rounded-r-full bg-primary"></div>
+<div class="flex items-start justify-between gap-3 mb-2.5 pl-1.5">
+<div class="flex items-center gap-2">
+<span class="font-code-sm text-label-md text-primary font-medium tracking-tight">#104</span>
+<span class="font-headline-sm text-[17px] text-on-surface font-medium leading-snug">
+              聊天输入框重构与 @ 唤起面板
+            </span>
+</div>
+<!-- Review Badge -->
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary-fixed/50 text-on-primary-fixed-variant font-label-sm text-label-sm whitespace-nowrap">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+            审查中 (示例)
+          </span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-4 pl-1.5">
+          重构文本域的自动伸缩逻辑，集成富文本标记投影，并在键入 @ 字符时挂载智能体建议卡片。
+        </p>
+<!-- Metadata Ribbon -->
+<div class="flex flex-wrap items-center justify-between gap-3 pt-3 pl-1.5 bg-surface-container-low/50 rounded-xl px-3.5 py-2">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5 text-secondary font-label-sm text-label-sm">
+<span class="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center font-code-sm text-[10px] font-bold">UI</span>
+<span class="">@ui-builder</span>
+</div>
+<span class="text-outline-variant text-[11px]">•</span>
+<span class="font-code-sm text-label-sm text-secondary">2 分钟前更新</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="flex items-center gap-1 font-label-sm text-label-sm text-primary font-medium">
+<span class="material-symbols-outlined text-[16px] text-primary">checklist</span>
+<span class="">检查清单 (3/4)</span>
+</div>
+<span class="material-symbols-outlined text-[18px] text-primary">arrow_forward</span>
+</div>
+</div>
+</div>
+<!-- Task #105 (In Progress) -->
+<div class="bg-surface-container-lowest rounded-2xl p-6 shadow-sm hover:shadow-md transition-all cursor-pointer">
+<div class="flex items-start justify-between gap-3 mb-2.5">
+<div class="flex items-center gap-2">
+<span class="font-code-sm text-label-md text-secondary font-medium tracking-tight">#105</span>
+<span class="font-headline-sm text-[17px] text-on-surface font-medium leading-snug">
+              Agent 状态投影轻量契约
+            </span>
+</div>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm whitespace-nowrap">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+            执行中 (示例)
+          </span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-4">
+          梳理流式消息中的 step_trace 与 memory_sync 阶段标识，统一各子代理生命周期回调。
+        </p>
+<div class="flex flex-wrap items-center justify-between gap-3 pt-2 text-secondary font-label-sm text-label-sm">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5">
+<span class="w-5 h-5 rounded-full bg-surface-container text-secondary flex items-center justify-center font-code-sm text-[10px]">UB</span>
+<span class="">@ui-builder</span>
+</div>
+<span class="text-outline-variant text-[11px]">•</span>
+<span class="font-code-sm text-label-sm">14 分钟前更新</span>
+</div>
+<!-- Discrete Micro Pipeline State -->
+<div class="flex items-center gap-1.5 font-code-sm text-label-sm text-secondary bg-surface-container-low px-2 py-0.5 rounded-md">
+<span class="material-symbols-outlined text-[14px] text-tertiary animate-spin">progress_activity</span>
+<span class="">trace.proto 合并中</span>
+</div>
+</div>
+</div>
+<!-- Task #103 (Archived) -->
+<div class="bg-surface-container-lowest/80 rounded-2xl p-6 shadow-sm opacity-85 hover:opacity-100 transition-all cursor-pointer">
+<div class="flex items-start justify-between gap-3 mb-2.5">
+<div class="flex items-center gap-2">
+<span class="font-code-sm text-label-md text-outline font-medium tracking-tight">#103</span>
+<span class="font-headline-sm text-[17px] text-secondary font-medium leading-snug">
+              端到端状态长连接契约
+            </span>
+</div>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container text-secondary font-label-sm text-label-sm whitespace-nowrap">
+<span class="material-symbols-outlined text-[13px]">check</span>
+            已归档 (示例)
+          </span>
+</div>
+<p class="font-body-md text-body-md text-secondary leading-relaxed mb-4">
+          已打通 SSE 心跳探测与本地代理节点的断线重连，心跳间隔锁定在 12,000ms。
+        </p>
+<div class="flex flex-wrap items-center justify-between gap-3 pt-2 text-secondary font-label-sm text-label-sm">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5">
+<span class="w-5 h-5 rounded-full bg-surface-container text-secondary flex items-center justify-center font-code-sm text-[10px]">AW</span>
+<span class="">@api-worker</span>
+</div>
+<span class="text-outline-variant text-[11px]">•</span>
+<span class="font-code-sm text-label-sm">昨日 18:32 完成</span>
+</div>
+<button class="flex items-center gap-1 text-secondary hover:text-on-surface font-label-sm transition-colors" type="button">
+<span class="material-symbols-outlined text-[15px]">description</span>
+<span class="">回溯日志</span>
+</button>
+</div>
+</div>
+<!-- Task #106 (Blocked / Pending) -->
+<div class="bg-surface-container-lowest/60 rounded-2xl p-6 shadow-sm hover:bg-surface-container-lowest transition-all cursor-pointer">
+<div class="flex items-start justify-between gap-3 mb-2.5">
+<div class="flex items-center gap-2">
+<span class="font-code-sm text-label-md text-outline font-medium tracking-tight">#106</span>
+<span class="font-headline-sm text-[17px] text-secondary font-medium leading-snug">
+              自动化截图回归与无障碍复核
+            </span>
+</div>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap">
+<span class="material-symbols-outlined text-[14px] text-secondary">lock_clock</span>
+            等待 #104 (示例)
+          </span>
+</div>
+<p class="font-body-md text-body-md text-secondary/80 leading-relaxed mb-4">
+          等待输入框与建议浮层交互确定后，触发 Playwright 端对端截图快照矩阵与 WCAG 2.1 AA 视障朗读核对。
+        </p>
+<div class="flex flex-wrap items-center justify-between gap-3 pt-2 text-secondary font-label-sm text-label-sm">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5">
+<span class="w-5 h-5 rounded-full bg-surface-container text-secondary flex items-center justify-center font-code-sm text-[10px]">QA</span>
+<span class="">@qa-inspector</span>
+</div>
+<span class="text-outline-variant text-[11px]">•</span>
+<span class="font-code-sm text-label-sm">队列排期中</span>
+</div>
+<span class="font-label-sm text-secondary bg-surface-container px-2 py-0.5 rounded">依赖拓扑就绪度 0%</span>
+</div>
+</div>
+</div>
+<!-- Right Column: Detail & Acceptance Criteria (Review Gate) (5 Cols) -->
+<div class="lg:col-span-5 flex flex-col gap-5 sticky top-20">
+<!-- Review Gate Surface Card -->
+<div class="bg-surface-container-lowest rounded-2xl p-6 shadow-md flex flex-col gap-6">
+<!-- Header -->
+<div class="flex items-start justify-between">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-1.5 font-label-sm text-label-sm text-primary tracking-wider uppercase font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+              审阅门禁 · REVIEW GATE
+            </div>
+<h2 class="font-headline-md text-[21px] text-on-surface font-medium leading-tight">
+              验收准则清单 (示例)
+            </h2>
+</div>
+<span class="font-code-sm text-label-sm text-secondary px-2.5 py-1 rounded-lg bg-surface-container-low">
+            TASK #104
+          </span>
+</div>
+<!-- Checklist -->
+<div class="flex flex-col gap-3">
+<!-- Item 1: Checked -->
+<label class="flex items-start gap-3 p-3 rounded-xl bg-surface-container-low/60 hover:bg-surface-container-low transition-colors cursor-pointer select-none">
+<div class="pt-0.5">
+<div class="w-4 h-4 rounded bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[13px] font-bold">check</span>
+</div>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="font-body-sm text-body-sm text-on-surface font-medium line-through opacity-70">
+                输入行数自增自减平滑过渡
+              </span>
+<span class="font-code-sm text-[11px] text-secondary">
+                通过 CSS field-sizing 与 fallback 实现
+              </span>
+</div>
+</label>
+<!-- Item 2: Checked -->
+<label class="flex items-start gap-3 p-3 rounded-xl bg-surface-container-low/60 hover:bg-surface-container-low transition-colors cursor-pointer select-none">
+<div class="pt-0.5">
+<div class="w-4 h-4 rounded bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[13px] font-bold">check</span>
+</div>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="font-body-sm text-body-sm text-on-surface font-medium line-through opacity-70">
+                键入 @ 唤起微型弹窗定位居中
+              </span>
+<span class="font-code-sm text-[11px] text-secondary">
+                测试通过：无视口溢出风险 (边缘自动避障)
+              </span>
+</div>
+</label>
+<!-- Item 3: Checked -->
+<label class="flex items-start gap-3 p-3 rounded-xl bg-surface-container-low/60 hover:bg-surface-container-low transition-colors cursor-pointer select-none">
+<div class="pt-0.5">
+<div class="w-4 h-4 rounded bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[13px] font-bold">check</span>
+</div>
+</div>
+<div class="flex flex-col gap-0.5">
+<span class="font-body-sm text-body-sm text-on-surface font-medium line-through opacity-70">
+                多模态文件拖拽附着状态响应
+              </span>
+<span class="font-code-sm text-[11px] text-secondary">
+                文件拖放已支持原生文件防抖校验 (50MB 阈值)
+              </span>
+</div>
+</label>
+<!-- Item 4: Unchecked & Highlighted -->
+<label class="flex items-start gap-3 p-3.5 rounded-xl bg-primary-fixed/20 hover:bg-primary-fixed/30 transition-colors cursor-pointer select-none">
+<div class="pt-0.5">
+<div class="w-4 h-4 rounded bg-surface-container-lowest flex items-center justify-center shadow-xs">
+<!-- Empty mark -->
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="font-body-sm text-body-sm text-on-surface font-medium">
+                  键盘 Escape 键快速收起面板与焦点复原
+                </span>
+<span class="font-label-sm text-[10px] px-1.5 py-0.2 rounded bg-primary text-on-primary font-semibold">待审</span>
+</div>
+<span class="font-code-sm text-[11px] text-primary">
+                需核对焦点复原到 textarea 的光标 offset，等待人工体验验证
+              </span>
+</div>
+</label>
+</div>
+<!-- Run Summary Section -->
+<div class="p-4 rounded-xl bg-surface-container-low flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-secondary uppercase font-semibold">执行概要 · Run Summary</span>
+<span class="font-code-sm text-[11px] text-secondary bg-surface-container px-2 py-0.5 rounded">CI #8942-A</span>
+</div>
+<div class="grid grid-cols-2 gap-2 text-on-surface">
+<div class="flex flex-col p-2.5 rounded-lg bg-surface-container-lowest">
+<span class="font-label-sm text-[11px] text-secondary">代码分支</span>
+<span class="font-code-sm text-label-sm font-medium text-on-surface truncate">feat/composer-v2</span>
+</div>
+<div class="flex flex-col p-2.5 rounded-lg bg-surface-container-lowest">
+<span class="font-label-sm text-[11px] text-secondary">变更统计</span>
+<span class="font-code-sm text-label-sm font-medium">
+<span class="text-tertiary font-bold">+184</span> / <span class="text-secondary">-42</span> 行
+              </span>
+</div>
+<div class="flex flex-col p-2.5 rounded-lg bg-surface-container-lowest">
+<span class="font-label-sm text-[11px] text-secondary">单元测试</span>
+<span class="font-code-sm text-label-sm font-medium text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary">check_circle</span>
+                12 Passed
+              </span>
+</div>
+<div class="flex flex-col p-2.5 rounded-lg bg-surface-container-lowest">
+<span class="font-label-sm text-[11px] text-secondary">静态复核</span>
+<span class="font-code-sm text-label-sm font-medium text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary">verified</span>
+                Clean (0 Warn)
+              </span>
+</div>
+</div>
+</div>
+<!-- Action Decision Buttons -->
+<div class="flex flex-col gap-2.5 pt-1">
+<button class="w-full py-3 px-4 rounded-xl bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container shadow-sm hover:shadow transition-all flex items-center justify-center gap-2" type="button">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+<span class="">批准并流转下一项 (示例)</span>
+</button>
+<div class="grid grid-cols-2 gap-2">
+<button class="py-2.5 px-3 rounded-xl bg-surface-container-low text-on-surface font-label-md text-label-md hover:bg-surface-container transition-colors flex items-center justify-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary">restart_alt</span>
+<span class="">回退重试</span>
+</button>
+<button class="py-2.5 px-3 rounded-xl bg-surface-container-low text-on-surface font-label-md text-label-md hover:bg-surface-container transition-colors flex items-center justify-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary">comment</span>
+<span class="">撰写审阅批注</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Quick Context Box -->
+<div class="p-4 rounded-2xl bg-surface-container-lowest shadow-sm flex items-start gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary pt-0.5">lightbulb</span>
+<div class="flex flex-col gap-0.5">
+<span class="font-label-md text-label-md text-on-surface">交互规范提示</span>
+<p class="font-body-sm text-body-sm text-secondary leading-relaxed">
+            按下 <code class="font-code-sm text-[11px] px-1 py-0.5 rounded bg-surface-container text-on-surface">Cmd + Enter</code> 可快速触发准入批准；Escape 键验收通过后即可自动触发 #106 截图队列。
+          </p>
+</div>
+</div>
+</div>
+</div>
+</div></main></div>
+
+</body></html>

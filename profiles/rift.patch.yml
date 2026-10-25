@@ -34,7 +34,7 @@
         env: !!js >-
           process.env.ANTHROPIC_API_KEY ? { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY } : {}
     - id: rift-codex
-      name: '@deepseek-ai/dsh-subagent-codex'
+      name: '../dist/agent/codex-provider.js'
       config:
         providerName: codex-review
         permissionMode: never
@@ -51,6 +51,8 @@
       config:
         home: !!js process.env.RIFT_HOME || '.rift'
         port: !!js Number(process.env.RIFT_PORT || 47831)
+        uiEnabled: !!js process.env.RIFT_UI_ENABLED !== 'false'
+        leadTurnLimit: !!js Number(process.env.RIFT_LEAD_TURN_LIMIT || 4)
         leadProvider: deepseek-official
         leadModel: !!js process.env.RIFT_LEAD_MODEL || 'deepseek-flash'
         developerProvider: !!js process.env.RIFT_DEVELOPER_PROVIDER || 'claude-code-dev'

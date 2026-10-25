@@ -1,0 +1,56 @@
+import { useState, type ReactNode } from 'react';
+import type { UiWorkspaceDetail, UiWorkspaceList } from '../../../src/api/ui-contracts';
+import { routeHref, type Page } from '../state';
+import { Icon } from './Icon';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from './ui/sheet';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+
+const navigation: {page: Page; name: string; icon: string}[] = [
+  {page:'chat',name:'对话',icon:'chat'}, {page:'agents',name:'智能代理',icon:'agents'},
+  {page:'skills',name:'技能扩展',icon:'skill'}, {page:'repositories',name:'代码库与工作区',icon:'branch'},
+  {page:'tasks',name:'任务队列',icon:'tasks'}, {page:'settings',name:'系统设置',icon:'settings'},
+];
+
+export function IconAction({ label, children, onClick }: {label: string; children: ReactNode; onClick: () => void}) {
+  return <Tooltip><TooltipTrigger asChild><Button variant="ghost" size="icon" className="icon-button" aria-label={label} onClick={onClick}>{children}</Button></TooltipTrigger><TooltipContent>{label}</TooltipContent></Tooltip>;
+}
+
+export function AppChrome({ workspaceId, page, list, current, connected, onNewChat, onRefresh, children }: {
+  workspaceId: string; page: Page; list: UiWorkspaceList | null; current: UiWorkspaceDetail | null;
+  connected: boolean; onNewChat: () => void; onRefresh: () => void; children: ReactNode;
+}) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [copied, setCopied] = useState(false);
+  const selected = list?.workspaces.find(w=>w.id===workspaceId);
+  const running = current?.presence.filter(p=>p.state==='running' || p.state==='stopping').length ?? 0;
+  const attention = current?.presence.filter(p=>['queued','cleanup_unknown','unavailable'].includes(p.state)).length ?? 0;
+  const link = (target: Page) => routeHref(workspaceId, target);
+  const side = <>
+    <DropdownMenu onOpenChange={open=>{if(!open)setSearch('');}}>
+      <DropdownMenuTrigger asChild><Button variant="ghost" className="workspace-switch" aria-label="切换工作区"><span className="dot accent-dot" /><span>{selected?.name ?? 'RIFT 工作区'}</span><Icon name="switch" size={16}/></Button></DropdownMenuTrigger>
+      <DropdownMenuContent className="workspace-menu" side="bottom" align="start">
+        <div className="workspace-menu-search"><Icon name="search" size={16}/><Input aria-label="搜索工作区" placeholder="搜索工作区…" value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>{if(e.key!=='Escape')e.stopPropagation();}}/></div>
+        <div className="workspace-menu-list">{list?.workspaces.filter(w=>w.name.toLowerCase().includes(search.toLowerCase())).map(w=><DropdownMenuItem key={w.id} asChild><a href={routeHref(w.id,'chat')} onClick={()=>setMobileOpen(false)}><Icon name="folder"/><span>{w.name}</span>{w.id===workspaceId&&<Icon name="check" size={15}/>}</a></DropdownMenuItem>)}{list && !list.workspaces.some(w=>w.name.toLowerCase().includes(search.toLowerCase()))&&<p className="menu-empty">没有匹配的工作区</p>}</div>
+        <DropdownMenuSeparator/><DropdownMenuItem asChild><a href={link('workspaces')} onClick={()=>setMobileOpen(false)}><Icon name="grid"/>管理与创建工作区</a></DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+    <Button variant="secondary" className="new-chat" disabled={!workspaceId} onClick={()=>{setMobileOpen(false);onNewChat();}}><Icon name="compose"/><span>新建对话</span><kbd>⌘K</kbd></Button>
+    <nav aria-label="工作区导航">{navigation.map(item=><Button variant="ghost" asChild key={item.page}><a href={link(item.page)} className={`nav-link ${page===item.page?'active':''}`} aria-current={page===item.page?'page':undefined} onClick={()=>setMobileOpen(false)}><Icon name={item.icon}/><span>{item.name}</span></a></Button>)}</nav>
+    <div className="host-status"><span className={`dot ${connected?'accent-dot':''}`}/><span>{connected?'本地宿主已连接':'等待本地宿主连接'}</span><code>v0.1.0</code></div>
+  </>;
+  return <div className="app-shell">
+    <a className="skip-link" href="#main" onClick={e=>{e.preventDefault();document.getElementById('main')?.focus();}}>跳至主要内容</a>
+    <aside className="sidebar" aria-label="主导航">{side}</aside>
+    <Sheet open={mobileOpen} onOpenChange={setMobileOpen}><SheetContent side="left" className="mobile-navigation"><SheetTitle className="sr-only">工作区导航</SheetTitle><SheetDescription className="sr-only">切换工作区或打开工作区页面。</SheetDescription><div className="mobile-sidebar">{side}</div></SheetContent></Sheet>
+    <div className="main-shell"><header className="topbar"><div className="topbar-left"><Button variant="ghost" size="icon" className="mobile-menu" aria-label="展开导航" onClick={()=>setMobileOpen(true)}><Icon name="menu"/></Button><span className="topbar-title">会话画布</span><span id="conversation-menu-slot"/>{selected&&<code className="session-tag" title={selected.id}>#{selected.id.slice(-8).toUpperCase()}</code>}</div>
+      <div className="topbar-actions"><Button variant="ghost" asChild><a className="status-link" href={link('activity')}><span className="dot accent-dot"/><span>{current?`Agent ${running} 运行 · ${attention} 待定`:'Agent 状态'}</span><Icon name="down" size={13}/></a></Button>
+        <IconAction label={copied?'链接已复制':'复制页面链接'} onClick={()=>{void navigator.clipboard.writeText(location.origin+location.pathname+location.hash).then(()=>setCopied(true),()=>setCopied(false));}}><Icon name={copied?'check':'copy'} size={17}/></IconAction>
+        <IconAction label="刷新工作区状态" onClick={onRefresh}><Icon name="refresh" size={17}/></IconAction>
+        <Button variant="default" size="icon" className="profile-button" asChild><a href={link('settings')} aria-label="系统设置"><Icon name="user" size={18}/></a></Button>
+      </div></header>{children}</div>
+  </div>;
+}

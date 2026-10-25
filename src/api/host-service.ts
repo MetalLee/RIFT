@@ -17,13 +17,35 @@ import { installLeadTools } from '../tools/rift-tools.js';
 import * as schemas from './schemas.js';
 import { publicError, redact } from './security.js';
 import type { ApiHandler } from './local-api.js';
+import { workspaceDetail, workspaceList, workspaceTasks } from './workspace-views.js';
+import { ChatService, sendMessageSchema } from '../chat/service.js';
+import { DshChatRuntime } from '../chat/dsh-runtime.js';
+import type { AgentRuntime, RuntimeTool } from '../agent/runtime-types.js';
+import type { AgentTurn, ChatConnection, ContextRef, ContextSnapshot } from '../chat/contracts.js';
+import { connectionSchema, createAgentSchema, createBrowserAgent, updateAgentSchema, updateBrowserAgent } from '../project/browser-agents.js';
+import { invariant } from '../contracts/index.js';
+import { SkillService } from '../skill/service.js';
+import { readWorkspaceEvents } from '../events/workspace-events.js';
+import { NativeCodexRuntime, nativeCodexPackage, VERIFIED_NATIVE_CODEX_MODELS } from '../agent/native-codex.js';
+import { RepositoryService } from '../project/repositories.js';
+import { localBootIdentity } from '../agent/boot-identity.js';
+import { ApiConnectionService } from '../agent/connections.js';
+import type { ActivationBridge } from '../contracts/index.js';
+import { nativeSession, sessionCallbacks } from '../agent/native-sessions.js';
 
-export interface HostConfig { home: string; port: number; leadProvider: string; leadModel: string; developerProvider?: string; reviewerProvider?: string; limits?: z.infer<typeof schemas.limitsSchema>; checks: CheckCommand[]; runTimeoutMs?: number }
+export interface HostConfig { home: string; port: number; uiDist?: string; uiEnabled?: boolean; leadTurnLimit?: number; leadProvider: string; leadModel: string; developerProvider?: string; reviewerProvider?: string; limits?: z.infer<typeof schemas.limitsSchema>; checks: CheckCommand[]; runTimeoutMs?: number }
 export class RiftHostService implements ApiHandler {
   readonly store: RiftStore;
   readonly project: ProjectService;
   readonly git: LocalGitService;
   readonly coordinator: TaskCoordinator;
+  readonly chat: ChatService;
+  readonly skills: SkillService;
+  readonly repositories: RepositoryService;
+  readonly connections: ApiConnectionService;
+  private readonly chatRuntimes = new Map<string, AgentRuntime>();
+  private readonly runtimeModels = new Map<string, readonly string[]>();
+  private nativeRuntimeUnavailable = 'Native subprocess service is not mounted in this Host.';
   private readonly leads = new Map<string, AgentHandle>();
   private readonly leadStarts = new Map<string, Promise<AgentHandle>>();
   private readonly providerNames = new Set<string>();
@@ -31,14 +53,109 @@ export class RiftHostService implements ApiHandler {
   constructor(private readonly ctx: Context, readonly config: HostConfig) {
     this.store = new RiftStore(path.join(config.home, 'rift.db'));
     try {
+    if (config.leadTurnLimit !== undefined) {
+      invariant(Number.isInteger(config.leadTurnLimit) && config.leadTurnLimit >= 1 && config.leadTurnLimit <= 128, 'INVALID_LIMITS', 'Lead turn limit must be 1–128.');
+      invariant(this.store.require<{count:number}>("SELECT COUNT(*) AS count FROM execution_leases WHERE released_at IS NULL AND capacity='lead'").count <= config.leadTurnLimit, 'LIMITS_IN_USE', 'Retained Lead executions exceed the requested limit.');
+      this.store.exec('UPDATE scheduler_limits SET lead_turns=? WHERE id=1', config.leadTurnLimit);
+    }
     this.store.db.exec('CREATE TABLE IF NOT EXISTS management_requests (key TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, status TEXT NOT NULL, response TEXT)');
     this.project = new ProjectService(this.store, this.providerNames);
     this.git = new LocalGitService({ managedRoot: path.join(config.home, 'workspaces'), commands: config.checks });
+    this.repositories = new RepositoryService(this.store, this.git);
+    this.connections = new ApiConnectionService(ctx, this.store, config.home);
     const bridge = new DshActivationBridge(ctx, taskId => this.leads.get(this.store.task(taskId).workflowId)?.agent, this.store);
-    this.coordinator = new TaskCoordinator({ store: this.store, bridge, git: this.git, runTimeoutMs: config.runTimeoutMs, limits: config.limits });
+    this.skills = new SkillService(this.store);
+    this.coordinator = new TaskCoordinator({ store: this.store, bridge, git: this.git, runTimeoutMs: config.runTimeoutMs, limits: config.limits, textAnalysisRoot: path.join(config.home,'text-analysis'), textAnalysisBridge: { start: input => this.startTextAnalysis(input) }, skillSnapshot: (workspaceId, agentId, runtime, runId) => this.skills.snapshotExecution(workspaceId, agentId, 'run', runId, this.skills.resolveEffective(workspaceId, agentId, runtime)) });
+    this.chat = new ChatService({ store: this.store, home: config.home, defaultConnection: () => ({ runtime: 'dsh', provider: config.leadProvider, model: config.leadModel }), validateConnection: connection => this.validateChatConnection(connection), runtime: connection => connection.runtime === 'dsh' ? new DshChatRuntime(ctx, connection.provider!) : this.chatRuntimes.get(connection.runtime)!, tools: turn => this.chatTools(turn), resolveContext: (workspaceId, refs) => this.contextSnapshots(workspaceId, refs), onLeaseReleased: () => this.coordinator.wake(), skillSnapshot: (workspaceId, agentId, runtime, turnId) => this.skills.snapshotExecution(workspaceId, agentId, 'turn', turnId, this.skills.resolveEffective(workspaceId, agentId, runtime)) });
+    const subprocess = ctx.get?.('subprocess');
+    if (subprocess) {
+      try { nativeCodexPackage(); this.registerChatRuntime('codex', new NativeCodexRuntime({ spawn: specification => subprocess.spawn(specification) }), VERIFIED_NATIVE_CODEX_MODELS); }
+      catch (error) { this.nativeRuntimeUnavailable = publicError(error).message; }
+    }
     } catch (error) { this.store.close(); throw error; }
   }
-  async initialize(): Promise<void> { await this.coordinator.recover(); }
+  async initialize(): Promise<void> { await this.connections.initialize(); const boot=await localBootIdentity();this.repositories.setBootIdentity(boot);this.coordinator.setBootIdentity(boot);await this.coordinator.recover();this.store.exec("UPDATE native_executions SET status='interrupted',updated_at=? WHERE status IN ('starting','running')",new Date().toISOString());this.chat.setBootIdentity(boot);this.chat.initialize(); }
+  registerChatRuntime(name: 'codex', runtime: AgentRuntime, models: readonly string[]): void { this.chatRuntimes.set(name, runtime); this.runtimeModels.set(name, models); }
+  browserEvents(workspaceId: string, after: number) { return readWorkspaceEvents(this.store, workspaceId, after); }
+  private validateChatConnection(connection: ChatConnection): void {
+    if (connection.runtime === 'dsh') invariant(this.ctx.llm?.listProviders().some(provider => provider.id === connection.provider), 'PROVIDER_UNAVAILABLE', 'The selected model API provider is not registered.');
+    else { invariant(this.chatRuntimes.has(connection.runtime), 'PROVIDER_UNAVAILABLE', 'The selected native discussion runtime is not enabled.'); invariant(this.runtimeModels.get(connection.runtime)?.includes(connection.model), 'MODEL_UNVERIFIED', 'This native model has not passed the restricted tool-boundary probe.'); }
+  }
+  private executionBinding(workspaceId: string, providerName: string): string {
+    this.store.workspace(workspaceId); this.refreshProviders();
+    const provider = this.ctx.subagents.getProvider(providerName);
+    invariant(provider && this.providerNames.has(providerName), 'PROVIDER_UNAVAILABLE', 'Choose an exact registered execution provider.');
+    const bindingId = `${workspaceId}:execution:${providerName}`;
+    if (!this.store.get('SELECT id FROM provider_bindings WHERE id=?', bindingId)) this.store.exec('INSERT INTO provider_bindings(id,workspace_id,provider_name,package_version,config_revision,capabilities,credential_refs,runtime,spawn) VALUES(?,?,?,?,1,?,?,?,?)', bindingId, workspaceId, providerName, '0.2.1-rc.3', JSON.stringify(provider.capabilities), '[]', providerName === 'spawn' ? 'dsh' : null, providerName === 'spawn' ? JSON.stringify({ provider: this.config.leadProvider, model: this.config.leadModel }) : null);
+    return bindingId;
+  }
+  private contextSnapshots(workspaceId: string, refs: ContextRef[]): ContextSnapshot[] {
+    return refs.map(ref => {
+      let value: unknown, version: number | null = null;
+      if (ref.type === 'repository') value = this.repositories.get(workspaceId, ref.id);
+      else if (ref.type === 'task') { const task = this.store.task(ref.id); invariant(this.store.workflow(task.workflowId).workspaceId === workspaceId, 'NOT_FOUND', 'Context task does not belong to this workspace.'); value = task; version = task.version; }
+      else { const tree = this.store.get<{version?:number}>('SELECT * FROM workspace_worktrees WHERE workspace_id=? AND id=?', workspaceId, ref.id) ?? this.store.require<{version?:number}>('SELECT t.* FROM worktrees t JOIN tasks k ON k.id=t.task_id JOIN workflows f ON f.id=k.workflow_id WHERE f.workspace_id=? AND t.id=?', workspaceId, ref.id); value = tree; version = tree.version ?? null; }
+      return { ref, version, content: redact(JSON.stringify(value), 16 * 1024) };
+    });
+  }
+  private async startTextAnalysis(input: Parameters<ActivationBridge['start']>[0]) {
+    const role=input.run.providerSnapshot.role as import('../project/browser-agents.js').BrowserAgent,binding=input.run.providerSnapshot.binding;
+    const connection=role.chatConnection??(binding?.spawn?{runtime:'dsh' as const,provider:binding.spawn.provider,model:binding.spawn.model,reasoningEffort:binding.spawn.reasoningEffort}:null);
+    invariant(connection,'START_NOT_PUBLISHED','Configure a supported discussion connection for this text-analysis Agent.');
+    this.validateChatConnection(connection);
+    const runtime:AgentRuntime=connection.runtime==='dsh'?new DshChatRuntime(this.ctx,connection.provider!):this.chatRuntimes.get(connection.runtime)!;
+    const session=runtime.persistentSessions?nativeSession(this.store,{workspaceId:role.workspaceId,scope:'task',scopeId:input.task.id,agentId:role.id,cwd:input.cwd,configuration:{connection,mode:'text-analysis',prompt:role.prompt,skills:input.run.providerSnapshot.skillInstructions??''}}):undefined;
+    const handle=await runtime.start({workspaceId:role.workspaceId,agentId:role.id,turnId:input.run.id,cwd:input.cwd,model:connection.model,reasoningEffort:connection.reasoningEffort,...session?{session:sessionCallbacks(this.store,session,input.run.id,input.cwd)}:{},instructions:`You are executing a registered text-only analysis task. Analyze only the supplied text, do not access files or delegate. The latest task envelope and runId supersede previous execution details.\n${role.prompt}\n${input.run.providerSnapshot.skillInstructions??''}`,messages:[{role:'user',content:input.prompt}],tools:[],signal:input.signal});
+    return{childId:`text-${input.run.id}`,dispose:()=>handle.dispose(),result:handle.result.then(result=>({stopReason:result.stopReason,text:JSON.stringify({schemaVersion:1,taskId:input.task.id,runId:input.run.id,outcome:'completed',summary:result.text,changedPaths:[],checksClaimed:[],blockingReasons:[]})}))};
+  }
+  private chatTools(turn: AgentTurn): RuntimeTool[] {
+    const tools: RuntimeTool[] = [];
+    const activeWorkflow = () => this.store.require<Workflow>("SELECT * FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','failed','cancelled')", turn.workspaceId);
+    const register = (name: string, description: string, schema: z.ZodType, execute: (input: any) => unknown): void => {
+      tools.push({ name, description, inputSchema: JSON.parse(JSON.stringify(z.toJSONSchema(schema, { io: 'input' }))), execute: async (args, signal) => {
+        signal.throwIfAborted();
+        const current = this.chat.turn(turn.workspaceId, turn.id);
+        invariant(current.status === 'running' && current.agentId === turn.agentId && this.store.get("SELECT id FROM execution_leases WHERE owner_type='turn' AND owner_id=? AND released_at IS NULL", turn.id), 'UNAUTHORIZED', 'This Turn no longer owns an active execution lease.');
+        return JSON.parse(JSON.stringify(await execute(schema.parse(args)) ?? null, (_key, item) => typeof item === 'string' ? redact(item) : item));
+      } });
+    };
+    const startWorkflow = async (goal: string, repositoryIds?: string[], mode: 'code'|'analysis' = 'code') => {
+      const existing = this.store.get<Workflow>("SELECT * FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','failed','cancelled')", turn.workspaceId);
+      if (existing) { if(existing.baseCommit)await this.ensureLead(existing.id); return existing; }
+      const workspace = this.store.workspace(turn.workspaceId);
+      invariant(mode==='analysis'||workspace.repositoryPath, 'REPOSITORY_REQUIRED', 'Connect a Git repository before requesting code work.');
+      this.refreshProviders();
+      if(mode==='code')for (const purpose of ['developer','reviewer']) invariant(this.store.all<{providerName:string}>("SELECT b.provider_name FROM roles r JOIN provider_bindings b ON b.id=r.provider_binding_id WHERE r.workspace_id=? AND r.purpose=? AND r.enabled=1", turn.workspaceId, purpose).some(row => this.providerNames.has(row.providerName)), 'ROLES_NOT_CONFIGURED', `Configure an executable ${purpose} before requesting code work.`);
+      const workflow = await this.route('POST', '/v1/workflows', { workspaceId: turn.workspaceId, goal, mode, startLead: false, ...(repositoryIds ? { repositoryIds } : {}) }) as Workflow;
+      if(mode==='code')await this.ensureLead(workflow.id); return workflow;
+    };
+    register('rift_status', 'Read this workspace and its current workflow. All scopes are fixed by the Host.', z.object({}).strict(), () => {
+      const workflow = this.store.get<Workflow>("SELECT * FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','failed','cancelled')", turn.workspaceId);
+      return workflow ? this.coordinator.status(workflow.id) : { workspace: this.store.workspace(turn.workspaceId), repositories: this.repositories.list(turn.workspaceId), roles: this.store.all('SELECT * FROM roles WHERE workspace_id=?', turn.workspaceId), workflow: null };
+    });
+    if (turn.configuration.agent.purpose !== 'lead') {
+      register('rift_task_request', 'Register one task assigned to yourself and return its receipt. Use kind analysis without repositoryId for supplied-text analysis. End this discussion turn before the task can run; never wait for it here.', z.object({ goal: z.string().min(1).max(32000),kind:z.enum(['change','analysis']).default('change'), title: z.string().min(1).max(240), instructions: z.string().min(1).max(32000), expectedPaths: z.array(z.string()).max(100), repositoryId: z.string().min(1).max(160).optional(), acceptanceCriteria: z.array(z.string()).max(100).default([]) }).strict(), async input => {
+        invariant(turn.configuration.agent.purpose === 'developer', 'ROLE_UNAVAILABLE', 'Only a developer can register a self-assigned change task.');
+        const workflow = await startWorkflow(input.goal,input.repositoryId?[input.repositoryId]:undefined,input.kind==='analysis'&&!input.repositoryId?'analysis':'code'), role = this.store.role(turn.agentId);
+        if(workflow.baseCommit)invariant(role.providerBindingId && this.providerNames.has(this.store.binding(role.providerBindingId).providerName), 'PROVIDER_UNAVAILABLE', 'This discussion member has no executable task binding.');
+        const taskId = `task-${randomUUID()}`;
+        this.coordinator.submitPlan({ workflowId: workflow.id, expectedRevision: workflow.planRevision, tasks: [{ id: taskId, kind: input.kind, title: input.title, instructions: input.instructions, expectedPaths: input.expectedPaths, acceptanceCriteria: input.acceptanceCriteria, repositoryId: input.repositoryId, roleName: role.name }] });
+        const request = this.coordinator.dispatch({ taskId, expectedVersion: 0, idempotencyKey: `${turn.id}:${taskId}` });
+        return { taskId, requestId: request.id, workflowId: workflow.id, state: 'queued-until-discussion-releases-agent' };
+      });
+      return tools;
+    }
+    register('rift_workflow_start', 'Start or attach this workspace workflow. Use mode analysis for registered text-only tasks without Git; code mode selects repositoryIds explicitly when more than one is connected.', z.object({ goal: z.string().min(1).max(32000), mode:z.enum(['code','analysis']).default('code'), repositoryIds: z.array(z.string().min(1)).min(1).max(20).optional() }).strict(), input => startWorkflow(input.goal, input.repositoryIds,input.mode));
+    const taskOwned = (taskId: string, workflowId: string) => invariant(this.store.task(taskId).workflowId === workflowId, 'CROSS_WORKFLOW', 'Task does not belong to this workspace workflow.');
+    register('rift_plan_submit', 'Submit a durable dependency plan to the current workflow.', schemas.planSchema, input => this.coordinator.submitPlan({ workflowId: activeWorkflow().id, ...schemas.planForCoordinator(input) }));
+    register('rift_plan_replan', 'Update unstarted tasks using current versions.', schemas.replanSchema, input => { const workflowId = activeWorkflow().id; for (const update of input.updates) taskOwned(update.taskId, workflowId); return this.coordinator.replan({ workflowId, ...input }); });
+    register('rift_task_dispatch', 'Queue an approved task. Returns a durable receipt.', schemas.dispatchSchema, input => { taskOwned(input.taskId, activeWorkflow().id); return this.coordinator.dispatch(input); });
+    register('rift_wait', 'Wait for this workflow task events; never infer completion without evidence.', schemas.waitSchema, input => this.coordinator.wait({ workflowId: activeWorkflow().id, ...input }));
+    register('rift_task_retry', 'Retry this workflow task after cleanup and within repair limits.', schemas.retrySchema, input => { taskOwned(input.taskId, activeWorkflow().id); return this.coordinator.retry(input); });
+    register('rift_integration_request', 'Request exact-commit checking and independent review.', schemas.integrationSchema, input => { taskOwned(input.taskId, activeWorkflow().id); return this.coordinator.requestIntegration(input); });
+    register('rift_workflow_finish', 'Complete only when all registered tasks passed real acceptance gates.', schemas.finishSchema, input => this.coordinator.finish({ workflowId: activeWorkflow().id, ...input }));
+    return tools;
+  }
   private refreshProviders(): void { this.providerNames.clear(); for (const name of this.ctx.subagents.list()) this.providerNames.add(name); }
   private defaults(workspaceId: string): void {
     this.refreshProviders();
@@ -65,7 +182,7 @@ export class RiftHostService implements ApiHandler {
       let pending = this.leadStarts.get(workflowId);
       if (!pending) {
         pending = (async () => {
-          const created = await this.ctx.agents.create({ sessionId: SessionId(`rift-lead-${randomUUID()}`), meta: { cwd: this.store.workspace(workflow.workspaceId).repositoryPath }, agentOptions: { provider: this.config.leadProvider, model: this.config.leadModel }, setup: (scope, agent) => installLeadTools(scope, agent, workflowId, this.coordinator) });
+          const created = await this.ctx.agents.create({ sessionId: SessionId(`rift-lead-${randomUUID()}`), meta: { cwd: this.store.workspace(workflow.workspaceId).repositoryPath || this.config.home }, agentOptions: { provider: this.config.leadProvider, model: this.config.leadModel }, setup: (scope, agent) => installLeadTools(scope, agent, workflowId, this.coordinator) });
           try {
             if (this.closing || ['completed','cancelled','failed'].includes(this.store.workflow(workflowId).status)) throw new RiftError('HOST_CLOSING', 'Lead attachment is no longer admitted.');
             this.store.transaction(() => { this.store.exec('UPDATE workflows SET lead_session_id=? WHERE id=?',created.agent.id,workflowId); this.store.event(workflowId,'lead.attached',{sessionId:created.agent.id}); });
@@ -111,7 +228,133 @@ export class RiftHostService implements ApiHandler {
       return value;
     } catch (error) { this.store.exec('UPDATE management_requests SET status=?,response=? WHERE key=?','failed',JSON.stringify(publicError(error)),key); throw error; }
   }
+  /** Explicit browser allowlist; never forward arbitrary management paths. */
+  async handleBrowser(method: string, pathname: string, body: unknown, key?: string): Promise<unknown> {
+    invariant(this.config.uiEnabled!==false,'NOT_FOUND','Browser UI is disabled.');
+    return this.handle(method, pathname, body, key ? `browser:${key}` : undefined);
+  }
+  private async routeBrowser(method: string, pathname: string, body: unknown): Promise<unknown> {
+    if (this.closing) throw new RiftError('HOST_CLOSING', 'Host is closing.');
+    const url = new URL(pathname, 'http://127.0.0.1'); pathname = url.pathname;
+    if(method==='POST'&&pathname==='/ui-api/v1/connections')return this.connections.create(body);
+    const connectionVerify=/^\/ui-api\/v1\/connections\/([^/]+)\/verify$/.exec(pathname);
+    if(method==='POST'&&connectionVerify){z.object({}).strict().parse(body);return this.connections.verify(decodeURIComponent(connectionVerify[1]!));}
+    if (method === 'GET' && pathname === '/ui-api/v1/connections') return { savedConnections: this.connections.list(), configuration: this.connections.configurationCapability(), executionProviders: this.ctx.subagents.list().map(name => ({ name, capabilities: this.ctx.subagents.getProvider(name)?.capabilities ?? {}, authentication: 'not-verified' })), connections: [...(this.ctx.llm?.listProviders() ?? []).map(provider => ({ id: `dsh:${provider.id}`, runtime: 'dsh', provider: provider.id, available: true, authentication: 'not-verified', modelSelection: 'explicit', models: [], tools: true, streaming: false, output: 'buffered-for-redaction' })), { id: 'codex', runtime: 'codex', available: this.chatRuntimes.has('codex'), authentication: 'not-verified', modelSelection: 'verified-only', models: this.runtimeModels.get('codex') ?? [], disabledReason: this.chatRuntimes.has('codex') ? null : this.nativeRuntimeUnavailable, tools: true, streaming: false, output: 'buffered-for-redaction' }] };
+    if (method === 'GET' && pathname === '/ui-api/v1/workspaces') return workspaceList(this.store);
+    const match = /^\/ui-api\/v1\/workspaces\/([^/]+)$/.exec(pathname);
+    if (method === 'GET' && match) {
+      this.refreshProviders();
+      return workspaceDetail(this.store, decodeURIComponent(match[1]!), this.providerNames, { provider: this.config.leadProvider, model: this.config.leadModel });
+    }
+    if (method === 'POST' && pathname === '/ui-api/v1/workspaces') {
+      const input = z.object({ name: z.string().trim().min(1).max(120), repositoryPath: z.string().min(1).optional(), baseRef: z.string().min(1).optional(), leadConnection: connectionSchema.optional() }).strict().parse(body);
+      if (input.leadConnection) this.validateChatConnection(input.leadConnection);
+      let workspace: import('../contracts/index.js').Workspace;
+      if (input.repositoryPath) workspace = await this.route('POST', '/v1/workspaces', { name: input.name, repositoryPath: input.repositoryPath, baseRef: input.baseRef ?? 'HEAD' }) as typeof workspace;
+      else {
+        invariant(!input.baseRef, 'INVALID_WORKSPACE', 'A base ref requires a repository.');
+        const id = `workspace-${randomUUID()}`;
+        workspace = this.store.transaction(() => {
+          this.store.exec('INSERT INTO workspaces(id,name,root_path,status) VALUES(?,?,?,?)', id, input.name, path.join(this.config.home, 'workspaces', id), 'active');
+          this.store.exec("INSERT INTO roles(id,workspace_id,name,purpose,kind,prompt,revision,display_name) VALUES(?,?,'lead','lead','dsh-lead',?,1,?)", `${id}:lead`, id, 'Help the user discuss and plan. Register all code work through RIFT tools; never bypass acceptance gates.', '主 Agent');
+          return this.store.workspace(id);
+        });
+      }
+      if (input.leadConnection) this.store.exec('UPDATE workspaces SET lead_connection=?,version=version+1 WHERE id=?', JSON.stringify(input.leadConnection), workspace.id);
+      this.chat.createConversation(workspace.id);
+      return this.store.workspace(workspace.id);
+    }
+    const archiveWorkspace=/^\/ui-api\/v1\/workspaces\/([^/]+)\/archive$/.exec(pathname);
+    if(archiveWorkspace&&method==='POST'){z.object({}).strict().parse(body);return this.route('POST',`/v1/workspaces/${archiveWorkspace[1]}/archive`,{});}
+    const taskList=/^\/ui-api\/v1\/workspaces\/([^/]+)\/tasks$/.exec(pathname);
+    if(taskList&&method==='GET')return workspaceTasks(this.store,decodeURIComponent(taskList[1]!),url.searchParams);
+    const repositoryRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/repositories(?:\/([^/]+)(?:\/(worktrees))?)?$/.exec(pathname);
+    if (repositoryRoute) {
+      const workspaceId = decodeURIComponent(repositoryRoute[1]!), repositoryId = repositoryRoute[2] ? decodeURIComponent(repositoryRoute[2]) : undefined;
+      if (!repositoryId && method === 'GET') return { repositories: this.repositories.list(workspaceId) };
+      if (!repositoryId && method === 'POST') return this.repositories.connect(workspaceId, z.object({ repositoryPath: z.string().min(1), baseRef: z.string().min(1).default('HEAD'), expectedVersion: z.number().int().nonnegative() }).strict().parse(body));
+      if (repositoryId && repositoryRoute[3] === 'worktrees' && method === 'GET') return { worktrees: this.repositories.worktrees(workspaceId, repositoryId), discovered: await this.repositories.discover(workspaceId, repositoryId) };
+      if (repositoryId && repositoryRoute[3] === 'worktrees' && method === 'POST') return this.repositories.createWorktree(workspaceId, repositoryId, z.object({ origin: z.enum(['managed','external']), path: z.string().min(1).optional(), baseRef: z.string().min(1).optional(), branch: z.string().min(1).max(200).optional() }).strict().parse(body));
+    }
+    const worktreeRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/worktrees\/([^/]+)\/(archive|detach|takeover|reconcile)$/.exec(pathname);
+    if (worktreeRoute && method === 'POST') {
+      const workspaceId=decodeURIComponent(worktreeRoute[1]!),treeId=decodeURIComponent(worktreeRoute[2]!);
+      if(worktreeRoute[3]==='takeover')return this.repositories.takeover(workspaceId,treeId,z.object({expectedVersion:z.number().int().nonnegative(),confirmExclusiveOwnership:z.literal(true),destinationPath:z.string().min(1).optional()}).strict().parse(body));
+      const input = z.object({ expectedVersion: z.number().int().nonnegative() }).strict().parse(body); if(worktreeRoute[3]==='reconcile')return this.repositories.reconcile(workspaceId,treeId,input.expectedVersion);return this.repositories[worktreeRoute[3] === 'archive' ? 'archive' : 'detach'](workspaceId,treeId,input.expectedVersion);
+    }
+    const taskRoute=/^\/ui-api\/v1\/workspaces\/([^/]+)\/tasks\/([^/]+)\/(retry|evidence)$/.exec(pathname);
+    const runReconcile=/^\/ui-api\/v1\/workspaces\/([^/]+)\/runs\/([^/]+)\/reconcile$/.exec(pathname);
+    if(runReconcile&&method==='POST'){const workspaceId=decodeURIComponent(runReconcile[1]!),runId=decodeURIComponent(runReconcile[2]!),run=this.store.run(runId);invariant(this.store.workflow(this.store.task(run.taskId).workflowId).workspaceId===workspaceId,'NOT_FOUND','Run does not belong to this workspace.');this.coordinator.reconcileRun(runId,z.object({expectedVersion:z.number().int().nonnegative()}).strict().parse(body).expectedVersion);return this.store.require('SELECT id,task_id,status,version,cleanup_status,slot_released_at FROM runs WHERE id=?',runId);}
+    const integrationReconcile=/^\/ui-api\/v1\/workspaces\/([^/]+)\/integrations\/([^/]+)\/reconcile$/.exec(pathname);
+    if(integrationReconcile&&method==='POST'){const workspaceId=decodeURIComponent(integrationReconcile[1]!),integrationId=decodeURIComponent(integrationReconcile[2]!),integration=this.store.require<{taskId:string}>('SELECT task_id FROM integrations WHERE id=?',integrationId);invariant(this.store.workflow(this.store.task(integration.taskId).workflowId).workspaceId===workspaceId,'NOT_FOUND','Integration does not belong to this workspace.');return this.coordinator.reconcileIntegration(integrationId,z.object({expectedVersion:z.number().int().nonnegative()}).strict().parse(body).expectedVersion);}
+    if(taskRoute){
+      const workspaceId=decodeURIComponent(taskRoute[1]!),taskId=decodeURIComponent(taskRoute[2]!),task=this.store.task(taskId);
+      invariant(this.store.workflow(task.workflowId).workspaceId===workspaceId,'NOT_FOUND','Task does not belong to this workspace.');
+      if(method==='POST'&&taskRoute[3]==='retry'){
+        const workflow=this.store.workflow(task.workflowId);if(workflow.baseCommit)await this.ensureLead(workflow.id);
+        const retried=await this.route('POST',`/v1/tasks/${encodeURIComponent(taskId)}/retry`,body) as import('../contracts/index.js').Task;
+        const request=this.coordinator.dispatch({taskId,expectedVersion:retried.version,idempotencyKey:`browser-retry:${taskId}:${retried.attempt}`});
+        return{task:this.store.task(taskId),request};
+      }
+      if(method==='GET'&&taskRoute[3]==='evidence'){
+        const records=this.store.all<{id:string;status:string;candidate:unknown}>('SELECT id,status,candidate FROM integrations WHERE task_id=? ORDER BY rowid',taskId);
+        const integrations=await Promise.all(records.map(async record=>{if(!record.candidate)return{...record,checks:[],review:null,evidenceUnavailable:true};try{const operation=await this.git.readOperation(this.store.workspace(workspaceId),record.id);return{id:record.id,status:record.status,candidateHead:operation.candidateHead,checks:operation.checks??[],review:operation.review??null,evidenceUnavailable:false};}catch{return{id:record.id,status:record.status,checks:[],review:null,evidenceUnavailable:true};}}));
+        return{taskId,acceptedCommit:task.acceptedCommit,integrations};
+      }
+    }
+    const skillRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/skills(?:\/([^/]+))?(?:\/(shared|archive))?$/.exec(pathname);
+    if (skillRoute) {
+      const workspaceId = decodeURIComponent(skillRoute[1]!), skillId = skillRoute[2] ? decodeURIComponent(skillRoute[2]) : undefined, action = skillRoute[3];
+      if (method === 'GET' && !skillId) return { skills: this.skills.list(workspaceId) };
+      if (method === 'POST' && skillId === 'preview') return this.skills.previewImport({ workspaceId, ...z.object({ directory: z.string().min(1), name: z.string().max(120).optional(), description: z.string().max(2000).optional(), skillId: z.string().max(160).optional(), expectedRevision: z.number().int().nonnegative().optional(), runtimes: z.array(z.string()).max(20).optional() }).strict().parse(body) });
+      if (method === 'POST' && skillId === 'import') {
+        const result = this.skills.saveImport({ workspaceId, ...z.object({ previewId: z.string().min(1).max(160) }).strict().parse(body) });
+        return { ...result, version: { ...result.version, resources: result.version.resources.map(({ contentBase64: _content, ...resource }) => resource) } };
+      }
+      if (method === 'PUT' && skillId && action === 'shared') return this.skills.setShared(workspaceId, skillId, z.object({ versionId: z.string().min(1).max(160), enabled: z.boolean(), expectedRevision: z.number().int().nonnegative() }).strict().parse(body));
+      if (method === 'POST' && skillId && action === 'archive') return this.skills.archive(workspaceId, skillId, z.object({ expectedRevision: z.number().int().nonnegative() }).strict().parse(body).expectedRevision);
+    }
+    const assignmentRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/agents\/([^/]+)\/skills\/([^/]+)$/.exec(pathname);
+    if (assignmentRoute) {
+      const workspaceId = decodeURIComponent(assignmentRoute[1]!), agentId = decodeURIComponent(assignmentRoute[2]!), skillId = decodeURIComponent(assignmentRoute[3]!);
+      if (method === 'GET' && skillId === 'effective') { const effective = this.skills.resolveEffective(workspaceId, agentId, url.searchParams.get('runtime') ?? 'dsh'); return { ...effective, resources: effective.resources.map(({ contentBase64: _content, ...resource }) => resource) }; }
+      if (method === 'PUT') return this.skills.setAgent(workspaceId, agentId, skillId, z.object({ mode: z.enum(['include','exclude','inherit']), versionId: z.string().min(1).max(160).optional(), expectedRevision: z.number().int().nonnegative() }).strict().parse(body));
+    }
+    const scoped = /^\/ui-api\/v1\/workspaces\/([^/]+)(?:\/(agents|conversations|turns|workflows|snapshot)(?:\/([^/]+))?(?:\/(messages|stop|reconcile|pause|resume|cancel|retry|replan))?)?$/.exec(pathname);
+    if (scoped) {
+      const workspaceId = decodeURIComponent(scoped[1]!), section = scoped[2], entityId = scoped[3] ? decodeURIComponent(scoped[3]) : undefined, action = scoped[4];
+      this.store.workspace(workspaceId);
+      if (method === 'PATCH' && !section) {
+        const input = z.object({ expectedVersion: z.number().int().nonnegative(), name: z.string().trim().min(1).max(120).optional(), leadConnection: connectionSchema.optional() }).strict().parse(body);
+        if (input.leadConnection) this.validateChatConnection(input.leadConnection);
+        return this.store.transaction(() => {
+          const workspace = this.store.workspace(workspaceId) as import('../contracts/index.js').Workspace & { version: number; leadConnection: ChatConnection | null };
+          invariant(workspace.version === input.expectedVersion, 'VERSION_CONFLICT', 'Workspace configuration changed.');
+          this.store.exec('UPDATE workspaces SET name=?,lead_connection=?,version=version+1 WHERE id=?', input.name ?? workspace.name, input.leadConnection ? JSON.stringify(input.leadConnection) : workspace.leadConnection ? JSON.stringify(workspace.leadConnection) : null, workspaceId);
+          return this.store.workspace(workspaceId);
+        });
+      }
+      if (section === 'snapshot' && method === 'GET') return this.routeBrowser('GET', `/ui-api/v1/workspaces/${encodeURIComponent(workspaceId)}`, {});
+      if (section === 'agents') {
+        if (method === 'GET' && !entityId) return { agents: this.store.all('SELECT * FROM roles WHERE workspace_id=? ORDER BY name', workspaceId) };
+        if (method === 'POST' && !entityId) { const input = createAgentSchema.parse(body); if (input.chatConnection) this.validateChatConnection(input.chatConnection); invariant(!input.executionProviderName || !input.providerBindingId, 'INVALID_CONFIG', 'Select one execution provider or existing binding.'); return this.store.transaction(() => createBrowserAgent(this.store, workspaceId, { ...input, ...(input.executionProviderName ? { providerBindingId: this.executionBinding(workspaceId, input.executionProviderName) } : {}) })); }
+        if (method === 'PATCH' && entityId) { const input = updateAgentSchema.parse(body); if (input.chatConnection) this.validateChatConnection(input.chatConnection); invariant(!input.executionProviderName || !input.providerBindingId, 'INVALID_CONFIG', 'Select one execution provider or existing binding.'); return this.store.transaction(() => updateBrowserAgent(this.store, workspaceId, entityId, { ...input, ...(input.executionProviderName ? { providerBindingId: this.executionBinding(workspaceId, input.executionProviderName) } : {}) })); }
+      }
+      if (section === 'conversations') {
+        if (method === 'GET' && !entityId) return { conversations: this.chat.list(workspaceId) };
+        if (method === 'POST' && !entityId) return this.chat.createConversation(workspaceId, z.object({ title: z.string().trim().min(1).max(240).default('新对话') }).strict().parse(body).title);
+        if (entityId && action === 'messages' && method === 'GET') return this.chat.page(workspaceId, entityId, url.searchParams.get('before') ?? undefined, Number(url.searchParams.get('limit') ?? 50));
+        if (entityId && action === 'messages' && method === 'POST') return this.chat.send(workspaceId, entityId, sendMessageSchema.parse(body));
+      }
+      if (section === 'turns' && entityId && action === 'stop' && method === 'POST') return this.chat.stop(workspaceId, entityId);
+      if (section === 'turns' && entityId && action === 'reconcile' && method === 'POST') return this.chat.reconcile(workspaceId, entityId, z.object({expectedVersion:z.number().int().nonnegative()}).strict().parse(body).expectedVersion);
+      if (section === 'turns' && entityId && !action && method === 'GET') return this.chat.turn(workspaceId, entityId);
+      if (section === 'workflows' && entityId && action && method === 'POST') { const workflow=this.store.workflow(entityId); invariant(workflow.workspaceId === workspaceId, 'NOT_FOUND', 'Workflow does not belong to this workspace.'); if(action==='resume'&&workflow.baseCommit)await this.ensureLead(entityId); return this.route(method, `/v1/workflows/${encodeURIComponent(entityId)}/${action}`, body); }
+    }
+    throw new RiftError('NOT_FOUND', 'Unknown browser route.');
+  }
   private async route(method:string, pathname:string, body:unknown):Promise<unknown> {
+    if (pathname.startsWith('/ui-api/')) return this.routeBrowser(method, pathname, body);
     if (method === 'GET' && pathname === '/v1/doctor') return this.doctor();
     if (method === 'GET' && pathname === '/v1/workspaces') return this.store.all('SELECT * FROM workspaces ORDER BY id');
     if (method === 'POST' && pathname === '/v1/workspaces') {
@@ -120,8 +363,18 @@ export class RiftHostService implements ApiHandler {
       return workspace;
     }
     if (method === 'POST' && pathname === '/v1/workflows') {
-      const input = schemas.workflowSchema.parse(body), workspace = this.store.workspace(input.workspaceId), repo = await this.git.inspectRepository(workspace.repositoryPath,workspace.baseRef), id = `workflow-${randomUUID()}`;
-      const workflow = this.coordinator.createWorkflow({ id,workspaceId:workspace.id,goal:input.goal,baseCommit:repo.baseCommit,integrationRef:`refs/heads/rift/${workspace.id}/${id}` });
+      const input = schemas.workflowSchema.parse(body), workspace = this.store.workspace(input.workspaceId), available = this.repositories.list(workspace.id), id = `workflow-${randomUUID()}`;
+      if(input.mode==='analysis'){
+        invariant(!input.repositoryIds,'INVALID_REPOSITORIES','Text-only analysis does not select repositories.');
+        const workflow=this.coordinator.createWorkflow({id,workspaceId:workspace.id,goal:input.goal,baseCommit:'',integrationRef:'',repositoryFree:true});
+        if(input.startLead)await this.startLead(workflow.id);
+        return this.store.workflow(workflow.id);
+      }
+      invariant(available.length, 'REPOSITORY_REQUIRED', 'Connect a repository before starting a workflow.');
+      invariant(input.repositoryIds || available.length === 1, 'AMBIGUOUS_REPOSITORY', 'Specify repositoryIds when this workspace has multiple repositories.');
+      const selected = input.repositoryIds ? input.repositoryIds.map(repositoryId => this.repositories.get(workspace.id, repositoryId)) : available;
+      const snapshots = await Promise.all(selected.map(async repository => ({ repositoryId: repository.id, baseCommit: (await this.git.inspectRepository(repository.canonicalPath, repository.baseRef)).baseCommit, integrationRef: `refs/heads/rift/${workspace.id}/${id}${selected.length > 1 ? `/${repository.id}` : ''}` })));
+      const workflow = this.coordinator.createWorkflow({ id,workspaceId:workspace.id,goal:input.goal,baseCommit:snapshots[0]!.baseCommit,integrationRef:snapshots[0]!.integrationRef,repositorySnapshots:snapshots });
       if (input.startLead) await this.startLead(id);
       return this.store.workflow(workflow.id);
     }
@@ -132,9 +385,12 @@ export class RiftHostService implements ApiHandler {
       if (method === 'PUT' && action === 'roles') { const input = schemas.rolesSchema.parse(body); this.refreshProviders(); return this.project.configureRoles(id,input.bindings,input.roles); }
       if (method === 'POST' && action === 'archive') {
         const workspace = this.store.workspace(id);
+        if(workspace.status==='archived')return workspace;
+        invariant(!this.store.get("SELECT id FROM workspace_worktrees WHERE workspace_id=? AND status IN ('creating','creation_unknown','moving','move_unknown')",id),'WORKSPACE_ACTIVE','Reconcile unfinished worktree operations before archiving.');
+        invariant(!this.store.get("SELECT id FROM agent_turns WHERE workspace_id=? AND status IN ('queued','running','stopping')", id) && !this.store.get('SELECT id FROM execution_leases WHERE workspace_id=? AND released_at IS NULL', id), 'WORKSPACE_ACTIVE', 'Finish or stop queued discussions and confirm all execution cleanup before archiving.');
         if (this.store.get("SELECT id FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','cancelled','failed')",id)) throw new RiftError('WORKSPACE_ACTIVE','Finish or cancel the active workflow first.');
         const trees=this.store.all<Worktree>('SELECT w.* FROM worktrees w JOIN tasks t ON t.id=w.task_id JOIN workflows f ON f.id=t.workflow_id WHERE f.workspace_id=?',id);
-        for(const worktree of trees) {const unknown=Boolean(this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',worktree.taskId));await this.git.archiveWorktree({workspace,worktree,active:unknown,cleanupConfirmed:!unknown,artifactsSaved:true});}
+        for(const worktree of trees) {const unknown=Boolean(this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',worktree.taskId));const task=this.store.task(worktree.taskId),repository=task.repositoryId?this.repositories.get(id,task.repositoryId):undefined;await this.git.archiveWorktree({workspace:repository?{...workspace,repositoryPath:repository.canonicalPath,commonGitDir:repository.commonGitDir,baseRef:repository.baseRef}:workspace,worktree,active:unknown,cleanupConfirmed:!unknown,artifactsSaved:true});}
         this.store.exec('UPDATE workspaces SET status=? WHERE id=?','archived',id); return this.store.workspace(id);
       }
     }
@@ -155,7 +411,7 @@ export class RiftHostService implements ApiHandler {
         }
         return result;
       }
-      if (method === 'POST' && (action === 'pause'||action === 'resume')) {const input=z.object({expectedVersion:z.number().int().nonnegative()}).strict().parse(body); if(action==='resume'&&!this.leads.has(id))throw new RiftError('LIVE_LEAD_REQUIRED','Attach a new Lead before resuming queues.');return this.coordinator[action](id,input.expectedVersion);}
+      if (method === 'POST' && (action === 'pause'||action === 'resume')) {const input=z.object({expectedVersion:z.number().int().nonnegative()}).strict().parse(body); if(action==='resume'&&this.store.workflow(id).baseCommit&&!this.leads.has(id))throw new RiftError('LIVE_LEAD_REQUIRED','Attach a new Lead before resuming queues.');return this.coordinator[action](id,input.expectedVersion);}
       if (method === 'POST' && action === 'lead') return this.startLead(id);
     }
     if (entity === 'tasks') {
@@ -185,5 +441,5 @@ export class RiftHostService implements ApiHandler {
       restrictions:['External providers use one-shot activations.','Reviewer permission never inherits native sandbox; independent checkout and mutation gate enforce acceptance.','Authentication and model availability require real activation evidence; doctor does not run a model.'],
     };
   }
-  async close():Promise<void>{this.closing=true;await this.coordinator.shutdown();await Promise.allSettled([...this.leadStarts.values()]);await Promise.allSettled([...this.leads.values()].map(handle=>handle.dispose()));this.store.close();}
+  async close():Promise<void>{this.closing=true;await this.chat.close();await this.coordinator.shutdown();await this.connections.close();await Promise.allSettled([...this.leadStarts.values()]);await Promise.allSettled([...this.leads.values()].map(handle=>handle.dispose()));this.store.close();}
 }

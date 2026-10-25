@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-25T14:28:20.919Z",
+  "mode": "Real Codex 0.164.0 app-server against a controlled local Responses server, zero external model calls",
+  "observations": [
+    {
+      "model": "gpt-6-astra",
+      "verdict": "not-enabled",
+      "reason": "Code-mode functions.exec/wait and collaboration tools remained advertised with environment access disabled and native feature restrictions. RIFT does not open this combination as a native main agent."
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "verdict": "not-enabled",
+      "reason": "The same code-mode and collaboration surface remained advertised; native main-agent isolation was not established."
+    },
+    {
+      "model": "gpt-5.4",
+      "verdict": "boundary-candidate",
+      "advertisedTools": [
+        "request_user_input",
+        "rift_probe"
+      ],
+      "toolCallsObserved": 1,
+      "cleanup": "confirmed",
+      "reason": "The native input request is rejected by the gateway. No shell, filesystem, inherited MCP or delegation surface was advertised. Credentialed execution is a separate acceptance gate."
+    }
+  ],
+  "scope": "This probe checks the native runtime used by the RIFT product. It does not change the three Astra high-effort development agents requested by the user.",
+  "resolution": {
+    "realNativeWorkflow": "u0-native-workflow-probe.json",
+    "payload": "0.164.0",
+    "realCrossRepositoryCode": "ui-code-workflow-probe.json",
+    "advertisedTools": [
+      "request_user_input",
+      "rift_probe"
+    ],
+    "gpt54Outcome": "Tool boundary passed, but real account returned model_not_found; not enabled.",
+    "realDshWorkflow": "ui-dsh-workflow-probe.json",
+    "date": "2026-10-25T14:39:28.519Z",
+    "enabledModel": "gpt-6.1-sol",
+    "method": "Fixed Host-owned model_catalog_json uses tool_mode=direct, multi_agent_version=none, shell_type=disabled, apply_patch_tool_type=null, supports_search_tool=false, use_responses_lite=false. Catalog SHA-256 is pinned in NativeCodexRuntime.",
+    "status": "resolved"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-25T14:39:28.519Z",
+  "mode": "real native Codex app-server with controlled local Responses server; zero external model calls",
+  "payload": "0.164.0",
+  "result": {
+    "text": "RIFT_NATIVE_TOOL_PROBE_OK",
+    "stopReason": "completed",
+    "nativeSessionId": "01a17380-9aeb-73d0-93ae-1fe2737aa8fd"
+  },
+  "advertisedTools": [
+    [
+      "request_user_input",
+      "rift_probe"
+    ],
+    [
+      "request_user_input",
+      "rift_probe"
+    ]
+  ],
+  "codeTools": [
+    [],
+    []
+  ],
+  "invocationCount": 1,
+  "httpCount": 2,
+  "boundaryPassed": true,
+  "deniedNativeSurface": "request_user_input is native interaction only; its server request is rejected by the RIFT gateway. No shell, filesystem, MCP, plugins, or delegation tools are advertised.",
+  "status": "pass",
+  "cleanup": "confirmed"
+}

@@ -1,0 +1,282 @@
+[
+  {
+    "id": "UI-01",
+    "geometry": [
+      {
+        "tag": "MAIN",
+        "className": "w-full pt-14 bg-surface flex-1 flex flex-col",
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 1024,
+        "padding": "56px 0px 0px",
+        "gap": "normal"
+      },
+      {
+        "tag": "DIV",
+        "className": "flex flex-col w-full",
+        "x": 240,
+        "y": 56,
+        "width": 1040,
+        "height": 911,
+        "padding": "0px",
+        "gap": "normal"
+      }
+    ]
+  },
+  {
+    "id": "UI-02",
+    "geometry": [
+      {
+        "tag": "MAIN",
+        "className": "w-full pt-14 bg-surface flex-1 flex flex-col",
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 1202,
+        "padding": "56px 0px 0px",
+        "gap": "normal"
+      },
+      {
+        "tag": "DIV",
+        "className": "flex flex-col w-full relative min-h-full pb-48",
+        "x": 240,
+        "y": 56,
+        "width": 1040,
+        "height": 1146,
+        "padding": "0px 0px 192px",
+        "gap": "normal"
+      }
+    ]
+  },
+  {
+    "id": "UI-03",
+    "geometry": [
+      {
+        "tag": "MAIN",
+        "className": "w-full pt-14 bg-surface flex-1 flex flex-col",
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 1356,
+        "padding": "56px 0px 0px",
+        "gap": "normal"
+      },
+      {
+        "tag": "DIV",
+        "className": "flex flex-col w-full",
+        "x": 240,
+        "y": 56,
+        "width": 1040,
+        "height": 1300,
+        "padding": "0px",
+        "gap": "normal"
+      }
+    ]
+  },
+  {
+    "id": "UI-04",
+    "geometry": [
+      {
+        "tag": "MAIN",
+        "className": "w-full pt-14 bg-surface flex-1 flex flex-col",
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 1024,
+        "padding": "56px 0px 0px",
+        "gap": "normal"
+      },
+      {
+        "tag": "DIV",
+        "className": "flex flex-col w-full",
+        "x": 240,
+        "y": 56,
+        "width": 1040,
+        "height": 758,
+        "padding": "0px",
+        "gap": "normal"
+      },
+      {
+        "tag": "DIV",
+        "className": "agent-card group p-5 rounded-2xl bg-surface-container-lowest shadow-[0_2px_16px_rgba(31,30,29,0.03)] hover:shadow-[0_4px_24px_rgba(31,30,29,0.06)] transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-5",
+        "x": 272,
+        "y": 217,
+        "width": 976,
+        "height": 99,
+        "padding": "20px",
+        "gap": "20px"
+      },
+      {
+        "tag": "DIV",
+        "className": "agent-card group p-5 rounded-2xl bg-surface-container-lowest shadow-[0_2px_16px_rgba(31,30,29,0.03)] hover:shadow-[0_4px_24px_rgba(31,30,29,0.06)] transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-5",
+        "x": 272,
+        "y": 330,
+        "width": 976,
+        "height": 99,
+        "padding": "20px",
+        "gap": "20px"
+      },
+      {
+        "tag": "DIV",
+        "className": "agent-card group p-5 rounded-2xl bg-surface-container-lowest shadow-[0_2px_16px_rgba(31,30,29,0.03)] hover:shadow-[0_4px_24px_rgba(31,30,29,0.06)] transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-5 opacity-90",
+        "x": 272,
+        "y": 443,
+        "width": 976,
+        "height": 99,
+        "padding": "20px",
+        "gap": "20px"
+      },
+      {
+        "tag": "DIV",
+        "className": "agent-card group p-5 rounded-2xl bg-surface-container-lowest shadow-[0_2px_16px_rgba(31,30,29,0.03)] hover:shadow-[0_4px_24px_rgba(31,30,29,0.06)] transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-5 opacity-90",
+        "x": 272,
+        "y": 556,
+        "width": 976,
+        "height": 99,
+        "padding": "20px",
+        "gap": "20px"
+      }
+    ]
+  },
+  {
+    "id": "UI-05",
+    "geometry": [
+      {
+        "tag": "MAIN",
+        "className": "w-full pt-14 bg-surface flex-1 flex flex-col",
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 1601.375,
+        "padding": "56px 0px 0px",
+        "gap": "normal"
+      },
+      {
+        "tag": "DIV",
+        "className": "flex flex-col w-full",
+        "x": 240,
+        "y": 56,
+        "width": 1040,
+        "height": 1545.375,
+        "padding": "0px",
+        "gap": "normal"
+      }
+    ]
+  },
+  {
+    "id": "UI-06",
+    "geometry": [
+      {
+        "tag": "MAIN",
+        "className": "w-full pt-14 bg-surface flex-1 flex flex-col",
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 1093,
+        "padding": "56px 0px 0px",
+        "gap": "normal"
+      },
+      {
+        "tag": "DIV",
+        "className": "flex flex-col w-full",
+        "x": 240,
+        "y": 56,
+        "width": 1040,
+        "height": 1037,
+        "padding": "0px",
+        "gap": "normal"
+      }
+    ]
+  },
+  {
+    "id": "UI-07",
+    "geometry": [
+      {
+        "tag": "MAIN",
+        "className": "w-full pt-14 bg-surface flex-1 flex flex-col",
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 1177.5,
+        "padding": "56px 0px 0px",
+        "gap": "normal"
+      },
+      {
+        "tag": "DIV",
+        "className": "flex flex-col w-full",
+        "x": 240,
+        "y": 56,
+        "width": 1040,
+        "height": 1121.5,
+        "padding": "0px",
+        "gap": "normal"
+      }
+    ]
+  },
+  {
+    "id": "UI-08",
+    "geometry": [
+      {
+        "tag": "MAIN",
+        "className": "w-full pt-14 bg-surface flex-1 flex flex-col",
+        "x": 240,
+        "y": 0,
+        "width": 1040,
+        "height": 1121.75,
+        "padding": "56px 0px 0px",
+        "gap": "normal"
+      },
+      {
+        "tag": "DIV",
+        "className": "flex flex-col w-full",
+        "x": 240,
+        "y": 56,
+        "width": 1040,
+        "height": 1065.75,
+        "padding": "0px",
+        "gap": "normal"
+      },
+      {
+        "tag": "DIV",
+        "className": "agent-card group relative p-6 rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-all cursor-pointer",
+        "x": 272,
+        "y": 180,
+        "width": 640,
+        "height": 180,
+        "padding": "24px",
+        "gap": "normal"
+      },
+      {
+        "tag": "DIV",
+        "className": "agent-card group p-6 rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-all cursor-pointer",
+        "x": 272,
+        "y": 422,
+        "width": 640,
+        "height": 176,
+        "padding": "24px",
+        "gap": "normal"
+      },
+      {
+        "tag": "DIV",
+        "className": "agent-card group p-6 rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-all cursor-pointer ring-1 ring-primary/20",
+        "x": 272,
+        "y": 614,
+        "width": 640,
+        "height": 188,
+        "padding": "24px",
+        "gap": "normal"
+      },
+      {
+        "tag": "DIV",
+        "className": "agent-card group p-6 rounded-xl bg-surface-container-lowest/80 shadow-sm hover:shadow-md transition-all cursor-pointer opacity-90 hover:opacity-100",
+        "x": 272,
+        "y": 864,
+        "width": 640,
+        "height": 132,
+        "padding": "24px",
+        "gap": "normal"
+      }
+    ]
+  }
+]

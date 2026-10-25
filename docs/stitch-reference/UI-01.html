@@ -1,0 +1,402 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=Plus+Jakarta+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "inverse-surface": "#2f312e", "outline-variant": "#dbc1b9", "inverse-on-surface": "#f2f1ed", "surface-tint": "#9a4526", "secondary-fixed-dim": "#ccc5be", "on-tertiary-fixed": "#2f1500", "tertiary-fixed": "#ffdcc3", "error-container": "#ffdad6", "primary-fixed-dim": "#ffb59c", "tertiary-container": "#b15f00", "on-secondary": "#ffffff", "on-tertiary-fixed-variant": "#6e3900", "surface-variant": "#e3e2df", "on-surface-variant": "#55433d", "secondary-container": "#e9e1d9", "on-primary-fixed": "#390c00", "primary": "#974324", "on-tertiary-container": "#fffbff", "surface": "#faf9f5", "surface-container-low": "#f4f4f0", "surface-container-high": "#e9e8e4", "tertiary-fixed-dim": "#ffb77d", "surface-container": "#efeeea", "surface-container-lowest": "#ffffff", "on-background": "#1b1c1a", "on-primary-fixed-variant": "#7b2e11", "on-error-container": "#93000a", "outline": "#88726b", "primary-fixed": "#ffdbd0", "on-surface": "#1b1c1a", "on-tertiary": "#ffffff", "on-primary-container": "#fffbff", "on-primary": "#ffffff", "surface-bright": "#faf9f5", "inverse-primary": "#ffb59c", "on-secondary-fixed": "#1e1b16", "primary-container": "#b65a3a", "error": "#ba1a1a", "background": "#faf9f5", "on-error": "#ffffff", "secondary-fixed": "#e9e1d9", "surface-container-highest": "#e3e2df", "secondary": "#625e57", "surface-dim": "#dbdad6", "on-secondary-fixed-variant": "#4a4640", "on-secondary-container": "#68645d", "tertiary": "#8d4b00" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-lg": "2rem", "margin-mobile": "1.25rem", "gutter-mobile": "1rem", "space-sm": "0.75rem", "space-xs": "0.375rem", "gutter": "1.5rem", "margin": "2.5rem", "space-xl": "3.5rem", "space-md": "1.25rem" }, "fontFamily": { "body-sm": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "code-sm": ["JetBrains Mono"], "headline-md": ["Newsreader"], "body-lg": ["Plus Jakarta Sans"], "headline-xl": ["Newsreader"], "headline-lg": ["Newsreader"], "headline-xl-mobile": ["Newsreader"], "headline-sm": ["Newsreader"], "headline-lg-mobile": ["Newsreader"] }, "fontSize": { "body-sm": ["13px", { "lineHeight": "21px", "fontWeight": "400" }], "label-md": ["13px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "600" }], "body-md": ["15px", { "lineHeight": "25px", "fontWeight": "400" }], "label-sm": ["11px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "code-sm": ["13px", { "lineHeight": "20px", "fontWeight": "400" }], "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "500" }], "body-lg": ["17px", { "lineHeight": "29px", "fontWeight": "400" }], "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "400" }], "headline-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.015em", "fontWeight": "400" }], "headline-xl-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "400" }], "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "500" }], "headline-lg-mobile": ["26px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "400" }] } } } };</script></head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed"><aside class="fixed left-0 top-0 h-full w-60 bg-surface-container-low shadow-[0_1px_8px_rgba(0,0,0,0.03)] z-50 flex flex-col justify-between py-4 px-3"><div class="flex flex-col gap-4"><div class="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-surface-container transition-colors cursor-pointer"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div><span class="font-label-md text-label-md text-on-surface tracking-tight">RIFT 界面组</span></div><span class="material-symbols-outlined text-[18px] text-on-surface-variant">unfold_more</span></div><div class="px-1"><button class="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)] hover:bg-surface-container hover:text-on-surface transition-all" type="button"><span class="flex items-center gap-2 font-label-md text-label-md"><span class="material-symbols-outlined text-primary text-[18px]">edit_square</span>新建对话</span><span class="font-code-sm text-label-sm text-on-surface-variant opacity-70">⌘K</span></button></div><nav class="flex flex-col gap-1 mt-2" data-active-classes="bg-secondary-container text-on-secondary-container font-label-md rounded-lg"><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="chat" href="#"><span class="material-symbols-outlined text-[18px]">chat_bubble</span>对话</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="agents" href="#"><span class="material-symbols-outlined text-[18px]">smart_toy</span>智能代理</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="skills" href="#"><span class="material-symbols-outlined text-[18px]">auto_awesome</span>技能扩展</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="repositories" href="#"><span class="material-symbols-outlined text-[18px]">source_environment</span>代码库与工作区</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="tasks" href="#"><span class="material-symbols-outlined text-[18px]">task_alt</span>任务队列</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-[18px]">tune</span>系统设置</a></nav></div><div class="flex flex-col gap-2 px-2 pt-3"><div class="flex items-center justify-between p-2 rounded-lg bg-surface-container/60"><div class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-primary"></div><span class="font-label-sm text-label-sm text-on-surface-variant">本地宿主已就绪</span></div><span class="font-code-sm text-label-sm text-on-surface-variant">v0.9.4</span></div></div></aside><div class="pl-60 min-h-screen flex flex-col"><header class="fixed top-0 left-60 right-0 h-14 bg-surface/85 backdrop-blur-md shadow-[0_1px_6px_rgba(0,0,0,0.02)] z-40 flex items-center justify-between px-6"><div class="flex items-center gap-3"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight font-medium">会话画布</span><span class="font-code-sm text-label-sm text-on-surface-variant px-1.5 py-0.5 rounded bg-surface-container-high">#SES-8419</span></div><div class="flex items-center gap-3"><button class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary-fixed/40 text-on-surface hover:bg-primary-fixed/70 transition-colors" type="button"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span><span class="font-label-sm text-label-sm">Agent 3 运行 · 1 待定</span><span class="material-symbols-outlined text-[16px] text-on-surface-variant">keyboard_arrow_down</span></button><div class="flex items-center gap-1"><button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" title="导出记录" type="button"><span class="material-symbols-outlined text-[18px]">ios_share</span></button><button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" title="清空历史" type="button"><span class="material-symbols-outlined text-[18px]">restart_alt</span></button></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="w-full pt-14 bg-surface flex-1 flex flex-col"><div class="flex flex-col w-full">
+<!-- Subtle Ambient Glow in background -->
+<div class="fixed top-20 right-48 w-96 h-96 rounded-full bg-primary/5 blur-3xl pointer-events-none -z-10"></div>
+<!-- Main Canvas / Workspace Management Viewport -->
+<div class="max-w-5xl w-full mx-auto px-8 py-10 flex flex-col gap-10">
+<!-- Header Meta Banner with Asymmetric Literary Detail -->
+<div class="flex flex-col md:flex-row justify-between gap-6 pb-2 items-center">
+<div class="space-y-2">
+<div class="flex items-center gap-2">
+<span class="font-code-sm text-label-sm uppercase tracking-wider text-primary">WORKSPACE DIRECTORY</span>
+<span class="text-surface-variant font-code-sm text-label-sm">/</span>
+<span class="font-code-sm text-label-sm text-secondary">系统工作区矩阵（示例）</span>
+</div>
+
+
+</div>
+<!-- Action Trigger Group -->
+<div class="flex items-center gap-3">
+<button class="group flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-on-primary shadow-sm hover:bg-primary-container transition-all" id="openModalBtn" type="button">
+<span class="material-symbols-outlined text-[18px] group-hover:rotate-90 transition-transform duration-300">add</span>
+<span class="font-label-md text-label-md">创建新工作区</span>
+</button>
+</div>
+</div>
+<!-- Layout: Primary Workspace List & Active Inspector Bento -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- Left Column: Workspace Registry Cards (7 cols) -->
+<div class="lg:col-span-7 flex flex-col gap-4">
+<div class="flex items-center justify-between px-1">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">可切换工作区 (3)</span>
+<span class="font-code-sm text-label-sm text-on-surface-variant">同步策略: 自动增量</span>
+</div>
+<!-- Active Workspace Card (RIFT 界面组) -->
+<div class="group relative rounded-xl bg-surface-container-lowest p-6 shadow-sm transition-all hover:shadow-md hover:bg-surface-bright border-l-4 border-l-primary flex flex-col gap-4">
+<div class="flex items-start justify-between gap-4">
+<div class="space-y-1">
+<div class="flex items-center gap-2.5">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-medium">RIFT 界面组</h3>
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary-fixed/40 text-on-surface text-label-sm font-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                  当前活动
+                </span>
+</div>
+<p class="font-code-sm text-label-sm text-on-surface-variant">~/workspace/rift-ui-runtime</p>
+</div>
+<button class="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface-variant font-label-sm text-label-sm cursor-default opacity-80" disabled="" type="button">
+              使用中
+            </button>
+</div>
+<!-- Card Metric Pills -->
+<div class="grid grid-cols-3 gap-2 pt-2">
+<div class="p-2.5 rounded-lg bg-surface-container-low flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">驻留代理</span>
+<span class="font-headline-sm text-headline-sm text-on-surface mt-0.5">3 <span class="font-body-sm text-label-sm text-on-surface-variant">Agent</span></span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">上下文索引</span>
+<span class="font-headline-sm text-headline-sm text-on-surface mt-0.5">14.2 <span class="font-body-sm text-label-sm text-on-surface-variant">MB</span></span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">最后刷新</span>
+<span class="font-code-sm text-label-sm text-on-surface mt-1">2分钟前</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-body-sm text-on-surface-variant pt-1">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-primary">hub</span>
+<span class="font-body-sm text-body-sm">主代理: Claude Architecture Core</span>
+</div>
+<span class="font-code-sm text-label-sm text-secondary">#WSP-001 (示例)</span>
+</div>
+</div>
+<!-- Inactive Workspace Card 2 -->
+<div class="group rounded-xl bg-surface-container-lowest p-6 shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
+<div class="flex items-start justify-between gap-4">
+<div class="space-y-1">
+<div class="flex items-center gap-2.5">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-medium">执行引擎 / 宿主核心</h3>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-label-sm font-label-sm">
+                  后台待命
+                </span>
+</div>
+<p class="font-code-sm text-label-sm text-on-surface-variant">~/runtime/execution-node-core</p>
+</div>
+<button class="switch-workspace-btn px-3 py-1.5 rounded-lg bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface font-label-sm text-label-sm transition-colors" type="button">
+              切换至此
+            </button>
+</div>
+<div class="grid grid-cols-3 gap-2 pt-2">
+<div class="p-2.5 rounded-lg bg-surface-container-low flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">驻留代理</span>
+<span class="font-headline-sm text-headline-sm text-on-surface mt-0.5">5 <span class="font-body-sm text-label-sm text-on-surface-variant">Agent</span></span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">上下文索引</span>
+<span class="font-headline-sm text-headline-sm text-on-surface mt-0.5">88.6 <span class="font-body-sm text-label-sm text-on-surface-variant">MB</span></span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">最后刷新</span>
+<span class="font-code-sm text-label-sm text-on-surface mt-1">45分钟前</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-body-sm text-on-surface-variant pt-1">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-secondary">memory</span>
+<span class="font-body-sm text-body-sm">主代理: Rust Syscall Dispatcher</span>
+</div>
+<span class="font-code-sm text-label-sm text-secondary">#WSP-002 (示例)</span>
+</div>
+</div>
+<!-- Inactive Workspace Card 3 -->
+<div class="group rounded-xl bg-surface-container-lowest p-6 shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
+<div class="flex items-start justify-between gap-4">
+<div class="space-y-1">
+<div class="flex items-center gap-2.5">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-medium">移动端重构项目</h3>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-label-sm font-label-sm">
+                  休眠就绪
+                </span>
+</div>
+<p class="font-code-sm text-label-sm text-on-surface-variant">~/mobile/react-native-subsystem</p>
+</div>
+<button class="switch-workspace-btn px-3 py-1.5 rounded-lg bg-surface-container-low hover:bg-primary hover:text-on-primary text-on-surface font-label-sm text-label-sm transition-colors" type="button">
+              切换至此
+            </button>
+</div>
+<div class="grid grid-cols-3 gap-2 pt-2">
+<div class="p-2.5 rounded-lg bg-surface-container-low flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">驻留代理</span>
+<span class="font-headline-sm text-headline-sm text-on-surface mt-0.5">2 <span class="font-body-sm text-label-sm text-on-surface-variant">Agent</span></span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">上下文索引</span>
+<span class="font-headline-sm text-headline-sm text-on-surface mt-0.5">3.8 <span class="font-body-sm text-label-sm text-on-surface-variant">MB</span></span>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">最后刷新</span>
+<span class="font-code-sm text-label-sm text-on-surface mt-1">昨日 18:30</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-body-sm text-on-surface-variant pt-1">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-secondary">phone_iphone</span>
+<span class="font-body-sm text-body-sm">主代理: Flutter/Swift Bridge</span>
+</div>
+<span class="font-code-sm text-label-sm text-secondary">#WSP-003 (示例)</span>
+</div>
+</div>
+</div>
+<!-- Right Column: Visual Summary & Quick Setup Drawer (5 cols) -->
+<div class="lg:col-span-5 flex flex-col gap-6">
+<!-- Live Node Allocation Minimal Bento -->
+<div class="rounded-xl bg-surface-container-lowest p-6 shadow-sm flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface">工作区资源拓扑（示例）</span>
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">grain</span>
+</div>
+<!-- Minimal SVG Topology Chart -->
+<div class="relative py-4 flex items-center justify-center bg-surface-container-low rounded-lg overflow-hidden">
+<svg class="w-full h-32" fill="none" viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg">
+<!-- Grid background hint -->
+<path class="text-surface-container" d="M0 30H320M0 60H320M0 90H320" stroke="currentColor" stroke-dasharray="2 4" stroke-width="1"></path>
+<!-- Connectors -->
+<path class="text-outline-variant" d="M60 60C110 60 130 35 170 35M60 60C110 60 130 85 170 85M170 35C210 35 230 45 260 45M170 85C210 85 230 75 260 75" stroke="currentColor" stroke-width="1.5"></path>
+<!-- Nodes -->
+<circle class="fill-primary-fixed" cx="60" cy="60" r="14"></circle>
+<circle class="fill-primary" cx="60" cy="60" r="6"></circle>
+<text class="fill-on-surface font-code-sm text-[9px]" text-anchor="middle" x="60" y="90">RIFT (Host)</text>
+<circle class="fill-surface-container-highest" cx="170" cy="35" r="10"></circle>
+<circle class="fill-secondary" cx="170" cy="35" r="4"></circle>
+<circle class="fill-surface-container-highest" cx="170" cy="85" r="10"></circle>
+<circle class="fill-secondary" cx="170" cy="85" r="4"></circle>
+<circle class="fill-surface-container-highest" cx="260" cy="45" r="8"></circle>
+<circle class="fill-surface-container-highest" cx="260" cy="75" r="8"></circle>
+</svg>
+</div>
+<div class="space-y-2">
+<div class="flex items-center justify-between text-body-sm">
+<span class="text-on-surface-variant font-body-sm">宿主运行时连接状态</span>
+<span class="text-primary font-label-sm font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                Socket 正常链路
+              </span>
+</div>
+<div class="flex items-center justify-between text-body-sm">
+<span class="text-on-surface-variant font-body-sm">本地目录只读保护</span>
+<span class="font-code-sm text-label-sm text-on-surface">严格隔离 (Sandboxed)</span>
+</div>
+</div>
+</div>
+<!-- Workspace Architecture Visual Anchor Card -->
+<div class="rounded-xl bg-surface-container-lowest p-6 shadow-sm flex flex-col gap-4">
+<div class="relative h-44 rounded-lg overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="An editorial minimalist architectural workspace study, warm oatmeal stone textures, soft diffused natural daylight from a high window casting warm shadows on linen book covers and clean minimalist desktop, terracotta subtle accents, cinematic tranquility, analog film aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBifF2lAKDWqhark52AVtIdTlJU6CfTwkBHHZbL394aVqZ6Kr4XPXHPtwuH4gdL3wmcwrZDBwtRQQjADIFDkGQt21eiu_6zqaQxNm_vsZYt8DiIjv9TGst24H_7ODZZZpmVxmR2rI6QSzlp873Q2VkU0TrBNbZJ9GlMyJfv9RoIfI-qYz9q57rUGx-3Jxm4cHxFYRTmVTakVf6AwBC2IviHeLN6Zg4dUbREmV0j8XCS3AXL2yitekbH">
+<div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/60 via-transparent to-transparent flex items-end p-4">
+<div class="text-inverse-on-surface space-y-0.5">
+<p class="font-label-sm text-label-sm uppercase tracking-wider opacity-80">Workspace Design Principle</p>
+<p class="font-headline-sm text-headline-sm">上下文的洁净是精准思维的前提</p>
+</div>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+            每个项目绑定独立代码库。在切换至不同工作区时，系统将无损固化当前会话状态，并在本地目录重新构建轻量级向量索引。
+          </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Create New Workspace Slide-Over Drawer / Modal Overlay -->
+<div class="fixed inset-0 bg-inverse-surface/20 backdrop-blur-sm z-50 transition-opacity duration-300 opacity-0 pointer-events-none flex justify-end" id="drawerOverlay">
+<!-- Drawer Panel Container -->
+<div class="w-full max-w-xl h-full bg-surface-bright shadow-2xl flex flex-col justify-between transform translate-x-full transition-transform duration-300 ease-out" id="drawerPanel">
+<!-- Drawer Header -->
+<div class="p-6 md:p-8 flex items-start justify-between bg-surface-container-low/40">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="font-code-sm text-label-sm uppercase tracking-wider text-primary">NEW RUNTIME ENVIRONMENT</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-on-surface font-medium">配置新工作区</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">指定本地代码路径与首选协作者，为新任务创建纯净运行时。</p>
+</div>
+<button class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" id="closeDrawerBtn" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Drawer Form Body -->
+<form class="flex-1 overflow-y-auto p-6 md:p-8 flex flex-col gap-6" id="createWorkspaceForm">
+<!-- Workspace Name Input -->
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface flex items-center justify-between" for="workspaceName">
+<span class="">工作区名称</span>
+<span class="font-code-sm text-label-sm text-on-surface-variant">必填</span>
+</label>
+<input class="w-full px-4 py-3 rounded-lg bg-surface-container-lowest text-on-surface font-body-md text-body-md placeholder:text-on-surface-variant/50 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20" id="workspaceName" name="workspaceName" placeholder="例如：向量数据库引擎优化 (示例)" required="" type="text">
+</div>
+<!-- Directory Binding Input -->
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface flex items-center justify-between" for="directoryPath">
+<span class="">本地工作目录映射</span>
+<span class="font-code-sm text-label-sm text-on-surface-variant">本地沙盒绑定</span>
+</label>
+<div class="flex gap-2">
+<div class="relative flex-1">
+<span class="absolute left-3.5 top-3.5 material-symbols-outlined text-on-surface-variant text-[18px]">folder_open</span>
+<input class="w-full pl-10 pr-4 py-3 rounded-lg bg-surface-container-lowest font-code-sm text-code-sm text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20" id="directoryPath" name="directoryPath" type="text" value="~/workspace/projects/new-sandbox">
+</div>
+<button class="px-3.5 py-3 rounded-lg bg-surface-container-high hover:bg-surface-container text-on-surface font-label-sm text-label-sm transition-colors whitespace-nowrap" type="button">
+              浏览目录
+            </button>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant">默认以只读与受控写权限挂载，无需担心宿主文件被意外重写。</p>
+</div>
+<!-- Primary Agent Selection Cards -->
+<div class="flex flex-col gap-3">
+<label class="font-label-md text-label-md text-on-surface">主导智能代理 (Primary Agent)</label>
+<div class="grid grid-cols-1 gap-2.5">
+<!-- Agent Option 1 -->
+<label class="flex items-center justify-between p-3.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container-low cursor-pointer shadow-sm transition-all group">
+<div class="flex items-center gap-3">
+<input checked="" class="w-4 h-4 accent-primary text-primary cursor-pointer" name="primaryAgent" type="radio" value="architect">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">Claude 架构解析核心</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">深度代码审计与系统设计（长上下文优化）</span>
+</div>
+</div>
+<span class="font-code-sm text-label-sm text-primary group-hover:translate-x-0.5 transition-transform">默认推荐</span>
+</label>
+<!-- Agent Option 2 -->
+<label class="flex items-center justify-between p-3.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container-low cursor-pointer shadow-sm transition-all group">
+<div class="flex items-center gap-3">
+<input class="w-4 h-4 accent-primary text-primary cursor-pointer" name="primaryAgent" type="radio" value="coder">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">快速代码生成与重构</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">高吞吐微服务模块编写与单元测试</span>
+</div>
+</div>
+<span class="font-code-sm text-label-sm text-secondary">低延迟</span>
+</label>
+<!-- Agent Option 3 -->
+<label class="flex items-center justify-between p-3.5 rounded-lg bg-surface-container-lowest hover:bg-surface-container-low cursor-pointer shadow-sm transition-all group">
+<div class="flex items-center gap-3">
+<input class="w-4 h-4 accent-primary text-primary cursor-pointer" name="primaryAgent" type="radio" value="researcher">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">技术文献与学术调研</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">论文检索与算法数学证明比对</span>
+</div>
+</div>
+<span class="font-code-sm text-label-sm text-secondary">严谨推理</span>
+</label>
+</div>
+</div>
+<!-- Secondary Config Checks -->
+<div class="p-4 rounded-xl bg-surface-container-low flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<input checked="" class="w-4 h-4 rounded accent-primary text-primary cursor-pointer" id="autoIndex" type="checkbox">
+<label class="font-label-md text-label-md text-on-surface cursor-pointer" for="autoIndex">自动扫描并建立本地代码索引 (AST 向量化)</label>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<input checked="" class="w-4 h-4 rounded accent-primary text-primary cursor-pointer" id="isolatedHist" type="checkbox">
+<label class="font-label-md text-label-md text-on-surface cursor-pointer" for="isolatedHist">会话历史完全隔离，不继承全局公共上下文</label>
+</div>
+</div>
+</div>
+</form>
+<!-- Drawer Footer Action Bar -->
+<div class="p-6 md:p-8 bg-surface-container-low/60 flex items-center justify-between gap-4">
+<button class="px-5 py-2.5 rounded-xl bg-surface-container text-on-surface-variant hover:bg-surface-container-high font-label-md text-label-md transition-colors" id="cancelDrawerBtn" type="button">
+          取消
+        </button>
+<div class="flex items-center gap-3">
+<span class="font-code-sm text-label-sm text-on-surface-variant">配置将在本地保存</span>
+<button class="px-6 py-2.5 rounded-xl bg-primary text-on-primary hover:bg-primary-container shadow-sm font-label-md text-label-md transition-all" id="submitCreateBtn" type="button">
+            确认并创建工作区
+          </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Interactive JavaScript -->
+<script>
+    (function initWorkspaceDrawer() {
+      const openModalBtn = document.getElementById('openModalBtn');
+      const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+      const cancelDrawerBtn = document.getElementById('cancelDrawerBtn');
+      const drawerOverlay = document.getElementById('drawerOverlay');
+      const drawerPanel = document.getElementById('drawerPanel');
+      const submitCreateBtn = document.getElementById('submitCreateBtn');
+
+      function openDrawer() {
+        drawerOverlay.classList.remove('opacity-0', 'pointer-events-none');
+        drawerOverlay.classList.add('opacity-100');
+        drawerPanel.classList.remove('translate-x-full');
+        drawerPanel.classList.add('translate-x-0');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeDrawer() {
+        drawerOverlay.classList.remove('opacity-100');
+        drawerOverlay.classList.add('opacity-0', 'pointer-events-none');
+        drawerPanel.classList.remove('translate-x-0');
+        drawerPanel.classList.add('translate-x-full');
+        document.body.style.overflow = '';
+      }
+
+      if (openModalBtn) openModalBtn.addEventListener('click', openDrawer);
+      if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', closeDrawer);
+      if (cancelDrawerBtn) cancelDrawerBtn.addEventListener('click', closeDrawer);
+
+      // Dismiss drawer clicking backdrop
+      if (drawerOverlay) {
+        drawerOverlay.addEventListener('click', (e) => {
+          if (e.target === drawerOverlay) closeDrawer();
+        });
+      }
+
+      // Escape key handler
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeDrawer();
+      });
+
+      // Simple submit interaction feedback
+      if (submitCreateBtn) {
+        submitCreateBtn.addEventListener('click', () => {
+          const nameInput = document.getElementById('workspaceName');
+          if (nameInput && !nameInput.value.trim()) {
+            nameInput.focus();
+            return;
+          }
+          submitCreateBtn.disabled = true;
+          submitCreateBtn.textContent = '正在初始化环境...';
+          setTimeout(() => {
+            submitCreateBtn.disabled = false;
+            submitCreateBtn.textContent = '确认并创建工作区';
+            closeDrawer();
+          }, 650);
+        });
+      }
+
+      // Switch workspace buttons simple feedback
+      document.querySelectorAll('.switch-workspace-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const originalText = this.textContent;
+          this.textContent = '切换中...';
+          setTimeout(() => {
+            this.textContent = '已切换';
+            setTimeout(() => {
+              this.textContent = originalText;
+            }, 1000);
+          }, 400);
+        });
+      });
+    })();
+  </script>
+</div></main></div>
+
+</body></html>

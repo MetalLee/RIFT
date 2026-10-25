@@ -19,7 +19,7 @@
         maxActiveSubagents: !!js Number(process.env.RIFT_TOTAL_LIMIT || (Number(process.env.RIFT_DEVELOPERS || 4) + 1))
         maxDepth: 1
     - id: rift-codex-dev
-      name: '@deepseek-ai/dsh-subagent-codex'
+      name: '../dist/agent/codex-provider.js'
       config:
         providerName: codex-dev
         permissionMode: never
@@ -32,7 +32,7 @@
             return model;
           })()
     - id: rift-codex-review
-      name: '@deepseek-ai/dsh-subagent-codex'
+      name: '../dist/agent/codex-provider.js'
       config:
         providerName: codex-review
         permissionMode: never

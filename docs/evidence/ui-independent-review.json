@@ -1,0 +1,514 @@
+{
+  "schemaVersion": 2,
+  "reviewDate": "2026-10-25",
+  "reviewer": "independent-review-agent",
+  "status": "passed-independent-review",
+  "scope": "Final independent source and adversarial acceptance review of the U0-U8 implementation, with real-model and interactive-browser evidence separately attributed to the parent agent.",
+  "batches": [
+    {
+      "id": "browser-slice-1",
+      "status": "passed-api-and-source-review",
+      "checks": [
+        {
+          "command": "pnpm typecheck",
+          "result": "passed"
+        },
+        {
+          "command": "pnpm exec vitest run tests/acceptance/management-security.test.ts",
+          "result": "passed",
+          "tests": 4
+        },
+        {
+          "command": "pnpm exec vitest run tests/acceptance/cli.test.ts tests/core/roles-and-reuse.test.ts",
+          "result": "passed",
+          "tests": 11
+        },
+        {
+          "command": "pnpm exec vitest run tests/acceptance/ui-review.test.ts tests/acceptance/management-security.test.ts",
+          "result": "passed",
+          "tests": 9
+        },
+        {
+          "command": "pnpm exec vitest run tests/acceptance/ui-review.test.ts tests/acceptance/browser-service.test.ts",
+          "result": "passed",
+          "tests": 8
+        }
+      ],
+      "independentTests": "tests/acceptance/ui-review.test.ts",
+      "verified": [
+        "All selected workspace read-model entities remain isolated between two workspaces.",
+        "Run snapshots/results, raw events, operation payloads and arbitrary candidate payloads are excluded.",
+        "Real Host HTTP responses redact seeded environment secrets and credential-shaped scalar text.",
+        "Missing records and unsupported doctor/run browser routes fail without exposing raw configuration.",
+        "Bootstrap URLs carry launch codes only in fragments; codes expire, are single-use and do not include management.token.",
+        "HttpOnly, SameSite=Strict and API-path cookies; expired, duplicate and logged-out cookies rejected.",
+        "Exact loopback Host, Origin, Fetch Metadata and CSRF enforced; cross-port same-site requests rejected.",
+        "Cookie authentication cannot authorize /v1; Bearer authentication cannot authorize /ui-api/v1.",
+        "Browser sessions and unconsumed launch codes are invalid after restarting the HTTP service on the same port, while the CLI token remains valid.",
+        "Raw/encoded/double-encoded/backslash traversal, hidden files, source maps and a real directory symlink/junction escape rejected.",
+        "Static assets use no-store, no-referrer and a restrictive CSP; HEAD returns no body.",
+        "Unknown cleanup retains occupancy; Lead idleness is not inferred; missing providers and disabled roles remain explicit."
+      ]
+    },
+    {
+      "id": "domain-chat-skill-events-2",
+      "status": "passed-targeted-checks-review-continuing",
+      "checks": [
+        {
+          "command": "pnpm exec vitest run tests/acceptance/ui-review.test.ts",
+          "result": "passed",
+          "tests": 12
+        }
+      ],
+      "verified": [
+        "Real v3 database upgrades preserve unknown cleanup, historical Run identities and unreleased leases; task repository and workflow repository backfills pass foreign_key_check.",
+        "One Agent serializes discussion Turns, duplicate clientMessageId reuses delivery, mismatched input and foreign workspace recipients/conversations/stops are rejected.",
+        "Queued Turns retain original model/prompt snapshots after Agent configuration changes; busy Agent disable is rejected.",
+        "Two discussion Turns consume the shared developer budget and leave task dispatch durably queued.",
+        "Unresponsive runtime result times out into bounded cleanup; released leases require confirmed disposal.",
+        "A credential split across runtime output chunks is no longer exposed after buffering and whole-response redaction.",
+        "Shared and per-Agent Skill versions remain isolated and immutable; exclusions, foreign IDs, credential files and unsupported resources are enforced.",
+        "Workspace event replay handles sparse global cursors without cross-workspace entities; stale/future cursors request resync; real SSE closes on session expiry and rejects wrong Origin."
+      ]
+    },
+    {
+      "id": "integration-native-and-recovery-3",
+      "status": "passed-targeted-checks-review-continuing",
+      "checks": [
+        {
+          "command": "pnpm exec vitest run tests/acceptance/ui-review.test.ts",
+          "result": "passed",
+          "tests": 16
+        },
+        {
+          "command": "pnpm exec vitest run tests/core/native-codex.test.ts tests/acceptance/ui-review.test.ts",
+          "result": "passed-at-12-review-tests",
+          "tests": 18
+        },
+        {
+          "command": "pnpm typecheck",
+          "result": "passed-backend-and-ui"
+        }
+      ],
+      "verified": [
+        "Real Host creates a repository-free workspace with exactly one Lead and injects shared Skill instructions into the runtime invocation.",
+        "Active Turns prevent CLI archive; confirmed cleanup permits archive. Skill assignment events are published.",
+        "Skill changes leave in-flight Turn snapshots intact and become visible on the next Turn.",
+        "Coordinator sends the immutable Skill snapshot to the ActivationBridge and persists its execution snapshot; controlled fake execution and Git only.",
+        "An incompatible Skill blocks its request/task and no longer poisons the shared scheduler.",
+        "Unknown Turn cleanup remains retained after restart; affected Agent queues are not replayed.",
+        "Native gateway source and six existing tests reviewed: verified model allowlist, fixed thread/turn closure, forbidden namespace/tools, replay deduplication, stop revocation, managed cleanup and Host tool quiescence.",
+        "Controlled real-native probe evidence reviewed, not rerun by independent reviewer; it is not credentialed real-model or full U0 orchestration proof."
+      ]
+    },
+    {
+      "id": "multi-repository-and-cleanup-4",
+      "status": "passed-targeted-tests-review-continuing",
+      "checks": [
+        {
+          "command": "pnpm exec vitest run tests/acceptance/ui-review.test.ts tests/core/native-codex.test.ts tests/core/boot-identity.test.ts",
+          "result": "passed",
+          "tests": 27
+        },
+        {
+          "command": "pnpm exec vitest run tests/acceptance/ui-review.test.ts -t 'integrates two real repositories'",
+          "result": "passed",
+          "tests": 1
+        }
+      ],
+      "evidence": [
+        "Real Git repository connect, ownership, dirty managed archive refusal and external detach preservation.",
+        "Real Git two-repository development, checks, review rejection, repair, cross-repository dependency, replan addition and per-repository publication; controlled ActivationBridge, no real model.",
+        "Same-boot and foreign-machine cleanup proof rejected; same-machine changed OS boot evidence releases retained lease and preserves response.",
+        "Timed-out owned disposer retains lease until actual late disposal receipt.",
+        "Native adapter fixed catalog path, allowlist and scoped gateway source re-reviewed; six controlled native protocol cases passed."
+      ],
+      "remaining": [
+        "Connections creation and explicit verification UI/API.",
+        "Chat contextRefs, structural mentions, provenance/versioned summaries.",
+        "Repository-free registered analysis tasks and configurable Lead quota.",
+        "Real browser, mobile, keyboard and full suite remain parent-owned."
+      ]
+    },
+    {
+      "id": "connections-context-and-takeover-5",
+      "status": "passed-targeted-tests-review-continuing",
+      "checks": [
+        {
+          "command": "pnpm exec vitest run tests/acceptance/ui-review.test.ts",
+          "result": "passed",
+          "tests": 27,
+          "observedAt": "2026-10-25T14:44:38Z"
+        },
+        {
+          "command": "pnpm typecheck",
+          "result": "failed-in-new-parent-owned-probe",
+          "detail": "scripts/ui-code-workflow-probe.ts:33 Workspace cast omits required version; reported to owner."
+        }
+      ],
+      "evidence": [
+        "Actual Cordis and official LlmRuntime/pi-ai registration observed all provider-update events; revision creation never withdrew original route. No network/model call.",
+        "Connection close aborts verification; a late startup handle is disposed even after database closes.",
+        "Explicit credential references with nonstandard names and rotated environment values are redacted.",
+        "Real Git external worktree primary checkout/path escape/ignored contents/unknown lease rejected; clean explicit takeover preserves content and repository ownership.",
+        "Detached external worktree can be re-associated with stable identity.",
+        "Structured context foreign repository and mention rejected, request metadata participates in idempotency, selected context snapshot remains fixed.",
+        "Extractive history summary persists source message IDs/versions; later concurrent input excluded.",
+        "Late startup cleanup receipt safely releases retained cancelled Turn lease; late output is not published."
+      ],
+      "remaining": [
+        "Connection verification startup timeout without a handle needs retained cleanup uncertainty until disposal proof.",
+        "Full task/workspace pagination, repository-free registered analysis and Run cleanup recovery are under implementation.",
+        "Browser visual/accessibility and actual model workflows remain separately owned by parent."
+      ]
+    },
+    {
+      "id": "final-analysis-recovery-and-concurrency-6",
+      "status": "passed",
+      "checks": [
+        {
+          "command": "pnpm exec vitest run tests/acceptance/ui-review.test.ts tests/core/native-codex.test.ts tests/core/boot-identity.test.ts",
+          "result": "passed",
+          "tests": 40,
+          "ownedTests": 32,
+          "observedAt": "2026-10-25T14:55:35Z"
+        },
+        {
+          "command": "pnpm test:ui",
+          "result": "passed",
+          "tests": 16,
+          "observedAt": "2026-10-25T14:53:43Z"
+        },
+        {
+          "command": "pnpm typecheck",
+          "result": "passed-backend-and-ui",
+          "observedAt": "2026-10-25T14:56:24.919Z"
+        },
+        {
+          "command": "pnpm exec vitest run tests/acceptance/coordinator-faults.test.ts -t 'bounds stuck cleanup'",
+          "result": "passed",
+          "tests": 1,
+          "observedAt": "2026-10-25T14:56:53Z",
+          "detail": "Updated legacy expectation independently reviewed: before owned dispose receipt, lease and writer remain held and manual reconcile is refused; after receipt, cleanup/lease/writer release while Task remains blocked, with exactly unknown then confirmed events and one disposal."
+        }
+      ],
+      "verified": [
+        "Repository-free analysis rejects filesystem writes, preserves evidence, and succeeds after a clean repair without creating Git records.",
+        "Unresponsive Task Run startup times out; lease release waits for actual late disposal receipt.",
+        "Run cleanup recovery rejects same-boot, foreign-machine and stale-version claims, accepts same-machine changed OS boot proof, and does not falsely accept the Task.",
+        "Interrupted candidate preparation without a review Run still requires its own process completion or reboot proof.",
+        "Disabling the browser surface preserves old management Bearer authentication and Origin rejection.",
+        "Unfinished worktree move cannot be detached. A real concurrent detach during takeover inspection invalidates the expected version and prevents movement.",
+        "Two concurrent archive requests cannot both act on the same worktree version.",
+        "Native fixed catalog/gateway protocol and actual local OS boot identity tests pass.",
+        "UI tests verify IME composing/legacy 229 guards, explicit send shortcut, draft/pending identity, monotonic history versions, task order and definitive-rejection key handling."
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "UI-REVIEW-001",
+      "severity": "P2",
+      "status": "fixed-source-reviewed",
+      "file": "ui/src/App.tsx",
+      "issue": "Skip-to-main anchor changes the hash route to #main and returns users to the workspace directory.",
+      "requestedFix": "Preserve the route and move focus to main directly."
+    },
+    {
+      "id": "UI-REVIEW-002",
+      "severity": "P2",
+      "status": "fixed-source-reviewed",
+      "file": "ui/src/App.tsx",
+      "issue": "Freshness initially depends only on request errors; hidden tabs stop polling while recorded activity can remain presented without a stale indication.",
+      "requestedFix": "Derive freshness from observedAt and visibility, and mark or refresh old snapshots on resume."
+    },
+    {
+      "id": "UI-REVIEW-003",
+      "severity": "P2",
+      "status": "fixed-source-reviewed",
+      "file": "ui/src/App.tsx",
+      "issue": "Field uses a truthy fallback and presents valid numeric zero, including initial task version, as missing.",
+      "requestedFix": "Use a nullish or explicit empty-value fallback."
+    },
+    {
+      "id": "UI-REVIEW-004",
+      "severity": "P2",
+      "status": "fixed-source-reviewed",
+      "file": "ui/src/pages.tsx",
+      "issue": "Shared succeeded label presents Run completion as accepted, although Task acceptance requires subsequent checks/review/integration.",
+      "requestedFix": "Use execution-complete wording for Run status and accepted wording only for actual Task acceptance."
+    },
+    {
+      "id": "UI-REVIEW-005",
+      "severity": "P1",
+      "status": "fixed-independent-test-passed",
+      "file": "src/chat/service.ts",
+      "issue": "Unresponsive runtime result previously prevented cleanup and bounded Host shutdown."
+    },
+    {
+      "id": "UI-REVIEW-006",
+      "severity": "P1",
+      "status": "fixed-independent-test-passed",
+      "file": "src/task/coordinator.ts",
+      "issue": "Scheduler previously selected capacity and roles from Runs without accounting for discussion leases."
+    },
+    {
+      "id": "UI-REVIEW-007",
+      "severity": "P1",
+      "status": "fixed-independent-test-passed",
+      "file": "src/chat/service.ts",
+      "issue": "Per-delta redaction leaked credentials split across output chunks."
+    },
+    {
+      "id": "UI-REVIEW-008",
+      "severity": "P2",
+      "status": "fixed-source-reviewed",
+      "file": "ui/src/ChatScreen.tsx",
+      "issue": "History pagination discarded earlier Turn state and chunks, removing old running Turn stop/error affordances."
+    },
+    {
+      "id": "UI-REVIEW-009",
+      "severity": "P2",
+      "status": "fixed-source-reviewed",
+      "file": "ui/src/ChatScreen.tsx",
+      "issue": "Live conversation activity initially lacked a stale indication after synchronization failures."
+    },
+    {
+      "id": "UI-REVIEW-010",
+      "severity": "P1",
+      "status": "fixed-independent-test-passed",
+      "file": "src/task/coordinator.ts",
+      "issue": "Incompatible Skill reservation previously left a poison queued request that could block unrelated scheduling."
+    },
+    {
+      "id": "UI-REVIEW-011",
+      "severity": "P2",
+      "status": "fixed-source-reviewed",
+      "file": "ui/src/ChatScreen.tsx",
+      "issue": "SSE resync previously reconnected using an expired cursor indefinitely; now closes and reopens after a fresh snapshot."
+    },
+    {
+      "id": "UI-REVIEW-012",
+      "severity": "P2",
+      "status": "fixed-source-reviewed",
+      "file": "ui/src/ChatScreen.tsx",
+      "issue": "Independent resync/poll/history requests can return out of order and currently replace newer snapshot/entity versions with older ones."
+    },
+    {
+      "id": "UI-REVIEW-013",
+      "severity": "P1",
+      "status": "fixed-independent-test-passed",
+      "file": "src/agent/connections.ts",
+      "issue": "Connection verification was not owned by shutdown and could write to a closed store; verification now serializes, aborts and cleans up before Host closure."
+    },
+    {
+      "id": "UI-REVIEW-014",
+      "severity": "P1",
+      "status": "fixed-independent-test-passed",
+      "file": "src/api/security.ts",
+      "issue": "Nonstandard credential reference environment names were not covered by generic redaction; explicit registered references now cover values and rotation."
+    },
+    {
+      "id": "UI-REVIEW-015",
+      "severity": "P2",
+      "status": "fixed-independent-test-passed",
+      "file": "src/project/repositories.ts",
+      "issue": "Detached external worktree could not be re-associated because of path uniqueness; existing association now reactivates safely."
+    },
+    {
+      "id": "UI-REVIEW-016",
+      "severity": "P2",
+      "status": "fixed-independent-test-passed",
+      "file": "src/chat/service.ts",
+      "issue": "Late startup cleanup did not contribute a receipt, retaining capacity unnecessarily; confirmed late disposer now releases the lease."
+    },
+    {
+      "id": "UI-REVIEW-017",
+      "severity": "P1",
+      "status": "fixed-independent-test-passed",
+      "file": "src/task/coordinator.ts",
+      "issue": "Repository-free Task Run startup could hang beyond its deadline; startup now races cancellation and retains uncertainty until late cleanup evidence."
+    },
+    {
+      "id": "UI-REVIEW-018",
+      "severity": "P1",
+      "status": "fixed-independent-test-passed",
+      "file": "src/task/coordinator.ts",
+      "issue": "An interrupted integration preparation without a review Run could be treated as safe; its own process receipt or trusted reboot proof is now mandatory."
+    },
+    {
+      "id": "UI-REVIEW-019",
+      "severity": "P2",
+      "status": "fixed-independent-test-passed",
+      "file": "src/project/repositories.ts",
+      "issue": "Detach could hide an unfinished external move; status and pending path now prevent detaching or re-associating an unresolved move."
+    },
+    {
+      "id": "UI-REVIEW-020",
+      "severity": "P2",
+      "status": "fixed-independent-test-passed",
+      "file": "src/project/repositories.ts",
+      "issue": "Concurrent detach during asynchronous takeover checks bypassed the initial version check. A transactional recheck now precedes Git movement; concurrent archival is also guarded."
+    },
+    {
+      "id": "UI-REVIEW-021",
+      "severity": "P2",
+      "status": "fixed-source-reviewed",
+      "file": "src/agent/connections.ts",
+      "issue": "Verification startup timeout before a handle existed could appear cleaned up. Uncertainty now blocks additional verification or creation until a late owned disposer confirms completion."
+    }
+  ],
+  "acceptanceMatrix": {
+    "A1": {
+      "status": "passed-with-stated-evidence-boundaries",
+      "independent": "Repository-free workspace/single Lead, entity/recipient isolation and active-turn archive guard. UI draft/pending state unit checks.",
+      "external": "Parent interactive browser: workspace switch preserves draft, recipient and history; reload preserves real replies.",
+      "limits": []
+    },
+    "A2": {
+      "status": "passed-with-stated-evidence-boundaries",
+      "independent": "Immutable connections and Turn snapshots; official provider registry never withdraws an old revision; scoped native protocol/gateway tests.",
+      "external": "Parent real native, DSH and custom API probes pass.",
+      "limits": [
+        "Only the pinned native runtime/catalog/model combination has been verified; this is not certification of every model or endpoint."
+      ]
+    },
+    "A3": {
+      "status": "passed-with-stated-evidence-boundaries",
+      "independent": "Stable identity, busy disable refusal, immutable config snapshots; configuration and execution-binding source review.",
+      "external": "Parent interactive browser creates Chinese-named member and uses its actual native connection.",
+      "limits": []
+    },
+    "A4": {
+      "status": "passed-with-stated-evidence-boundaries",
+      "independent": "Shared/override/exclusion scope, immutable Skill versions, frozen Turn/Run injection, incompatibility and poison-queue handling.",
+      "external": "Parent interactive browser saves shared Skill and obtains its marker from a real native Turn.",
+      "limits": [
+        "Resource/script execution remains capability-gated and explicitly unsupported by current adapters; instruction Skills are verified."
+      ]
+    },
+    "A5": {
+      "status": "passed-with-stated-evidence-boundaries",
+      "independent": "Idempotent delivery, serial Agent queue/shared quota, foreign/invalid recipients and context, provenance/versioned bounded history, IME guards and startup/output timeout faults.",
+      "external": "Parent real browser explicit recipient routing, multiline Enter and Ctrl-Enter.",
+      "limits": [
+        "No actual OS IME composition session was automated; composing and legacy 229 behavior are unit-tested."
+      ]
+    },
+    "A6": {
+      "status": "passed-with-stated-evidence-boundaries",
+      "independent": "Real two-repository ownership, dirty/ignored/active-lease/path-escape/primary-checkout refusal; external detach preserves files; takeover and archive concurrency regressions.",
+      "external": "Parent browser repository/worktree creation and real cross-repository code workflow.",
+      "limits": []
+    },
+    "A7": {
+      "status": "passed-with-stated-evidence-boundaries",
+      "independent": "Real Git dependency, rejected review, repair, added replan task, exact candidate commit acceptance, per-repository publication, and early-finish refusal using controlled model outputs.",
+      "external": "Parent real native code workflow proves actual model/developer/reviewer execution in two repositories.",
+      "limits": [
+        "Failure/repair/replan sequence is controlled fault acceptance, not an additional credentialed model fault run."
+      ]
+    },
+    "A8": {
+      "status": "passed-with-stated-evidence-boundaries",
+      "independent": "Turn/Run/lease projections, truthful unknown cleanup, task/chat shared quota, stop/timeout/late receipt and trusted reboot recovery.",
+      "external": "Parent native stop is persisted cancelled with cleanup confirmed; browser freshness source reviewed.",
+      "limits": []
+    },
+    "X1": {
+      "status": "passed-with-stated-evidence-boundaries",
+      "independent": "Foreign workspace entities, context refs, mentions, recipient and stop isolation; workspace SSE filtering; scoped native gateway.",
+      "external": "Parent browser workspace continuity.",
+      "limits": []
+    },
+    "X2": {
+      "status": "passed-with-stated-evidence-boundaries",
+      "independent": "Session/bootstrap restart invalidation; retained unknown Turn/Run cleanup with no automatic replay; startup/result/disposal stalls and late receipt; integration uncertainty; same-machine reboot proof.",
+      "external": "Parent real native cancellation cleanup.",
+      "limits": [
+        "Fault injection is bounded and controlled; this is not exhaustive OS power-loss or process-kill testing at every instruction."
+      ]
+    },
+    "X3": {
+      "status": "passed-with-stated-evidence-boundaries",
+      "independent": "Sparse/stale/future SSE cursor replay, expiry, snapshot/entity monotonic merge, history pagination and resync source review.",
+      "external": "Parent browser reload/history continuity.",
+      "limits": [
+        "No claim of browser network fault injection for every reconnect interleaving."
+      ]
+    },
+    "X4": {
+      "status": "passed-with-stated-evidence-boundaries",
+      "independent": "Exact Host/Origin/Fetch Metadata/CSRF, one-time expiring fragment codes, scoped cookie flags, auth separation, logout/restart expiry, static traversal/junction escape, no raw doctor/provider/result DTOs, explicit secret-reference redaction.",
+      "external": "Parent browser bootstrap fragment consumption and same-Host operation.",
+      "limits": []
+    },
+    "X5": {
+      "status": "passed-with-stated-evidence-boundaries",
+      "independent": "Focus/skip link, 44px controls, reduced-motion and non-color state source reviewed; input/ordering state tests pass.",
+      "external": "Parent screenshots and viewport measurements at 320/390/768/1440 and keyboard interactions.",
+      "limits": [
+        "No formal accessibility conformance audit or screen-reader certification; no exhaustive tab order across every control."
+      ]
+    }
+  },
+  "limitations": [
+    "The independent reviewer made no real model calls, no commits and no primary implementation edits. Parent real-model and browser evidence is separately attributed above.",
+    "Independent 32-case suite uses real HTTP/SQLite/Git with controlled execution/faults. It is not itself a claim that every external model or provider is compatible.",
+    "Parent owns the final whole-repository regression/build and interactive browser acceptance; this artifact records independently executed targeted checks and reviewed parent evidence.",
+    "Native support is deliberately pinned to the verified app-server/model/catalog boundary. Skill resource/script execution is explicitly unsupported where adapters cannot honor it.",
+    "Output is buffered and redacted before publication; no claim of token-by-token streaming. Unknown side effects require actual disposal receipt or trusted same-machine reboot evidence and are not force-released on Host restart.",
+    "OS IME composition and formal accessibility certification were not performed; exact automated and interactive coverage is recorded in A5 and X5.",
+    "No known remaining implementation blocker from the final plan cross-check; documented compatibility limits are not hidden as successful support."
+  ],
+  "finalSummary": {
+    "ownedTests": 32,
+    "independentFinalCombinedTests": 40,
+    "uiUnitTests": 16,
+    "unresolvedP0": 0,
+    "unresolvedP1": 0,
+    "unresolvedP2": 0,
+    "verdict": "No known unresolved P0-P2 findings within reviewed scope. Documented capability restrictions and unautomated validation remain explicit below.",
+    "historicalBatches": "Earlier remaining/pending entries are historical checkpoints; finalSummary, acceptanceMatrix and limitations supersede them."
+  },
+  "evidenceAttribution": {
+    "independent": {
+      "tests": "tests/acceptance/ui-review.test.ts",
+      "mode": "Real local HTTP sockets, SQLite migrations, official Cordis/DSH provider registration without network calls, real Git repositories and worktrees, controlled runtimes and fault injection. No credentialed model invocation by reviewer."
+    },
+    "parentRealModelEvidence": [
+      {
+        "file": "docs/evidence/u0-native-workflow-probe.json",
+        "observedStatus": "pass",
+        "covers": "Real native main Agent controlled orchestration and real child lifecycle."
+      },
+      {
+        "file": "docs/evidence/ui-dsh-workflow-probe.json",
+        "observedStatus": "pass",
+        "covers": "Real DSH main Agent workflow and actual child lifecycle."
+      },
+      {
+        "file": "docs/evidence/ui-api-connection-probe.json",
+        "observedStatus": "pass",
+        "covers": "Official DSH pi-ai custom API verification and immutable revision isolation."
+      },
+      {
+        "file": "docs/evidence/ui-code-workflow-probe.json",
+        "observedStatus": "pass",
+        "covers": "Real native main Agent, actual code-writing children and reviewers, two repositories with dependent accepted changes and passing checks."
+      }
+    ],
+    "parentControlledNativeEvidence": {
+      "file": "docs/evidence/u0-native-tools-probe.json",
+      "observedStatus": "pass",
+      "covers": "Real native app-server protocol with local controlled Responses, fixed catalog and tool boundary; not a credentialed real-model call."
+    },
+    "parentInteractiveBrowserEvidence": {
+      "file": "docs/evidence/ui-browser-acceptance.json",
+      "observed": "Recorded interactive Edge actions, persisted real Turns and five screenshots were reviewed as evidence; reviewer did not repeat these interactions.",
+      "screenshots": "docs/evidence/ui-screenshots/",
+      "covers": "Workspace switching, real DSH/native replies, Chinese Agent name, explicit recipient, Enter/Ctrl-Enter, Skill effect, repositories, verified API connection, native stop with confirmed cleanup, 320/390/768/1440 widths."
+    }
+  },
+  "finalVerifiedAt": "2026-10-25T14:56:24.919Z"
+}

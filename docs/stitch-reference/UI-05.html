@@ -1,0 +1,317 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=Plus+Jakarta+Sans:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "inverse-surface": "#2f312e", "outline-variant": "#dbc1b9", "inverse-on-surface": "#f2f1ed", "surface-tint": "#9a4526", "secondary-fixed-dim": "#ccc5be", "on-tertiary-fixed": "#2f1500", "tertiary-fixed": "#ffdcc3", "error-container": "#ffdad6", "primary-fixed-dim": "#ffb59c", "tertiary-container": "#b15f00", "on-secondary": "#ffffff", "on-tertiary-fixed-variant": "#6e3900", "surface-variant": "#e3e2df", "on-surface-variant": "#55433d", "secondary-container": "#e9e1d9", "on-primary-fixed": "#390c00", "primary": "#974324", "on-tertiary-container": "#fffbff", "surface": "#faf9f5", "surface-container-low": "#f4f4f0", "surface-container-high": "#e9e8e4", "tertiary-fixed-dim": "#ffb77d", "surface-container": "#efeeea", "surface-container-lowest": "#ffffff", "on-background": "#1b1c1a", "on-primary-fixed-variant": "#7b2e11", "on-error-container": "#93000a", "outline": "#88726b", "primary-fixed": "#ffdbd0", "on-surface": "#1b1c1a", "on-tertiary": "#ffffff", "on-primary-container": "#fffbff", "on-primary": "#ffffff", "surface-bright": "#faf9f5", "inverse-primary": "#ffb59c", "on-secondary-fixed": "#1e1b16", "primary-container": "#b65a3a", "error": "#ba1a1a", "background": "#faf9f5", "on-error": "#ffffff", "secondary-fixed": "#e9e1d9", "surface-container-highest": "#e3e2df", "secondary": "#625e57", "surface-dim": "#dbdad6", "on-secondary-fixed-variant": "#4a4640", "on-secondary-container": "#68645d", "tertiary": "#8d4b00" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "space-lg": "2rem", "margin-mobile": "1.25rem", "gutter-mobile": "1rem", "space-sm": "0.75rem", "space-xs": "0.375rem", "gutter": "1.5rem", "margin": "2.5rem", "space-xl": "3.5rem", "space-md": "1.25rem" }, "fontFamily": { "body-sm": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "code-sm": ["JetBrains Mono"], "headline-md": ["Newsreader"], "body-lg": ["Plus Jakarta Sans"], "headline-xl": ["Newsreader"], "headline-lg": ["Newsreader"], "headline-xl-mobile": ["Newsreader"], "headline-sm": ["Newsreader"], "headline-lg-mobile": ["Newsreader"] }, "fontSize": { "body-sm": ["13px", { "lineHeight": "21px", "fontWeight": "400" }], "label-md": ["13px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "600" }], "body-md": ["15px", { "lineHeight": "25px", "fontWeight": "400" }], "label-sm": ["11px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "code-sm": ["13px", { "lineHeight": "20px", "fontWeight": "400" }], "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "500" }], "body-lg": ["17px", { "lineHeight": "29px", "fontWeight": "400" }], "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "400" }], "headline-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.015em", "fontWeight": "400" }], "headline-xl-mobile": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "400" }], "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "500" }], "headline-lg-mobile": ["26px", { "lineHeight": "34px", "letterSpacing": "-0.01em", "fontWeight": "400" }] } } } };</script></head><body class="bg-surface font-body-md text-body-md text-on-surface antialiased selection:bg-primary-fixed selection:text-on-primary-fixed"><aside class="fixed left-0 top-0 h-full w-60 bg-surface-container-low shadow-[0_1px_8px_rgba(0,0,0,0.03)] z-50 flex flex-col justify-between py-4 px-3"><div class="flex flex-col gap-4"><div class="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-surface-container transition-colors cursor-pointer justify-end"><div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div><span class="font-label-md text-label-md text-on-surface tracking-tight">RIFT 界面组</span></div><span class="material-symbols-outlined text-[18px] text-on-surface-variant">unfold_more</span></div><div class="px-1"><button class="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-surface-container-lowest text-on-surface shadow-[0_1px_4px_rgba(0,0,0,0.04)] hover:bg-surface-container hover:text-on-surface transition-all" type="button"><span class="flex items-center gap-2 font-label-md text-label-md"><span class="material-symbols-outlined text-primary text-[18px]">edit_square</span>新建对话</span><span class="font-code-sm text-label-sm text-on-surface-variant opacity-70">⌘K</span></button></div><nav class="flex flex-col gap-1 mt-2" data-active-classes="bg-secondary-container text-on-secondary-container font-label-md rounded-lg"><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="chat" href="#"><span class="material-symbols-outlined text-[18px]">chat_bubble</span>对话</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="agents" href="#"><span class="material-symbols-outlined text-[18px]">smart_toy</span>智能代理</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="skills" href="#"><span class="material-symbols-outlined text-[18px]">auto_awesome</span>技能扩展</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="repositories" href="#"><span class="material-symbols-outlined text-[18px]">source_environment</span>代码库与工作区</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="tasks" href="#"><span class="material-symbols-outlined text-[18px]">task_alt</span>任务队列</a><a class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-label-md text-label-md transition-colors" data-path="settings" href="#"><span class="material-symbols-outlined text-[18px]">tune</span>系统设置</a></nav></div><div class="flex flex-col gap-2 px-2 pt-3"><div class="flex items-center justify-between p-2 rounded-lg bg-surface-container/60"><div class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full bg-primary"></div><span class="font-label-sm text-label-sm text-on-surface-variant">本地宿主已就绪</span></div><span class="font-code-sm text-label-sm text-on-surface-variant">v0.9.4</span></div></div></aside><div class="pl-60 min-h-screen flex flex-col"><header class="fixed top-0 left-60 right-0 h-14 bg-surface/85 backdrop-blur-md shadow-[0_1px_6px_rgba(0,0,0,0.02)] z-40 flex items-center justify-between px-6"><div class="flex items-center gap-3"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight font-medium">会话画布</span><span class="font-code-sm text-label-sm text-on-surface-variant px-1.5 py-0.5 rounded bg-surface-container-high">#SES-8419</span></div><div class="flex items-center gap-3"><button class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary-fixed/40 text-on-surface hover:bg-primary-fixed/70 transition-colors" type="button"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span><span class="font-label-sm text-label-sm">Agent 3 运行 · 1 待定</span><span class="material-symbols-outlined text-[16px] text-on-surface-variant">keyboard_arrow_down</span></button><div class="flex items-center gap-1"><button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" title="导出记录" type="button"><span class="material-symbols-outlined text-[18px]">ios_share</span></button><button class="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" title="清空历史" type="button"><span class="material-symbols-outlined text-[18px]">restart_alt</span></button></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></header><main class="w-full pt-14 bg-surface flex-1 flex flex-col"><div class="flex flex-col w-full">
+<div class="px-8 py-8 max-w-[1520px] mx-auto w-full flex flex-col gap-8">
+<!-- 面包屑与顶部操作区 -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant tracking-wider uppercase">
+<span class="">RIFT</span>
+<span class="material-symbols-outlined text-[14px] text-outline">chevron_right</span>
+<span class="text-on-surface font-medium">工作台</span>
+</div>
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 justify-end">
+
+<div class="flex items-center gap-3 flex-shrink-0">
+<button class="group flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-container-lowest text-on-surface shadow-[0_2px_12px_rgba(31,30,29,0.04)] hover:bg-surface-container-high transition-all active:scale-95" id="reload-btn" type="button">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant group-hover:rotate-180 transition-transform duration-500">sync</span>
+<span class="font-label-md text-label-md">热重载指令</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant font-code-sm text-[10px]">⌥R</span>
+</button>
+<button class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-on-primary shadow-[0_4px_16px_rgba(151,67,36,0.22)] hover:bg-primary-container transition-all active:scale-95" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span class="font-label-md text-label-md tracking-wide">+ 导入 Skill</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 分组 Tab 与系统沙盒状态 -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-2 px-1">
+<div class="flex items-center gap-2 p-1 rounded-xl bg-surface-container-low max-w-fit">
+<button class="px-4 py-1.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm transition-all flex items-center gap-2" id="tab-shared">
+<span class="">工作区共享库</span>
+<span class="px-1.5 py-0.2 rounded-full bg-secondary-container text-on-secondary-container font-code-sm text-label-sm">2</span>
+</button>
+<button class="px-4 py-1.5 rounded-lg text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-all flex items-center gap-2" id="tab-dedicated">
+<span class="">Agent 专属配置</span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-container-high text-on-surface-variant font-code-sm text-label-sm">3</span>
+</button>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant font-code-sm text-label-sm">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="">生效中 5 项规则 (示例)</span>
+</div>
+<span class="text-outline-variant font-light">•</span>
+<div class="flex items-center gap-1.5 text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary">verified_user</span>
+<span class="">代码沙盒签名正常 (示例)</span>
+</div>
+</div>
+</div>
+<!-- 双栏杂志级排版布局 -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- 左侧 Skill 规范轻量列表 (5 cols) -->
+<div class="lg:col-span-5 flex flex-col gap-4">
+<!-- 卡片 1 (当前选中) -->
+<div class="group relative p-6 rounded-2xl bg-surface-container-lowest shadow-[0_4px_24px_rgba(31,30,29,0.05)] cursor-pointer transition-all hover:shadow-[0_8px_30px_rgba(31,30,29,0.08)]" id="card-skill-1">
+<div class="absolute left-0 top-6 bottom-6 w-1 rounded-r-full bg-primary"></div>
+<div class="flex items-start justify-between gap-4 mb-3">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-on-surface font-medium">代码规范与约束</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+</div>
+<span class="font-code-sm text-label-sm text-on-surface-variant tracking-tight mt-0.5">code-conventions</span>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-primary-fixed/50 text-on-primary-fixed font-code-sm text-label-sm flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+              已生效 (示例)
+            </span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-5 line-clamp-2 leading-relaxed">
+            规定代码提交质量、TypeScript 强类型与无障碍标准。确保工程模块具备一致的可读性与架构约束。
+          </p>
+<div class="flex items-center justify-between pt-4 bg-surface-container-low/40 -mx-6 -mb-6 px-6 py-3 rounded-b-2xl font-code-sm text-label-sm text-on-surface-variant">
+<div class="flex items-center gap-3">
+<span class="font-medium text-on-surface">v2.1</span>
+<span class="">·</span>
+<span class="text-on-secondary-container">全员默认共享</span>
+</div>
+<span class="">2.8 KB</span>
+</div>
+</div>
+<!-- 卡片 2 -->
+<div class="group relative p-6 rounded-2xl bg-surface-container-lowest/80 shadow-[0_2px_12px_rgba(31,30,29,0.03)] cursor-pointer transition-all hover:bg-surface-container-lowest hover:shadow-[0_6px_20px_rgba(31,30,29,0.06)]" id="card-skill-2">
+<div class="flex items-start justify-between gap-4 mb-3">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-on-surface font-normal group-hover:text-primary transition-colors">界面与交互规范</span>
+</div>
+<span class="font-code-sm text-label-sm text-on-surface-variant tracking-tight mt-0.5">ui-design-guidelines</span>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-secondary-container/70 text-on-secondary-container font-code-sm text-label-sm flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+              已生效 (示例)
+            </span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-5 line-clamp-2 leading-relaxed">
+            定义 Claude 风格高留白、温润色相与组件规范。禁止生硬纯黑对比与冗余线条堆叠。
+          </p>
+<div class="flex items-center justify-between pt-4 bg-surface-container-low/40 -mx-6 -mb-6 px-6 py-3 rounded-b-2xl font-code-sm text-label-sm text-on-surface-variant">
+<div class="flex items-center gap-3">
+<span class="font-medium text-on-surface">v1.4</span>
+<span class="">·</span>
+<span class="">界面实现专属</span>
+</div>
+<span class="">4.2 KB</span>
+</div>
+</div>
+<!-- 卡片 3 -->
+<div class="group relative p-6 rounded-2xl bg-surface-container-lowest/80 shadow-[0_2px_12px_rgba(31,30,29,0.03)] cursor-pointer transition-all hover:bg-surface-container-lowest hover:shadow-[0_6px_20px_rgba(31,30,29,0.06)]" id="card-skill-3">
+<div class="flex items-start justify-between gap-4 mb-3">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-headline-sm text-on-surface font-normal group-hover:text-primary transition-colors">回归测试驱动</span>
+</div>
+<span class="font-code-sm text-label-sm text-on-surface-variant tracking-tight mt-0.5">regression-testing</span>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-secondary-container/70 text-on-secondary-container font-code-sm text-label-sm flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+              已生效 (示例)
+            </span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-5 line-clamp-2 leading-relaxed">
+            定义基于单元断言的自动化覆盖要求，生成严苛的边缘分支检查单。
+          </p>
+<div class="flex items-center justify-between pt-4 bg-surface-container-low/40 -mx-6 -mb-6 px-6 py-3 rounded-b-2xl font-code-sm text-label-sm text-on-surface-variant">
+<div class="flex items-center gap-3">
+<span class="font-medium text-on-surface">v1.0</span>
+<span class="">·</span>
+<span class="">回归检查专属</span>
+</div>
+<span class="">1.9 KB</span>
+</div>
+</div>
+<!-- 卡片 4: 机制说明卡片 -->
+<div class="p-6 rounded-2xl bg-secondary-container/30 relative overflow-hidden flex flex-col gap-3">
+<div class="flex items-center gap-2.5 text-primary">
+<span class="material-symbols-outlined text-[20px]">lightbulb</span>
+<span class="font-label-md text-label-md text-on-surface tracking-tight">关于技能注入机制</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+            Skill 规范文件将直接编译进 Agent 运行时的「前置元指令沙盒 (Pre-System Prompt)」。工作区级 Skill 具备全局最高优先级，Agent 专属 Skill 随后合并执行，冲突项以显式契约为准。
+          </p>
+<div class="flex items-center gap-2 pt-1 font-label-sm text-label-sm text-primary cursor-pointer hover:underline">
+<span class="">阅读《RIFT 运行时注入规范 RFC-08》</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</div>
+</div>
+</div>
+<!-- 右侧优雅出版物级 Markdown 规范预览区 (7 cols) -->
+<div class="lg:col-span-7 flex flex-col rounded-2xl bg-surface-container-lowest shadow-[0_4px_30px_rgba(31,30,29,0.04)] overflow-hidden">
+<!-- 顶部文件头与工具栏 -->
+<div class="px-8 py-5 bg-surface-container-low/60 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-[20px]">description</span>
+<div class="flex items-center gap-2">
+<span class="font-code-sm text-body-sm font-medium text-on-surface">code-conventions.skill.md</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-code-sm bg-surface-container-high text-on-surface-variant">只读预览 · 示例</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5">
+<button class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" id="copy-btn" title="复制指令">
+<span class="material-symbols-outlined text-[18px]">content_copy</span>
+</button>
+<button class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors" title="全屏阅读">
+<span class="material-symbols-outlined text-[18px]">fullscreen</span>
+</button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high font-label-sm text-label-sm transition-colors ml-1">
+<span class="material-symbols-outlined text-[16px]">edit_note</span>
+<span class="">编辑源码</span>
+</button>
+</div>
+</div>
+<!-- 作用域与元标签 -->
+<div class="px-8 pt-6 pb-4 flex flex-wrap items-center gap-3">
+<span class="px-2.5 py-1 rounded bg-tertiary-fixed text-on-tertiary-fixed font-code-sm text-label-sm tracking-wider">
+            SCOPE: WORKSPACE DEFAULT SHARED
+          </span>
+<span class="px-2.5 py-1 rounded bg-surface-container text-on-surface-variant font-code-sm text-label-sm">
+            INJECTION_TARGET: ALL_ROLES
+          </span>
+<span class="px-2.5 py-1 rounded bg-surface-container text-on-surface-variant font-code-sm text-label-sm">
+            ENFORCE_LEVEL: STRICT
+          </span>
+</div>
+<!-- 优雅出版物正文区 -->
+<div class="px-8 py-6 flex flex-col gap-8 max-w-3xl">
+<!-- 标题与引言 -->
+<div class="flex flex-col gap-3">
+<h2 class="font-headline-lg text-headline-lg text-on-surface font-normal tracking-tight">代码规范与提交契约</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+              本文档为 RIFT 架构团队制定的全局代码合成与重构标准。在执行任何文件写入操作（File Write）或补丁合成（Patch Synthesis）时，Agent 必须将以下契约强制作为无损前提。
+            </p>
+</div>
+<!-- 01 章节 -->
+<div class="flex flex-col gap-4">
+<div class="flex items-baseline gap-3">
+<span class="font-headline-sm text-headline-sm text-primary font-medium">01/</span>
+<h3 class="font-headline-md text-headline-md text-on-surface font-medium">TypeScript 强类型与完整性</h3>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+              严格禁用 <code class="px-1.5 py-0.5 rounded bg-surface-container font-code-sm text-code-sm text-primary">any</code> 与 <code class="px-1.5 py-0.5 rounded bg-surface-container font-code-sm text-code-sm text-primary">unknown</code> 的未经卫语句直接解包。所有输出的工程代码必须通过严格的断言守卫验证：
+            </p>
+<!-- 代码示例模块 -->
+<div class="p-5 rounded-xl bg-surface-container-low font-code-sm text-code-sm text-on-surface flex flex-col gap-2 overflow-x-auto shadow-inner">
+<div class="flex items-center justify-between pb-2 text-on-surface-variant opacity-70">
+<span class="">typescript // 推荐契约模式 (示例)</span>
+<span class="">TS 5.4+</span>
+</div>
+<pre class="leading-relaxed"><span class="text-primary font-medium">type</span> Result&lt;<span class="text-tertiary">T</span>, <span class="text-tertiary">E</span> = Error&gt; = 
+  | { success: <span class="text-primary">true</span>; data: <span class="text-tertiary">T</span> }
+  | { success: <span class="text-primary">false</span>; error: <span class="text-tertiary">E</span> };
+
+<span class="text-primary font-medium">export function</span> parseKernelPayload(raw: <span class="text-tertiary">unknown</span>): Result&lt;KernelMeta&gt; {
+  <span class="text-secondary">// 显式结构校验，杜绝隐式类型穿透</span>
+  <span class="text-primary font-medium">if</span> (!isValidMeta(raw)) {
+    <span class="text-primary font-medium">return</span> { success: <span class="text-primary">false</span>, error: <span class="text-primary font-medium">new</span> MalformedPayloadError() };
+  }
+  <span class="text-primary font-medium">return</span> { success: <span class="text-primary">true</span>, data: raw };
+}</pre>
+</div>
+<!-- 规范提示条 -->
+<div class="p-4 rounded-xl bg-surface-container flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-[18px] mt-0.5">info</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+<span class="font-semibold text-on-surface">规范提示：</span>若调用第三方无类型依赖，必须同时就地生成 <code class="px-1 py-0.2 rounded bg-surface-container-high font-code-sm text-[12px]">*.d.ts</code> 声明模块，绝不可直接使用跳过检查指令。
+              </p>
+</div>
+</div>
+<!-- 02 章节 -->
+<div class="flex flex-col gap-4">
+<div class="flex items-baseline gap-3">
+<span class="font-headline-sm text-headline-sm text-primary font-medium">02/</span>
+<h3 class="font-headline-md text-headline-md text-on-surface font-medium">提交记录标准化 (Conventional Commits)</h3>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+              执行 Git 提交流程时，所有生成的主题行必须遵循语义化动词前缀标准，包含原子范围与明确上下文：
+            </p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+<div class="p-4 rounded-xl bg-surface-container-low flex flex-col gap-1.5">
+<span class="font-code-sm text-label-sm text-primary font-semibold">feat(canvas):</span>
+<span class="font-body-sm text-body-sm text-on-surface">引入双重缓冲重绘流水线</span>
+<span class="font-code-sm text-label-sm text-on-surface-variant">新增可感知特性或端点</span>
+</div>
+<div class="p-4 rounded-xl bg-surface-container-low flex flex-col gap-1.5">
+<span class="font-code-sm text-label-sm text-primary font-semibold">refactor(kernel):</span>
+<span class="font-body-sm text-body-sm text-on-surface">解耦元指令词法分析器</span>
+<span class="font-code-sm text-label-sm text-on-surface-variant">不改变外部行为的架构优化</span>
+</div>
+</div>
+</div>
+<!-- 底部版本与维护者签名 -->
+<div class="mt-4 pt-6 bg-surface-container-low/50 -mx-8 -mb-6 px-8 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-on-surface-variant font-code-sm text-label-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+<span class="">最后更新 2025-02-24 14:20</span>
+<span class="">·</span>
+<span class="text-on-surface font-medium">维护者 @SystemArchitect</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="">SHA:</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container font-mono text-on-surface">e8f471b (示例)</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // 简易交互状态绑定
+  const reloadBtn = document.getElementById('reload-btn');
+  const copyBtn = document.getElementById('copy-btn');
+  const tabShared = document.getElementById('tab-shared');
+  const tabDedicated = document.getElementById('tab-dedicated');
+
+  if (reloadBtn) {
+    reloadBtn.addEventListener('click', () => {
+      const originalText = reloadBtn.querySelector('.font-label-md').innerText;
+      reloadBtn.querySelector('.font-label-md').innerText = '重载中...';
+      reloadBtn.classList.add('opacity-75');
+      setTimeout(() => {
+        reloadBtn.querySelector('.font-label-md').innerText = '已同步最新状态';
+        reloadBtn.classList.remove('opacity-75');
+        setTimeout(() => {
+          reloadBtn.querySelector('.font-label-md').innerText = originalText;
+        }, 1400);
+      }, 700);
+    });
+  }
+
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const icon = copyBtn.querySelector('.material-symbols-outlined');
+      icon.innerText = 'check';
+      icon.classList.add('text-primary');
+      setTimeout(() => {
+        icon.innerText = 'content_copy';
+        icon.classList.remove('text-primary');
+      }, 1500);
+    });
+  }
+
+  if (tabShared && tabDedicated) {
+    tabShared.addEventListener('click', () => {
+      tabShared.className = 'px-4 py-1.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm transition-all flex items-center gap-2';
+      tabDedicated.className = 'px-4 py-1.5 rounded-lg text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-all flex items-center gap-2';
+    });
+
+    tabDedicated.addEventListener('click', () => {
+      tabDedicated.className = 'px-4 py-1.5 rounded-lg bg-surface-container-lowest text-on-surface font-label-md text-label-md shadow-sm transition-all flex items-center gap-2';
+      tabShared.className = 'px-4 py-1.5 rounded-lg text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-all flex items-center gap-2';
+    });
+  }
+</script></main></div>
+
+</body></html>

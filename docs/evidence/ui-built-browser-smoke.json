@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-25T14:57:44.613Z",
+  "mode": "Final production build and fresh home; real Edge UI and live DeepSeek reply, read-only SQLite corroboration",
+  "workspace": [
+    {
+      "id": "workspace-911200d8-5a90-4210-b8eb-c965a7f6f354",
+      "name": "最终构建验收"
+    }
+  ],
+  "turns": [
+    {
+      "id": "turn-8ce85540-17dc-4130-8985-1959fb94c013",
+      "status": "completed",
+      "cleanup_status": "confirmed",
+      "runtime": "dsh",
+      "model": "deepseek-flash"
+    }
+  ],
+  "messages": [
+    {
+      "role": "user",
+      "content": "请仅回复“最终构建验收通过”，不调用工具。",
+      "status": "completed"
+    },
+    {
+      "role": "assistant",
+      "content": "无法确认最终构建验收通过：当前没有 RIFT 验收证据。",
+      "status": "completed"
+    }
+  ],
+  "checks": [
+    "Fresh migration and same-origin UI startup",
+    "One-time browser bootstrap consumed and removed",
+    "Create repository-free workspace through actual form",
+    "Actual DSH reply completes and cleanup confirmed",
+    "Activity changes from unknown before lifecycle evidence to idle after completed Turn; capacity 0"
+  ],
+  "screenshot": "ui-screenshots/activity-final-1440.png",
+  "note": "The model declined to certify the build without evidence. This is a real response/cleanup check, not a model-provided acceptance verdict."
+}

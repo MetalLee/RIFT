@@ -10,6 +10,7 @@ import { RiftError } from '../contracts/index.js';
 
 const help = `RIFT 0.1.0 — local DSH plugin management
   rift serve [--profile rift] [--home PATH] [--port 47831] [--patch PATH]
+  rift ui [--home PATH]
   rift doctor [--json]
   rift workspace create --name NAME --repo PATH --base REF
   rift workspace list
@@ -28,7 +29,7 @@ const help = `RIFT 0.1.0 — local DSH plugin management
 All commands accept --home PATH and --json. Writes accept --key KEY for repeatable requests.
 serve owns its DSH Host; other commands only connect to that Host.
 See docs/e1-acceptance.md for current E1 verification and provider coverage.`;
-function readArgs() { try { return parseArgs({allowPositionals:true,options:{home:{type:'string'},profile:{type:'string'},port:{type:'string'},patch:{type:'string'},name:{type:'string'},repo:{type:'string'},base:{type:'string'},workspace:{type:'string'},workflow:{type:'string'},run:{type:'string'},task:{type:'string'},goal:{type:'string'},file:{type:'string'},reason:{type:'string'},version:{type:'string'},key:{type:'string'},json:{type:'boolean'},help:{type:'boolean'},'no-lead':{type:'boolean'}}}); } catch(error) { console.error(JSON.stringify({error:publicError(error)})); process.exit(1); } }
+function readArgs() { try { return parseArgs({allowPositionals:true,options:{home:{type:'string'},profile:{type:'string'},port:{type:'string'},patch:{type:'string'},'ui-dist':{type:'string'},name:{type:'string'},repo:{type:'string'},base:{type:'string'},workspace:{type:'string'},workflow:{type:'string'},run:{type:'string'},task:{type:'string'},goal:{type:'string'},file:{type:'string'},reason:{type:'string'},version:{type:'string'},key:{type:'string'},json:{type:'boolean'},help:{type:'boolean'},'no-lead':{type:'boolean'}}}); } catch(error) { console.error(JSON.stringify({error:publicError(error)})); process.exit(1); } }
 const args=readArgs();
 const home=path.resolve(args.values.home??process.env.RIFT_HOME??'.rift');
 const required=(name:keyof typeof args.values):string=>{const value=args.values[name];if(typeof value!=='string'||!value)throw new RiftError('MISSING_ARGUMENT',`--${name} is required.`);return value;};
@@ -43,7 +44,9 @@ async function request(method:string,route:string,body?:unknown):Promise<any>{
 async function main():Promise<unknown>{
   const [command,subcommand,operand]=args.positionals;
   if(args.values.help||!command){console.log(help);return;}
+  if(command==='ui')return request('POST','/v1/ui/bootstrap',{});
   if(command==='serve'){
+    if(args.values['ui-dist'])process.env.RIFT_UI_DIST=path.resolve(args.values['ui-dist']);
     await mkdir(home,{recursive:true});process.env.RIFT_HOME=home;process.env.RIFT_PORT=args.values.port??process.env.RIFT_PORT??'47831';process.env.DSH_HOME??=path.join(home,'dsh');
     const profile=args.values.profile??'rift';if(!/^[A-Za-z0-9_-]+$/.test(profile))throw new RiftError('INVALID_PROFILE','Use a simple profile name.');
     const {initializeProfileFromDefault,runProfile}=await import('@deepseek-ai/dsh/profile-boot');

@@ -1,6 +1,8 @@
 # RIFT 分阶段实施任务清单
 
-版本：0.4。2026-10-25 的 `0.1.0` 已完成 P0–P3 MVP；当前源码继续交付 E1.1–E1.5，E1.6 按用户要求暂缓，本轮未使用 Claude。逐项状态见[开发记录](development-status.md)，新增证据见 [E1 验收](e1-acceptance.md)。下表保留原 MVP 验收标准，E1 的配置契约以 [E1 指南](e1-guide.md) 为准。旧版 P0–P6 独立 Orchestrator 任务表已由本清单替代。
+**2026-10-26 增量已实现：** Codex 聊天与任务持久 thread、增量公共消息同步、返工原角色续接、原生执行映射与恢复边界。迁移 0009；详细契约及验证见 [原生会话说明](native-sessions.md)。早期表格中的长期会话待办已由此项承接。
+
+版本：0.5。2026-10-25 的 `0.1.0` 已完成 P0–P3 MVP，源码继续交付 E1.1–E1.5 与 UI 计划 U0–U8。SSE/Web UI 的 E1.6 暂缓状态是历史记录，已由本轮 [UI 开发计划](ui-gap-analysis-and-plan.md)和 [UI 验收](ui-acceptance.md)承接完成。本轮使用 Codex 与 DeepSeek，没有执行 Claude。逐项状态见[开发记录](development-status.md)。下表保留原 MVP 验收标准，E1 的配置契约以 [E1 指南](e1-guide.md) 为准。旧版 P0–P6 独立 Orchestrator 任务表已由本清单替代。
 
 ## P0 验证 DSH 技术可行性
 

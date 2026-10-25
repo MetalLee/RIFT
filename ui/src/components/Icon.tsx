@@ -1,0 +1,5 @@
+// Material Symbols are bundled locally from the exact Stitch icon family.
+const icons: Record<string, string> = { chat: 'chat_bubble', grid: 'grid_view', agents: 'smart_toy', skill: 'auto_awesome', branch: 'source_environment', tasks: 'task_alt', settings: 'tune', pulse: 'hub', plus: 'add', arrow: 'arrow_forward', up: 'arrow_upward', chevron: 'chevron_right', down: 'keyboard_arrow_down', switch: 'unfold_more', menu: 'menu', compose: 'edit_square', refresh: 'refresh', user: 'person', copy: 'content_copy', search: 'search', folder: 'folder', git: 'source_environment', shield: 'verified_user', network: 'neurology', code: 'code', file: 'description', terminal: 'terminal', check: 'check', checks: 'done_all', more: 'more_horiz', help: 'help', close: 'close', loading: 'sync' };
+export function Icon({ name, size = 18 }: { name: string; size?: number }) {
+  return <span className="material-symbols-outlined rift-icon" style={{fontSize: size, width: size, height: size}} aria-hidden="true">{icons[name] ?? 'grid_view'}</span>;
+}

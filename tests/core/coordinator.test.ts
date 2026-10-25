@@ -28,6 +28,24 @@ function fixture(options:{failCleanup?:boolean;neverCleanup?:boolean;cleanupTime
   return{store,projects,workspace,workflow,coordinator,calls,git,plan,dispatch,complete};
 }
 describe('persistent task coordinator',()=>{
+  it('waits for the previous native developer on repair instead of losing its thread',async()=>{
+    const f=fixture();f.plan([{id:'a'},{id:'b'}]);f.dispatch('a');await tick();
+    const original=f.calls[0]!.run;
+    f.store.exec('INSERT INTO native_sessions(id,workspace_id,scope,scope_id,agent_id,configuration_key,thread_id,runtime_home,cwd,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)','session','ws','task','a',original.roleId,'config','thread','home','cwd','now');
+    f.store.exec('INSERT INTO native_executions(execution_id,session_id,status,updated_at) VALUES(?,?,?,?)',original.id,'session','completed','now');
+    f.calls[0]!.result.resolve({stopReason:'error',text:'needs repair'});await tick();
+    f.dispatch('b');await tick();expect(f.calls[1]!.run.roleId).toBe(original.roleId);
+    f.coordinator.retry({taskId:'a',reason:'continue with native memory',expectedVersion:f.store.task('a').version});
+    const queued=f.dispatch('a','repair');expect(queued.phase).toBe('queued');await tick();expect(f.calls).toHaveLength(2);
+    f.complete(1);await tick();expect(f.calls[2]!.run.roleId).toBe(original.roleId);expect(f.calls[2]!.run.purpose).toBe('repair');
+    f.complete(2);await tick();await f.coordinator.shutdown();
+  });
+  it('releases a failed native startup only with an explicit runtime cleanup receipt',async()=>{
+    const f=fixture({startError:new RiftError('NATIVE_START_FAILED','Saved thread unavailable',{cleanupConfirmed:true})});
+    f.plan([{id:'a'}]);f.dispatch('a');await tick();
+    expect(f.coordinator.status('workflow').runs[0]).toMatchObject({cleanupStatus:'confirmed',stopReason:'NATIVE_START_FAILED'});
+    expect(f.coordinator.status('workflow').slots.total).toBe(0);await f.coordinator.shutdown();
+  });
   it('reserves two independent developers, queues third, and handles out-of-order completion',async()=>{
     const f=fixture();f.plan([{id:'a'},{id:'b'},{id:'c'}]);const a=f.dispatch('a'),b=f.dispatch('b'),c=f.dispatch('c');
     expect(a.phase).toBe('started');expect(b.phase).toBe('started');expect(c.phase).toBe('queued');expect(f.coordinator.status('workflow').slots.developers).toBe(2);
@@ -70,7 +88,7 @@ describe('persistent task coordinator',()=>{
       const run=f.store.run(call.run.id);expect(run.resultArtifactId).toBeTruthy();
       const artifact=f.store.require<{relativePath:string;sha256:string;byteSize:number}>('SELECT * FROM artifacts WHERE id=?',run.resultArtifactId!);
       const data=readFileSync(join(directory,artifact.relativePath));expect(data.toString()).not.toContain('super-sensitive-secret-value');expect(data.toString()).toContain('[REDACTED]');expect(createHash('sha256').update(data).digest('hex')).toBe(artifact.sha256);expect(data.length).toBe(artifact.byteSize);
-      await f.coordinator.shutdown();stores.splice(stores.indexOf(f.store),1);f.store.close();const reopened=new RiftStore(join(directory,'rift.db'));try{expect(reopened.run(call.run.id).resultArtifactId).toBe(run.resultArtifactId);expect(reopened.get<{version:number}>('SELECT MAX(version) AS version FROM schema_migrations')!.version).toBe(3);}finally{reopened.close();}
+      await f.coordinator.shutdown();stores.splice(stores.indexOf(f.store),1);f.store.close();const reopened=new RiftStore(join(directory,'rift.db'));try{expect(reopened.run(call.run.id).resultArtifactId).toBe(run.resultArtifactId);expect(reopened.get<{version:number}>('SELECT MAX(version) AS version FROM schema_migrations')!.version).toBeGreaterThanOrEqual(3);}finally{reopened.close();}
     }finally{if(stores.includes(f.store)){stores.splice(stores.indexOf(f.store),1);f.store.close();}rmSync(directory,{recursive:true});}
   });
   it('times out one execution without cancelling its completed sibling',async()=>{

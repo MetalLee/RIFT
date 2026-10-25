@@ -1,0 +1,446 @@
+{
+  "date": "2026-10-25T14:43:15.958Z",
+  "mode": "real native main + real Astra developer/reviewer, two real isolated Git repositories, functional Node tests, chat-triggered orchestration",
+  "mainModel": "gpt-6.1-sol",
+  "childModel": "gpt-6-astra",
+  "payload": "0.164.0",
+  "turn": {
+    "id": "turn-d31d932e-f7bc-41e1-acae-bed35cae2501",
+    "workspaceId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81",
+    "conversationId": "conversation-46f28521-39ca-49fc-b9e1-edb057e80d8b",
+    "messageId": "message-22c06bee-9577-4a18-aede-279684f02a56",
+    "agentId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:lead",
+    "status": "completed",
+    "configuration": {
+      "connection": {
+        "runtime": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": "low"
+      },
+      "agent": {
+        "id": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:lead",
+        "displayName": "lead",
+        "prompt": "Coordinate a durable plan, parallel independent developers and exact-commit acceptance. Do not claim success before workflow_finish succeeds.",
+        "version": 0,
+        "purpose": "lead"
+      },
+      "skillInstructions": "",
+      "skills": [],
+      "request": {
+        "content": "Execute this bounded end-to-end RIFT acceptance entirely using your provided tools. First start a workflow selecting BOTH repository ids repository-290c5b57-ee3d-4416-8a4b-b015fb02b819 and repository-bf0b3a67-078c-47f3-b957-d1f69f92ce5e. Plan exactly two CHANGE tasks: alpha assigned developer-a in repository repository-290c5b57-ee3d-4416-8a4b-b015fb02b819, changes ONLY feature.mjs to export const value = 11; beta assigned developer-b in repository repository-bf0b3a67-078c-47f3-b957-d1f69f92ce5e, changes ONLY feature.mjs to export const value = 22 and depends on the alpha task. Each expectedPaths is [\"feature.mjs\"]. Each acceptanceCriteria includes \"node --test test.mjs passes; test.mjs unchanged; only feature.mjs is committed\". Tell both developers to make the commit and return the required RIFT result JSON. Dispatch alpha, wait for its real result, request integration using current sourceHead and expectedVersion, wait for real checks and independent review and acceptedCommit. Only after alpha succeeds dispatch beta and do the same integration. Read status between phases and finish the workflow only after both tasks are succeeded and all cleanup is confirmed. If a task fails, inspect the specific evidence and retry at most once. Do not change tests or call external tools. After successful workflow_finish reply RIFT_UI_CODE_WORKFLOW_OK.",
+        "recipientAgentId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:lead",
+        "contextRefs": [
+          {
+            "type": "repository",
+            "id": "repository-290c5b57-ee3d-4416-8a4b-b015fb02b819"
+          },
+          {
+            "type": "repository",
+            "id": "repository-bf0b3a67-078c-47f3-b957-d1f69f92ce5e"
+          }
+        ],
+        "mentions": []
+      },
+      "contextData": [
+        {
+          "ref": {
+            "type": "repository",
+            "id": "repository-290c5b57-ee3d-4416-8a4b-b015fb02b819"
+          },
+          "version": null,
+          "content": "{\"id\":\"repository-290c5b57-ee3d-4416-8a4b-b015fb02b819\",\"workspaceId\":\"workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81\",\"canonicalPath\":\"D:\\\\Codex Workspace\\\\RIFT\\\\.runtime-evidence\\\\ui-code-workflow-EYadrY\\\\alpha\",\"commonGitDir\":\"D:\\\\Codex Workspace\\\\RIFT\\\\.runtime-evidence\\\\ui-code-workflow-EYadrY\\\\alpha\\\\.git\",\"baseRef\":\"main\"}"
+        },
+        {
+          "ref": {
+            "type": "repository",
+            "id": "repository-bf0b3a67-078c-47f3-b957-d1f69f92ce5e"
+          },
+          "version": null,
+          "content": "{\"id\":\"repository-bf0b3a67-078c-47f3-b957-d1f69f92ce5e\",\"workspaceId\":\"workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81\",\"canonicalPath\":\"D:\\\\Codex Workspace\\\\RIFT\\\\.runtime-evidence\\\\ui-code-workflow-EYadrY\\\\beta\",\"commonGitDir\":\"D:\\\\Codex Workspace\\\\RIFT\\\\.runtime-evidence\\\\ui-code-workflow-EYadrY\\\\beta\\\\.git\",\"baseRef\":\"main\"}"
+        }
+      ],
+      "context": {
+        "capturedAt": "2026-10-25T14:43:16.625Z",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Execute this bounded end-to-end RIFT acceptance entirely using your provided tools. First start a workflow selecting BOTH repository ids repository-290c5b57-ee3d-4416-8a4b-b015fb02b819 and repository-bf0b3a67-078c-47f3-b957-d1f69f92ce5e. Plan exactly two CHANGE tasks: alpha assigned developer-a in repository repository-290c5b57-ee3d-4416-8a4b-b015fb02b819, changes ONLY feature.mjs to export const value = 11; beta assigned developer-b in repository repository-bf0b3a67-078c-47f3-b957-d1f69f92ce5e, changes ONLY feature.mjs to export const value = 22 and depends on the alpha task. Each expectedPaths is [\"feature.mjs\"]. Each acceptanceCriteria includes \"node --test test.mjs passes; test.mjs unchanged; only feature.mjs is committed\". Tell both developers to make the commit and return the required RIFT result JSON. Dispatch alpha, wait for its real result, request integration using current sourceHead and expectedVersion, wait for real checks and independent review and acceptedCommit. Only after alpha succeeds dispatch beta and do the same integration. Read status between phases and finish the workflow only after both tasks are succeeded and all cleanup is confirmed. If a task fails, inspect the specific evidence and retry at most once. Do not change tests or call external tools. After successful workflow_finish reply RIFT_UI_CODE_WORKFLOW_OK."
+          }
+        ],
+        "sources": [
+          {
+            "messageId": "message-22c06bee-9577-4a18-aede-279684f02a56",
+            "version": 1
+          }
+        ],
+        "summary": null,
+        "summarySources": []
+      }
+    },
+    "version": 3,
+    "cleanupStatus": "confirmed",
+    "error": null,
+    "createdAt": "2026-10-25T14:43:16.622Z",
+    "startedAt": "2026-10-25T14:43:16.624Z",
+    "endedAt": "2026-10-25T14:45:19.607Z"
+  },
+  "workflows": [
+    {
+      "id": "workflow-0c3f3bf0-b306-47b6-85df-2950e33ce56b",
+      "status": "completed"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "alpha",
+      "workflowId": "workflow-0c3f3bf0-b306-47b6-85df-2950e33ce56b",
+      "roleId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:developer-a",
+      "kind": "change",
+      "title": "alpha",
+      "instructions": "Change ONLY feature.mjs to export const value = 11; do not change tests. Run node --test test.mjs. Make the commit and return the required RIFT result JSON.",
+      "expectedPaths": [
+        "feature.mjs"
+      ],
+      "acceptanceCriteria": [
+        "node --test test.mjs passes; test.mjs unchanged; only feature.mjs is committed"
+      ],
+      "status": "succeeded",
+      "attempt": 1,
+      "version": 4,
+      "acceptedCommit": "a4f85825efe122d32bef558b6bf5e7cb572de276",
+      "sourceHead": "aa3be526221451b4def18108c1c130233ff9be45",
+      "blockingReason": null,
+      "analysisItems": null,
+      "priority": 0,
+      "repositoryId": "repository-290c5b57-ee3d-4416-8a4b-b015fb02b819"
+    },
+    {
+      "id": "beta",
+      "workflowId": "workflow-0c3f3bf0-b306-47b6-85df-2950e33ce56b",
+      "roleId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:developer-b",
+      "kind": "change",
+      "title": "beta",
+      "instructions": "Change ONLY feature.mjs to export const value = 22; do not change tests. Run node --test test.mjs. Make the commit and return the required RIFT result JSON.",
+      "expectedPaths": [
+        "feature.mjs"
+      ],
+      "acceptanceCriteria": [
+        "node --test test.mjs passes; test.mjs unchanged; only feature.mjs is committed"
+      ],
+      "status": "succeeded",
+      "attempt": 1,
+      "version": 4,
+      "acceptedCommit": "7b9b2118a540aee5e1d032a43ceb50d30b339566",
+      "sourceHead": "169ee5bac1d1c65f6b96765d457c10edc363ebe2",
+      "blockingReason": null,
+      "analysisItems": null,
+      "priority": 0,
+      "repositoryId": "repository-bf0b3a67-078c-47f3-b957-d1f69f92ce5e"
+    }
+  ],
+  "runs": [
+    {
+      "id": "run-dc31aaf7-a29c-4be5-9bd2-6f464af49f7c",
+      "taskId": "alpha",
+      "roleId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:developer-a",
+      "purpose": "develop",
+      "taskAttempt": 1,
+      "status": "succeeded",
+      "providerSnapshot": {
+        "role": {
+          "id": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:developer-a",
+          "workspaceId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81",
+          "name": "developer-a",
+          "enabled": 1,
+          "purpose": "developer",
+          "kind": "subagent",
+          "providerBindingId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:codex-dev",
+          "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+          "revision": 1,
+          "displayName": null,
+          "version": 0,
+          "chatConnection": null
+        },
+        "binding": {
+          "id": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:codex-dev",
+          "providerName": "codex-dev",
+          "packageVersion": "0.2.1-rc.3",
+          "configRevision": 1,
+          "capabilities": {
+            "agentOptions": false,
+            "agentPreset": false,
+            "outputSchema": false,
+            "depthLimit": false
+          },
+          "credentialRefs": [
+            "native:codex"
+          ],
+          "runtime": null,
+          "model": null,
+          "spawn": null,
+          "workspaceId": null
+        },
+        "skills": [],
+        "skillInstructions": ""
+      },
+      "dshChildId": "34a18aaf-3a86-44cc-8c14-b1548782b552",
+      "dshRunId": null,
+      "stopReason": "completed",
+      "cleanupStatus": "confirmed",
+      "slotReleasedAt": "2026-10-25T14:44:03.101Z",
+      "deadline": "2026-10-25T14:46:31.050Z",
+      "result": {
+        "schemaVersion": 1,
+        "taskId": "alpha",
+        "runId": "run-dc31aaf7-a29c-4be5-9bd2-6f464af49f7c",
+        "outcome": "completed",
+        "summary": "Changed feature.mjs to export const value = 11; committed as aa3be526221451b4def18108c1c130233ff9be45.",
+        "changedPaths": [
+          "feature.mjs"
+        ],
+        "checksClaimed": [
+          "node --test test.mjs passed at committed HEAD.",
+          "test.mjs unchanged from base commit.",
+          "Only feature.mjs was committed.",
+          "Working tree clean."
+        ],
+        "blockingReasons": []
+      },
+      "createdAt": "2026-10-25T14:43:31.050Z",
+      "startedAt": "2026-10-25T14:43:33.372Z",
+      "endedAt": "2026-10-25T14:44:03.099Z",
+      "resultArtifactId": "artifact-80452963-c5bd-4324-8bba-b2bf52c3c6d7"
+    },
+    {
+      "id": "run-77f24a10-5b4a-4641-9afb-302ac87ba179",
+      "taskId": "alpha",
+      "roleId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:reviewer",
+      "purpose": "review",
+      "taskAttempt": 1,
+      "status": "succeeded",
+      "providerSnapshot": {
+        "role": {
+          "id": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:reviewer",
+          "workspaceId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81",
+          "name": "reviewer",
+          "enabled": 1,
+          "purpose": "reviewer",
+          "kind": "subagent",
+          "providerBindingId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:codex-review",
+          "prompt": "Review the exact candidate commit read-only. Never edit or commit. Return one JSON object matching resultSchema; approve only when all acceptance criteria pass.",
+          "revision": 1,
+          "displayName": null,
+          "version": 0,
+          "chatConnection": null
+        },
+        "binding": {
+          "id": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:codex-review",
+          "providerName": "codex-review",
+          "packageVersion": "0.2.1-rc.3",
+          "configRevision": 1,
+          "capabilities": {
+            "agentOptions": false,
+            "agentPreset": false,
+            "outputSchema": false,
+            "depthLimit": false
+          },
+          "credentialRefs": [
+            "native:codex"
+          ],
+          "runtime": null,
+          "model": null,
+          "spawn": null,
+          "workspaceId": null
+        },
+        "skills": [],
+        "skillInstructions": ""
+      },
+      "dshChildId": "1089e6a4-c928-406d-9e3e-64aabde24f20",
+      "dshRunId": null,
+      "stopReason": "completed",
+      "cleanupStatus": "confirmed",
+      "slotReleasedAt": "2026-10-25T14:44:20.712Z",
+      "deadline": "2026-10-25T14:47:04.422Z",
+      "result": {
+        "schemaVersion": 1,
+        "taskId": "alpha",
+        "runId": "run-77f24a10-5b4a-4641-9afb-302ac87ba179",
+        "verdict": "approve",
+        "reviewedCommit": "a4f85825efe122d32bef558b6bf5e7cb572de276",
+        "findings": []
+      },
+      "createdAt": "2026-10-25T14:44:04.422Z",
+      "startedAt": "2026-10-25T14:44:04.818Z",
+      "endedAt": "2026-10-25T14:44:20.709Z",
+      "resultArtifactId": "artifact-7604c144-aa3e-4fd1-b222-ba0c818ebe7d"
+    },
+    {
+      "id": "run-a5d25e7e-4fc9-4f4f-802a-004669e39238",
+      "taskId": "beta",
+      "roleId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:developer-b",
+      "purpose": "develop",
+      "taskAttempt": 1,
+      "status": "succeeded",
+      "providerSnapshot": {
+        "role": {
+          "id": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:developer-b",
+          "workspaceId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81",
+          "name": "developer-b",
+          "enabled": 1,
+          "purpose": "developer",
+          "kind": "subagent",
+          "providerBindingId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:codex-dev",
+          "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+          "revision": 1,
+          "displayName": null,
+          "version": 0,
+          "chatConnection": null
+        },
+        "binding": {
+          "id": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:codex-dev",
+          "providerName": "codex-dev",
+          "packageVersion": "0.2.1-rc.3",
+          "configRevision": 1,
+          "capabilities": {
+            "agentOptions": false,
+            "agentPreset": false,
+            "outputSchema": false,
+            "depthLimit": false
+          },
+          "credentialRefs": [
+            "native:codex"
+          ],
+          "runtime": null,
+          "model": null,
+          "spawn": null,
+          "workspaceId": null
+        },
+        "skills": [],
+        "skillInstructions": ""
+      },
+      "dshChildId": "ea33c199-3dc3-4668-92fd-1aab1e5e022a",
+      "dshRunId": null,
+      "stopReason": "completed",
+      "cleanupStatus": "confirmed",
+      "slotReleasedAt": "2026-10-25T14:44:49.108Z",
+      "deadline": "2026-10-25T14:47:24.756Z",
+      "result": {
+        "schemaVersion": 1,
+        "taskId": "beta",
+        "runId": "run-a5d25e7e-4fc9-4f4f-802a-004669e39238",
+        "outcome": "completed",
+        "summary": "Updated feature.mjs to export const value = 22; committed as 169ee5bac1d1c65f6b96765d457c10edc363ebe2.",
+        "changedPaths": [
+          "feature.mjs"
+        ],
+        "checksClaimed": [
+          "node --test test.mjs passed (1 test).",
+          "test.mjs unchanged.",
+          "Only feature.mjs was committed.",
+          "git diff --check passed; worktree clean."
+        ],
+        "blockingReasons": []
+      },
+      "createdAt": "2026-10-25T14:44:24.756Z",
+      "startedAt": "2026-10-25T14:44:25.775Z",
+      "endedAt": "2026-10-25T14:44:49.106Z",
+      "resultArtifactId": "artifact-c213cd43-a7c9-470c-ba2b-fd0d13fe3140"
+    },
+    {
+      "id": "run-61183cea-d371-43ef-b5af-ee4428dfb7c7",
+      "taskId": "beta",
+      "roleId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:reviewer",
+      "purpose": "review",
+      "taskAttempt": 1,
+      "status": "succeeded",
+      "providerSnapshot": {
+        "role": {
+          "id": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:reviewer",
+          "workspaceId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81",
+          "name": "reviewer",
+          "enabled": 1,
+          "purpose": "reviewer",
+          "kind": "subagent",
+          "providerBindingId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:codex-review",
+          "prompt": "Review the exact candidate commit read-only. Never edit or commit. Return one JSON object matching resultSchema; approve only when all acceptance criteria pass.",
+          "revision": 1,
+          "displayName": null,
+          "version": 0,
+          "chatConnection": null
+        },
+        "binding": {
+          "id": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:codex-review",
+          "providerName": "codex-review",
+          "packageVersion": "0.2.1-rc.3",
+          "configRevision": 1,
+          "capabilities": {
+            "agentOptions": false,
+            "agentPreset": false,
+            "outputSchema": false,
+            "depthLimit": false
+          },
+          "credentialRefs": [
+            "native:codex"
+          ],
+          "runtime": null,
+          "model": null,
+          "spawn": null,
+          "workspaceId": null
+        },
+        "skills": [],
+        "skillInstructions": ""
+      },
+      "dshChildId": "d31f6a22-05da-4c7c-bc25-5a4e46fed000",
+      "dshRunId": null,
+      "stopReason": "completed",
+      "cleanupStatus": "confirmed",
+      "slotReleasedAt": "2026-10-25T14:45:12.688Z",
+      "deadline": "2026-10-25T14:47:50.415Z",
+      "result": {
+        "schemaVersion": 1,
+        "taskId": "beta",
+        "runId": "run-61183cea-d371-43ef-b5af-ee4428dfb7c7",
+        "verdict": "approve",
+        "reviewedCommit": "7b9b2118a540aee5e1d032a43ceb50d30b339566",
+        "findings": []
+      },
+      "createdAt": "2026-10-25T14:44:50.415Z",
+      "startedAt": "2026-10-25T14:44:52.001Z",
+      "endedAt": "2026-10-25T14:45:12.685Z",
+      "resultArtifactId": "artifact-c8db2d81-bf4d-48ff-bde0-f5df2846a9fe"
+    }
+  ],
+  "values": [
+    "export const value = 11;",
+    "export const value = 22;"
+  ],
+  "messages": [
+    {
+      "id": "message-22c06bee-9577-4a18-aede-279684f02a56",
+      "workspaceId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81",
+      "conversationId": "conversation-46f28521-39ca-49fc-b9e1-edb057e80d8b",
+      "clientMessageId": "two-repo-code",
+      "recipientAgentId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:lead",
+      "role": "user",
+      "content": "Execute this bounded end-to-end RIFT acceptance entirely using your provided tools. First start a workflow selecting BOTH repository ids repository-290c5b57-ee3d-4416-8a4b-b015fb02b819 and repository-bf0b3a67-078c-47f3-b957-d1f69f92ce5e. Plan exactly two CHANGE tasks: alpha assigned developer-a in repository repository-290c5b57-ee3d-4416-8a4b-b015fb02b819, changes ONLY feature.mjs to export const value = 11; beta assigned developer-b in repository repository-bf0b3a67-078c-47f3-b957-d1f69f92ce5e, changes ONLY feature.mjs to export const value = 22 and depends on the alpha task. Each expectedPaths is [\"feature.mjs\"]. Each acceptanceCriteria includes \"node --test test.mjs passes; test.mjs unchanged; only feature.mjs is committed\". Tell both developers to make the commit and return the required RIFT result JSON. Dispatch alpha, wait for its real result, request integration using current sourceHead and expectedVersion, wait for real checks and independent review and acceptedCommit. Only after alpha succeeds dispatch beta and do the same integration. Read status between phases and finish the workflow only after both tasks are succeeded and all cleanup is confirmed. If a task fails, inspect the specific evidence and retry at most once. Do not change tests or call external tools. After successful workflow_finish reply RIFT_UI_CODE_WORKFLOW_OK.",
+      "status": "completed",
+      "version": 2,
+      "createdAt": "2026-10-25T14:43:16.622Z",
+      "replyToMessageId": null
+    },
+    {
+      "id": "message-0596fd7f-91c9-4449-a572-8a52c7e4c036",
+      "workspaceId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81",
+      "conversationId": "conversation-46f28521-39ca-49fc-b9e1-edb057e80d8b",
+      "clientMessageId": null,
+      "recipientAgentId": "workspace-fe381d8d-5b94-4d6d-8d8c-ec2671216f81:lead",
+      "role": "assistant",
+      "content": "RIFT_UI_CODE_WORKFLOW_OK",
+      "status": "completed",
+      "version": 0,
+      "createdAt": "2026-10-25T14:45:19.607Z",
+      "replyToMessageId": "message-22c06bee-9577-4a18-aede-279684f02a56"
+    }
+  ],
+  "status": "pass"
+}

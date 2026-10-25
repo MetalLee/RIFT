@@ -1,13 +1,22 @@
 import { timingSafeEqual } from 'node:crypto';
 import { RiftError } from '../contracts/index.js';
 
+const credentialReferences = new Set<string>();
+const configuredSecrets = new Set<string>();
+/** Host-only registration; never expose resolved credentials in wire DTOs. */
+export function registerCredentialRedaction(reference: string, resolved?: string): void {
+  credentialReferences.add(reference);
+  if (resolved) configuredSecrets.add(resolved);
+}
+
 export function redact(value: string, maxBytes = 128 * 1024): string {
   let safe = value.replace(/(Bearer\s+)[^\s"']+/gi, '$1[REDACTED]')
     .replace(/((?:api[_-]?key|token|password|secret|authorization)["']?\s*[:=]\s*["']?)[^\s,}"']+/gi, '$1[REDACTED]')
     .replace(/\b(?:sk-|sk-ant-)[A-Za-z0-9_-]{10,}\b/g, '[REDACTED]');
   for (const [name, secret] of Object.entries(process.env)) {
-    if (/(?:KEY|TOKEN|SECRET|PASSWORD)/i.test(name) && secret && secret.length >= 8) safe = safe.split(secret).join('[REDACTED]');
+    if ((credentialReferences.has(name) || /(?:KEY|TOKEN|SECRET|PASSWORD)/i.test(name)) && secret && (credentialReferences.has(name) || secret.length >= 8)) safe = safe.split(secret).join('[REDACTED]');
   }
+  for (const secret of configuredSecrets) safe = safe.split(secret).join('[REDACTED]');
   const bytes = Buffer.from(safe);
   return bytes.length > maxBytes ? bytes.subarray(0, maxBytes).toString('utf8') + '\n[TRUNCATED]' : safe;
 }

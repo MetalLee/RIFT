@@ -1,0 +1,13 @@
+ALTER TABLE agent_turns ADD COLUMN runtime_boot_id TEXT;
+ALTER TABLE runs ADD COLUMN runtime_boot_id TEXT;
+ALTER TABLE runs ADD COLUMN version INTEGER NOT NULL DEFAULT 0;
+CREATE TRIGGER run_version AFTER UPDATE ON runs WHEN NEW.version=OLD.version BEGIN UPDATE runs SET version=version+1 WHERE id=NEW.id; END;
+ALTER TABLE integrations ADD COLUMN version INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE integrations ADD COLUMN runtime_boot_id TEXT;
+CREATE TRIGGER integration_version AFTER UPDATE ON integrations WHEN NEW.version=OLD.version BEGIN UPDATE integrations SET version=version+1 WHERE id=NEW.id; END;
+ALTER TABLE scheduler_limits ADD COLUMN lead_turns INTEGER NOT NULL DEFAULT 4 CHECK(lead_turns BETWEEN 1 AND 128);
+DROP TRIGGER lease_capacity;
+CREATE TRIGGER lease_capacity BEFORE INSERT ON execution_leases WHEN NEW.released_at IS NULL AND ((NEW.capacity='lead' AND (SELECT count(*) FROM execution_leases WHERE released_at IS NULL AND capacity='lead')>=(SELECT lead_turns FROM scheduler_limits WHERE id=1)) OR (NEW.capacity<>'lead' AND ((SELECT count(*) FROM execution_leases WHERE released_at IS NULL AND capacity<>'lead')>=(SELECT total FROM scheduler_limits WHERE id=1) OR (NEW.capacity='reviewer' AND (SELECT count(*) FROM execution_leases WHERE released_at IS NULL AND capacity='reviewer')>=1) OR (NEW.capacity='developer' AND (SELECT count(*) FROM execution_leases WHERE released_at IS NULL AND capacity='developer')>=(SELECT developers FROM scheduler_limits WHERE id=1))))) BEGIN SELECT RAISE(ABORT,'capacity exceeded'); END;
+ALTER TABLE messages ADD COLUMN reply_to_message_id TEXT REFERENCES messages(id);
+CREATE TRIGGER reply_scope BEFORE INSERT ON messages WHEN NEW.reply_to_message_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM messages m WHERE m.id=NEW.reply_to_message_id AND m.workspace_id=NEW.workspace_id AND m.conversation_id=NEW.conversation_id AND m.recipient_agent_id=NEW.recipient_agent_id AND m.role='user') BEGIN SELECT RAISE(ABORT,'cross-scope reply'); END;
+INSERT INTO schema_migrations(version,applied_at) VALUES(7,strftime('%Y-%m-%dT%H:%M:%fZ','now'));

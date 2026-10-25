@@ -7,11 +7,13 @@ import { saveResultArtifact } from '../storage/artifacts.js';
 import { createHash } from 'node:crypto';
 import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { mkdir, readdir } from 'node:fs/promises';
+import { provesPreviousBootExited } from '../agent/boot-identity.js';
 
 interface Active { controller:AbortController; handle?:ActivationHandle; cleanup?:Promise<boolean>; cancelled:boolean; cancelReason?:string }
 interface IntegrationRecord { id:string; taskId:string; status:string; candidate:Candidate|null; reviewRunId:string|null; error:string|null }
-export interface CoordinatorOptions { store:RiftStore; bridge:ActivationBridge; git:GitService; runTimeoutMs?:number;cleanupTimeoutMs?:number; limits?:Partial<SchedulerLimits> }
-export interface CreateWorkflowInput { id?:string; workspaceId:string; goal:string; integrationRef:string; baseCommit:string; leadSessionId?:string }
+export interface CoordinatorOptions { store:RiftStore; bridge:ActivationBridge; git:GitService; runTimeoutMs?:number;cleanupTimeoutMs?:number; limits?:Partial<SchedulerLimits>; skillSnapshot?:(workspaceId:string,agentId:string,runtime:string,runId:string)=>{instructions:string;versions:unknown[]}; textAnalysisBridge?:ActivationBridge; textAnalysisRoot?:string }
+export interface CreateWorkflowInput { id?:string; workspaceId:string; goal:string; integrationRef:string; baseCommit:string; leadSessionId?:string; repositorySnapshots?:{repositoryId:string;baseCommit:string;integrationRef:string}[]; repositoryFree?:boolean }
 export interface DispatchInput {taskId:string;idempotencyKey:string;expectedVersion:number;roleName?:string}
 export interface ReplanInput {workflowId:string;expectedRevision:number;updates:{taskId:string;expectedVersion:number;dependsOn?:string[];priority?:number}[];tasks?:PlanTask[]}
 export interface WaitInput {workflowId:string;runIds?:string[];requestIds?:string[];afterEventSeq?:number;timeoutMs?:number}
@@ -31,27 +33,76 @@ export class TaskCoordinator {
   private pumping=false;
   private stopping=false;
   private integrationBusy=false;
-  constructor(options:CoordinatorOptions) {this.store=options.store;this.bridge=options.bridge;this.git=options.git;this.runTimeoutMs=options.runTimeoutMs??30*60_000;this.cleanupTimeoutMs=options.cleanupTimeoutMs??10_000;
+  private closed=false;
+  private bootIdentity:string|null=null;
+  private readonly cleanupReceipts=new Set<string>();
+  private readonly integrationCleanupReceipts=new Set<string>();
+  private readonly skillSnapshot: CoordinatorOptions['skillSnapshot'];
+  private readonly textAnalysisBridge: ActivationBridge | undefined;
+  private readonly textAnalysisRoot: string | undefined;
+  constructor(options:CoordinatorOptions) {this.store=options.store;this.bridge=options.bridge;this.git=options.git;this.runTimeoutMs=options.runTimeoutMs??30*60_000;this.cleanupTimeoutMs=options.cleanupTimeoutMs??10_000;this.skillSnapshot=options.skillSnapshot;this.textAnalysisBridge=options.textAnalysisBridge;this.textAnalysisRoot=options.textAnalysisRoot;
     if(options.limits){const limits=schedulerLimits(options.limits);this.store.transaction(()=>{
-      const occupied=this.store.all<Run>('SELECT * FROM runs WHERE slot_released_at IS NULL');
-      invariant(occupied.length<=limits.total&&occupied.filter(run=>run.purpose!=='review').length<=limits.developers,'LIMITS_IN_USE','New limits cannot be lower than retained execution slots.');
+      const occupied=this.globalSlots();
+      invariant(occupied.total<=limits.total&&occupied.developers<=limits.developers,'LIMITS_IN_USE','New limits cannot be lower than retained execution slots.');
       this.store.exec('UPDATE scheduler_limits SET developers=?,total=?,max_tasks=?,max_replans=?,aging_ms=? WHERE id=1',limits.developers,limits.total,limits.maxTasks,limits.maxReplans,limits.agingMs);
     });}
   }
   get limits():SchedulerLimits {return this.store.require<SchedulerLimits>('SELECT developers,total,max_tasks,max_replans,aging_ms FROM scheduler_limits WHERE id=1');}
+  wake(): void { this.pump(); }
+  setBootIdentity(identity:string|null):void {this.bootIdentity=identity;}
+  reconcileRun(runId:string,expectedVersion:number):Run {
+    this.store.transaction(()=>{
+      const run=this.store.require<Run & {version:number;runtimeBootId:string|null}>('SELECT * FROM runs WHERE id=?',runId);
+      invariant(run.version===expectedVersion,'VERSION_CONFLICT','Run changed; reload before reconciling cleanup.');
+      if(run.cleanupStatus==='confirmed')return;
+      invariant(terminalRuns.has(run.status),'RUN_ACTIVE','Cancel the Run before reconciling cleanup.');
+      invariant(this.cleanupReceipts.has(runId)||provesPreviousBootExited(run.runtimeBootId,this.bootIdentity),'CLEANUP_UNKNOWN','No owned cleanup receipt or same-machine OS reboot proof is available. Restarting only the Host does not prove descendants exited.');
+      this.confirmCleanup(runId);
+    });
+    this.pump();return this.store.run(runId);
+  }
+  private cleanupReceipt(runId:string):void {if(this.closed)return;this.cleanupReceipts.add(runId);const run=this.store.run(runId) as Run & {version:number};if(['unknown','failed'].includes(run.cleanupStatus)&&terminalRuns.has(run.status))this.reconcileRun(runId,run.version);}
+  async reconcileIntegration(integrationId:string,expectedVersion:number) {
+    invariant(!this.integrationBusy,'INTEGRATION_ACTIVE','Wait for the current integration worker to stop.');
+    const integration=this.store.require<IntegrationRecord & {version:number;runtimeBootId:string|null}>('SELECT * FROM integrations WHERE id=?',integrationId),task=this.store.task(integration.taskId);
+    invariant(integration.version===expectedVersion,'VERSION_CONFLICT','Integration changed; reload before reconciling.');
+    invariant(['cleanup_unknown','publishing'].includes(integration.status),'INVALID_STATE','Only an uncertain integration can be reconciled.');
+    invariant(!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',task.id),'CLEANUP_UNKNOWN','Verify all Run cleanup before inspecting publication.');
+    invariant(this.integrationCleanupReceipts.has(integrationId)||provesPreviousBootExited(integration.runtimeBootId,this.bootIdentity),'CLEANUP_UNKNOWN','Git/check subprocess cleanup has no owned completion receipt or same-machine reboot proof. Missing candidate/Run rows do not prove cleanup.');
+    let publication:'published'|'not-published'|'unknown'='not-published';
+    if(integration.candidate){invariant(this.git.recoverPublication,'PUBLICATION_UNKNOWN','Git publication verification is unavailable.');publication=await this.git.recoverPublication({...this.context(task),candidate:integration.candidate});}
+    invariant(publication!=='unknown','PUBLICATION_UNKNOWN','Git cannot establish the exact publication outcome; no ledger state was released.');
+    if(publication==='not-published'&&integration.candidate&&this.git.abandonCandidate)await this.git.abandonCandidate({...this.context(task),candidate:integration.candidate,reason:'Execution cleanup verified; unpublished candidate abandoned for explicit retry.'});
+    this.store.transaction(()=>{
+      invariant(this.store.require<{version:number}>('SELECT version FROM integrations WHERE id=?',integrationId).version===expectedVersion,'VERSION_CONFLICT','Integration changed during verification.');
+      invariant(!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',task.id),'CLEANUP_UNKNOWN','Execution ownership changed during verification.');
+      this.store.exec('UPDATE integrations SET status=?,error=? WHERE id=?',publication==='published'?'accepted':'blocked',publication==='published'?null:'Cleanup verified; candidate was not published. Retry the task explicitly.',integrationId);
+      if(publication==='published')this.store.exec('UPDATE tasks SET status=?,accepted_commit=?,blocking_reason=NULL,version=version+1 WHERE id=?',task.status==='cancelled'?'cancelled':'succeeded',integration.candidate!.candidateHead,task.id);
+      else this.blockTask(task.id,'RECOVERED_NOT_PUBLISHED');
+      for(const operation of this.store.all<Operation>("SELECT * FROM operations WHERE entity_id=? AND kind='integration' AND phase IN ('queued','started')",task.id))this.operationPhase(operation,publication==='published'?'completed':'blocked');
+      this.store.event(task.workflowId,'integration.reconciled',{integrationId,publication},{taskId:task.id});
+    });
+    this.pump();return this.store.require('SELECT id,task_id,status,version,error FROM integrations WHERE id=?',integrationId);
+  }
 
   createWorkflow(input:CreateWorkflowInput):Workflow {
     invariant(!this.stopping,'HOST_STOPPING','Host is shutting down and cannot accept new work.');
     if(input.id)invariant(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(input.id),'INVALID_ID','Workflow ID must be a safe identifier.');
     invariant(this.store.workspace(input.workspaceId).status==='active','WORKSPACE_ARCHIVED','Archived workspaces cannot start workflows.');
-    invariant(input.goal.trim()&&/^refs\/heads\/rift\/[A-Za-z0-9_./-]+$/.test(input.integrationRef)&&/^[0-9a-f]{40,64}$/.test(input.baseCommit),'INVALID_WORKFLOW','Workflow needs a goal, rift integration branch and exact base commit.');
+    invariant(input.repositoryFree || this.store.workspace(input.workspaceId).repositoryPath, 'REPOSITORY_REQUIRED', 'Connect a repository before starting code execution.');
+    invariant(input.goal.trim()&&(input.repositoryFree?input.integrationRef===''&&input.baseCommit==='':/^refs\/heads\/rift\/[A-Za-z0-9_./-]+$/.test(input.integrationRef)&&/^[0-9a-f]{40,64}$/.test(input.baseCommit)),'INVALID_WORKFLOW','Code workflow needs a goal, rift integration branch and exact base commit; repository-free analysis uses empty Git fields.');
     return this.store.transaction(()=>{
       if(input.id) {const prior=this.store.get<Workflow>('SELECT * FROM workflows WHERE id=?',input.id);if(prior){invariant(prior.workspaceId===input.workspaceId&&prior.goal===input.goal&&prior.baseCommit===input.baseCommit&&prior.integrationRef===input.integrationRef,'IDEMPOTENCY_CONFLICT','Workflow ID was used for different input.');return prior;}}
       invariant(!this.store.get("SELECT id FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','failed','cancelled') LIMIT 1",input.workspaceId)&&!this.store.get('SELECT r.id FROM runs r JOIN tasks t ON t.id=r.task_id JOIN workflows w ON w.id=t.workflow_id WHERE w.workspace_id=? AND r.slot_released_at IS NULL LIMIT 1',input.workspaceId)&&!this.store.get("SELECT i.id FROM integrations i JOIN tasks t ON t.id=i.task_id JOIN workflows w ON w.id=t.workflow_id WHERE w.workspace_id=? AND i.status IN ('preparing','reviewing','publishing','cleanup_unknown') LIMIT 1",input.workspaceId),'WORKFLOW_CAPACITY','This workspace already owns active work or unconfirmed cleanup.');
       const roles=this.store.all<Role>('SELECT * FROM roles WHERE workspace_id=? AND enabled=1',input.workspaceId);
-      invariant(['lead','developer','reviewer'].every(purpose=>roles.some(role=>role.purpose===purpose)),'ROLES_NOT_CONFIGURED','Configure a Lead, at least one Developer and a Reviewer before starting a workflow.');
+      invariant((input.repositoryFree?['lead','developer']:['lead','developer','reviewer']).every(purpose=>roles.some(role=>role.purpose===purpose)),'ROLES_NOT_CONFIGURED','Configure the required Lead/developer roles, and a reviewer for code workflows.');
       const workflowId=input.id??id('workflow');
+      const available=this.store.all<{id:string}>('SELECT id FROM repositories WHERE workspace_id=? ORDER BY id',input.workspaceId);
+      invariant(input.repositoryFree || input.repositorySnapshots || available.length===1,'AMBIGUOUS_REPOSITORY','Explicit repository snapshots are required for a multi-repository workflow.');
+      const repositories=input.repositoryFree?[]:input.repositorySnapshots??[{repositoryId:available[0]!.id,baseCommit:input.baseCommit,integrationRef:input.integrationRef}];
+      invariant((input.repositoryFree||repositories.length>0)&&new Set(repositories.map(repo=>repo.repositoryId)).size===repositories.length&&repositories.every(repo=>available.some(item=>item.id===repo.repositoryId)&&/^[0-9a-f]{40,64}$/.test(repo.baseCommit)&&/^refs\/heads\/rift\/[A-Za-z0-9_./-]+$/.test(repo.integrationRef)&&!repo.integrationRef.includes('..')),'INVALID_REPOSITORIES','Workflow repositories must belong to this workspace and have exact commits and safe integration refs.');
       this.store.exec('INSERT INTO workflows(id,workspace_id,goal,lead_session_id,status,integration_ref,base_commit) VALUES(?,?,?,?,?,?,?)',workflowId,input.workspaceId,input.goal,input.leadSessionId??null,'planning',input.integrationRef,input.baseCommit);
+      for(const repository of repositories)this.store.exec('INSERT INTO workflow_repositories(workflow_id,repository_id,base_commit,integration_ref) VALUES(?,?,?,?)',workflowId,repository.repositoryId,repository.baseCommit,repository.integrationRef);
       this.store.event(workflowId,'workflow.created');return this.store.workflow(workflowId);
     });
   }
@@ -71,10 +122,13 @@ export class TaskCoordinator {
       for(const task of fresh){
         invariant(task.title.trim()&&task.instructions.trim()&&['change','analysis'].includes(task.kind),'INVALID_TASK','Task title, instructions and kind are required.');
         const roleId=task.roleName?this.store.require<Role>("SELECT * FROM roles WHERE workspace_id=? AND name=? AND purpose='developer' AND enabled=1",workflow.workspaceId,task.roleName).id:null;
+        const repositories=this.store.all<{repositoryId:string}>('SELECT repository_id FROM workflow_repositories WHERE workflow_id=?',workflow.id);
+        const repositoryId=task.repositoryId??(repositories.length===1?repositories[0]!.repositoryId:undefined);
+        invariant(repositories.length===0?task.kind==='analysis'&&!task.repositoryId&&task.expectedPaths.length===0:repositoryId&&repositories.some(repo=>repo.repositoryId===repositoryId),'REPOSITORY_REQUIRED','Code tasks select a repository; repository-free workflows accept only text analysis with no write paths.');
         validatePriority(task.priority??0);
         if(task.analysisItems!==undefined){invariant(task.kind==='analysis'&&Array.isArray(task.analysisItems)&&task.analysisItems.length>0&&task.analysisItems.length<=32&&new Set(task.analysisItems.map(item=>item.id)).size===task.analysisItems.length&&task.analysisItems.every(item=>typeof item.id==='string'&&/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(item.id)&&typeof item.prompt==='string'&&item.prompt.trim()),'INVALID_ANALYSIS_ITEMS','Analysis batches require 1 to 32 unique safe item IDs and nonempty prompts on an analysis task.');}
 
-        this.store.exec('INSERT INTO tasks(id,workflow_id,role_id,kind,title,instructions,expected_paths,acceptance_criteria,status,priority,analysis_items) VALUES(?,?,?,?,?,?,?,?,?,?,?)',task.id,workflow.id,roleId,task.kind,task.title,task.instructions,JSON.stringify(task.expectedPaths),JSON.stringify(task.acceptanceCriteria??[]),'pending',task.priority??0,task.analysisItems?JSON.stringify(task.analysisItems):null);
+        this.store.exec('INSERT INTO tasks(id,workflow_id,role_id,repository_id,kind,title,instructions,expected_paths,acceptance_criteria,status,priority,analysis_items) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',task.id,workflow.id,roleId,repositoryId??null,task.kind,task.title,task.instructions,JSON.stringify(task.expectedPaths),JSON.stringify(task.acceptanceCriteria??[]),'pending',task.priority??0,task.analysisItems?JSON.stringify(task.analysisItems):null);
       }
       for(const task of fresh)for(const dep of task.dependsOn??[])this.store.exec('INSERT INTO task_dependencies(task_id,depends_on_task_id) VALUES(?,?)',task.id,dep);
       this.store.exec('UPDATE workflows SET plan_revision=plan_revision+1,version=version+1,status=? WHERE id=?',workflow.status==='paused'?'paused':'running',workflow.id);
@@ -133,7 +187,8 @@ export class TaskCoordinator {
     }
   }
   private sameRepository(left:Task,right:Task):boolean {
-    const canonical=(task:Task)=>{let directory=this.store.workspace(this.store.workflow(task.workflowId).workspaceId).commonGitDir;try{directory=realpathSync.native(directory);}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;directory=resolve(directory);}directory=directory.replaceAll('\\','/').replace(/\/$/,'');return process.platform==='win32'?directory.toLowerCase():directory;};
+    if(this.isTextAnalysis(left)||this.isTextAnalysis(right))return false;
+    const canonical=(task:Task)=>{let directory=this.context(task).workspace.commonGitDir;try{directory=realpathSync.native(directory);}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;directory=resolve(directory);}directory=directory.replaceAll('\\','/').replace(/\/$/,'');return process.platform==='win32'?directory.toLowerCase():directory;};
     return canonical(left)===canonical(right);
   }
   private markScheduled(workflowId:string):void {
@@ -182,12 +237,15 @@ export class TaskCoordinator {
       if(dependency==='blocked'){this.operationPhase(operation,'blocked','DEPENDENCY_BLOCKED');this.store.exec('UPDATE tasks SET status=?,blocking_reason=?,version=version+1 WHERE id=?','blocked','DEPENDENCY_BLOCKED',task.id);return;}
       if(dependency==='waiting')return;
       const occupied=this.store.all<Run>('SELECT * FROM runs WHERE slot_released_at IS NULL');
-      if(occupied.length>=this.limits.total||occupied.filter(run=>run.purpose!=='review').length>=this.limits.developers||occupied.some(run=>run.taskId===task.id))return;
+      const slots=this.globalSlots();
+      if(slots.total>=this.limits.total||slots.developers>=this.limits.developers||occupied.some(run=>run.taskId===task.id))return;
       if(occupied.some(run=>run.purpose!=='review'&&this.sameRepository(task,this.store.task(run.taskId))&&pathsOverlap(task.expectedPaths,this.store.task(run.taskId).expectedPaths)))return;
-      const roles=this.store.all<Role>("SELECT * FROM roles WHERE workspace_id=? AND purpose='developer' AND enabled=1 ORDER BY name",workflow.workspaceId);
-      const requestedRole=operation.payload.roleId??task.roleId;
-      if(requestedRole&&!roles.some(role=>role.id===requestedRole)){this.operationPhase(operation,'blocked','ROLE_UNAVAILABLE');return;}
-      const role=roles.find(candidate=>(!requestedRole||candidate.id===requestedRole)&&!occupied.some(run=>run.roleId===candidate.id));
+      const textOnly=this.isTextAnalysis(task);
+      const roles=this.store.all<Role>(`SELECT r.* FROM roles r JOIN provider_bindings b ON b.id=r.provider_binding_id WHERE r.workspace_id=? AND r.purpose='developer' AND r.enabled=1 AND ${textOnly?"(r.chat_connection IS NOT NULL OR b.spawn IS NOT NULL)":"b.provider_name<>'discussion-only'"} ORDER BY r.name`,workflow.workspaceId);
+      const previousNativeRole=task.attempt>1?this.store.get<{roleId:string}>("SELECT r.role_id FROM runs r JOIN native_executions e ON e.execution_id=r.id OR instr(e.execution_id,r.id||':item:')=1 JOIN native_sessions s ON s.id=e.session_id WHERE r.task_id=? AND r.purpose<>'review' AND s.thread_id IS NOT NULL ORDER BY r.rowid DESC LIMIT 1",task.id)?.roleId:undefined;
+      const requestedRole=operation.payload.roleId??task.roleId??previousNativeRole;
+      if(!roles.length||(requestedRole&&!roles.some(role=>role.id===requestedRole))){const reason=textOnly?'CONNECTION_REQUIRED':'ROLE_UNAVAILABLE';this.blockTask(task.id,reason);this.operationPhase(operation,'blocked',reason);return;}
+      const role=roles.find(candidate=>(!requestedRole||candidate.id===requestedRole)&&!this.store.get('SELECT id FROM execution_leases WHERE agent_id=? AND released_at IS NULL',candidate.id));
       if(!role)return;
       const run=this.createRun(task,role,task.attempt===1?'develop':'repair');
       this.markScheduled(workflow.id);
@@ -199,7 +257,8 @@ export class TaskCoordinator {
   private createRun(task:Task,role:Role,purpose:Run['purpose']):Run {
     const runId=id('run'),binding=role.providerBindingId?this.store.binding(role.providerBindingId):null;
     invariant(binding,'BINDING_NOT_FOUND','Child role needs a registered provider binding.');
-    this.store.exec('INSERT INTO runs(id,task_id,role_id,purpose,task_attempt,status,provider_snapshot,deadline,created_at) VALUES(?,?,?,?,?,?,?,?,?)',runId,task.id,role.id,purpose,task.attempt,'preparing',JSON.stringify({role,binding}),new Date(Date.now()+this.runTimeoutMs).toISOString(),now());
+    const skills=this.skillSnapshot?.(this.store.workflow(task.workflowId).workspaceId,role.id,(this.isTextAnalysis(task)?(role as Role & {chatConnection?:{runtime:string}}).chatConnection?.runtime:undefined)??binding.runtime??binding.providerName,runId);
+    this.store.exec('INSERT INTO runs(id,task_id,role_id,purpose,task_attempt,status,provider_snapshot,deadline,created_at,runtime_boot_id) VALUES(?,?,?,?,?,?,?,?,?,?)',runId,task.id,role.id,purpose,task.attempt,'preparing',JSON.stringify({role,binding,...skills?{skills:skills.versions,skillInstructions:skills.instructions}:{}}),new Date(Date.now()+this.runTimeoutMs).toISOString(),now(),this.bootIdentity);
     return this.store.run(runId);
   }
   private track(promise:Promise<void>):void {this.background.add(promise);void promise.finally(()=>this.background.delete(promise)).catch(()=>{});}
@@ -208,7 +267,14 @@ export class TaskCoordinator {
     try {
       // Re-sort after every reservation so a large workflow cannot consume every vacancy.
       for(;;){let reserved=false;for(const operation of this.queued('dispatch')){
-        const run=this.reserve(operation);if(run){this.track(this.executeDevelopment(run,operation).catch(error=>this.unexpected(run,error)));reserved=true;break;}
+        let run: Run | undefined;
+        try { run=this.reserve(operation); }
+        catch(error) {
+          if (!(error instanceof RiftError) || !/^SKILL_(?:INCOMPATIBLE|ARCHIVED|NAME_CONFLICT|CONTEXT_LIMIT)$/.test(error.code)) throw error;
+          this.store.transaction(()=>{this.blockTask(operation.entityId,errorMessage(error));this.operationPhase(this.store.operation(operation.id),'blocked',`${error.code}: ${errorMessage(error)}`);});
+          continue;
+        }
+        if(run){this.track(this.executeDevelopment(run,operation).catch(error=>this.unexpected(run,error)));reserved=true;break;}
       }if(!reserved)break;}
       if(!this.integrationBusy&&!this.store.get('SELECT id FROM integrations WHERE status IN (\'preparing\',\'reviewing\',\'publishing\',\'cleanup_unknown\') LIMIT 1')) {
         for(const operation of this.queued('integration')) {
@@ -222,18 +288,25 @@ export class TaskCoordinator {
       }
     } finally {this.pumping=false;}
   }
-  private context(task:Task) {const workflow=this.store.workflow(task.workflowId);return{task,workflow,workspace:this.store.workspace(workflow.workspaceId)};}
+  private context(task:Task) {
+    const workflow=this.store.workflow(task.workflowId),workspace=this.store.workspace(workflow.workspaceId);
+    const repositories=this.store.all<{repositoryId:string;canonicalPath:string;commonGitDir:string;baseRef:string;baseCommit:string;integrationRef:string}>('SELECT f.*,r.canonical_path,r.common_git_dir,r.base_ref FROM workflow_repositories f JOIN repositories r ON r.id=f.repository_id WHERE f.workflow_id=?',workflow.id);
+    const repository=task.repositoryId?repositories.find(repo=>repo.repositoryId===task.repositoryId):repositories.length===1?repositories[0]:undefined;
+    invariant(repository,'REPOSITORY_REQUIRED','Task repository is missing or ambiguous.');
+    return {task,workflow:{...workflow,baseCommit:repository.baseCommit,integrationRef:repository.integrationRef},workspace:{...workspace,repositoryPath:repository.canonicalPath,commonGitDir:repository.commonGitDir,baseRef:repository.baseRef}};
+  }
+  private isTextAnalysis(task:Task):boolean {return task.kind==='analysis'&&!this.store.get('SELECT repository_id FROM workflow_repositories WHERE workflow_id=? LIMIT 1',task.workflowId);}
   private saveWorktree(worktree:Worktree,run:Run):void {this.store.exec('INSERT INTO worktrees(id,task_id,attempt,kind,path,branch,base_commit,head_commit,writer_run_id,status) VALUES(?,?,?,?,?,?,?,?,?,?)',worktree.id,run.taskId,run.taskAttempt,worktree.kind,worktree.path,worktree.branch??null,worktree.baseCommit,worktree.headCommit??null,run.id,'active');}
   private async prompt(run:Run,task:Task,cwd:string,candidate?:Candidate,worktree?:Worktree):Promise<string> {
     const previous=this.store.all<Run>('SELECT * FROM runs WHERE task_id=? AND id<>? ORDER BY created_at',task.id,run.id);
     const sourceEvidence=this.store.all<{payload:unknown}>('SELECT payload FROM task_events WHERE task_id=? AND type=? ORDER BY event_seq DESC LIMIT 1',task.id,'source.collected').map(event=>event.payload);
     const integrationEvidence=this.store.all<IntegrationRecord>('SELECT * FROM integrations WHERE task_id=? ORDER BY rowid',task.id);
-    const currentTargetHead=candidate?.expectedTargetHead??(this.git.currentHead?await this.git.currentHead(this.context(task)):null);
-    return JSON.stringify({role:run.providerSnapshot.role.prompt,taskId:task.id,runId:run.id,goal:this.store.workflow(task.workflowId).goal,title:task.title,instructions:task.instructions,cwd,expectedPaths:task.expectedPaths,acceptanceCriteria:task.acceptanceCriteria,attempt:task.attempt,sourceHead:task.sourceHead,baseCommit:worktree?.baseCommit??candidate?.candidateHead??this.store.workflow(task.workflowId).baseCommit,currentTargetHead,candidate,sourceEvidence,integrationEvidence,previousResults:previous.map(prior=>({runId:prior.id,status:prior.status,result:prior.result,stopReason:prior.stopReason})),resultSchema:run.purpose==='review'?{schemaVersion:1,taskId:task.id,runId:run.id,verdict:'approve|changes_requested|blocked',reviewedCommit:candidate?.candidateHead,findings:[{severity:'critical|high|medium|low',file:'string',line:1,reason:'string',suggestion:'string'}]}:{schemaVersion:1,taskId:task.id,runId:run.id,outcome:'completed|blocked',summary:'string',changedPaths:[],checksClaimed:[],blockingReasons:[]}});
+    const currentTargetHead=candidate?.expectedTargetHead??(!this.isTextAnalysis(task)&&this.git.currentHead?await this.git.currentHead(this.context(task)):null);
+    return JSON.stringify({role:run.providerSnapshot.role.prompt,skillInstructions:run.providerSnapshot.skillInstructions??'',skillVersions:run.providerSnapshot.skills??[],taskId:task.id,runId:run.id,goal:this.store.workflow(task.workflowId).goal,title:task.title,instructions:task.instructions,cwd,expectedPaths:task.expectedPaths,acceptanceCriteria:task.acceptanceCriteria,attempt:task.attempt,sourceHead:task.sourceHead,baseCommit:worktree?.baseCommit??candidate?.candidateHead??this.store.workflow(task.workflowId).baseCommit,currentTargetHead,candidate,sourceEvidence,integrationEvidence,previousResults:previous.map(prior=>({runId:prior.id,status:prior.status,result:prior.result,stopReason:prior.stopReason})),resultSchema:run.purpose==='review'?{schemaVersion:1,taskId:task.id,runId:run.id,verdict:'approve|changes_requested|blocked',reviewedCommit:candidate?.candidateHead,findings:[{severity:'critical|high|medium|low',file:'string',line:1,reason:'string',suggestion:'string'}]}:{schemaVersion:1,taskId:task.id,runId:run.id,outcome:'completed|blocked',summary:'string',changedPaths:[],checksClaimed:[],blockingReasons:[]}});
   }
   private async cleanup(runId:string,state:Active):Promise<boolean> {
     if(state.cleanup)return state.cleanup;
-    state.cleanup=(async()=>{let timer:ReturnType<typeof setTimeout>|undefined;try {if(!state.handle)return false;await Promise.race([state.handle.dispose(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new RiftError('CLEANUP_TIMEOUT','Activation cleanup did not settle before its deadline.')),this.cleanupTimeoutMs);})]);this.store.transaction(()=>this.confirmCleanup(runId));return true;}catch(error){this.store.transaction(()=>{const timedOut=error instanceof RiftError&&error.code==='CLEANUP_TIMEOUT';this.store.exec('UPDATE runs SET cleanup_status=? WHERE id=?',timedOut?'unknown':'failed',runId);const run=this.store.run(runId);const task=this.store.task(run.taskId);this.store.event(task.workflowId,timedOut?'cleanup.unknown':'cleanup.failed',{error:errorMessage(error)},{taskId:task.id,runId});});return false;}finally{if(timer)clearTimeout(timer);}})();
+    state.cleanup=(async()=>{let timer:ReturnType<typeof setTimeout>|undefined;try {if(!state.handle)return false;await Promise.race([state.handle.dispose().then(()=>this.cleanupReceipt(runId)),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new RiftError('CLEANUP_TIMEOUT','Activation cleanup did not settle before its deadline.')),this.cleanupTimeoutMs);})]);this.store.transaction(()=>this.confirmCleanup(runId));return true;}catch(error){this.store.transaction(()=>{const timedOut=error instanceof RiftError&&error.code==='CLEANUP_TIMEOUT';this.store.exec('UPDATE runs SET cleanup_status=? WHERE id=?',timedOut?'unknown':'failed',runId);const run=this.store.run(runId);const task=this.store.task(run.taskId);this.store.event(task.workflowId,timedOut?'cleanup.unknown':'cleanup.failed',{error:errorMessage(error)},{taskId:task.id,runId});});return false;}finally{if(timer)clearTimeout(timer);}})();
     return state.cleanup;
   }
   private confirmCleanup(runId:string):void {const run=this.store.run(runId),task=this.store.task(run.taskId);this.store.exec('UPDATE runs SET cleanup_status=?,slot_released_at=? WHERE id=?','confirmed',now(),runId);this.store.exec('UPDATE worktrees SET writer_run_id=NULL WHERE writer_run_id=?',runId);this.store.event(task.workflowId,'cleanup.confirmed',{}, {taskId:task.id,runId});}
@@ -250,34 +323,45 @@ export class TaskCoordinator {
     const timeout=setTimeout(()=>{void this.cancelRun(run.id,'TIMEOUT');},Math.max(1,Date.parse(run.deadline)-Date.now()));
     let startAttempted=false;
     let rawText:string|undefined;
+    let abortListener:(()=>void)|undefined;
+    const aborted=new Promise<never>((_,reject)=>{abortListener=()=>reject(new RiftError('CANCELLED','Run was cancelled.'));state.controller.signal.addEventListener('abort',abortListener,{once:true});});
+    void aborted.catch(()=>undefined);
     try {
       const prompt=await this.prompt(run,task,cwd,candidate,worktree);
       if(state.controller.signal.aborted)throw new RiftError('ABORTED_BEFORE_START','Run was cancelled before provider invocation.');
       this.store.transaction(()=>{const input=safeValue(JSON.parse(prompt));const artifactId=saveResultArtifact(this.store,this.store.workflow(task.workflowId).workspaceId,run.id,input,'input');this.store.event(task.workflowId,'run.input_prepared',{artifactId,promptSha256:createHash('sha256').update(JSON.stringify(input)).digest('hex'),cwd,baseCommit:worktree?.baseCommit??candidate?.candidateHead??null,sourceHead:task.sourceHead,candidateHead:candidate?.candidateHead??null},{taskId:task.id,runId:run.id});});
       startAttempted=true;
-      const handle=await this.bridge.start({run,task,role:run.providerSnapshot.role,cwd,prompt,signal:state.controller.signal});state.handle=handle;
+      const bridge=this.isTextAnalysis(task)?this.textAnalysisBridge:this.bridge;
+      invariant(bridge,'START_NOT_PUBLISHED','A restricted text-analysis runtime is not configured.');
+      const starting=bridge.start({run,task,role:run.providerSnapshot.role,cwd,prompt,signal:state.controller.signal});
+      void starting.then(late=>{if(!state.handle&&state.controller.signal.aborted){void late.result.catch(()=>undefined);void late.dispose().then(()=>this.cleanupReceipt(run.id)).catch(()=>undefined);}},()=>undefined);
+      const handle=await Promise.race([starting,aborted]);state.handle=handle;
+      if(state.cleanup)state.cleanup=undefined;
       this.store.transaction(()=>{this.store.exec('UPDATE runs SET dsh_child_id=?,status=?,started_at=? WHERE id=?',handle.childId,state.cancelled?'cancelling':'running',now(),run.id);this.store.event(task.workflowId,'activation_accepted',{childId:handle.childId},{taskId:task.id,runId:run.id});});
       if(state.cancelled){await this.cleanup(run.id,state);this.store.transaction(()=>this.recordResult(run.id,'cancelled',state.cancelReason??'CANCELLED',null));return;}
-      const result=await Promise.race([handle.result,new Promise<never>((_,reject)=>{state.controller.signal.addEventListener('abort',()=>reject(new RiftError('CANCELLED','Run was cancelled.')),{once:true});})]);
+      const result=await Promise.race([handle.result,aborted]);
       rawText=result.text;
       if(result.dshRunId)this.store.exec('UPDATE runs SET dsh_run_id=? WHERE id=?',result.dshRunId,run.id);
       invariant(['completed','end_turn','stop','success'].includes(result.stopReason),'PROVIDER_STOP',`Provider stopped with ${result.stopReason}.`);
       const parsed=parseResult(result.text,{taskId:task.id,runId:run.id,purpose:run.purpose});
       this.store.transaction(()=>this.recordResult(run.id,'succeeded',result.stopReason,parsed));return parsed;
-    }catch(error){this.store.transaction(()=>{this.recordResult(run.id,state.cancelled?'cancelled':'failed',state.cancelled?(state.cancelReason??'CANCELLED'):error instanceof RiftError?error.code:'EXECUTION_FAILED',{error:errorMessage(error),...(rawText===undefined?{}:{output:redact(rawText)})});if(!state.handle){if(!startAttempted||(error instanceof RiftError&&['START_NOT_PUBLISHED','LIVE_LEAD_REQUIRED','PROVIDER_UNAVAILABLE','ABORTED_BEFORE_START'].includes(error.code)))this.confirmCleanup(run.id);else this.store.exec('UPDATE runs SET cleanup_status=? WHERE id=?','unknown',run.id);}});return;}
-    finally {clearTimeout(timeout);if(state.handle)await this.cleanup(run.id,state);this.active.delete(run.id);}
+    }catch(error){this.store.transaction(()=>{this.recordResult(run.id,state.cancelled?'cancelled':'failed',state.cancelled?(state.cancelReason??'CANCELLED'):error instanceof RiftError?error.code:'EXECUTION_FAILED',{error:errorMessage(error),...(rawText===undefined?{}:{output:redact(rawText)})});if(!state.handle){if(!startAttempted||(error instanceof RiftError&&(['START_NOT_PUBLISHED','LIVE_LEAD_REQUIRED','PROVIDER_UNAVAILABLE','ABORTED_BEFORE_START'].includes(error.code)||(error.details as {cleanupConfirmed?:boolean}|undefined)?.cleanupConfirmed)))this.confirmCleanup(run.id);else this.store.exec('UPDATE runs SET cleanup_status=? WHERE id=?','unknown',run.id);}});return;}
+    finally {clearTimeout(timeout);if(abortListener)state.controller.signal.removeEventListener('abort',abortListener);if(state.handle)await this.cleanup(run.id,state);this.active.delete(run.id);}
   }
   private blockTask(taskId:string,reason:string):void {const task=this.store.task(taskId);if(['succeeded','cancelled'].includes(task.status))return;this.store.exec('UPDATE tasks SET status=?,blocking_reason=?,version=version+1 WHERE id=?','blocked',reason,taskId);this.store.event(task.workflowId,'task.blocked',{reason},{taskId});}
   private async executeDevelopment(run:Run,operation:Operation):Promise<void> {
     const state:Active={controller:new AbortController(),cancelled:false};this.active.set(run.id,state);
-    const task=this.store.task(run.taskId);let worktree:Worktree;
+    const task=this.store.task(run.taskId);let worktree:Worktree|undefined;let cwd:string;
     try {
-      for(const dependency of this.dependencies(task))if(dependency.kind==='change'&&dependency.acceptedCommit){invariant(this.git.containsCommit,'DEPENDENCY_UNVERIFIABLE','Git service cannot verify accepted dependency ancestry.');invariant(await this.git.containsCommit({...this.context(task),commit:dependency.acceptedCommit}),'DEPENDENCY_NOT_INTEGRATED','Accepted dependency is no longer contained in the current integration head.');}
-      worktree=await this.git.prepareTask({...this.context(task),run});this.store.transaction(()=>this.saveWorktree(worktree,run));
+      for(const dependency of this.dependencies(task))if(dependency.kind==='change'&&dependency.acceptedCommit){invariant(this.git.containsCommit,'DEPENDENCY_UNVERIFIABLE','Git service cannot verify accepted dependency ancestry.');invariant(await this.git.containsCommit({...this.context(dependency),commit:dependency.acceptedCommit}),'DEPENDENCY_NOT_INTEGRATED','Accepted dependency is no longer contained in the current integration head.');}
+      if(this.isTextAnalysis(task)){
+        invariant(this.textAnalysisRoot&&this.textAnalysisBridge,'START_NOT_PUBLISHED','Repository-free analysis requires the restricted text runtime.');
+        cwd=resolve(this.textAnalysisRoot,run.id);await mkdir(cwd,{recursive:true});invariant((await readdir(cwd)).length===0,'ANALYSIS_DIRECTORY_DIRTY','Text-analysis staging must start empty.');
+      }else{worktree=await this.git.prepareTask({...this.context(task),run});cwd=worktree.path;this.store.transaction(()=>this.saveWorktree(worktree!,run));}
     }
     catch(error){this.store.transaction(()=>{this.recordResult(run.id,state.cancelled?'cancelled':'failed','WORKTREE_PREPARATION_FAILED',{error:errorMessage(error)});this.confirmCleanup(run.id);this.blockTask(task.id,errorMessage(error));this.operationPhase(this.store.operation(operation.id),'blocked',errorMessage(error));});this.active.delete(run.id);this.pump();return;}
     if(state.cancelled){this.store.transaction(()=>{this.recordResult(run.id,'cancelled','CANCELLED',null);this.confirmCleanup(run.id);this.operationPhase(this.store.operation(operation.id),'cancelled');});this.active.delete(run.id);this.pump();return;}
-    const result=await this.execute(run,task,worktree.path,state,undefined,worktree) as DevelopmentResult|undefined;
+    const result=await this.execute(run,task,cwd,state,undefined,worktree) as DevelopmentResult|undefined;
     try {
       const completed=this.store.run(run.id);
       if(this.store.task(task.id).status==='cancelled'||terminalWorkflows.has(this.store.workflow(task.workflowId).status)){this.store.transaction(()=>this.operationPhase(this.store.operation(operation.id),'cancelled'));return;}
@@ -285,7 +369,8 @@ export class TaskCoordinator {
       if(completed.status==='cancelled'){this.store.transaction(()=>{this.store.exec('UPDATE tasks SET status=?,blocking_reason=?,version=version+1 WHERE id=?','cancelled','CANCELLED',task.id);this.operationPhase(this.store.operation(operation.id),'cancelled');});return;}
       if(!result||result.outcome!=='completed'){this.store.transaction(()=>{this.blockTask(task.id,result?.blockingReasons.join('; ')||completed.stopReason||'EXECUTION_FAILED');this.operationPhase(this.store.operation(operation.id),'blocked','EXECUTION_FAILED');});return;}
       if(task.kind==='analysis'){
-        const evidence=this.git.verifyAnalysis?await this.git.verifyAnalysis({...this.context(this.store.task(task.id)),run:completed,worktree}):undefined;
+        const evidence=this.isTextAnalysis(task)?{textOnly:true,noFilesystemChanges:(await readdir(cwd)).length===0}:this.git.verifyAnalysis?await this.git.verifyAnalysis({...this.context(this.store.task(task.id)),run:completed,worktree:worktree!}):undefined;
+        if(this.isTextAnalysis(task))invariant(evidence&&'noFilesystemChanges' in evidence&&evidence.noFilesystemChanges,'ANALYSIS_MUTATION','Text-analysis runtime changed its staging directory.');
         this.store.transaction(()=>{
           const latest=this.store.task(task.id);
           if(latest.status==='cancelled'||terminalWorkflows.has(this.store.workflow(task.workflowId).status)){this.operationPhase(this.store.operation(operation.id),'cancelled');return;}
@@ -294,14 +379,14 @@ export class TaskCoordinator {
           this.store.exec('UPDATE tasks SET status=?,version=version+1 WHERE id=?','succeeded',task.id);this.operationPhase(this.store.operation(operation.id),'completed');this.store.event(task.workflowId,'task.succeeded',{}, {taskId:task.id,runId:run.id});
         });return;
       }
-      const source=await this.git.collectSource({...this.context(this.store.task(task.id)),run:completed,worktree});
+      const source=await this.git.collectSource({...this.context(this.store.task(task.id)),run:completed,worktree:worktree!});
       const eligible=this.store.transaction(()=>{
         const latest=this.store.task(task.id),workflow=this.store.workflow(task.workflowId);
         const sameAttempt=latest.attempt===run.taskAttempt;
         const mayIntegrate=sameAttempt&&latest.status==='running'&&!terminalWorkflows.has(workflow.status);
         if(mayIntegrate)this.store.exec('UPDATE tasks SET status=?,source_head=?,version=version+1 WHERE id=?','validating',source.sourceHead,task.id);
         else if(sameAttempt)this.store.exec('UPDATE tasks SET source_head=?,version=version+1 WHERE id=?',source.sourceHead,task.id);
-        this.store.exec('UPDATE worktrees SET head_commit=? WHERE id=?',source.sourceHead,worktree.id);
+        this.store.exec('UPDATE worktrees SET head_commit=? WHERE id=?',source.sourceHead,worktree!.id);
         this.operationPhase(this.store.operation(operation.id),mayIntegrate?'completed':'cancelled');
         this.store.event(task.workflowId,'source.collected',{...source,diff:redact(source.diff),taskAttempt:run.taskAttempt,eligibleForIntegration:mayIntegrate},{taskId:task.id,runId:run.id});
         return mayIntegrate;
@@ -312,13 +397,13 @@ export class TaskCoordinator {
   }
   private async executeIntegration(operation:Operation):Promise<void> {
     let task=this.store.task(operation.entityId);const integrationId=id('integration');let candidate:Candidate|undefined;let reviewRun:Run|undefined;
-    this.store.transaction(()=>{this.store.exec('INSERT INTO integrations(id,task_id,source_head,status) VALUES(?,?,?,?)',integrationId,task.id,operation.payload.sourceHead!,'preparing');operation.payload.integrationId=integrationId;this.operationPhase(operation,'started');this.store.exec('UPDATE tasks SET status=?,version=version+1 WHERE id=?','integrating',task.id);});
+    this.store.transaction(()=>{this.store.exec('INSERT INTO integrations(id,task_id,source_head,status,runtime_boot_id) VALUES(?,?,?,?,?)',integrationId,task.id,operation.payload.sourceHead!,'preparing',this.bootIdentity);operation.payload.integrationId=integrationId;this.operationPhase(operation,'started');this.store.exec('UPDATE tasks SET status=?,version=version+1 WHERE id=?','integrating',task.id);});
     try {
       candidate=await this.git.prepareCandidate({...this.context(task),sourceHead:operation.payload.sourceHead!,integrationId});
       this.store.transaction(()=>{this.store.exec('UPDATE integrations SET expected_target_head=?,candidate_head=?,check_ids=?,candidate=? WHERE id=?',candidate!.expectedTargetHead,candidate!.candidateHead,JSON.stringify(candidate!.checkIds),JSON.stringify(candidate),integrationId);this.store.event(task.workflowId,'candidate.prepared',candidate,{taskId:task.id,requestId:operation.id});});
-      while(this.store.workflow(task.workflowId).status==='paused'&&this.store.task(task.id).status!=='cancelled'&&!this.stopping)await new Promise(resolve=>setTimeout(resolve,25));
+      while((this.store.workflow(task.workflowId).status==='paused'||!this.availableReviewer(this.store.workflow(task.workflowId).workspaceId))&&!terminalWorkflows.has(this.store.workflow(task.workflowId).status)&&this.store.task(task.id).status!=='cancelled'&&!this.stopping)await new Promise(resolve=>setTimeout(resolve,25));
       task=this.store.task(task.id);invariant(!this.stopping&&this.store.workflow(task.workflowId).status==='running'&&task.status!=='cancelled','CANCELLED','Integration cancelled before review.');
-      reviewRun=this.store.transaction(()=>{const role=this.store.require<Role>("SELECT * FROM roles WHERE workspace_id=? AND purpose='reviewer' AND enabled=1 ORDER BY name LIMIT 1",this.store.workflow(task.workflowId).workspaceId);const run=this.createRun(task,role,'review');this.store.exec('UPDATE integrations SET status=?,review_run_id=? WHERE id=?','reviewing',run.id,integrationId);operation.payload.runId=run.id;this.store.exec('UPDATE operations SET payload=? WHERE id=?',JSON.stringify(operation.payload),operation.id);this.store.event(task.workflowId,'review.reserved',{candidateHead:candidate!.candidateHead},{taskId:task.id,runId:run.id,requestId:operation.id});return run;});
+      reviewRun=this.store.transaction(()=>{const role=this.availableReviewer(this.store.workflow(task.workflowId).workspaceId);invariant(role,'CAPACITY','Reviewer capacity is occupied.');const run=this.createRun(task,role,'review');this.store.exec('UPDATE integrations SET status=?,review_run_id=? WHERE id=?','reviewing',run.id,integrationId);operation.payload.runId=run.id;this.store.exec('UPDATE operations SET payload=? WHERE id=?',JSON.stringify(operation.payload),operation.id);this.store.event(task.workflowId,'review.reserved',{candidateHead:candidate!.candidateHead},{taskId:task.id,runId:run.id,requestId:operation.id});return run;});
       const state:Active={controller:new AbortController(),cancelled:false};this.active.set(reviewRun.id,state);
       const review=await this.execute(reviewRun,task,candidate.cwd,state,candidate) as ReviewResult|undefined;
       invariant(this.store.run(reviewRun.id).cleanupStatus==='confirmed','CLEANUP_UNKNOWN','Review cleanup is unconfirmed.');
@@ -330,6 +415,7 @@ export class TaskCoordinator {
     }catch(error){
       const unknown=reviewRun&&this.store.run(reviewRun.id).cleanupStatus!=='confirmed';
       const publishing=this.store.require<IntegrationRecord>('SELECT * FROM integrations WHERE id=?',integrationId).status==='publishing';
+      if(candidate&&!publishing)this.integrationCleanupReceipts.add(integrationId);
       if(publishing&&candidate){
         let publication:'published'|'not-published'|'unknown'='unknown';
         if(this.git.recoverPublication)try{publication=await this.git.recoverPublication({...this.context(task),candidate});}catch{/* Preserve publication intent for startup inspection. */}
@@ -341,11 +427,13 @@ export class TaskCoordinator {
   }
   private unexpected(run:Run,error:unknown):void {this.store.transaction(()=>{this.recordResult(run.id,'interrupted','INTERNAL_ERROR',{error:errorMessage(error)});this.store.exec('UPDATE runs SET cleanup_status=? WHERE id=? AND slot_released_at IS NULL','unknown',run.id);this.blockTask(run.taskId,errorMessage(error));});}
 
-  private globalSlots():{developers:number;reviewers:number;total:number} {const occupied=this.store.all<Run>('SELECT * FROM runs WHERE slot_released_at IS NULL');return{developers:occupied.filter(run=>run.purpose!=='review').length,reviewers:occupied.filter(run=>run.purpose==='review').length,total:occupied.length};}
+  private globalSlots():{developers:number;reviewers:number;total:number} {return this.store.require("SELECT COALESCE(SUM(capacity='developer'),0) AS developers,COALESCE(SUM(capacity='reviewer'),0) AS reviewers,COUNT(*) AS total FROM execution_leases WHERE released_at IS NULL AND capacity<>'lead'");}
+  private availableReviewer(workspaceId:string):Role|undefined {const slots=this.globalSlots();if(slots.total>=this.limits.total||slots.reviewers>=1)return;return this.store.get<Role>("SELECT r.* FROM roles r JOIN provider_bindings b ON b.id=r.provider_binding_id WHERE r.workspace_id=? AND r.purpose='reviewer' AND r.enabled=1 AND b.provider_name<>'discussion-only' AND NOT EXISTS(SELECT 1 FROM execution_leases l WHERE l.agent_id=r.id AND l.released_at IS NULL) ORDER BY r.name LIMIT 1",workspaceId);}
   status(workflowId:string) {
     const workflow=this.store.workflow(workflowId),tasks=this.store.all<Task>('SELECT * FROM tasks WHERE workflow_id=? ORDER BY rowid',workflowId);
-    const runs=this.store.all<Run>('SELECT r.* FROM runs r JOIN tasks t ON t.id=r.task_id WHERE t.workflow_id=? ORDER BY r.created_at',workflowId),occupied=runs.filter(run=>run.slotReleasedAt===null);
-    return {workflow,roles:this.store.all<Role>('SELECT * FROM roles WHERE workspace_id=? ORDER BY name',workflow.workspaceId),tasks:tasks.map(task=>({...task,dependencyStatus:dependencyStatus(this.dependencies(task))})),runs,worktrees:this.store.all<Worktree>('SELECT w.* FROM worktrees w JOIN tasks t ON t.id=w.task_id WHERE t.workflow_id=?',workflowId),operations:this.store.all<Operation>('SELECT o.* FROM operations o JOIN tasks t ON t.id=o.entity_id WHERE t.workflow_id=? ORDER BY o.created_at,o.id',workflowId),integrations:this.store.all<IntegrationRecord>('SELECT i.* FROM integrations i JOIN tasks t ON t.id=i.task_id WHERE t.workflow_id=?',workflowId),limits:this.limits,globalSlots:this.globalSlots(),slots:{developers:occupied.filter(run=>run.purpose!=='review').length,reviewers:occupied.filter(run=>run.purpose==='review').length,total:occupied.length},eventSeq:this.store.get<{seq:number}>('SELECT COALESCE(MAX(event_seq),0) AS seq FROM task_events WHERE workflow_id=?',workflowId)!.seq};
+    const runs=this.store.all<Run & {runtimeBootId:string|null}>('SELECT r.* FROM runs r JOIN tasks t ON t.id=r.task_id WHERE t.workflow_id=? ORDER BY r.created_at',workflowId).map(({runtimeBootId:_boot,...run})=>run),occupied=runs.filter(run=>run.slotReleasedAt===null);
+    const nativeExecutions=this.store.all("SELECT r.id AS run_id,s.id AS session_id,s.agent_id,s.thread_id,e.execution_id,e.native_turn_id,e.status FROM runs r JOIN native_executions e ON e.execution_id=r.id OR instr(e.execution_id,r.id||':item:')=1 JOIN native_sessions s ON s.id=e.session_id JOIN tasks t ON t.id=r.task_id WHERE t.workflow_id=? ORDER BY r.rowid,e.execution_id",workflowId);
+    return {workflow,nativeExecutions,repositories:this.store.all('SELECT * FROM workflow_repositories WHERE workflow_id=?',workflowId),roles:this.store.all<Role>('SELECT * FROM roles WHERE workspace_id=? ORDER BY name',workflow.workspaceId),tasks:tasks.map(task=>({...task,dependencyStatus:dependencyStatus(this.dependencies(task))})),runs,worktrees:this.store.all<Worktree>('SELECT w.* FROM worktrees w JOIN tasks t ON t.id=w.task_id WHERE t.workflow_id=?',workflowId),operations:this.store.all<Operation>('SELECT o.* FROM operations o JOIN tasks t ON t.id=o.entity_id WHERE t.workflow_id=? ORDER BY o.created_at,o.id',workflowId),integrations:this.store.all<IntegrationRecord & {runtimeBootId:string|null}>('SELECT i.* FROM integrations i JOIN tasks t ON t.id=i.task_id WHERE t.workflow_id=?',workflowId).map(({runtimeBootId:_boot,...integration})=>integration),limits:this.limits,globalSlots:this.globalSlots(),slots:{developers:occupied.filter(run=>run.purpose!=='review').length,reviewers:occupied.filter(run=>run.purpose==='review').length,total:occupied.length},eventSeq:this.store.get<{seq:number}>('SELECT COALESCE(MAX(event_seq),0) AS seq FROM task_events WHERE workflow_id=?',workflowId)!.seq};
   }
   async wait(input:WaitInput):Promise<{events:TaskEvent[];eventSeq:number;timedOut:boolean;status:ReturnType<TaskCoordinator['status']>}> {
     invariant((input.runIds?.length??0)+(input.requestIds?.length??0)>0,'INVALID_WAIT','wait requires runIds or requestIds.');
@@ -406,6 +494,6 @@ export class TaskCoordinator {
     this.store.transaction(()=>{this.store.exec('UPDATE workflows SET status=?,version=version+1 WHERE status IN (\'running\',\'planning\',\'blocked\')','paused');});
     return{interruptedRunIds,recoveredIntegrationIds};
   }
-  async shutdown():Promise<void> {this.stopping=true;await Promise.allSettled([...this.active.keys()].map(runId=>this.cancelRun(runId,'HOST_SHUTDOWN')));await Promise.allSettled([...this.background]);}
+  async shutdown():Promise<void> {this.stopping=true;await Promise.allSettled([...this.active.keys()].map(runId=>this.cancelRun(runId,'HOST_SHUTDOWN')));await Promise.allSettled([...this.background]);this.closed=true;}
 }
 

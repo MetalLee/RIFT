@@ -105,8 +105,8 @@ HTTP/工具单次最多提交 1000 个任务，仍受 256 KiB 管理请求大小
 }
 ```
 
-批次必须先登记 Task、预留 Run 和独占 worktree，再由官方 Workflow engine 执行固定脚本。1–32 个子项顺序执行，每项在结束并清理后启动下一项，因此一个批次只占一个业务开发槽。输入是数据，用户或模型不能提交脚本。每项结果与官方 Workflow ID 聚合进入原有结果产物；任一失败使任务阻塞。
+批次必须先登记 Task、预留 Run 和独占 worktree。非 Codex Provider 由官方 Workflow engine 执行固定脚本；2026-10-26 起内置 Codex Provider 直接按 item ID 维护持久 thread。两条路径的 1–32 个子项均顺序执行，每项在结束并清理后启动下一项，因此一个批次只占一个业务开发槽。输入是数据，用户或模型不能提交脚本。每项结果聚合进入原有结果产物；DSH 路径另保存官方 Workflow ID，Codex 路径在原生执行账本保存 thread/turn 身份。任一失败使任务阻塞。
 
 这是对提供文本的分析。DSH 分析子项没有工具权限；外部 Provider 使用自身原生工具策略，结束后必须通过真实 Git 只读检查。HEAD 变化、tracked/untracked/ignored 文件变更都阻止成功。`change` Task 携带 `analysisItems` 会被拒绝；代码变更仍需普通开发、确定性检查、精确提交审查与发布。
 
-复用只发生在一次执行内。崩溃后不恢复旧 Workflow handle、不自动重放子项，未知清理保留占槽。SSE、Web UI、长期原生 Session 和运行中人工审批不属于本轮实现。
+原 E1 的复用只发生在一次执行内。当前 SSE/Web UI 已交付，Codex 原生 thread 可以在明确返工时续接；详情见 [原生会话说明](native-sessions.md)。崩溃后不恢复旧 DSH Workflow handle、不自动重放子项，未知清理保留占槽；运行中人工审批仍未接入。

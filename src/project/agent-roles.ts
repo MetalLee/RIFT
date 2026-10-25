@@ -16,10 +16,11 @@ export function configureRoles(store:RiftStore,workspaceId:string,bindings:Provi
     if(role.providerBindingId) invariant(bindings.some(binding=>binding.id===role.providerBindingId),'BINDING_NOT_FOUND','Role binding must be included in this configuration.');
   }
   return store.transaction(()=> {
-    invariant(!store.get('SELECT r.id FROM runs r JOIN roles role ON role.id=r.role_id WHERE role.workspace_id=? AND r.slot_released_at IS NULL LIMIT 1',workspaceId),'CONFIG_IN_USE','Cannot change role configuration while executions or unknown cleanup retain slots.');
+    invariant(!store.get('SELECT id FROM execution_leases WHERE workspace_id=? AND released_at IS NULL LIMIT 1',workspaceId),'CONFIG_IN_USE','Cannot change role configuration while executions or unknown cleanup retain slots.');
     for(const prior of store.all<Role>('SELECT * FROM roles WHERE workspace_id=? AND enabled=1',workspaceId)) {
       const replacement=roles.find(role=>role.name===prior.name);
       if(replacement&&rolePurpose(replacement)===rolePurpose(prior))continue;
+      invariant(!store.get("SELECT id FROM agent_turns WHERE agent_id=? AND status='queued' LIMIT 1",prior.id),'CONFIG_IN_USE','A queued discussion still needs this role.');
       invariant(!store.get("SELECT id FROM tasks WHERE role_id=? AND status NOT IN ('succeeded','failed','cancelled') LIMIT 1",prior.id)&&!store.get("SELECT id FROM operations WHERE phase='queued' AND json_extract(payload,'$.roleId')=? LIMIT 1",prior.id),'CONFIG_IN_USE','An unfinished task or queued request still needs this role and purpose.');
     }
     const incomingIds=new Set(bindings.map(binding=>binding.id));
@@ -35,7 +36,7 @@ export function configureRoles(store:RiftStore,workspaceId:string,bindings:Provi
     for(const role of roles) {
       const prior=store.get<Role>('SELECT * FROM roles WHERE workspace_id=? AND name=?',workspaceId,role.name);
       if(prior) invariant(role.revision>prior.revision || (role.revision===prior.revision&&role.kind===prior.kind&&rolePurpose(role)===rolePurpose(prior)&&role.prompt===prior.prompt&&(role.providerBindingId??null)===prior.providerBindingId),'STALE_CONFIG','A changed role requires a higher revision.');
-      store.exec('INSERT INTO roles(id,workspace_id,name,kind,purpose,provider_binding_id,prompt,revision,enabled) VALUES(?,?,?,?,?,?,?,?,1) ON CONFLICT(workspace_id,name) DO UPDATE SET kind=excluded.kind,purpose=excluded.purpose,provider_binding_id=excluded.provider_binding_id,prompt=excluded.prompt,revision=excluded.revision,enabled=1',`${workspaceId}:${role.name}`,workspaceId,role.name,role.kind,rolePurpose(role)!,role.providerBindingId??null,role.prompt,role.revision);
+      store.exec('INSERT INTO roles(id,workspace_id,name,kind,purpose,provider_binding_id,prompt,revision,enabled) VALUES(?,?,?,?,?,?,?,?,1) ON CONFLICT(workspace_id,name) DO UPDATE SET kind=excluded.kind,purpose=excluded.purpose,provider_binding_id=excluded.provider_binding_id,prompt=excluded.prompt,revision=excluded.revision,version=roles.version+1,enabled=1',`${workspaceId}:${role.name}`,workspaceId,role.name,role.kind,rolePurpose(role)!,role.providerBindingId??null,role.prompt,role.revision);
     }
     return store.all<Role>('SELECT * FROM roles WHERE workspace_id=? AND enabled=1 ORDER BY name',workspaceId);
   });

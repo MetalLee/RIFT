@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-25T14:42:06.789Z",
+  "mode": "real persisted connection through official DSH pi-ai adapter and DeepSeek API; no business tools or repository access",
+  "connection": {
+    "id": "connection-391c6f7d-8a52-4039-bd7b-f31e0a0d3644",
+    "name": "DeepSeek API 验收",
+    "protocol": "openai-completions",
+    "endpoint": "https://api.deepseek.com",
+    "model": "deepseek-flash",
+    "credentialRef": "DEEPSEEK_API_KEY",
+    "provider": "rift-api-connection-391c6f7d-8a52-4039-bd7b-f31e0a0d3644",
+    "revision": 1,
+    "parentId": null,
+    "createdAt": "2026-10-25T14:42:06.790Z",
+    "verifiedAt": "2026-10-25T14:42:08.411Z",
+    "verificationStatus": "passed",
+    "verificationError": null,
+    "available": true
+  },
+  "passed": true,
+  "revisionIsolation": true,
+  "status": "pass"
+}

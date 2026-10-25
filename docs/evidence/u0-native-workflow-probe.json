@@ -1,0 +1,126 @@
+{
+  "date": "2026-10-25T14:34:38.883Z",
+  "mode": "real native main agent and real registered native child, isolated Git/SQLite/Host",
+  "mainModel": "gpt-6.1-sol",
+  "nativePayload": "0.164.0",
+  "childProvider": "codex-dev",
+  "turn": {
+    "id": "turn-505aff57-c864-432c-8b2d-672410fe1d82",
+    "workspaceId": "workspace-366bf2c0-3a60-4e1f-b7e0-f2f01fd95823",
+    "conversationId": "conversation-f908b6e0-8e63-4180-8a33-2befd9279b6e",
+    "messageId": "message-b0ee2ac8-a7d9-4d3d-8f04-518d99b17745",
+    "agentId": "workspace-366bf2c0-3a60-4e1f-b7e0-f2f01fd95823:lead",
+    "status": "completed",
+    "configuration": {
+      "connection": {
+        "runtime": "codex",
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": "low"
+      },
+      "agent": {
+        "id": "workspace-366bf2c0-3a60-4e1f-b7e0-f2f01fd95823:lead",
+        "displayName": "lead",
+        "prompt": "Coordinate a durable plan, parallel independent developers and exact-commit acceptance. Do not claim success before workflow_finish succeeds.",
+        "version": 0,
+        "purpose": "lead"
+      },
+      "skillInstructions": "",
+      "skills": []
+    },
+    "version": 2,
+    "cleanupStatus": "confirmed",
+    "error": null,
+    "createdAt": "2026-10-25T14:34:39.056Z",
+    "startedAt": "2026-10-25T14:34:39.057Z",
+    "endedAt": "2026-10-25T14:35:05.954Z"
+  },
+  "workflows": [
+    {
+      "id": "workflow-a7f8817c-72c2-4e91-a4c5-2a4f131b275f",
+      "status": "completed"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task-7505c0d5-0f43-4648-ab20-acb2a1ced03c",
+      "status": "succeeded",
+      "kind": "analysis",
+      "acceptedCommit": null
+    }
+  ],
+  "runs": [
+    {
+      "id": "run-93cc265e-ffd3-4f04-b156-2e3e70d55308",
+      "status": "succeeded",
+      "cleanupStatus": "confirmed",
+      "slotReleasedAt": "2026-10-25T14:35:00.707Z",
+      "dshChildId": "324a51cd-e656-45a6-9daf-c0170901650d"
+    }
+  ],
+  "toolCalls": [
+    {
+      "name": "rift_workflow_start",
+      "outcome": "completed"
+    },
+    {
+      "name": "rift_plan_submit",
+      "outcome": "completed"
+    },
+    {
+      "name": "rift_task_dispatch",
+      "outcome": "completed"
+    },
+    {
+      "name": "rift_wait",
+      "outcome": "completed"
+    },
+    {
+      "name": "rift_wait",
+      "outcome": "completed"
+    },
+    {
+      "name": "rift_wait",
+      "outcome": "completed"
+    },
+    {
+      "name": "rift_wait",
+      "outcome": "completed"
+    },
+    {
+      "name": "rift_status",
+      "outcome": "completed"
+    },
+    {
+      "name": "rift_workflow_finish",
+      "outcome": "completed"
+    }
+  ],
+  "messages": [
+    {
+      "id": "message-b0ee2ac8-a7d9-4d3d-8f04-518d99b17745",
+      "workspaceId": "workspace-366bf2c0-3a60-4e1f-b7e0-f2f01fd95823",
+      "conversationId": "conversation-f908b6e0-8e63-4180-8a33-2befd9279b6e",
+      "clientMessageId": "native-workflow-probe",
+      "recipientAgentId": "workspace-366bf2c0-3a60-4e1f-b7e0-f2f01fd95823:lead",
+      "role": "user",
+      "content": "Run a bounded acceptance of the RIFT workflow tools. Start a workflow with goal \"Read the acceptance README without changing files\". Submit exactly one analysis task, assigned to developer-a, with expectedPaths [] and acceptance criteria [\"Read README.md; change no file and make no commit\"]. Ask the child to return the required RIFT result JSON with outcome completed, summary confirming the README title, changedPaths [], checksClaimed [], blockingReasons []. Dispatch it using current versions. Wait for the actual registered child result; inspect status and finish the workflow only after the analysis task succeeds and cleanup is confirmed. Do not create change tasks or edit files. Once rift_workflow_finish succeeds, reply RIFT_NATIVE_WORKFLOW_OK. If blocked, explain the exact tool error and stop.",
+      "status": "completed",
+      "version": 2,
+      "createdAt": "2026-10-25T14:34:39.056Z"
+    },
+    {
+      "id": "message-a687f512-392b-427a-bc94-25e795c63198",
+      "workspaceId": "workspace-366bf2c0-3a60-4e1f-b7e0-f2f01fd95823",
+      "conversationId": "conversation-f908b6e0-8e63-4180-8a33-2befd9279b6e",
+      "clientMessageId": null,
+      "recipientAgentId": "workspace-366bf2c0-3a60-4e1f-b7e0-f2f01fd95823:lead",
+      "role": "assistant",
+      "content": "RIFT_NATIVE_WORKFLOW_OK",
+      "status": "completed",
+      "version": 0,
+      "createdAt": "2026-10-25T14:35:05.954Z"
+    }
+  ],
+  "repositoryClean": true,
+  "status": "pass"
+}

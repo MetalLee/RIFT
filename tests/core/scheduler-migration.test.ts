@@ -27,7 +27,7 @@ describe('E1 durable scheduler migration and policy',()=>{
         expect(store.run('r')).toMatchObject({cleanupStatus:'unknown',slotReleasedAt:null,providerSnapshot:{role:{prompt:'snapshot'}}});
         expect(store.task('t')).toMatchObject({priority:0,analysisItems:null,roleId:'dev'});
         expect(store.db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
-        store.exec("INSERT INTO workspaces VALUES('w2','workspace2','repo2','active')");
+        store.exec("INSERT INTO workspaces(id,name,root_path,status) VALUES('w2','workspace2','repo2','active')");
         store.exec("INSERT INTO workflows(id,workspace_id,goal,status,integration_ref,base_commit) VALUES('wf2','w2','goal','running','refs/heads/rift/other','abc')");
         expect(()=>store.exec("INSERT INTO tasks(id,workflow_id,role_id,kind,title,instructions,expected_paths,acceptance_criteria,status) VALUES('bad','wf2','dev','analysis','x','x','[]','[]','pending')")).toThrow(/workspace/i);
       }finally{store.close();}

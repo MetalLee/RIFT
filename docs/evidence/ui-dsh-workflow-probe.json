@@ -1,0 +1,115 @@
+{
+  "date": "2026-10-25T14:39:45.388Z",
+  "mode": "real DSH DeepSeek API main agent and real native child, isolated Git/SQLite/Host",
+  "mainModel": "deepseek-flash",
+  "nativePayload": "0.164.0",
+  "childProvider": "codex-dev",
+  "turn": {
+    "id": "turn-a27a7895-7f96-454a-8286-93fd622a4c0f",
+    "workspaceId": "workspace-29234827-3185-4b2f-b5b4-077346968151",
+    "conversationId": "conversation-184c4789-c270-4418-a535-bc39aeb7ba70",
+    "messageId": "message-bdc8c717-0c6c-4d6b-b516-3da7159d8607",
+    "agentId": "workspace-29234827-3185-4b2f-b5b4-077346968151:lead",
+    "status": "completed",
+    "configuration": {
+      "connection": {
+        "runtime": "dsh",
+        "provider": "deepseek-official",
+        "model": "deepseek-flash"
+      },
+      "agent": {
+        "id": "workspace-29234827-3185-4b2f-b5b4-077346968151:lead",
+        "displayName": "lead",
+        "prompt": "Coordinate a durable plan, parallel independent developers and exact-commit acceptance. Do not claim success before workflow_finish succeeds.",
+        "version": 0,
+        "purpose": "lead"
+      },
+      "skillInstructions": "",
+      "skills": [],
+      "request": {
+        "content": "Run a bounded acceptance of the RIFT workflow tools. Start a workflow with goal \"Read the acceptance README without changing files\". Submit exactly one analysis task, assigned to developer-a, with expectedPaths [] and acceptance criteria [\"Read README.md; change no file and make no commit\"]. Ask the child to return the required RIFT result JSON with outcome completed, summary confirming the README title, changedPaths [], checksClaimed [], blockingReasons []. Dispatch it using current versions. Wait for the actual registered child result; inspect status and finish the workflow only after the analysis task succeeds and cleanup is confirmed. Do not create change tasks or edit files. Once rift_workflow_finish succeeds, reply RIFT_NATIVE_WORKFLOW_OK. If blocked, explain the exact tool error and stop.",
+        "recipientAgentId": "workspace-29234827-3185-4b2f-b5b4-077346968151:lead",
+        "contextRefs": [],
+        "mentions": []
+      },
+      "contextData": [],
+      "context": {
+        "capturedAt": "2026-10-25T14:39:45.970Z",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Run a bounded acceptance of the RIFT workflow tools. Start a workflow with goal \"Read the acceptance README without changing files\". Submit exactly one analysis task, assigned to developer-a, with expectedPaths [] and acceptance criteria [\"Read README.md; change no file and make no commit\"]. Ask the child to return the required RIFT result JSON with outcome completed, summary confirming the README title, changedPaths [], checksClaimed [], blockingReasons []. Dispatch it using current versions. Wait for the actual registered child result; inspect status and finish the workflow only after the analysis task succeeds and cleanup is confirmed. Do not create change tasks or edit files. Once rift_workflow_finish succeeds, reply RIFT_NATIVE_WORKFLOW_OK. If blocked, explain the exact tool error and stop."
+          }
+        ],
+        "sources": [
+          {
+            "messageId": "message-bdc8c717-0c6c-4d6b-b516-3da7159d8607",
+            "version": 1
+          }
+        ],
+        "summary": null,
+        "summarySources": []
+      }
+    },
+    "version": 3,
+    "cleanupStatus": "confirmed",
+    "error": null,
+    "createdAt": "2026-10-25T14:39:45.967Z",
+    "startedAt": "2026-10-25T14:39:45.968Z",
+    "endedAt": "2026-10-25T14:40:21.330Z"
+  },
+  "workflows": [
+    {
+      "id": "workflow-7514d676-fb9c-4faa-8fda-8ba8e82f266b",
+      "status": "completed"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "read-acceptance-readme",
+      "status": "succeeded",
+      "kind": "analysis",
+      "acceptedCommit": null
+    }
+  ],
+  "runs": [
+    {
+      "id": "run-17e2e27a-b3a3-4116-a118-cc61bc9bb2a9",
+      "status": "succeeded",
+      "cleanupStatus": "confirmed",
+      "slotReleasedAt": "2026-10-25T14:40:09.121Z",
+      "dshChildId": "rift-analysis-f6a244e6-a97c-42bd-8b5a-b3fdd2a33f33"
+    }
+  ],
+  "toolCalls": [],
+  "messages": [
+    {
+      "id": "message-bdc8c717-0c6c-4d6b-b516-3da7159d8607",
+      "workspaceId": "workspace-29234827-3185-4b2f-b5b4-077346968151",
+      "conversationId": "conversation-184c4789-c270-4418-a535-bc39aeb7ba70",
+      "clientMessageId": "native-workflow-probe",
+      "recipientAgentId": "workspace-29234827-3185-4b2f-b5b4-077346968151:lead",
+      "role": "user",
+      "content": "Run a bounded acceptance of the RIFT workflow tools. Start a workflow with goal \"Read the acceptance README without changing files\". Submit exactly one analysis task, assigned to developer-a, with expectedPaths [] and acceptance criteria [\"Read README.md; change no file and make no commit\"]. Ask the child to return the required RIFT result JSON with outcome completed, summary confirming the README title, changedPaths [], checksClaimed [], blockingReasons []. Dispatch it using current versions. Wait for the actual registered child result; inspect status and finish the workflow only after the analysis task succeeds and cleanup is confirmed. Do not create change tasks or edit files. Once rift_workflow_finish succeeds, reply RIFT_NATIVE_WORKFLOW_OK. If blocked, explain the exact tool error and stop.",
+      "status": "completed",
+      "version": 2,
+      "createdAt": "2026-10-25T14:39:45.967Z",
+      "replyToMessageId": null
+    },
+    {
+      "id": "message-d770ca76-71b4-4d3f-8e03-0b4a5c1fb09a",
+      "workspaceId": "workspace-29234827-3185-4b2f-b5b4-077346968151",
+      "conversationId": "conversation-184c4789-c270-4418-a535-bc39aeb7ba70",
+      "clientMessageId": null,
+      "recipientAgentId": "workspace-29234827-3185-4b2f-b5b4-077346968151:lead",
+      "role": "assistant",
+      "content": "RIFT_NATIVE_WORKFLOW_OK",
+      "status": "completed",
+      "version": 0,
+      "createdAt": "2026-10-25T14:40:21.330Z",
+      "replyToMessageId": "message-bdc8c717-0c6c-4d6b-b516-3da7159d8607"
+    }
+  ],
+  "repositoryClean": true,
+  "status": "pass"
+}

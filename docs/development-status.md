@@ -1,6 +1,22 @@
 # RIFT 开发交付记录
 
-## E1 最新交付（2026-10-25）
+## Codex 原生持久会话（2026-10-26）
+
+聊天按 conversation＋成员保存原生 thread，并以消息 receipts 增量同步公共历史；正式任务按 task＋角色续接，返工默认等待原成员，更新 cwd 和任务 envelope，审查保留独立 thread。新增迁移 0009、原生会话/执行账本及 API 诊断字段，两个 profile 使用 RIFT 自有 Codex Provider；DSH/Claude 路径保持原有执行方式。
+
+真实 Codex 0.164.0 二进制与本地受控 Responses 接口验证了五次进程启动间的历史恢复、工具新闭包、账本重开后的返工、cwd 更新及审查隔离，见 [探针结果](evidence/native-session-probe.json)。本轮没有外部模型调用，不将协议验证表述为真实开发质量或完整原生 Git 工作流验收。架构、限制和备份要求见 [原生会话说明](native-sessions.md)。
+
+最终自动测试 **186/186 通过，32 个文件、0 failed**，见 [测试报告](evidence/native-session-tests.json)。Root/UI 类型检查、生产构建和差异空白检查通过；新迁移唯一归属约束另通过 18 项定向测试。构建仍提示现有前端包超过 500 kB，此次未调整前端拆包。
+
+## UI 最新交付（2026-10-25）
+
+**《RIFT UI 缺口分析、实现方案与开发计划》U0–U8 全部完成。** 两个 Astra 高思考强度子 agent 实现，一个 Astra 高思考强度子 agent 独立检视与功能验收，主 agent 集成和真实运行验证。UI 依据指定 Stitch 项目的八个页面落地，包含多工作区聊天、Agent/连接、@、Skill、多仓库 worktree、任务与证据、恢复与升级说明。
+
+最终 **31 文件、176/176 测试通过，0 failed / 0 pending**；Root/UI 类型检查、生产构建、冻结安装、peer 检查和差异空白检查通过。独立检视无未解决 P0–P2。真实 Native 与 DSH Lead 均完成自主工作流；真实双仓代码闭环完成 2 个任务、4 次开发/审查 Run，两个精确接受提交通过预设 Node 功能测试。Edge 完成真实对话、中文成员定向回复、共享 Skill 生效、连接验证、仓库/目录、停止和响应式检查；最终构建另在全新 home 完成真实回复及空闲状态核对。
+
+启动、备份和恢复见 [UI 使用指南](ui-guide.md)，场景矩阵和适配边界见 [UI 验收](ui-acceptance.md)，机器可读结果见 [UI 最终检查](evidence/ui-final-validation.json)。迁移为 0004–0008；运行时仍为同一个 Host。原生对话只开放已验证组合；Skill 资源/脚本当前明确不兼容；清理未知不提供强制释放。没有提交或推送，本地原有 DESIGN.md 修改保留。以下 E1/P0–P3 的测试计数与延期说明保留为历史。
+
+## E1 历史交付（2026-10-25）
 
 **E1.1–E1.5 done，E1.6 deferred。** 按用户要求由三个 Astra 高思考强度子 agent 分工实现及独立验收，主 agent 集成；未使用 Claude。全局可配置预算、多工作区隔离、自由角色、动态 DAG/公平调度和一次 analysis Run 内官方 Workflow 复用已交付。完整接口见 [E1 指南](e1-guide.md)，任务与检查见 [E1 验收](e1-acceptance.md)。
 
