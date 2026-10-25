@@ -1,0 +1,298 @@
+{
+  "date": "2026-10-25T05:35:06.664Z",
+  "node": "v24.16.0",
+  "platform": "win32",
+  "dsh": "0.2.1-rc.3",
+  "mode": "real DSH services and live Agents, zero model calls",
+  "evidenceDirectory": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\lead-tools-5wiSmV",
+  "toolScope": {
+    "status": "pass",
+    "inherited": [
+      "working_directory",
+      "pwsh",
+      "read_image",
+      "rift_probe_inherited_delegate"
+    ],
+    "visible": [
+      "rift_plan_submit",
+      "rift_task_dispatch",
+      "rift_wait",
+      "rift_status",
+      "rift_task_retry",
+      "rift_integration_request",
+      "rift_workflow_finish"
+    ],
+    "leadPublished": true,
+    "otherDoesNotSeeRift": true
+  },
+  "statusCall": {
+    "status": "pass",
+    "outcome": {
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"workflow\":{\"id\":\"probe-workflow\",\"workspaceId\":\"probe\",\"goal\":\"Validate actual DSH scoped tools without running a model.\",\"leadSessionId\":null,\"planRevision\":1,\"version\":1,\"status\":\"running\",\"integrationRef\":\"refs/heads/rift/probe\",\"baseCommit\":\"46c3d2a89c1876b73a186e5c3273c0050a25357f\",\"summary\":null},\"roles\":[{\"id\":\"probe:developer-a\",\"workspaceId\":\"probe\",\"name\":\"developer-a\",\"kind\":\"subagent\",\"providerBindingId\":\"claude\",\"prompt\":\"A\",\"revision\":1},{\"id\":\"probe:developer-b\",\"workspaceId\":\"probe\",\"name\":\"developer-b\",\"kind\":\"subagent\",\"providerBindingId\":\"claude\",\"prompt\":\"B\",\"revision\":1},{\"id\":\"probe:lead\",\"workspaceId\":\"probe\",\"name\":\"lead\",\"kind\":\"dsh-lead\",\"providerBindingId\":null,\"prompt\":\"Lead probe\",\"revision\":1},{\"id\":\"probe:reviewer\",\"workspaceId\":\"probe\",\"name\":\"reviewer\",\"kind\":\"subagent\",\"providerBindingId\":\"codex\",\"prompt\":\"Review\",\"revision\":1}],\"tasks\":[{\"id\":\"probe-task\",\"workflowId\":\"probe-workflow\",\"roleId\":null,\"kind\":\"analysis\",\"title\":\"Probe task\",\"instructions\":\"Never dispatch this task; this probe only validates management tools.\",\"expectedPaths\":[],\"acceptanceCriteria\":[],\"status\":\"pending\",\"attempt\":1,\"version\":0,\"acceptedCommit\":null,\"sourceHead\":null,\"blockingReason\":null,\"dependencyStatus\":\"ready\"}],\"runs\":[],\"worktrees\":[],\"operations\":[],\"integrations\":[],\"slots\":{\"developers\":0,\"reviewers\":0,\"total\":0},\"eventSeq\":2}"
+        }
+      ],
+      "value": {
+        "workflow": {
+          "id": "probe-workflow",
+          "workspaceId": "probe",
+          "goal": "Validate actual DSH scoped tools without running a model.",
+          "leadSessionId": null,
+          "planRevision": 1,
+          "version": 1,
+          "status": "running",
+          "integrationRef": "refs/heads/rift/probe",
+          "baseCommit": "46c3d2a89c1876b73a186e5c3273c0050a25357f",
+          "summary": null
+        },
+        "roles": [
+          {
+            "id": "probe:developer-a",
+            "workspaceId": "probe",
+            "name": "developer-a",
+            "kind": "subagent",
+            "providerBindingId": "claude",
+            "prompt": "A",
+            "revision": 1
+          },
+          {
+            "id": "probe:developer-b",
+            "workspaceId": "probe",
+            "name": "developer-b",
+            "kind": "subagent",
+            "providerBindingId": "claude",
+            "prompt": "B",
+            "revision": 1
+          },
+          {
+            "id": "probe:lead",
+            "workspaceId": "probe",
+            "name": "lead",
+            "kind": "dsh-lead",
+            "providerBindingId": null,
+            "prompt": "Lead probe",
+            "revision": 1
+          },
+          {
+            "id": "probe:reviewer",
+            "workspaceId": "probe",
+            "name": "reviewer",
+            "kind": "subagent",
+            "providerBindingId": "codex",
+            "prompt": "Review",
+            "revision": 1
+          }
+        ],
+        "tasks": [
+          {
+            "id": "probe-task",
+            "workflowId": "probe-workflow",
+            "roleId": null,
+            "kind": "analysis",
+            "title": "Probe task",
+            "instructions": "Never dispatch this task; this probe only validates management tools.",
+            "expectedPaths": [],
+            "acceptanceCriteria": [],
+            "status": "pending",
+            "attempt": 1,
+            "version": 0,
+            "acceptedCommit": null,
+            "sourceHead": null,
+            "blockingReason": null,
+            "dependencyStatus": "ready"
+          }
+        ],
+        "runs": [],
+        "worktrees": [],
+        "operations": [],
+        "integrations": [],
+        "slots": {
+          "developers": 0,
+          "reviewers": 0,
+          "total": 0
+        },
+        "eventSeq": 2
+      }
+    }
+  },
+  "planSchema": {
+    "status": "pass",
+    "outcome": {
+      "isError": false,
+      "content": [
+        {
+          "type": "text",
+          "text": "[{\"id\":\"probe-task\",\"workflowId\":\"probe-workflow\",\"roleId\":null,\"kind\":\"analysis\",\"title\":\"Probe task\",\"instructions\":\"Never dispatch this task; this probe only validates management tools.\",\"expectedPaths\":[],\"acceptanceCriteria\":[],\"status\":\"pending\",\"attempt\":1,\"version\":0,\"acceptedCommit\":null,\"sourceHead\":null,\"blockingReason\":null}]"
+        }
+      ],
+      "value": [
+        {
+          "id": "probe-task",
+          "workflowId": "probe-workflow",
+          "roleId": null,
+          "kind": "analysis",
+          "title": "Probe task",
+          "instructions": "Never dispatch this task; this probe only validates management tools.",
+          "expectedPaths": [],
+          "acceptanceCriteria": [],
+          "status": "pending",
+          "attempt": 1,
+          "version": 0,
+          "acceptedCommit": null,
+          "sourceHead": null,
+          "blockingReason": null
+        }
+      ]
+    }
+  },
+  "schemaValidation": {
+    "status": "pass",
+    "outcome": {
+      "isError": true,
+      "error": {
+        "message": "[\n  {\n    \"code\": \"unrecognized_keys\",\n    \"keys\": [\n      \"unexpected\"\n    ],\n    \"path\": [],\n    \"message\": \"Unrecognized key: \\\"unexpected\\\"\"\n  }\n]"
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Error: [\n  {\n    \"code\": \"unrecognized_keys\",\n    \"keys\": [\n      \"unexpected\"\n    ],\n    \"path\": [],\n    \"message\": \"Unrecognized key: \\\"unexpected\\\"\"\n  }\n]"
+        }
+      ]
+    }
+  },
+  "finishGate": {
+    "status": "pass",
+    "outcome": {
+      "isError": true,
+      "error": {
+        "message": "Every task must pass its actual acceptance gate."
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Error: Every task must pass its actual acceptance gate."
+        }
+      ]
+    }
+  },
+  "identity": {
+    "status": "pass",
+    "otherAgent": {
+      "isError": true,
+      "error": {
+        "message": "unknown tool \"rift_status\"",
+        "info": {
+          "name": "ToolNotFoundError",
+          "code": "UNKNOWN_TOOL"
+        }
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Error: unknown tool \"rift_status\""
+        }
+      ]
+    },
+    "agentless": {
+      "isError": true,
+      "error": {
+        "message": "unknown tool \"rift_status\"",
+        "info": {
+          "name": "ToolNotFoundError",
+          "code": "UNKNOWN_TOOL"
+        }
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Error: unknown tool \"rift_status\""
+        }
+      ]
+    }
+  },
+  "inheritedDelegation": {
+    "status": "pass",
+    "outcome": {
+      "isError": true,
+      "error": {
+        "message": "unknown tool \"rift_probe_inherited_delegate\"",
+        "info": {
+          "name": "ToolNotFoundError",
+          "code": "UNKNOWN_TOOL"
+        }
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Error: unknown tool \"rift_probe_inherited_delegate\""
+        }
+      ]
+    },
+    "note": "Synthetic globally registered delegation sentinel verifies the actual DSH restriction mechanism; inherited official tools are listed separately."
+  },
+  "lateDelegation": {
+    "status": "pass",
+    "outcome": {
+      "isError": true,
+      "error": {
+        "message": "unknown tool \"rift_probe_late_delegate\"",
+        "info": {
+          "name": "ToolNotFoundError",
+          "code": "UNKNOWN_TOOL"
+        }
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Error: unknown tool \"rift_probe_late_delegate\""
+        }
+      ]
+    }
+  },
+  "inheritedShell": {
+    "status": "pass",
+    "outcome": {
+      "isError": true,
+      "error": {
+        "message": "unknown tool \"pwsh\"",
+        "info": {
+          "name": "ToolNotFoundError",
+          "code": "UNKNOWN_TOOL"
+        }
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Error: unknown tool \"pwsh\""
+        }
+      ]
+    }
+  },
+  "disposedLead": {
+    "status": "pass",
+    "outcome": {
+      "isError": true,
+      "error": {
+        "message": "unknown tool \"rift_status\"",
+        "info": {
+          "name": "ToolNotFoundError",
+          "code": "UNKNOWN_TOOL"
+        }
+      },
+      "content": [
+        {
+          "type": "text",
+          "text": "Error: unknown tool \"rift_status\""
+        }
+      ]
+    }
+  },
+  "providerCalls": {
+    "status": "pass",
+    "count": 0
+  },
+  "status": "pass"
+}

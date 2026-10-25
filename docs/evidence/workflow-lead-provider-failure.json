@@ -1,0 +1,135 @@
+{
+  "startedAt": "2026-10-25T06:41:39.469Z",
+  "root": "<RIFT_ROOT>\\.runtime-evidence\\workflow-acceptance-5F8fD5",
+  "mode": "Real LLM Lead tools -> durable business coordinator -> official providers -> exact Git acceptance",
+  "lead": {
+    "provider": "deepseek",
+    "model": "deepseek-chat",
+    "sessionId": "rift-lead-37647507-133d-4d94-8eaa-9326830e9cab"
+  },
+  "developerModel": "claude-opus-5-5",
+  "reviewerModel": "gpt-6.1-sol",
+  "toolCalls": [],
+  "leadRequests": [
+    {
+      "at": "2026-10-25T06:41:41.336Z",
+      "agentId": "rift-lead-37647507-133d-4d94-8eaa-9326830e9cab",
+      "turn": 1,
+      "step": 1
+    }
+  ],
+  "leadErrors": [
+    {
+      "at": "2026-10-25T06:41:41.340Z",
+      "agentId": "rift-lead-37647507-133d-4d94-8eaa-9326830e9cab",
+      "error": "LlmError: no adapter registered for provider \"deepseek\""
+    }
+  ],
+  "gates": [],
+  "overlapSamples": [],
+  "baseline": {
+    "repository": "<RIFT_ROOT>\\.runtime-evidence\\workflow-acceptance-5F8fD5\\中文 业务仓库",
+    "branch": "main",
+    "head": "ec9a299832f293d9e8e7dd5c00b340d328aa33c2",
+    "remotes": ""
+  },
+  "workflowId": "workflow-c1d3ab00-fa12-4840-8909-787e6852ab60",
+  "status": "fail",
+  "error": "Error: The real Lead reported a model/turn failure; see leadErrors.",
+  "business": {
+    "workflow": {
+      "id": "workflow-c1d3ab00-fa12-4840-8909-787e6852ab60",
+      "workspaceId": "workspace-4fa6296a-603b-4dc2-b140-fdfe15eb1191",
+      "goal": "Run this real acceptance workload. Submit exactly these four task IDs and task definitions (no added tasks): [{\"id\":\"slow-a\",\"roleName\":\"developer-a\",\"kind\":\"change\",\"title\":\"Alpha feature\",\"instructions\":\"Create features/alpha.json with exactly {\\\"value\\\":11}. After writing the feature, write exactly READY to .probe-control/ready.txt. The harness creates .probe-control/gate.json in this worktree; read it using Read until release is true (at most 60 reads). Do not change gate.json. Only then return your exact resultSchema JSON. These ignored control files are harness coordination, not source changes. Use Read/Write/Edit, no shell or git commands.\",\"expectedPaths\":[\"features/alpha.json\"],\"acceptanceCriteria\":[\"features/alpha.json parses as JSON and value equals 11; no unrelated tracked changes.\"]},{\"id\":\"fast-b\",\"roleName\":\"developer-b\",\"kind\":\"change\",\"title\":\"Beta feature\",\"instructions\":\"Create features/beta.json with exactly {\\\"value\\\":22}. Use Write/Edit tools, no shell or git. Return only the exact development resultSchema JSON promptly; do not wait for any other task.\",\"expectedPaths\":[\"features/beta.json\"],\"acceptanceCriteria\":[\"features/beta.json parses as JSON and value equals 22; no unrelated tracked changes.\"]},{\"id\":\"queued-b\",\"roleName\":\"developer-b\",\"kind\":\"change\",\"title\":\"Gamma feature\",\"instructions\":\"Create features/gamma.json with exactly {\\\"value\\\":33}. After writing the feature, write exactly READY to .probe-control/ready.txt. The harness creates .probe-control/gate.json in this worktree; read it using Read until release is true (at most 60 reads). Do not change gate.json. Only then return your exact resultSchema JSON. These ignored control files are harness coordination, not source changes. Use Read/Write/Edit, no shell or git commands.\",\"expectedPaths\":[\"features/gamma.json\"],\"acceptanceCriteria\":[\"features/gamma.json parses as JSON and value equals 33; no unrelated tracked changes.\"]},{\"id\":\"dependent-d\",\"roleName\":\"developer-a\",\"kind\":\"change\",\"title\":\"Dependent delta feature\",\"instructions\":\"Read features/beta.json from your integrated baseline and confirm value 22, then create features/delta.json with exactly {\\\"value\\\":44}. Use direct file tools, no shell or git. Return only the exact development resultSchema JSON.\",\"expectedPaths\":[\"features/delta.json\"],\"acceptanceCriteria\":[\"features/delta.json value is 44 and integrated features/beta.json remains 22.\"],\"dependsOn\":[\"fast-b\"]}]. Preserve each task instruction and acceptance criterion. Dispatch slow-a first, fast-b second, queued-b third and dependent-d fourth, all BEFORE the first wait; use the specified roles and accept queued requests rather than retrying a duplicate. The harness releases gated developers only after their ready markers and one real Codex candidate review overlap. You may only use RIFT business tools; you cannot edit files directly. Observe status/results and continue until all four changes are reviewed, integrated and workflow_finish succeeds. The reviewer must inspect the exact candidate and functional evidence, never edit it. Do not treat ignored .probe-control harness files as production source changes. Do not claim success while blocked; report concrete failures if retries cannot fix them.",
+      "leadSessionId": "rift-lead-37647507-133d-4d94-8eaa-9326830e9cab",
+      "planRevision": 0,
+      "version": 0,
+      "status": "planning",
+      "integrationRef": "refs/heads/rift/workspace-4fa6296a-603b-4dc2-b140-fdfe15eb1191/workflow-c1d3ab00-fa12-4840-8909-787e6852ab60",
+      "baseCommit": "ec9a299832f293d9e8e7dd5c00b340d328aa33c2",
+      "summary": null
+    },
+    "roles": [
+      {
+        "id": "workspace-4fa6296a-603b-4dc2-b140-fdfe15eb1191:developer-a",
+        "workspaceId": "workspace-4fa6296a-603b-4dc2-b140-fdfe15eb1191",
+        "name": "developer-a",
+        "kind": "subagent",
+        "providerBindingId": "workspace-4fa6296a-603b-4dc2-b140-fdfe15eb1191:claude-code-dev",
+        "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+        "revision": 1
+      },
+      {
+        "id": "workspace-4fa6296a-603b-4dc2-b140-fdfe15eb1191:developer-b",
+        "workspaceId": "workspace-4fa6296a-603b-4dc2-b140-fdfe15eb1191",
+        "name": "developer-b",
+        "kind": "subagent",
+        "providerBindingId": "workspace-4fa6296a-603b-4dc2-b140-fdfe15eb1191:claude-code-dev",
+        "prompt": "Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.",
+        "revision": 1
+      },
+      {
+        "id": "workspace-4fa6296a-603b-4dc2-b140-fdfe15eb1191:lead",
+        "workspaceId": "workspace-4fa6296a-603b-4dc2-b140-fdfe15eb1191",
+        "name": "lead",
+        "kind": "dsh-lead",
+        "providerBindingId": null,
+        "prompt": "Coordinate a durable plan, parallel independent developers and exact-commit acceptance. Do not claim success before workflow_finish succeeds.",
+        "revision": 1
+      },
+      {
+        "id": "workspace-4fa6296a-603b-4dc2-b140-fdfe15eb1191:reviewer",
+        "workspaceId": "workspace-4fa6296a-603b-4dc2-b140-fdfe15eb1191",
+        "name": "reviewer",
+        "kind": "subagent",
+        "providerBindingId": "workspace-4fa6296a-603b-4dc2-b140-fdfe15eb1191:codex-review",
+        "prompt": "Review the exact candidate commit read-only. Never edit or commit. Return one JSON object matching resultSchema; approve only when all acceptance criteria pass.",
+        "revision": 1
+      }
+    ],
+    "tasks": [],
+    "runs": [],
+    "worktrees": [],
+    "operations": [],
+    "integrations": [],
+    "slots": {
+      "developers": 0,
+      "reviewers": 0,
+      "total": 0
+    },
+    "eventSeq": 2
+  },
+  "events": [
+    {
+      "eventSeq": 1,
+      "workflowId": "workflow-c1d3ab00-fa12-4840-8909-787e6852ab60",
+      "taskId": null,
+      "runId": null,
+      "requestId": null,
+      "type": "workflow.created",
+      "payload": {},
+      "occurredAt": "2026-10-25T06:41:41.324Z"
+    },
+    {
+      "eventSeq": 2,
+      "workflowId": "workflow-c1d3ab00-fa12-4840-8909-787e6852ab60",
+      "taskId": null,
+      "runId": null,
+      "requestId": null,
+      "type": "lead.attached",
+      "payload": {
+        "sessionId": "rift-lead-37647507-133d-4d94-8eaa-9326830e9cab"
+      },
+      "occurredAt": "2026-10-25T06:41:41.331Z"
+    }
+  ],
+  "hostCleanup": "pass",
+  "runtimeUnload": "pass",
+  "databaseLockReleased": true,
+  "endedAt": "2026-10-25T06:41:41.494Z",
+  "exitCode": 1,
+  "evidenceArchive": {
+    "originalSha256": "c2dc941a38abb817a5613e992a3167da915ed826ade1ae96106516b34404798b",
+    "note": "Historical genuine Lead request failed because old default provider deepseek was not registered."
+  }
+}

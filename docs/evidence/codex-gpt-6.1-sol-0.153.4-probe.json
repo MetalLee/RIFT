@@ -1,0 +1,93 @@
+{
+  "date": "2026-10-25T06:03:23.237Z",
+  "node": "v24.16.0",
+  "platform": "win32",
+  "dsh": "0.2.1-rc.3",
+  "codexConfiguration": {
+    "providerName": "codex-review",
+    "model": "gpt-6.1-sol",
+    "permissionMode": "never",
+    "providerVersion": "0.2.1-rc.3",
+    "codexPayloadVersion": "0.153.4"
+  },
+  "claude": {
+    "status": "skipped",
+    "reason": "User opted not to configure Claude credentials."
+  },
+  "managementApi": {
+    "status": "pass",
+    "loopback": "127.0.0.1",
+    "doctor": {
+      "version": "0.1.0-preview.1",
+      "node": "v24.16.0",
+      "dsh": "0.2.1-rc.3",
+      "providers": [
+        {
+          "name": "claude-code-dev",
+          "capabilities": {
+            "agentOptions": false,
+            "agentPreset": false,
+            "outputSchema": false,
+            "depthLimit": false
+          }
+        },
+        {
+          "name": "codex-review",
+          "capabilities": {
+            "agentOptions": false,
+            "agentPreset": false,
+            "outputSchema": false,
+            "depthLimit": false
+          }
+        }
+      ],
+      "authentication": {
+        "deepseekConfigured": true,
+        "claudeApiKeyConfigured": false,
+        "nativeAuthentication": "Not inferred from registration; run the credentialed probe."
+      },
+      "limits": {
+        "workflows": 1,
+        "developers": 2,
+        "reviewers": 1,
+        "total": 3
+      },
+      "unconfirmedRuns": [],
+      "interruptedRequests": [],
+      "restrictions": [
+        "External providers use one-shot activations.",
+        "Reviewer permission never inherits native sandbox; independent checkout and mutation gate enforce acceptance.",
+        "Claude real POC is skipped until credentials are configured."
+      ]
+    }
+  },
+  "plugin": {
+    "status": "pass",
+    "providers": [
+      "claude-code-dev",
+      "codex-review"
+    ],
+    "liveParent": true
+  },
+  "preAbort": "pass",
+  "capabilityRejection": "pass",
+  "codex": {
+    "status": "fail",
+    "childId": "e12ec0dc-5c3e-4f3e-99eb-556a1d85efe3",
+    "stopReason": "error",
+    "text": "",
+    "diagnostic": "Product subagent failure (product: Codex; stage: turn; category: product-error)",
+    "markerVerified": false,
+    "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\中文 空格 Codex worktree 1792908204733",
+    "startedAt": "2026-10-25T06:03:24.989Z",
+    "endedAt": "2026-10-25T06:03:29.505Z"
+  },
+  "codexCleanup": {
+    "status": "pass",
+    "activationReleased": true
+  },
+  "pluginUnload": {
+    "status": "pass",
+    "databaseLockReleased": true
+  }
+}

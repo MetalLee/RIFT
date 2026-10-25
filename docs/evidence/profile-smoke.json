@@ -1,0 +1,75 @@
+{
+  "date": "2026-10-25T05:29:05.354Z",
+  "node": "v24.16.0",
+  "platform": "win32",
+  "dsh": "0.2.1-rc.3",
+  "claude": {
+    "status": "skipped",
+    "reason": "User opted not to configure Claude credentials."
+  },
+  "managementApi": {
+    "status": "pass",
+    "loopback": "127.0.0.1",
+    "doctor": {
+      "version": "0.1.0-preview.1",
+      "node": "v24.16.0",
+      "dsh": "0.2.1-rc.3",
+      "providers": [
+        {
+          "name": "claude-code-dev",
+          "capabilities": {
+            "agentOptions": false,
+            "agentPreset": false,
+            "outputSchema": false,
+            "depthLimit": false
+          }
+        },
+        {
+          "name": "codex-review",
+          "capabilities": {
+            "agentOptions": false,
+            "agentPreset": false,
+            "outputSchema": false,
+            "depthLimit": false
+          }
+        }
+      ],
+      "authentication": {
+        "deepseekConfigured": true,
+        "claudeApiKeyConfigured": false,
+        "nativeAuthentication": "Not inferred from registration; run the credentialed probe."
+      },
+      "limits": {
+        "workflows": 1,
+        "developers": 2,
+        "reviewers": 1,
+        "total": 3
+      },
+      "unconfirmedRuns": [],
+      "interruptedRequests": [],
+      "restrictions": [
+        "External providers use one-shot activations.",
+        "Reviewer permission never inherits native sandbox; independent checkout and mutation gate enforce acceptance.",
+        "Claude real POC is skipped until credentials are configured."
+      ]
+    }
+  },
+  "plugin": {
+    "status": "pass",
+    "providers": [
+      "claude-code-dev",
+      "codex-review"
+    ],
+    "liveParent": true
+  },
+  "preAbort": "pass",
+  "capabilityRejection": "pass",
+  "codex": {
+    "status": "skipped",
+    "reason": "Use --codex to run credentialed probe."
+  },
+  "pluginUnload": {
+    "status": "pass",
+    "databaseLockReleased": true
+  }
+}

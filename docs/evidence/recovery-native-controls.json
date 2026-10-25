@@ -1,0 +1,659 @@
+{
+  "date": "2026-10-25T06:58:32.699Z",
+  "node": "v24.16.0",
+  "platform": "win32",
+  "dsh": "0.2.1-rc.3",
+  "root": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-lFutNF",
+  "mode": "native Claude management API pause and cancellation",
+  "nativeModelCallsRequested": true,
+  "cases": [],
+  "controls": {
+    "status": "pass",
+    "boundary": "real official Claude activations; loopback management API pause and whole-workflow cancellation; no external process kill",
+    "provider": "claude-code-dev",
+    "model": "claude-opus-5-5",
+    "before": {
+      "workflow": {
+        "id": "workflow",
+        "workspaceId": "probe",
+        "goal": "Native in-flight crash recovery probe",
+        "leadSessionId": "rift-lead-45dbf5a2-2952-487e-8f6c-5a2c682f29ee",
+        "planRevision": 1,
+        "version": 1,
+        "status": "running",
+        "integrationRef": "refs/heads/rift/recovery",
+        "baseCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+        "summary": null
+      },
+      "slots": {
+        "developers": 2,
+        "reviewers": 0,
+        "total": 2
+      },
+      "tasks": [
+        {
+          "id": "a",
+          "workflowId": "workflow",
+          "roleId": null,
+          "kind": "change",
+          "title": "a",
+          "instructions": "This is an authorized controlled lifecycle test in your temporary repository. Use only Read/Write/Edit tools, never shell commands. First Write a.gate.txt inside your cwd with content CLOSED. Then Write a.txt in your cwd containing RIFT_NATIVE_READY and counter 0. Repeatedly Read your local a.gate.txt. While its content is CLOSED, increment the counter and Write a.txt again, then Read the gate again. Keep making separate tool calls. Do not return a final result while CLOSED. Stop after 200 iterations if it never changes. Only edit these two permitted files. If the local gate reads OPEN, return the exact development result schema. The test owner will cancel this native activation or terminate only its own host while it is in flight. No external directories, global configuration or credentials are to be read.",
+          "expectedPaths": [
+            "a.txt",
+            "a.gate.txt"
+          ],
+          "acceptanceCriteria": [],
+          "status": "running",
+          "attempt": 1,
+          "version": 1,
+          "acceptedCommit": null,
+          "sourceHead": null,
+          "blockingReason": null,
+          "dependencyStatus": "ready"
+        },
+        {
+          "id": "b",
+          "workflowId": "workflow",
+          "roleId": null,
+          "kind": "change",
+          "title": "b",
+          "instructions": "This is an authorized controlled lifecycle test in your temporary repository. Use only Read/Write/Edit tools, never shell commands. First Write b.gate.txt inside your cwd with content CLOSED. Then Write b.txt in your cwd containing RIFT_NATIVE_READY and counter 0. Repeatedly Read your local b.gate.txt. While its content is CLOSED, increment the counter and Write b.txt again, then Read the gate again. Keep making separate tool calls. Do not return a final result while CLOSED. Stop after 200 iterations if it never changes. Only edit these two permitted files. If the local gate reads OPEN, return the exact development result schema. The test owner will cancel this native activation or terminate only its own host while it is in flight. No external directories, global configuration or credentials are to be read.",
+          "expectedPaths": [
+            "b.txt",
+            "b.gate.txt"
+          ],
+          "acceptanceCriteria": [],
+          "status": "running",
+          "attempt": 1,
+          "version": 1,
+          "acceptedCommit": null,
+          "sourceHead": null,
+          "blockingReason": null,
+          "dependencyStatus": "ready"
+        },
+        {
+          "id": "c",
+          "workflowId": "workflow",
+          "roleId": null,
+          "kind": "change",
+          "title": "c",
+          "instructions": "This is an authorized controlled lifecycle test in your temporary repository. Use only Read/Write/Edit tools, never shell commands. First Write c.gate.txt inside your cwd with content CLOSED. Then Write c.txt in your cwd containing RIFT_NATIVE_READY and counter 0. Repeatedly Read your local c.gate.txt. While its content is CLOSED, increment the counter and Write c.txt again, then Read the gate again. Keep making separate tool calls. Do not return a final result while CLOSED. Stop after 200 iterations if it never changes. Only edit these two permitted files. If the local gate reads OPEN, return the exact development result schema. The test owner will cancel this native activation or terminate only its own host while it is in flight. No external directories, global configuration or credentials are to be read.",
+          "expectedPaths": [
+            "c.txt",
+            "c.gate.txt"
+          ],
+          "acceptanceCriteria": [],
+          "status": "pending",
+          "attempt": 1,
+          "version": 0,
+          "acceptedCommit": null,
+          "sourceHead": null,
+          "blockingReason": null,
+          "dependencyStatus": "ready"
+        }
+      ],
+      "runs": [
+        {
+          "id": "run-80ef0b06-d71e-4b5e-9f57-e5e623d4f2ed",
+          "taskId": "a",
+          "status": "running",
+          "dshChildId": "89026704-0143-49b7-a079-a31b1869333b",
+          "cleanupStatus": "pending",
+          "slotReleasedAt": null,
+          "resultArtifactId": null
+        },
+        {
+          "id": "run-1943fda4-7501-4425-862b-15333a5d2c84",
+          "taskId": "b",
+          "status": "running",
+          "dshChildId": "3672ac9e-a8c3-4955-9d86-52a1110d01a7",
+          "cleanupStatus": "pending",
+          "slotReleasedAt": null,
+          "resultArtifactId": null
+        }
+      ],
+      "operations": [
+        {
+          "id": "request-85174e65-7806-4b32-b885-ff124b9c4581",
+          "kind": "dispatch",
+          "dedupeKey": "native-a",
+          "entityId": "a",
+          "phase": "started",
+          "payload": {
+            "expectedVersion": 0,
+            "planRevision": 1,
+            "runId": "run-80ef0b06-d71e-4b5e-9f57-e5e623d4f2ed"
+          },
+          "createdAt": "2026-10-25T06:58:34.744Z"
+        },
+        {
+          "id": "request-9e55c545-e1ad-411e-b3a1-09720d9d693f",
+          "kind": "dispatch",
+          "dedupeKey": "native-b",
+          "entityId": "b",
+          "phase": "started",
+          "payload": {
+            "expectedVersion": 0,
+            "planRevision": 1,
+            "runId": "run-1943fda4-7501-4425-862b-15333a5d2c84"
+          },
+          "createdAt": "2026-10-25T06:58:34.749Z"
+        },
+        {
+          "id": "request-2c200d21-9146-4566-ab05-f4d9eaaa1b2a",
+          "kind": "dispatch",
+          "dedupeKey": "native-c",
+          "entityId": "c",
+          "phase": "queued",
+          "payload": {
+            "expectedVersion": 0,
+            "planRevision": 1
+          },
+          "createdAt": "2026-10-25T06:58:34.753Z"
+        }
+      ],
+      "integrations": [],
+      "worktrees": [
+        {
+          "id": "a:1",
+          "taskId": "a",
+          "attempt": 1,
+          "kind": "task",
+          "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-lFutNF\\native-controls\\business\\workspaces\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+          "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+          "baseCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+          "headCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+          "writerRunId": "run-80ef0b06-d71e-4b5e-9f57-e5e623d4f2ed",
+          "status": "active"
+        },
+        {
+          "id": "b:1",
+          "taskId": "b",
+          "attempt": 1,
+          "kind": "task",
+          "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-lFutNF\\native-controls\\business\\workspaces\\ba9c736f19e7f60b7f6764ad\\worktrees\\34340f0e82d75a3446150f4a",
+          "branch": "rift/ba9c736f19e7f60b7f6764ad/3e23e8160039594a33894f65/1",
+          "baseCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+          "headCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+          "writerRunId": "run-1943fda4-7501-4425-862b-15333a5d2c84",
+          "status": "active"
+        }
+      ],
+      "eventSeq": 14
+    },
+    "paused": {
+      "workflow": {
+        "id": "workflow",
+        "workspaceId": "probe",
+        "goal": "Native in-flight crash recovery probe",
+        "leadSessionId": "rift-lead-45dbf5a2-2952-487e-8f6c-5a2c682f29ee",
+        "planRevision": 1,
+        "version": 2,
+        "status": "paused",
+        "integrationRef": "refs/heads/rift/recovery",
+        "baseCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+        "summary": null
+      },
+      "slots": {
+        "developers": 2,
+        "reviewers": 0,
+        "total": 2
+      },
+      "tasks": [
+        {
+          "id": "a",
+          "workflowId": "workflow",
+          "roleId": null,
+          "kind": "change",
+          "title": "a",
+          "instructions": "This is an authorized controlled lifecycle test in your temporary repository. Use only Read/Write/Edit tools, never shell commands. First Write a.gate.txt inside your cwd with content CLOSED. Then Write a.txt in your cwd containing RIFT_NATIVE_READY and counter 0. Repeatedly Read your local a.gate.txt. While its content is CLOSED, increment the counter and Write a.txt again, then Read the gate again. Keep making separate tool calls. Do not return a final result while CLOSED. Stop after 200 iterations if it never changes. Only edit these two permitted files. If the local gate reads OPEN, return the exact development result schema. The test owner will cancel this native activation or terminate only its own host while it is in flight. No external directories, global configuration or credentials are to be read.",
+          "expectedPaths": [
+            "a.txt",
+            "a.gate.txt"
+          ],
+          "acceptanceCriteria": [],
+          "status": "running",
+          "attempt": 1,
+          "version": 1,
+          "acceptedCommit": null,
+          "sourceHead": null,
+          "blockingReason": null,
+          "dependencyStatus": "ready"
+        },
+        {
+          "id": "b",
+          "workflowId": "workflow",
+          "roleId": null,
+          "kind": "change",
+          "title": "b",
+          "instructions": "This is an authorized controlled lifecycle test in your temporary repository. Use only Read/Write/Edit tools, never shell commands. First Write b.gate.txt inside your cwd with content CLOSED. Then Write b.txt in your cwd containing RIFT_NATIVE_READY and counter 0. Repeatedly Read your local b.gate.txt. While its content is CLOSED, increment the counter and Write b.txt again, then Read the gate again. Keep making separate tool calls. Do not return a final result while CLOSED. Stop after 200 iterations if it never changes. Only edit these two permitted files. If the local gate reads OPEN, return the exact development result schema. The test owner will cancel this native activation or terminate only its own host while it is in flight. No external directories, global configuration or credentials are to be read.",
+          "expectedPaths": [
+            "b.txt",
+            "b.gate.txt"
+          ],
+          "acceptanceCriteria": [],
+          "status": "running",
+          "attempt": 1,
+          "version": 1,
+          "acceptedCommit": null,
+          "sourceHead": null,
+          "blockingReason": null,
+          "dependencyStatus": "ready"
+        },
+        {
+          "id": "c",
+          "workflowId": "workflow",
+          "roleId": null,
+          "kind": "change",
+          "title": "c",
+          "instructions": "This is an authorized controlled lifecycle test in your temporary repository. Use only Read/Write/Edit tools, never shell commands. First Write c.gate.txt inside your cwd with content CLOSED. Then Write c.txt in your cwd containing RIFT_NATIVE_READY and counter 0. Repeatedly Read your local c.gate.txt. While its content is CLOSED, increment the counter and Write c.txt again, then Read the gate again. Keep making separate tool calls. Do not return a final result while CLOSED. Stop after 200 iterations if it never changes. Only edit these two permitted files. If the local gate reads OPEN, return the exact development result schema. The test owner will cancel this native activation or terminate only its own host while it is in flight. No external directories, global configuration or credentials are to be read.",
+          "expectedPaths": [
+            "c.txt",
+            "c.gate.txt"
+          ],
+          "acceptanceCriteria": [],
+          "status": "pending",
+          "attempt": 1,
+          "version": 0,
+          "acceptedCommit": null,
+          "sourceHead": null,
+          "blockingReason": null,
+          "dependencyStatus": "ready"
+        }
+      ],
+      "runs": [
+        {
+          "id": "run-80ef0b06-d71e-4b5e-9f57-e5e623d4f2ed",
+          "taskId": "a",
+          "status": "running",
+          "dshChildId": "89026704-0143-49b7-a079-a31b1869333b",
+          "cleanupStatus": "pending",
+          "slotReleasedAt": null,
+          "resultArtifactId": null
+        },
+        {
+          "id": "run-1943fda4-7501-4425-862b-15333a5d2c84",
+          "taskId": "b",
+          "status": "running",
+          "dshChildId": "3672ac9e-a8c3-4955-9d86-52a1110d01a7",
+          "cleanupStatus": "pending",
+          "slotReleasedAt": null,
+          "resultArtifactId": null
+        }
+      ],
+      "operations": [
+        {
+          "id": "request-85174e65-7806-4b32-b885-ff124b9c4581",
+          "kind": "dispatch",
+          "dedupeKey": "native-a",
+          "entityId": "a",
+          "phase": "started",
+          "payload": {
+            "expectedVersion": 0,
+            "planRevision": 1,
+            "runId": "run-80ef0b06-d71e-4b5e-9f57-e5e623d4f2ed"
+          },
+          "createdAt": "2026-10-25T06:58:34.744Z"
+        },
+        {
+          "id": "request-9e55c545-e1ad-411e-b3a1-09720d9d693f",
+          "kind": "dispatch",
+          "dedupeKey": "native-b",
+          "entityId": "b",
+          "phase": "started",
+          "payload": {
+            "expectedVersion": 0,
+            "planRevision": 1,
+            "runId": "run-1943fda4-7501-4425-862b-15333a5d2c84"
+          },
+          "createdAt": "2026-10-25T06:58:34.749Z"
+        },
+        {
+          "id": "request-2c200d21-9146-4566-ab05-f4d9eaaa1b2a",
+          "kind": "dispatch",
+          "dedupeKey": "native-c",
+          "entityId": "c",
+          "phase": "queued",
+          "payload": {
+            "expectedVersion": 0,
+            "planRevision": 1
+          },
+          "createdAt": "2026-10-25T06:58:34.753Z"
+        }
+      ],
+      "integrations": [],
+      "worktrees": [
+        {
+          "id": "a:1",
+          "taskId": "a",
+          "attempt": 1,
+          "kind": "task",
+          "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-lFutNF\\native-controls\\business\\workspaces\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+          "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+          "baseCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+          "headCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+          "writerRunId": "run-80ef0b06-d71e-4b5e-9f57-e5e623d4f2ed",
+          "status": "active"
+        },
+        {
+          "id": "b:1",
+          "taskId": "b",
+          "attempt": 1,
+          "kind": "task",
+          "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-lFutNF\\native-controls\\business\\workspaces\\ba9c736f19e7f60b7f6764ad\\worktrees\\34340f0e82d75a3446150f4a",
+          "branch": "rift/ba9c736f19e7f60b7f6764ad/3e23e8160039594a33894f65/1",
+          "baseCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+          "headCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+          "writerRunId": "run-1943fda4-7501-4425-862b-15333a5d2c84",
+          "status": "active"
+        }
+      ],
+      "eventSeq": 15
+    },
+    "cancelled": {
+      "workflow": {
+        "id": "workflow",
+        "workspaceId": "probe",
+        "goal": "Native in-flight crash recovery probe",
+        "leadSessionId": "rift-lead-45dbf5a2-2952-487e-8f6c-5a2c682f29ee",
+        "planRevision": 1,
+        "version": 3,
+        "status": "cancelled",
+        "integrationRef": "refs/heads/rift/recovery",
+        "baseCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+        "summary": null
+      },
+      "slots": {
+        "developers": 0,
+        "reviewers": 0,
+        "total": 0
+      },
+      "tasks": [
+        {
+          "id": "a",
+          "workflowId": "workflow",
+          "roleId": null,
+          "kind": "change",
+          "title": "a",
+          "instructions": "This is an authorized controlled lifecycle test in your temporary repository. Use only Read/Write/Edit tools, never shell commands. First Write a.gate.txt inside your cwd with content CLOSED. Then Write a.txt in your cwd containing RIFT_NATIVE_READY and counter 0. Repeatedly Read your local a.gate.txt. While its content is CLOSED, increment the counter and Write a.txt again, then Read the gate again. Keep making separate tool calls. Do not return a final result while CLOSED. Stop after 200 iterations if it never changes. Only edit these two permitted files. If the local gate reads OPEN, return the exact development result schema. The test owner will cancel this native activation or terminate only its own host while it is in flight. No external directories, global configuration or credentials are to be read.",
+          "expectedPaths": [
+            "a.txt",
+            "a.gate.txt"
+          ],
+          "acceptanceCriteria": [],
+          "status": "cancelled",
+          "attempt": 1,
+          "version": 2,
+          "acceptedCommit": null,
+          "sourceHead": null,
+          "blockingReason": null,
+          "dependencyStatus": "ready"
+        },
+        {
+          "id": "b",
+          "workflowId": "workflow",
+          "roleId": null,
+          "kind": "change",
+          "title": "b",
+          "instructions": "This is an authorized controlled lifecycle test in your temporary repository. Use only Read/Write/Edit tools, never shell commands. First Write b.gate.txt inside your cwd with content CLOSED. Then Write b.txt in your cwd containing RIFT_NATIVE_READY and counter 0. Repeatedly Read your local b.gate.txt. While its content is CLOSED, increment the counter and Write b.txt again, then Read the gate again. Keep making separate tool calls. Do not return a final result while CLOSED. Stop after 200 iterations if it never changes. Only edit these two permitted files. If the local gate reads OPEN, return the exact development result schema. The test owner will cancel this native activation or terminate only its own host while it is in flight. No external directories, global configuration or credentials are to be read.",
+          "expectedPaths": [
+            "b.txt",
+            "b.gate.txt"
+          ],
+          "acceptanceCriteria": [],
+          "status": "cancelled",
+          "attempt": 1,
+          "version": 2,
+          "acceptedCommit": null,
+          "sourceHead": null,
+          "blockingReason": null,
+          "dependencyStatus": "ready"
+        },
+        {
+          "id": "c",
+          "workflowId": "workflow",
+          "roleId": null,
+          "kind": "change",
+          "title": "c",
+          "instructions": "This is an authorized controlled lifecycle test in your temporary repository. Use only Read/Write/Edit tools, never shell commands. First Write c.gate.txt inside your cwd with content CLOSED. Then Write c.txt in your cwd containing RIFT_NATIVE_READY and counter 0. Repeatedly Read your local c.gate.txt. While its content is CLOSED, increment the counter and Write c.txt again, then Read the gate again. Keep making separate tool calls. Do not return a final result while CLOSED. Stop after 200 iterations if it never changes. Only edit these two permitted files. If the local gate reads OPEN, return the exact development result schema. The test owner will cancel this native activation or terminate only its own host while it is in flight. No external directories, global configuration or credentials are to be read.",
+          "expectedPaths": [
+            "c.txt",
+            "c.gate.txt"
+          ],
+          "acceptanceCriteria": [],
+          "status": "cancelled",
+          "attempt": 1,
+          "version": 1,
+          "acceptedCommit": null,
+          "sourceHead": null,
+          "blockingReason": null,
+          "dependencyStatus": "ready"
+        }
+      ],
+      "runs": [
+        {
+          "id": "run-80ef0b06-d71e-4b5e-9f57-e5e623d4f2ed",
+          "taskId": "a",
+          "status": "cancelled",
+          "dshChildId": "89026704-0143-49b7-a079-a31b1869333b",
+          "cleanupStatus": "confirmed",
+          "slotReleasedAt": "2026-10-25T06:58:44.590Z",
+          "resultArtifactId": "artifact-0f5abb42-d15a-4ffb-a6b9-6545345ca60a"
+        },
+        {
+          "id": "run-1943fda4-7501-4425-862b-15333a5d2c84",
+          "taskId": "b",
+          "status": "cancelled",
+          "dshChildId": "3672ac9e-a8c3-4955-9d86-52a1110d01a7",
+          "cleanupStatus": "confirmed",
+          "slotReleasedAt": "2026-10-25T06:58:44.589Z",
+          "resultArtifactId": "artifact-15b4a811-f7ab-4383-868a-39172ee4052c"
+        }
+      ],
+      "operations": [
+        {
+          "id": "request-85174e65-7806-4b32-b885-ff124b9c4581",
+          "kind": "dispatch",
+          "dedupeKey": "native-a",
+          "entityId": "a",
+          "phase": "cancelled",
+          "payload": {
+            "expectedVersion": 0,
+            "planRevision": 1,
+            "runId": "run-80ef0b06-d71e-4b5e-9f57-e5e623d4f2ed"
+          },
+          "createdAt": "2026-10-25T06:58:34.744Z"
+        },
+        {
+          "id": "request-9e55c545-e1ad-411e-b3a1-09720d9d693f",
+          "kind": "dispatch",
+          "dedupeKey": "native-b",
+          "entityId": "b",
+          "phase": "cancelled",
+          "payload": {
+            "expectedVersion": 0,
+            "planRevision": 1,
+            "runId": "run-1943fda4-7501-4425-862b-15333a5d2c84"
+          },
+          "createdAt": "2026-10-25T06:58:34.749Z"
+        },
+        {
+          "id": "request-2c200d21-9146-4566-ab05-f4d9eaaa1b2a",
+          "kind": "dispatch",
+          "dedupeKey": "native-c",
+          "entityId": "c",
+          "phase": "cancelled",
+          "payload": {
+            "expectedVersion": 0,
+            "planRevision": 1
+          },
+          "createdAt": "2026-10-25T06:58:34.753Z"
+        }
+      ],
+      "integrations": [],
+      "worktrees": [
+        {
+          "id": "a:1",
+          "taskId": "a",
+          "attempt": 1,
+          "kind": "task",
+          "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-lFutNF\\native-controls\\business\\workspaces\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+          "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+          "baseCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+          "headCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+          "writerRunId": null,
+          "status": "active"
+        },
+        {
+          "id": "b:1",
+          "taskId": "b",
+          "attempt": 1,
+          "kind": "task",
+          "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-lFutNF\\native-controls\\business\\workspaces\\ba9c736f19e7f60b7f6764ad\\worktrees\\34340f0e82d75a3446150f4a",
+          "branch": "rift/ba9c736f19e7f60b7f6764ad/3e23e8160039594a33894f65/1",
+          "baseCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+          "headCommit": "e797c624a1f97f3197c1dee12e200e5e119bcb41",
+          "writerRunId": null,
+          "status": "active"
+        }
+      ],
+      "eventSeq": 25
+    },
+    "nativeStarts": [
+      {
+        "id": "89026704-0143-49b7-a079-a31b1869333b",
+        "runId": "6d3dbb9f-e541-4394-8311-650c39d58330",
+        "provider": "claude-code-dev"
+      },
+      {
+        "id": "3672ac9e-a8c3-4955-9d86-52a1110d01a7",
+        "runId": "de012072-fbed-40a8-b7b1-196379495be8",
+        "provider": "claude-code-dev"
+      }
+    ],
+    "nativeEnds": [
+      {
+        "id": "3672ac9e-a8c3-4955-9d86-52a1110d01a7",
+        "runId": "de012072-fbed-40a8-b7b1-196379495be8",
+        "provider": "claude-code-dev",
+        "stopReason": "aborted"
+      },
+      {
+        "id": "89026704-0143-49b7-a079-a31b1869333b",
+        "runId": "6d3dbb9f-e541-4394-8311-650c39d58330",
+        "provider": "claude-code-dev",
+        "stopReason": "aborted"
+      }
+    ],
+    "cancellationDurationMs": 883,
+    "allDescendants": [
+      {
+        "pid": 35076,
+        "parentPid": 6256,
+        "name": "conhost.exe",
+        "createdAt": "2026-10-25T06:58:32.7055030Z"
+      },
+      {
+        "pid": 32820,
+        "parentPid": 6256,
+        "name": "node.exe",
+        "createdAt": "2026-10-25T06:58:35.2303900Z"
+      },
+      {
+        "pid": 30256,
+        "parentPid": 6256,
+        "name": "node.exe",
+        "createdAt": "2026-10-25T06:58:35.2704320Z"
+      },
+      {
+        "pid": 13848,
+        "parentPid": 32820,
+        "name": "claude.exe",
+        "createdAt": "2026-10-25T06:58:35.2870310Z"
+      },
+      {
+        "pid": 31680,
+        "parentPid": 30256,
+        "name": "claude.exe",
+        "createdAt": "2026-10-25T06:58:35.3249050Z"
+      },
+      {
+        "pid": 468,
+        "parentPid": 6256,
+        "name": "powershell.exe",
+        "createdAt": "2026-10-25T06:58:43.5111440Z"
+      },
+      {
+        "pid": 33864,
+        "parentPid": 468,
+        "name": "conhost.exe",
+        "createdAt": "2026-10-25T06:58:43.5188440Z"
+      }
+    ],
+    "tracked": [
+      {
+        "pid": 32820,
+        "parentPid": 6256,
+        "name": "node.exe",
+        "createdAt": "2026-10-25T06:58:35.2303900Z"
+      },
+      {
+        "pid": 30256,
+        "parentPid": 6256,
+        "name": "node.exe",
+        "createdAt": "2026-10-25T06:58:35.2704320Z"
+      },
+      {
+        "pid": 13848,
+        "parentPid": 32820,
+        "name": "claude.exe",
+        "createdAt": "2026-10-25T06:58:35.2870310Z"
+      },
+      {
+        "pid": 31680,
+        "parentPid": 30256,
+        "name": "claude.exe",
+        "createdAt": "2026-10-25T06:58:35.3249050Z"
+      }
+    ],
+    "survivors": [],
+    "readyFilesStableAfterCancellation": true,
+    "hostClosed": true
+  },
+  "status": "pass",
+  "evidence": {
+    "rawArtifact": ".runtime-evidence/recovery-native-controls.json",
+    "rawSha256": "6a3c2cd339b2f972298ab099c4458e27b66474b84bc587ec4d1ab0ce4e486b28",
+    "exportedAt": "2026-10-25T06:59:28.120Z",
+    "sanitization": "Workspace and user-home paths replaced; no credentials or raw environment values included.",
+    "scope": "Two real Claude activations with independent gate files explicitly permitted inside each worktree. Cancellation only; no source collection or candidate publication. Stable ready files after cancellation do not prove pre-cancellation counter growth."
+  },
+  "priorAttempts": [
+    {
+      "status": "fail",
+      "reason": "Probe incorrectly included the live Host console in Provider-exit measurement. Business cancellation succeeded, but evidence gate failed; never counted as pass. Failed worker was ended only after normal service cleanup.",
+      "rawArtifact": ".runtime-evidence/recovery-acceptance-K44rz5/report.json",
+      "rawSha256": "4123f86c80add73cacff761ce236c243fda3e2d02f4edd7d762829bf1024ba32"
+    },
+    {
+      "status": "fail",
+      "reason": "Gate was outside the worktree; unattended Claude denied Read approval, returned blocked and freed a slot before pause. Probe did not hold the required two in-flight tasks; never counted as pass.",
+      "rawArtifact": ".runtime-evidence/recovery-acceptance-bcmRyS/report.json",
+      "rawSha256": "95ee9e663f214e8e1dcbd8d17bd54bb1d4608a8cc754b42a6fe438c31994ec0d",
+      "actualProviderResult": {
+        "schemaVersion": 1,
+        "taskId": "b",
+        "runId": "run-477abf8d-4a78-422b-84c8-09c83528aea0",
+        "outcome": "blocked",
+        "summary": "I created b.txt with RIFT_NATIVE_READY and counter 0, then tried to read the release gate. The read was denied because this unattended session can't ask for approval to read the gate file, which is outside the working directory. Since I couldn't see whether the gate was CLOSED or OPEN, the loop never ran past the first read and b.txt still has counter 0.",
+        "changedPaths": [
+          "b.txt"
+        ],
+        "checksClaimed": [],
+        "blockingReasons": [
+          "The read of <RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-bcmRyS\\native-controls\\release-gate.txt was denied: 'This unattended Claude Code subagent cannot request human approval.' The gate state couldn't be checked, so the polling loop couldn't continue."
+        ]
+      }
+    }
+  ]
+}

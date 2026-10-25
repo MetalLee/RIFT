@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.rift/
+.runtime-evidence/
+coverage/
+*.tsbuildinfo
+
+# Local credentials and runtime state
+.env
+.env.*
+!.env.example
+management.token
+endpoint.json
+*.db
+*.db-shm
+*.db-wal

@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-25T06:08:25.608Z",
+  "node": "v24.16.0",
+  "platform": "win32",
+  "dsh": "0.2.1-rc.3",
+  "codexConfiguration": {
+    "providerName": "codex-review",
+    "model": "gpt-6.1-sol",
+    "permissionMode": "never",
+    "providerVersion": "0.2.1-rc.3",
+    "codexPayloadVersion": "0.164.0",
+    "codexPlatformPackage": "@openai/codex-win32-x64",
+    "codexPlatformPayloadVersion": "0.164.0-win32-x64"
+  },
+  "claude": {
+    "status": "skipped",
+    "reason": "User opted not to configure Claude credentials."
+  },
+  "managementApi": {
+    "status": "pass",
+    "loopback": "127.0.0.1",
+    "doctor": {
+      "version": "0.1.0-preview.1",
+      "node": "v24.16.0",
+      "dsh": "0.2.1-rc.3",
+      "providers": [
+        {
+          "name": "claude-code-dev",
+          "capabilities": {
+            "agentOptions": false,
+            "agentPreset": false,
+            "outputSchema": false,
+            "depthLimit": false
+          }
+        },
+        {
+          "name": "codex-review",
+          "capabilities": {
+            "agentOptions": false,
+            "agentPreset": false,
+            "outputSchema": false,
+            "depthLimit": false
+          }
+        }
+      ],
+      "authentication": {
+        "deepseekConfigured": true,
+        "claudeApiKeyConfigured": false,
+        "nativeAuthentication": "Not inferred from registration; run the credentialed probe."
+      },
+      "limits": {
+        "workflows": 1,
+        "developers": 2,
+        "reviewers": 1,
+        "total": 3
+      },
+      "unconfirmedRuns": [],
+      "interruptedRequests": [],
+      "restrictions": [
+        "External providers use one-shot activations.",
+        "Reviewer permission never inherits native sandbox; independent checkout and mutation gate enforce acceptance.",
+        "Claude real POC is skipped until credentials are configured."
+      ]
+    }
+  },
+  "plugin": {
+    "status": "pass",
+    "providers": [
+      "claude-code-dev",
+      "codex-review"
+    ],
+    "liveParent": true
+  },
+  "preAbort": "pass",
+  "preAbortDiagnostic": "AbortError: This operation was aborted",
+  "capabilityRejection": "pass",
+  "capabilityDiagnostic": "SubagentError: subagent provider \"codex-review\" does not support the \"outputSchema\" capability",
+  "codex": {
+    "status": "pass",
+    "childId": "fb4ee63f-45e0-45fc-9406-ef4492a267df",
+    "stopReason": "completed",
+    "text": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\中文 空格 Codex worktree 1792908507069\n\nRIFT_P0_CODEX",
+    "markerVerified": true,
+    "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\中文 空格 Codex worktree 1792908507069",
+    "startedAt": "2026-10-25T06:08:27.329Z",
+    "endedAt": "2026-10-25T06:08:40.296Z"
+  },
+  "codexCleanup": {
+    "status": "pass",
+    "activationReleased": true
+  },
+  "parentCleanup": {
+    "status": "pass"
+  },
+  "pluginUnload": {
+    "status": "pass",
+    "databaseLockReleased": true
+  },
+  "exitCode": 0
+}

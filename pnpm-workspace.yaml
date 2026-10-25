@@ -1,0 +1,13 @@
+packages:
+  - .
+allowBuilds:
+  '@deepseek-ai/dsh-subprocess-local': true
+  esbuild: true
+  koffi: true
+  node-pty: true
+  '@google/genai': false
+  protobufjs: false
+overrides:
+  '@opentelemetry/api': 1.9.0
+  '@deepseek-ai/dsh-subagent-codex>@openai/codex': 0.164.0
+  '@deepseek-ai/dsh-subagent-claude-code>@anthropic-ai/claude-agent-sdk': 0.3.310

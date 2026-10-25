@@ -1,0 +1,49 @@
+- id: sdk-app-startup
+  disabled: true
+- id: sdk-jsonrpc-server
+  disabled: true
+- insert:
+    - id: rift-subagents
+      name: '@deepseek-ai/dsh-subagent'
+      config:
+        maxActiveSubagents: 3
+        maxDepth: 1
+    - id: rift-claude
+      name: '@deepseek-ai/dsh-subagent-claude-code'
+      config:
+        providerName: claude-code-dev
+        permissionMode: acceptEdits
+        model: !!js >-
+          (() => {
+            const model = process.env.RIFT_CLAUDE_MODEL ?? 'claude-opus-5-5';
+            if (model !== 'claude-opus-5-5') {
+              throw new Error('RIFT_CLAUDE_MODEL must be claude-opus-5-5.');
+            }
+            return model;
+          })()
+        env: !!js >-
+          process.env.ANTHROPIC_API_KEY ? { ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY } : {}
+    - id: rift-codex
+      name: '@deepseek-ai/dsh-subagent-codex'
+      config:
+        providerName: codex-review
+        permissionMode: never
+        model: !!js >-
+          (() => {
+            const model = process.env.RIFT_CODEX_MODEL ?? 'gpt-6.1-sol';
+            if (!['gpt-6.1-sol', 'gpt-6-astra'].includes(model)) {
+              throw new Error('RIFT_CODEX_MODEL must be gpt-6.1-sol or gpt-6-astra.');
+            }
+            return model;
+          })()
+    - id: rift
+      name: '../dist/index.js'
+      config:
+        home: !!js process.env.RIFT_HOME || '.rift'
+        port: !!js Number(process.env.RIFT_PORT || 47831)
+        leadProvider: deepseek-official
+        leadModel: !!js process.env.RIFT_LEAD_MODEL || 'deepseek-flash'
+        checks:
+          - id: diff-check
+            executable: git
+            args: ['diff', '--check', 'HEAD^', 'HEAD']

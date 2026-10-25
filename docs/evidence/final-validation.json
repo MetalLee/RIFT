@@ -1,0 +1,50 @@
+{
+  "validatedAt": "2026-10-25T07:08:22.808Z",
+  "version": "0.1.0",
+  "checks": [
+    {
+      "command": "pnpm install --frozen-lockfile",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm peers check",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm typecheck",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm build",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm exec vitest run --reporter=json --outputFile=docs/evidence/automated-tests.json",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm poc",
+      "exitCode": 0
+    },
+    {
+      "command": "pnpm poc:tools",
+      "exitCode": 0
+    }
+  ],
+  "automated": {
+    "startedAt": "2026-10-25T07:00:00.306Z",
+    "files": 15,
+    "total": 72,
+    "passed": 72,
+    "failed": 0,
+    "pending": 0,
+    "reportSha256": "590c9566f6f8e952203cb375285eb133d105b40b760033fba4974753d0a44c1e"
+  },
+  "finalWorkflowImplementationHashesMatch": true,
+  "workflowEvidenceSha256": "143e05225f5aca4fd26359e016ac834bb694208e7681f7173c8e489be1217447",
+  "modelScope": {
+    "gpt-6.1-sol": "marker and 11-activation directed native review/rework/conflict workflow",
+    "gpt-6-astra": "marker and final unattended full LLM Lead workflow",
+    "claude-opus-5-5": "marker, full workflows, concurrency, cancellation, crash recovery"
+  }
+}

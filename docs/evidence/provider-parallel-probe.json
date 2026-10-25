@@ -1,0 +1,136 @@
+{
+  "probeId": "provider-parallel-1792909494537-14402f89",
+  "startedAt": "2026-10-25T06:24:54.538Z",
+  "node": "v24.16.0",
+  "platform": "win32",
+  "scope": "Official Provider activation overlap, selected activation disposal and sibling completion only.",
+  "notVerified": [
+    "Full four-role business workflow",
+    "Lead model orchestration",
+    "OS subprocess-tree cancellation",
+    "Arbitrary shell permissions"
+  ],
+  "models": {
+    "claude": "claude-opus-5-5",
+    "codex": "gpt-6.1-sol"
+  },
+  "permissionModes": {
+    "claude": "acceptEdits",
+    "codex": "never"
+  },
+  "deadlineMs": 90000,
+  "hostFilePollMs": 250,
+  "maximumModelGateReads": 20,
+  "children": {
+    "claude-a": {
+      "providerName": "claude-code-dev",
+      "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\provider-parallel-1792909494537-14402f89\\中文 空格 claude-a worktree",
+      "baseHead": "2579d905179d8efaab3c3f052089a5124ee242b5",
+      "startRequestedAt": "2026-10-25T06:24:56.452Z",
+      "gateReadPolicy": {
+        "tool": "Read",
+        "exactPath": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\provider-parallel-1792909494537-14402f89\\中文 空格 claude-a worktree\\gate.json"
+      },
+      "childId": "cb6d944e-c2ca-45f5-8f65-94ace7179de1",
+      "acceptedAt": "2026-10-25T06:24:56.482Z",
+      "readyAt": "2026-10-25T06:25:06.350Z",
+      "cancelRequestedAt": "2026-10-25T06:25:08.380Z",
+      "cleanupRequestedAt": "2026-10-25T06:25:08.381Z",
+      "endedAt": "2026-10-25T06:25:08.407Z",
+      "stopReason": "aborted",
+      "output": "",
+      "cleanup": "confirmed",
+      "cleanedAt": "2026-10-25T06:25:08.407Z"
+    },
+    "claude-b": {
+      "providerName": "claude-code-dev",
+      "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\provider-parallel-1792909494537-14402f89\\中文 空格 claude-b worktree",
+      "baseHead": "2579d905179d8efaab3c3f052089a5124ee242b5",
+      "startRequestedAt": "2026-10-25T06:24:56.452Z",
+      "gateReadPolicy": {
+        "tool": "Read",
+        "exactPath": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\provider-parallel-1792909494537-14402f89\\中文 空格 claude-b worktree\\gate.json"
+      },
+      "childId": "54043ea9-8227-4c26-a135-d56b9da52989",
+      "acceptedAt": "2026-10-25T06:24:56.482Z",
+      "readyAt": "2026-10-25T06:25:03.513Z",
+      "gateReleasedAt": "2026-10-25T06:25:08.408Z",
+      "endedAt": "2026-10-25T06:25:18.802Z",
+      "stopReason": "completed",
+      "output": "The gate opened on my third read of `gate.json`, and I wrote `done.txt`. That read showed `release:true` for probeId provider-parallel-1792909494537-14402f89 and child claude-b. On the second read, the tool returned \"file unchanged\" instead of the file contents.\n\nI wrote only `ready.txt` and `done.txt`, used only Read and Write, and didn't change `gate.json` or `baseline.txt`.\n\nAbsolute cwd: `D:\\Codex Workspace\\RIFT\\.runtime-evidence\\provider-parallel-1792909494537-14402f89\\中文 空格 claude-b worktree`\n\nDONE marker: `provider-parallel-1792909494537-14402f89:claude-b:DONE`",
+      "doneVerified": true,
+      "cleanupRequestedAt": "2026-10-25T06:25:18.831Z",
+      "cleanup": "confirmed",
+      "cleanedAt": "2026-10-25T06:25:18.831Z"
+    },
+    "codex-review": {
+      "providerName": "codex-review",
+      "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\provider-parallel-1792909494537-14402f89\\中文 空格 codex-review worktree",
+      "baseHead": "2579d905179d8efaab3c3f052089a5124ee242b5",
+      "startRequestedAt": "2026-10-25T06:24:56.453Z",
+      "gateReadPolicy": {
+        "tool": "exec_command",
+        "exactCommand": "Get-Content -LiteralPath 'D:\\Codex Workspace\\RIFT\\.runtime-evidence\\provider-parallel-1792909494537-14402f89\\中文 空格 codex-review worktree\\gate.json'"
+      },
+      "childId": "af3afd2c-91a7-4dab-96e1-019fd790d8e7",
+      "acceptedAt": "2026-10-25T06:25:02.489Z",
+      "readyAt": "2026-10-25T06:25:08.130Z",
+      "gateReleasedAt": "2026-10-25T06:25:08.408Z",
+      "endedAt": "2026-10-25T06:25:16.934Z",
+      "stopReason": "completed",
+      "output": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\provider-parallel-1792909494537-14402f89\\中文 空格 codex-review worktree\n\nprovider-parallel-1792909494537-14402f89:codex-review:DONE",
+      "doneVerified": true,
+      "cleanupRequestedAt": "2026-10-25T06:25:18.831Z",
+      "cleanup": "confirmed",
+      "cleanedAt": "2026-10-25T06:25:18.831Z"
+    }
+  },
+  "versions": {
+    "dsh": "0.2.1-rc.3",
+    "codexProvider": "0.2.1-rc.3",
+    "claudeProvider": "0.2.1-rc.3",
+    "codex": "0.164.0",
+    "claudeAgentSdk": "0.3.310",
+    "codexPlatform": "0.164.0-win32-x64",
+    "claudePlatform": "0.3.310"
+  },
+  "providers": [
+    "claude-code-dev",
+    "codex-review"
+  ],
+  "overlap": {
+    "status": "pass",
+    "confirmedAt": "2026-10-25T06:25:08.380Z",
+    "readyMarkers": 3,
+    "unsettledResults": 3,
+    "distinctWorktrees": 3,
+    "sameClaudeProvider": "claude-code-dev"
+  },
+  "selectedCancellation": {
+    "status": "pass",
+    "child": "claude-a",
+    "stopReason": "aborted",
+    "siblingsStillUnsettledAt": "2026-10-25T06:25:08.407Z"
+  },
+  "siblingCompletion": {
+    "status": "pass",
+    "children": [
+      "claude-b",
+      "codex-review"
+    ],
+    "completedAt": "2026-10-25T06:25:18.830Z"
+  },
+  "parentCleanup": {
+    "status": "pass",
+    "endedAt": "2026-10-25T06:25:18.832Z"
+  },
+  "hostUnload": {
+    "status": "pass",
+    "endedAt": "2026-10-25T06:25:18.841Z"
+  },
+  "databaseLockReleased": true,
+  "status": "pass",
+  "endedAt": "2026-10-25T06:25:18.842Z",
+  "elapsedMs": 24304,
+  "exitCode": 0
+}

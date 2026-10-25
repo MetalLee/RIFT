@@ -1,0 +1,125 @@
+{
+  "date": "2026-10-25T06:23:41.425Z",
+  "node": "v24.16.0",
+  "platform": "win32",
+  "dsh": "0.2.1-rc.3",
+  "codexConfiguration": {
+    "providerName": "codex-review",
+    "model": "gpt-6.1-sol",
+    "permissionMode": "never",
+    "providerVersion": "0.2.1-rc.3",
+    "codexPayloadVersion": "0.164.0",
+    "codexPlatformPackage": "@openai/codex-win32-x64",
+    "codexPlatformPayloadVersion": "0.164.0-win32-x64"
+  },
+  "claudeConfiguration": {
+    "providerName": "claude-code-dev",
+    "model": "claude-opus-5-5",
+    "permissionMode": "acceptEdits",
+    "providerVersion": "0.2.1-rc.3",
+    "claudeAgentSdkVersion": "0.3.310",
+    "claudeCodeVersion": "2.1.310",
+    "claudePlatformPackage": "@anthropic-ai/claude-agent-sdk-win32-x64",
+    "claudePlatformPayloadVersion": "0.3.310"
+  },
+  "codex": {
+    "status": "skipped",
+    "reason": "Not selected; use --codex to run this credentialed provider probe."
+  },
+  "claude": {
+    "status": "pass",
+    "model": "claude-opus-5-5",
+    "providerName": "claude-code-dev",
+    "childId": "358886e9-3b02-41ff-ab14-fc3bfdf1e053",
+    "stopReason": "completed",
+    "text": "I wrote `RIFT_P0_CLAUDE` to `marker.txt` and touched no other files.\n\n- **Absolute current directory:** `D:\\Codex Workspace\\RIFT\\.runtime-evidence\\中文 空格 Claude worktree 1792909422788`\n- **Marker:** `RIFT_P0_CLAUDE`\n\nI couldn't check the result with a shell command: a PowerShell check of the current path and the file's byte count was blocked, because this session runs unattended and can't ask for approval. The directory above is the working directory this session was given. The file was written with no trailing newline, but I couldn't read it back to confirm that.",
+    "markerVerified": true,
+    "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\中文 空格 Claude worktree 1792909422788",
+    "startedAt": "2026-10-25T06:23:43.040Z",
+    "endedAt": "2026-10-25T06:23:56.341Z"
+  },
+  "managementApi": {
+    "status": "pass",
+    "loopback": "127.0.0.1",
+    "doctor": {
+      "version": "0.1.0-preview.1",
+      "node": "v24.16.0",
+      "dsh": "0.2.1-rc.3",
+      "providers": [
+        {
+          "name": "claude-code-dev",
+          "capabilities": {
+            "agentOptions": false,
+            "agentPreset": false,
+            "outputSchema": false,
+            "depthLimit": false
+          }
+        },
+        {
+          "name": "codex-review",
+          "capabilities": {
+            "agentOptions": false,
+            "agentPreset": false,
+            "outputSchema": false,
+            "depthLimit": false
+          }
+        }
+      ],
+      "configuration": {
+        "credentialReferences": [
+          "env:DEEPSEEK_API_KEY",
+          "env:ANTHROPIC_API_KEY",
+          "native:claude",
+          "native:codex"
+        ],
+        "environmentPresence": {
+          "deepseekApiKey": true,
+          "anthropicApiKey": false
+        }
+      },
+      "authentication": {
+        "deepseek": "not-verified",
+        "claude": "not-verified",
+        "codex": "not-verified",
+        "verification": "Provider registration, environment-variable presence and an open Desktop app do not verify authentication or model access. Check a real activation probe for the configured instance."
+      },
+      "limits": {
+        "workflows": 1,
+        "developers": 2,
+        "reviewers": 1,
+        "total": 3
+      },
+      "unconfirmedRuns": [],
+      "interruptedRequests": [],
+      "restrictions": [
+        "External providers use one-shot activations.",
+        "Reviewer permission never inherits native sandbox; independent checkout and mutation gate enforce acceptance.",
+        "Authentication and model availability require real activation evidence; doctor does not run a model."
+      ]
+    }
+  },
+  "plugin": {
+    "status": "pass",
+    "providers": [
+      "claude-code-dev",
+      "codex-review"
+    ],
+    "liveParent": true
+  },
+  "claudePreAbort": "pass",
+  "claudePreAbortDiagnostic": "AbortError: This operation was aborted",
+  "claudeCapabilityRejection": "pass",
+  "claudeCapabilityRejectionDiagnostic": "SubagentError: subagent provider \"claude-code-dev\" does not support the \"outputSchema\" capability",
+  "claudeCleanup": {
+    "status": "pass",
+    "activationReleased": true
+  },
+  "parentCleanup": {
+    "status": "pass"
+  },
+  "pluginUnload": {
+    "status": "pass",
+    "databaseLockReleased": true
+  },
+  "exitCode": 0
+}

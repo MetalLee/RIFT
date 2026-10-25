@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-25T05:22:09.461Z",
+  "node": "v24.16.0",
+  "platform": "win32",
+  "dsh": "0.2.1-rc.3",
+  "claude": {
+    "status": "skipped",
+    "reason": "User opted not to configure Claude credentials."
+  },
+  "plugin": {
+    "status": "pass",
+    "providers": [
+      "claude-code-dev",
+      "codex-review"
+    ],
+    "liveParent": true
+  },
+  "preAbort": "pass",
+  "capabilityRejection": "pass",
+  "codex": {
+    "status": "fail",
+    "childId": "a27a6a95-8b02-4810-8c65-32702969065f",
+    "stopReason": "error",
+    "text": "",
+    "diagnostic": "Product subagent failure (product: Codex; stage: turn; category: product-error)",
+    "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\中文 空格 Codex probe",
+    "startedAt": "2026-10-25T05:22:11.026Z",
+    "endedAt": "2026-10-25T05:22:16.525Z"
+  }
+}

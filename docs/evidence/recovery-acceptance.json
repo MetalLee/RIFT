@@ -1,0 +1,3221 @@
+{
+  "date": "2026-10-25T06:49:20.420Z",
+  "node": "v24.16.0",
+  "platform": "win32",
+  "dsh": "0.2.1-rc.3",
+  "root": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3",
+  "mode": "real Host/SQLite/Git OS fault windows, controlled fake activations and real subprocess service",
+  "nativeModelCallsRequested": false,
+  "cases": [
+    {
+      "mode": "start-window",
+      "status": "pass",
+      "crash": {
+        "status": "pass",
+        "mode": "start-window",
+        "hostPid": 35460,
+        "killedAt": "2026-10-25T06:49:23.009Z",
+        "exit": {
+          "code": null,
+          "signal": "SIGKILL"
+        },
+        "checkpoint": {
+          "stage": "start-window",
+          "pid": 35460,
+          "time": "2026-10-25T06:49:22.972Z",
+          "details": {
+            "liveDshHost": true,
+            "bridge": "controlled fake",
+            "snapshot": {
+              "workflow": {
+                "id": "workflow",
+                "workspaceId": "probe",
+                "goal": "OS crash acceptance",
+                "leadSessionId": "recovery-start-window-1792910962479",
+                "planRevision": 1,
+                "version": 1,
+                "status": "running",
+                "integrationRef": "refs/heads/rift/recovery",
+                "baseCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+                "summary": null
+              },
+              "slots": {
+                "developers": 2,
+                "reviewers": 0,
+                "total": 2
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "workflowId": "workflow",
+                  "roleId": null,
+                  "kind": "analysis",
+                  "title": "a",
+                  "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+                  "expectedPaths": [
+                    "a.txt"
+                  ],
+                  "acceptanceCriteria": [],
+                  "status": "running",
+                  "attempt": 1,
+                  "version": 1,
+                  "acceptedCommit": null,
+                  "sourceHead": null,
+                  "blockingReason": null,
+                  "dependencyStatus": "ready"
+                },
+                {
+                  "id": "b",
+                  "workflowId": "workflow",
+                  "roleId": null,
+                  "kind": "analysis",
+                  "title": "b",
+                  "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+                  "expectedPaths": [
+                    "b.txt"
+                  ],
+                  "acceptanceCriteria": [],
+                  "status": "running",
+                  "attempt": 1,
+                  "version": 1,
+                  "acceptedCommit": null,
+                  "sourceHead": null,
+                  "blockingReason": null,
+                  "dependencyStatus": "ready"
+                },
+                {
+                  "id": "c",
+                  "workflowId": "workflow",
+                  "roleId": null,
+                  "kind": "analysis",
+                  "title": "c",
+                  "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+                  "expectedPaths": [
+                    "c.txt"
+                  ],
+                  "acceptanceCriteria": [],
+                  "status": "pending",
+                  "attempt": 1,
+                  "version": 0,
+                  "acceptedCommit": null,
+                  "sourceHead": null,
+                  "blockingReason": null,
+                  "dependencyStatus": "ready"
+                }
+              ],
+              "runs": [
+                {
+                  "id": "run-2368e5aa-3eda-400f-9f12-4d21bb1a95f6",
+                  "taskId": "a",
+                  "status": "preparing",
+                  "dshChildId": null,
+                  "cleanupStatus": "pending",
+                  "slotReleasedAt": null,
+                  "resultArtifactId": null
+                },
+                {
+                  "id": "run-879bdd8f-276b-4925-8f28-38ae78884300",
+                  "taskId": "b",
+                  "status": "preparing",
+                  "dshChildId": null,
+                  "cleanupStatus": "pending",
+                  "slotReleasedAt": null,
+                  "resultArtifactId": null
+                }
+              ],
+              "operations": [
+                {
+                  "id": "request-83b05f42-f2c8-4351-954b-ef43a3a46254",
+                  "kind": "dispatch",
+                  "dedupeKey": "dispatch-a",
+                  "entityId": "a",
+                  "phase": "started",
+                  "payload": {
+                    "expectedVersion": 0,
+                    "planRevision": 1,
+                    "runId": "run-2368e5aa-3eda-400f-9f12-4d21bb1a95f6"
+                  },
+                  "createdAt": "2026-10-25T06:49:22.484Z"
+                },
+                {
+                  "id": "request-befc6ddb-8632-45c6-a9a2-ac0e0bb2746c",
+                  "kind": "dispatch",
+                  "dedupeKey": "dispatch-b",
+                  "entityId": "b",
+                  "phase": "started",
+                  "payload": {
+                    "expectedVersion": 0,
+                    "planRevision": 1,
+                    "runId": "run-879bdd8f-276b-4925-8f28-38ae78884300"
+                  },
+                  "createdAt": "2026-10-25T06:49:22.490Z"
+                },
+                {
+                  "id": "request-94cb225e-6df8-4b47-8c34-085eebf39c44",
+                  "kind": "dispatch",
+                  "dedupeKey": "dispatch-c",
+                  "entityId": "c",
+                  "phase": "queued",
+                  "payload": {
+                    "expectedVersion": 0,
+                    "planRevision": 1
+                  },
+                  "createdAt": "2026-10-25T06:49:22.494Z"
+                }
+              ],
+              "integrations": [],
+              "worktrees": [
+                {
+                  "id": "a:1",
+                  "taskId": "a",
+                  "attempt": 1,
+                  "kind": "task",
+                  "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\start-window\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+                  "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+                  "baseCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+                  "headCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+                  "writerRunId": "run-2368e5aa-3eda-400f-9f12-4d21bb1a95f6",
+                  "status": "active"
+                },
+                {
+                  "id": "b:1",
+                  "taskId": "b",
+                  "attempt": 1,
+                  "kind": "task",
+                  "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\start-window\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\34340f0e82d75a3446150f4a",
+                  "branch": "rift/ba9c736f19e7f60b7f6764ad/3e23e8160039594a33894f65/1",
+                  "baseCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+                  "headCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+                  "writerRunId": "run-879bdd8f-276b-4925-8f28-38ae78884300",
+                  "status": "active"
+                }
+              ],
+              "eventSeq": 11
+            }
+          }
+        },
+        "nativeCleanup": null
+      },
+      "lease": {
+        "status": "pass",
+        "observations": [
+          {
+            "status": "acquired",
+            "pid": 14872
+          },
+          {
+            "status": "rejected",
+            "output": "RiftError: Another RIFT host holds this database.\n"
+          }
+        ]
+      },
+      "recovery": {
+        "status": "pass",
+        "mode": "start-window",
+        "boundary": "real DSH Host/SQLite/Git and abrupt OS termination; controlled activation except explicit native mode",
+        "before": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "OS crash acceptance",
+            "leadSessionId": "recovery-start-window-1792910962479",
+            "planRevision": 1,
+            "version": 1,
+            "status": "running",
+            "integrationRef": "refs/heads/rift/recovery",
+            "baseCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+            "summary": null
+          },
+          "slots": {
+            "developers": 2,
+            "reviewers": 0,
+            "total": 2
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "running",
+              "attempt": 1,
+              "version": 1,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "b",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "b",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "b.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "running",
+              "attempt": 1,
+              "version": 1,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "c",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "c",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "c.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "pending",
+              "attempt": 1,
+              "version": 0,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-2368e5aa-3eda-400f-9f12-4d21bb1a95f6",
+              "taskId": "a",
+              "status": "preparing",
+              "dshChildId": null,
+              "cleanupStatus": "pending",
+              "slotReleasedAt": null,
+              "resultArtifactId": null
+            },
+            {
+              "id": "run-879bdd8f-276b-4925-8f28-38ae78884300",
+              "taskId": "b",
+              "status": "preparing",
+              "dshChildId": null,
+              "cleanupStatus": "pending",
+              "slotReleasedAt": null,
+              "resultArtifactId": null
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-83b05f42-f2c8-4351-954b-ef43a3a46254",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "started",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-2368e5aa-3eda-400f-9f12-4d21bb1a95f6"
+              },
+              "createdAt": "2026-10-25T06:49:22.484Z"
+            },
+            {
+              "id": "request-befc6ddb-8632-45c6-a9a2-ac0e0bb2746c",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-b",
+              "entityId": "b",
+              "phase": "started",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-879bdd8f-276b-4925-8f28-38ae78884300"
+              },
+              "createdAt": "2026-10-25T06:49:22.490Z"
+            },
+            {
+              "id": "request-94cb225e-6df8-4b47-8c34-085eebf39c44",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-c",
+              "entityId": "c",
+              "phase": "queued",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1
+              },
+              "createdAt": "2026-10-25T06:49:22.494Z"
+            }
+          ],
+          "integrations": [],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\start-window\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+              "headCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+              "writerRunId": "run-2368e5aa-3eda-400f-9f12-4d21bb1a95f6",
+              "status": "active"
+            },
+            {
+              "id": "b:1",
+              "taskId": "b",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\start-window\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\34340f0e82d75a3446150f4a",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/3e23e8160039594a33894f65/1",
+              "baseCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+              "headCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+              "writerRunId": "run-879bdd8f-276b-4925-8f28-38ae78884300",
+              "status": "active"
+            }
+          ],
+          "eventSeq": 11
+        },
+        "recovery": {
+          "interruptedRunIds": [
+            "run-2368e5aa-3eda-400f-9f12-4d21bb1a95f6",
+            "run-879bdd8f-276b-4925-8f28-38ae78884300"
+          ],
+          "recoveredIntegrationIds": []
+        },
+        "after": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "OS crash acceptance",
+            "leadSessionId": "recovery-start-window-1792910962479",
+            "planRevision": 1,
+            "version": 2,
+            "status": "paused",
+            "integrationRef": "refs/heads/rift/recovery",
+            "baseCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+            "summary": null
+          },
+          "slots": {
+            "developers": 2,
+            "reviewers": 0,
+            "total": 2
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "blocked",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": "INTERRUPTED_CLEANUP_UNKNOWN",
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "b",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "b",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "b.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "blocked",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": "INTERRUPTED_CLEANUP_UNKNOWN",
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "c",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "c",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "c.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "pending",
+              "attempt": 1,
+              "version": 0,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-2368e5aa-3eda-400f-9f12-4d21bb1a95f6",
+              "taskId": "a",
+              "status": "interrupted",
+              "dshChildId": null,
+              "cleanupStatus": "unknown",
+              "slotReleasedAt": null,
+              "resultArtifactId": "artifact-060c509c-6786-4994-b09f-4263245d5b89"
+            },
+            {
+              "id": "run-879bdd8f-276b-4925-8f28-38ae78884300",
+              "taskId": "b",
+              "status": "interrupted",
+              "dshChildId": null,
+              "cleanupStatus": "unknown",
+              "slotReleasedAt": null,
+              "resultArtifactId": "artifact-3a422b10-7991-470b-b5a3-799cc8460310"
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-83b05f42-f2c8-4351-954b-ef43a3a46254",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "blocked",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-2368e5aa-3eda-400f-9f12-4d21bb1a95f6",
+                "error": "HOST_INTERRUPTED"
+              },
+              "createdAt": "2026-10-25T06:49:22.484Z"
+            },
+            {
+              "id": "request-befc6ddb-8632-45c6-a9a2-ac0e0bb2746c",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-b",
+              "entityId": "b",
+              "phase": "blocked",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-879bdd8f-276b-4925-8f28-38ae78884300",
+                "error": "HOST_INTERRUPTED"
+              },
+              "createdAt": "2026-10-25T06:49:22.490Z"
+            },
+            {
+              "id": "request-94cb225e-6df8-4b47-8c34-085eebf39c44",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-c",
+              "entityId": "c",
+              "phase": "queued",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1
+              },
+              "createdAt": "2026-10-25T06:49:22.494Z"
+            }
+          ],
+          "integrations": [],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\start-window\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+              "headCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+              "writerRunId": "run-2368e5aa-3eda-400f-9f12-4d21bb1a95f6",
+              "status": "active"
+            },
+            {
+              "id": "b:1",
+              "taskId": "b",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\start-window\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\34340f0e82d75a3446150f4a",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/3e23e8160039594a33894f65/1",
+              "baseCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+              "headCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+              "writerRunId": "run-879bdd8f-276b-4925-8f28-38ae78884300",
+              "status": "active"
+            }
+          ],
+          "eventSeq": 17
+        },
+        "afterExplicitResume": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "OS crash acceptance",
+            "leadSessionId": "recovery-start-window-1792910962479",
+            "planRevision": 1,
+            "version": 3,
+            "status": "running",
+            "integrationRef": "refs/heads/rift/recovery",
+            "baseCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+            "summary": null
+          },
+          "slots": {
+            "developers": 2,
+            "reviewers": 0,
+            "total": 2
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "blocked",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": "INTERRUPTED_CLEANUP_UNKNOWN",
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "b",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "b",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "b.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "blocked",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": "INTERRUPTED_CLEANUP_UNKNOWN",
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "c",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "c",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "c.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "pending",
+              "attempt": 1,
+              "version": 0,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-2368e5aa-3eda-400f-9f12-4d21bb1a95f6",
+              "taskId": "a",
+              "status": "interrupted",
+              "dshChildId": null,
+              "cleanupStatus": "unknown",
+              "slotReleasedAt": null,
+              "resultArtifactId": "artifact-060c509c-6786-4994-b09f-4263245d5b89"
+            },
+            {
+              "id": "run-879bdd8f-276b-4925-8f28-38ae78884300",
+              "taskId": "b",
+              "status": "interrupted",
+              "dshChildId": null,
+              "cleanupStatus": "unknown",
+              "slotReleasedAt": null,
+              "resultArtifactId": "artifact-3a422b10-7991-470b-b5a3-799cc8460310"
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-83b05f42-f2c8-4351-954b-ef43a3a46254",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "blocked",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-2368e5aa-3eda-400f-9f12-4d21bb1a95f6",
+                "error": "HOST_INTERRUPTED"
+              },
+              "createdAt": "2026-10-25T06:49:22.484Z"
+            },
+            {
+              "id": "request-befc6ddb-8632-45c6-a9a2-ac0e0bb2746c",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-b",
+              "entityId": "b",
+              "phase": "blocked",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-879bdd8f-276b-4925-8f28-38ae78884300",
+                "error": "HOST_INTERRUPTED"
+              },
+              "createdAt": "2026-10-25T06:49:22.490Z"
+            },
+            {
+              "id": "request-94cb225e-6df8-4b47-8c34-085eebf39c44",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-c",
+              "entityId": "c",
+              "phase": "queued",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1
+              },
+              "createdAt": "2026-10-25T06:49:22.494Z"
+            }
+          ],
+          "integrations": [],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\start-window\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+              "headCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+              "writerRunId": "run-2368e5aa-3eda-400f-9f12-4d21bb1a95f6",
+              "status": "active"
+            },
+            {
+              "id": "b:1",
+              "taskId": "b",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\start-window\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\34340f0e82d75a3446150f4a",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/3e23e8160039594a33894f65/1",
+              "baseCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+              "headCommit": "43e0deb9114952157e75f5dc56dc047b85759c41",
+              "writerRunId": "run-879bdd8f-276b-4925-8f28-38ae78884300",
+              "status": "active"
+            }
+          ],
+          "eventSeq": 18
+        },
+        "providerRestarts": 0,
+        "publishCalls": 0,
+        "refHead": null,
+        "journal": null
+      }
+    },
+    {
+      "mode": "running",
+      "status": "pass",
+      "crash": {
+        "status": "pass",
+        "mode": "running",
+        "hostPid": 4260,
+        "killedAt": "2026-10-25T06:49:28.143Z",
+        "exit": {
+          "code": null,
+          "signal": "SIGKILL"
+        },
+        "checkpoint": {
+          "stage": "running",
+          "pid": 4260,
+          "time": "2026-10-25T06:49:28.093Z",
+          "details": {
+            "liveDshHost": true,
+            "bridge": "controlled fake",
+            "snapshot": {
+              "workflow": {
+                "id": "workflow",
+                "workspaceId": "probe",
+                "goal": "OS crash acceptance",
+                "leadSessionId": "recovery-running-1792910967602",
+                "planRevision": 1,
+                "version": 1,
+                "status": "running",
+                "integrationRef": "refs/heads/rift/recovery",
+                "baseCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+                "summary": null
+              },
+              "slots": {
+                "developers": 2,
+                "reviewers": 0,
+                "total": 2
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "workflowId": "workflow",
+                  "roleId": null,
+                  "kind": "analysis",
+                  "title": "a",
+                  "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+                  "expectedPaths": [
+                    "a.txt"
+                  ],
+                  "acceptanceCriteria": [],
+                  "status": "running",
+                  "attempt": 1,
+                  "version": 1,
+                  "acceptedCommit": null,
+                  "sourceHead": null,
+                  "blockingReason": null,
+                  "dependencyStatus": "ready"
+                },
+                {
+                  "id": "b",
+                  "workflowId": "workflow",
+                  "roleId": null,
+                  "kind": "analysis",
+                  "title": "b",
+                  "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+                  "expectedPaths": [
+                    "b.txt"
+                  ],
+                  "acceptanceCriteria": [],
+                  "status": "running",
+                  "attempt": 1,
+                  "version": 1,
+                  "acceptedCommit": null,
+                  "sourceHead": null,
+                  "blockingReason": null,
+                  "dependencyStatus": "ready"
+                },
+                {
+                  "id": "c",
+                  "workflowId": "workflow",
+                  "roleId": null,
+                  "kind": "analysis",
+                  "title": "c",
+                  "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+                  "expectedPaths": [
+                    "c.txt"
+                  ],
+                  "acceptanceCriteria": [],
+                  "status": "pending",
+                  "attempt": 1,
+                  "version": 0,
+                  "acceptedCommit": null,
+                  "sourceHead": null,
+                  "blockingReason": null,
+                  "dependencyStatus": "ready"
+                }
+              ],
+              "runs": [
+                {
+                  "id": "run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+                  "taskId": "a",
+                  "status": "running",
+                  "dshChildId": "controlled-fake-run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+                  "cleanupStatus": "pending",
+                  "slotReleasedAt": null,
+                  "resultArtifactId": null
+                },
+                {
+                  "id": "run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b",
+                  "taskId": "b",
+                  "status": "running",
+                  "dshChildId": "controlled-fake-run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b",
+                  "cleanupStatus": "pending",
+                  "slotReleasedAt": null,
+                  "resultArtifactId": null
+                }
+              ],
+              "operations": [
+                {
+                  "id": "request-1ffac59e-3260-46e2-aa4f-276c7af702c6",
+                  "kind": "dispatch",
+                  "dedupeKey": "dispatch-a",
+                  "entityId": "a",
+                  "phase": "started",
+                  "payload": {
+                    "expectedVersion": 0,
+                    "planRevision": 1,
+                    "runId": "run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e"
+                  },
+                  "createdAt": "2026-10-25T06:49:27.608Z"
+                },
+                {
+                  "id": "request-366d63ee-05ea-4466-bd5e-926427308291",
+                  "kind": "dispatch",
+                  "dedupeKey": "dispatch-b",
+                  "entityId": "b",
+                  "phase": "started",
+                  "payload": {
+                    "expectedVersion": 0,
+                    "planRevision": 1,
+                    "runId": "run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b"
+                  },
+                  "createdAt": "2026-10-25T06:49:27.613Z"
+                },
+                {
+                  "id": "request-a6845cd8-8401-46b1-92be-d0e174317cf6",
+                  "kind": "dispatch",
+                  "dedupeKey": "dispatch-c",
+                  "entityId": "c",
+                  "phase": "queued",
+                  "payload": {
+                    "expectedVersion": 0,
+                    "planRevision": 1
+                  },
+                  "createdAt": "2026-10-25T06:49:27.617Z"
+                }
+              ],
+              "integrations": [],
+              "worktrees": [
+                {
+                  "id": "a:1",
+                  "taskId": "a",
+                  "attempt": 1,
+                  "kind": "task",
+                  "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\running\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+                  "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+                  "baseCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+                  "headCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+                  "writerRunId": "run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+                  "status": "active"
+                },
+                {
+                  "id": "b:1",
+                  "taskId": "b",
+                  "attempt": 1,
+                  "kind": "task",
+                  "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\running\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\34340f0e82d75a3446150f4a",
+                  "branch": "rift/ba9c736f19e7f60b7f6764ad/3e23e8160039594a33894f65/1",
+                  "baseCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+                  "headCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+                  "writerRunId": "run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b",
+                  "status": "active"
+                }
+              ],
+              "eventSeq": 13
+            }
+          }
+        },
+        "nativeCleanup": null
+      },
+      "lease": null,
+      "recovery": {
+        "status": "pass",
+        "mode": "running",
+        "boundary": "real DSH Host/SQLite/Git and abrupt OS termination; controlled activation except explicit native mode",
+        "before": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "OS crash acceptance",
+            "leadSessionId": "recovery-running-1792910967602",
+            "planRevision": 1,
+            "version": 1,
+            "status": "running",
+            "integrationRef": "refs/heads/rift/recovery",
+            "baseCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+            "summary": null
+          },
+          "slots": {
+            "developers": 2,
+            "reviewers": 0,
+            "total": 2
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "running",
+              "attempt": 1,
+              "version": 1,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "b",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "b",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "b.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "running",
+              "attempt": 1,
+              "version": 1,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "c",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "c",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "c.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "pending",
+              "attempt": 1,
+              "version": 0,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+              "taskId": "a",
+              "status": "running",
+              "dshChildId": "controlled-fake-run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+              "cleanupStatus": "pending",
+              "slotReleasedAt": null,
+              "resultArtifactId": null
+            },
+            {
+              "id": "run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b",
+              "taskId": "b",
+              "status": "running",
+              "dshChildId": "controlled-fake-run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b",
+              "cleanupStatus": "pending",
+              "slotReleasedAt": null,
+              "resultArtifactId": null
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-1ffac59e-3260-46e2-aa4f-276c7af702c6",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "started",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e"
+              },
+              "createdAt": "2026-10-25T06:49:27.608Z"
+            },
+            {
+              "id": "request-366d63ee-05ea-4466-bd5e-926427308291",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-b",
+              "entityId": "b",
+              "phase": "started",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b"
+              },
+              "createdAt": "2026-10-25T06:49:27.613Z"
+            },
+            {
+              "id": "request-a6845cd8-8401-46b1-92be-d0e174317cf6",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-c",
+              "entityId": "c",
+              "phase": "queued",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1
+              },
+              "createdAt": "2026-10-25T06:49:27.617Z"
+            }
+          ],
+          "integrations": [],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\running\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+              "headCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+              "writerRunId": "run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+              "status": "active"
+            },
+            {
+              "id": "b:1",
+              "taskId": "b",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\running\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\34340f0e82d75a3446150f4a",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/3e23e8160039594a33894f65/1",
+              "baseCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+              "headCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+              "writerRunId": "run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b",
+              "status": "active"
+            }
+          ],
+          "eventSeq": 13
+        },
+        "recovery": {
+          "interruptedRunIds": [
+            "run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+            "run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b"
+          ],
+          "recoveredIntegrationIds": []
+        },
+        "after": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "OS crash acceptance",
+            "leadSessionId": "recovery-running-1792910967602",
+            "planRevision": 1,
+            "version": 2,
+            "status": "paused",
+            "integrationRef": "refs/heads/rift/recovery",
+            "baseCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+            "summary": null
+          },
+          "slots": {
+            "developers": 2,
+            "reviewers": 0,
+            "total": 2
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "blocked",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": "INTERRUPTED_CLEANUP_UNKNOWN",
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "b",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "b",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "b.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "blocked",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": "INTERRUPTED_CLEANUP_UNKNOWN",
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "c",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "c",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "c.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "pending",
+              "attempt": 1,
+              "version": 0,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+              "taskId": "a",
+              "status": "interrupted",
+              "dshChildId": "controlled-fake-run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+              "cleanupStatus": "unknown",
+              "slotReleasedAt": null,
+              "resultArtifactId": "artifact-07d5ed62-3032-44c6-bfe7-b4760e299055"
+            },
+            {
+              "id": "run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b",
+              "taskId": "b",
+              "status": "interrupted",
+              "dshChildId": "controlled-fake-run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b",
+              "cleanupStatus": "unknown",
+              "slotReleasedAt": null,
+              "resultArtifactId": "artifact-d332f8d5-833b-4f0d-8bdd-747977824983"
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-1ffac59e-3260-46e2-aa4f-276c7af702c6",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "blocked",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+                "error": "HOST_INTERRUPTED"
+              },
+              "createdAt": "2026-10-25T06:49:27.608Z"
+            },
+            {
+              "id": "request-366d63ee-05ea-4466-bd5e-926427308291",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-b",
+              "entityId": "b",
+              "phase": "blocked",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b",
+                "error": "HOST_INTERRUPTED"
+              },
+              "createdAt": "2026-10-25T06:49:27.613Z"
+            },
+            {
+              "id": "request-a6845cd8-8401-46b1-92be-d0e174317cf6",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-c",
+              "entityId": "c",
+              "phase": "queued",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1
+              },
+              "createdAt": "2026-10-25T06:49:27.617Z"
+            }
+          ],
+          "integrations": [],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\running\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+              "headCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+              "writerRunId": "run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+              "status": "active"
+            },
+            {
+              "id": "b:1",
+              "taskId": "b",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\running\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\34340f0e82d75a3446150f4a",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/3e23e8160039594a33894f65/1",
+              "baseCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+              "headCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+              "writerRunId": "run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b",
+              "status": "active"
+            }
+          ],
+          "eventSeq": 19
+        },
+        "afterExplicitResume": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "OS crash acceptance",
+            "leadSessionId": "recovery-running-1792910967602",
+            "planRevision": 1,
+            "version": 3,
+            "status": "running",
+            "integrationRef": "refs/heads/rift/recovery",
+            "baseCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+            "summary": null
+          },
+          "slots": {
+            "developers": 2,
+            "reviewers": 0,
+            "total": 2
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "blocked",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": "INTERRUPTED_CLEANUP_UNKNOWN",
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "b",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "b",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "b.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "blocked",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": "INTERRUPTED_CLEANUP_UNKNOWN",
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "c",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "c",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "c.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "pending",
+              "attempt": 1,
+              "version": 0,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+              "taskId": "a",
+              "status": "interrupted",
+              "dshChildId": "controlled-fake-run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+              "cleanupStatus": "unknown",
+              "slotReleasedAt": null,
+              "resultArtifactId": "artifact-07d5ed62-3032-44c6-bfe7-b4760e299055"
+            },
+            {
+              "id": "run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b",
+              "taskId": "b",
+              "status": "interrupted",
+              "dshChildId": "controlled-fake-run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b",
+              "cleanupStatus": "unknown",
+              "slotReleasedAt": null,
+              "resultArtifactId": "artifact-d332f8d5-833b-4f0d-8bdd-747977824983"
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-1ffac59e-3260-46e2-aa4f-276c7af702c6",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "blocked",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+                "error": "HOST_INTERRUPTED"
+              },
+              "createdAt": "2026-10-25T06:49:27.608Z"
+            },
+            {
+              "id": "request-366d63ee-05ea-4466-bd5e-926427308291",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-b",
+              "entityId": "b",
+              "phase": "blocked",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b",
+                "error": "HOST_INTERRUPTED"
+              },
+              "createdAt": "2026-10-25T06:49:27.613Z"
+            },
+            {
+              "id": "request-a6845cd8-8401-46b1-92be-d0e174317cf6",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-c",
+              "entityId": "c",
+              "phase": "queued",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1
+              },
+              "createdAt": "2026-10-25T06:49:27.617Z"
+            }
+          ],
+          "integrations": [],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\running\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+              "headCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+              "writerRunId": "run-5aa864c7-0ecb-45be-9d1e-79586ed15b4e",
+              "status": "active"
+            },
+            {
+              "id": "b:1",
+              "taskId": "b",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\running\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\34340f0e82d75a3446150f4a",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/3e23e8160039594a33894f65/1",
+              "baseCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+              "headCommit": "eed00c932f1ba835a92d8f9289136cff4a89b68e",
+              "writerRunId": "run-aee9fcff-4c9d-4a2a-ad81-bb74f591278b",
+              "status": "active"
+            }
+          ],
+          "eventSeq": 20
+        },
+        "providerRestarts": 0,
+        "publishCalls": 0,
+        "refHead": null,
+        "journal": null
+      }
+    },
+    {
+      "mode": "result-cleanup",
+      "status": "pass",
+      "crash": {
+        "status": "pass",
+        "mode": "result-cleanup",
+        "hostPid": 12788,
+        "killedAt": "2026-10-25T06:49:32.599Z",
+        "exit": {
+          "code": null,
+          "signal": "SIGKILL"
+        },
+        "checkpoint": {
+          "stage": "result-cleanup",
+          "pid": 12788,
+          "time": "2026-10-25T06:49:32.569Z",
+          "details": {
+            "liveDshHost": true,
+            "bridge": "controlled fake",
+            "snapshot": {
+              "workflow": {
+                "id": "workflow",
+                "workspaceId": "probe",
+                "goal": "OS crash acceptance",
+                "leadSessionId": "recovery-result-cleanup-1792910972191",
+                "planRevision": 1,
+                "version": 1,
+                "status": "running",
+                "integrationRef": "refs/heads/rift/recovery",
+                "baseCommit": "9df7797fe622ca63aab5f9b9ea507e94a728e9b1",
+                "summary": null
+              },
+              "slots": {
+                "developers": 0,
+                "reviewers": 0,
+                "total": 0
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "workflowId": "workflow",
+                  "roleId": null,
+                  "kind": "change",
+                  "title": "a",
+                  "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+                  "expectedPaths": [
+                    "a.txt"
+                  ],
+                  "acceptanceCriteria": [],
+                  "status": "running",
+                  "attempt": 1,
+                  "version": 1,
+                  "acceptedCommit": null,
+                  "sourceHead": null,
+                  "blockingReason": null,
+                  "dependencyStatus": "ready"
+                }
+              ],
+              "runs": [
+                {
+                  "id": "run-3e45c1b9-05df-47ff-84f4-03041047f3ec",
+                  "taskId": "a",
+                  "status": "succeeded",
+                  "dshChildId": "controlled-fake-run-3e45c1b9-05df-47ff-84f4-03041047f3ec",
+                  "cleanupStatus": "confirmed",
+                  "slotReleasedAt": "2026-10-25T06:49:32.568Z",
+                  "resultArtifactId": "artifact-41251360-f02b-4e89-b8e2-09e92f5f053d"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "request-f00c5cc2-c8e5-4cfc-b750-5a60e8d61687",
+                  "kind": "dispatch",
+                  "dedupeKey": "dispatch-a",
+                  "entityId": "a",
+                  "phase": "started",
+                  "payload": {
+                    "expectedVersion": 0,
+                    "planRevision": 1,
+                    "runId": "run-3e45c1b9-05df-47ff-84f4-03041047f3ec"
+                  },
+                  "createdAt": "2026-10-25T06:49:32.196Z"
+                }
+              ],
+              "integrations": [],
+              "worktrees": [
+                {
+                  "id": "a:1",
+                  "taskId": "a",
+                  "attempt": 1,
+                  "kind": "task",
+                  "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\result-cleanup\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+                  "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+                  "baseCommit": "9df7797fe622ca63aab5f9b9ea507e94a728e9b1",
+                  "headCommit": "9df7797fe622ca63aab5f9b9ea507e94a728e9b1",
+                  "writerRunId": null,
+                  "status": "active"
+                }
+              ],
+              "eventSeq": 9
+            }
+          }
+        },
+        "nativeCleanup": null
+      },
+      "lease": null,
+      "recovery": {
+        "status": "pass",
+        "mode": "result-cleanup",
+        "boundary": "real DSH Host/SQLite/Git and abrupt OS termination; controlled activation except explicit native mode",
+        "before": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "OS crash acceptance",
+            "leadSessionId": "recovery-result-cleanup-1792910972191",
+            "planRevision": 1,
+            "version": 1,
+            "status": "running",
+            "integrationRef": "refs/heads/rift/recovery",
+            "baseCommit": "9df7797fe622ca63aab5f9b9ea507e94a728e9b1",
+            "summary": null
+          },
+          "slots": {
+            "developers": 0,
+            "reviewers": 0,
+            "total": 0
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "change",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "running",
+              "attempt": 1,
+              "version": 1,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-3e45c1b9-05df-47ff-84f4-03041047f3ec",
+              "taskId": "a",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-3e45c1b9-05df-47ff-84f4-03041047f3ec",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:32.568Z",
+              "resultArtifactId": "artifact-41251360-f02b-4e89-b8e2-09e92f5f053d"
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-f00c5cc2-c8e5-4cfc-b750-5a60e8d61687",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "started",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-3e45c1b9-05df-47ff-84f4-03041047f3ec"
+              },
+              "createdAt": "2026-10-25T06:49:32.196Z"
+            }
+          ],
+          "integrations": [],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\result-cleanup\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "9df7797fe622ca63aab5f9b9ea507e94a728e9b1",
+              "headCommit": "9df7797fe622ca63aab5f9b9ea507e94a728e9b1",
+              "writerRunId": null,
+              "status": "active"
+            }
+          ],
+          "eventSeq": 9
+        },
+        "recovery": {
+          "interruptedRunIds": [],
+          "recoveredIntegrationIds": []
+        },
+        "after": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "OS crash acceptance",
+            "leadSessionId": "recovery-result-cleanup-1792910972191",
+            "planRevision": 1,
+            "version": 2,
+            "status": "paused",
+            "integrationRef": "refs/heads/rift/recovery",
+            "baseCommit": "9df7797fe622ca63aab5f9b9ea507e94a728e9b1",
+            "summary": null
+          },
+          "slots": {
+            "developers": 0,
+            "reviewers": 0,
+            "total": 0
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "change",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "blocked",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": "HOST_INTERRUPTED_FINALIZATION",
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-3e45c1b9-05df-47ff-84f4-03041047f3ec",
+              "taskId": "a",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-3e45c1b9-05df-47ff-84f4-03041047f3ec",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:32.568Z",
+              "resultArtifactId": "artifact-41251360-f02b-4e89-b8e2-09e92f5f053d"
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-f00c5cc2-c8e5-4cfc-b750-5a60e8d61687",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "blocked",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-3e45c1b9-05df-47ff-84f4-03041047f3ec",
+                "error": "HOST_INTERRUPTED"
+              },
+              "createdAt": "2026-10-25T06:49:32.196Z"
+            }
+          ],
+          "integrations": [],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\result-cleanup\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "9df7797fe622ca63aab5f9b9ea507e94a728e9b1",
+              "headCommit": "9df7797fe622ca63aab5f9b9ea507e94a728e9b1",
+              "writerRunId": null,
+              "status": "active"
+            }
+          ],
+          "eventSeq": 11
+        },
+        "afterExplicitResume": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "OS crash acceptance",
+            "leadSessionId": "recovery-result-cleanup-1792910972191",
+            "planRevision": 1,
+            "version": 3,
+            "status": "running",
+            "integrationRef": "refs/heads/rift/recovery",
+            "baseCommit": "9df7797fe622ca63aab5f9b9ea507e94a728e9b1",
+            "summary": null
+          },
+          "slots": {
+            "developers": 0,
+            "reviewers": 0,
+            "total": 0
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "change",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "blocked",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": "HOST_INTERRUPTED_FINALIZATION",
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-3e45c1b9-05df-47ff-84f4-03041047f3ec",
+              "taskId": "a",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-3e45c1b9-05df-47ff-84f4-03041047f3ec",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:32.568Z",
+              "resultArtifactId": "artifact-41251360-f02b-4e89-b8e2-09e92f5f053d"
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-f00c5cc2-c8e5-4cfc-b750-5a60e8d61687",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "blocked",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-3e45c1b9-05df-47ff-84f4-03041047f3ec",
+                "error": "HOST_INTERRUPTED"
+              },
+              "createdAt": "2026-10-25T06:49:32.196Z"
+            }
+          ],
+          "integrations": [],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\result-cleanup\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "9df7797fe622ca63aab5f9b9ea507e94a728e9b1",
+              "headCommit": "9df7797fe622ca63aab5f9b9ea507e94a728e9b1",
+              "writerRunId": null,
+              "status": "active"
+            }
+          ],
+          "eventSeq": 12
+        },
+        "providerRestarts": 0,
+        "publishCalls": 0,
+        "refHead": null,
+        "journal": null
+      }
+    },
+    {
+      "mode": "publication",
+      "status": "pass",
+      "crash": {
+        "status": "pass",
+        "mode": "publication",
+        "hostPid": 3392,
+        "killedAt": "2026-10-25T06:49:38.546Z",
+        "exit": {
+          "code": null,
+          "signal": "SIGKILL"
+        },
+        "checkpoint": {
+          "stage": "publication",
+          "pid": 3392,
+          "time": "2026-10-25T06:49:38.500Z",
+          "details": {
+            "liveDshHost": true,
+            "bridge": "controlled fake",
+            "snapshot": {
+              "workflow": {
+                "id": "workflow",
+                "workspaceId": "probe",
+                "goal": "OS crash acceptance",
+                "leadSessionId": "recovery-publication-1792910976622",
+                "planRevision": 1,
+                "version": 1,
+                "status": "running",
+                "integrationRef": "refs/heads/rift/recovery",
+                "baseCommit": "64d14d0106e52675150057389c9a0c5616f6b854",
+                "summary": null
+              },
+              "slots": {
+                "developers": 0,
+                "reviewers": 0,
+                "total": 0
+              },
+              "tasks": [
+                {
+                  "id": "a",
+                  "workflowId": "workflow",
+                  "roleId": null,
+                  "kind": "change",
+                  "title": "a",
+                  "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+                  "expectedPaths": [
+                    "a.txt"
+                  ],
+                  "acceptanceCriteria": [],
+                  "status": "integrating",
+                  "attempt": 1,
+                  "version": 3,
+                  "acceptedCommit": null,
+                  "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+                  "blockingReason": null,
+                  "dependencyStatus": "ready"
+                }
+              ],
+              "runs": [
+                {
+                  "id": "run-d3eb9df0-3868-4aa0-ae59-520c9a779878",
+                  "taskId": "a",
+                  "status": "succeeded",
+                  "dshChildId": "controlled-fake-run-d3eb9df0-3868-4aa0-ae59-520c9a779878",
+                  "cleanupStatus": "confirmed",
+                  "slotReleasedAt": "2026-10-25T06:49:37.024Z",
+                  "resultArtifactId": "artifact-83cd89b2-f86c-4a36-84fe-1f793bab8ec7"
+                },
+                {
+                  "id": "run-6d011ac7-4d98-4119-b3e0-89b5e86cabae",
+                  "taskId": "a",
+                  "status": "succeeded",
+                  "dshChildId": "controlled-fake-run-6d011ac7-4d98-4119-b3e0-89b5e86cabae",
+                  "cleanupStatus": "confirmed",
+                  "slotReleasedAt": "2026-10-25T06:49:38.183Z",
+                  "resultArtifactId": "artifact-e6a35cac-ef1f-4acd-95c3-1ed6000675b1"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "request-d560ef94-b44d-43c2-b704-eadb1d9aea3b",
+                  "kind": "dispatch",
+                  "dedupeKey": "dispatch-a",
+                  "entityId": "a",
+                  "phase": "completed",
+                  "payload": {
+                    "expectedVersion": 0,
+                    "planRevision": 1,
+                    "runId": "run-d3eb9df0-3868-4aa0-ae59-520c9a779878"
+                  },
+                  "createdAt": "2026-10-25T06:49:36.628Z"
+                },
+                {
+                  "id": "request-c08b28e3-ded8-422f-b7ee-3bf9ddbb9c62",
+                  "kind": "integration",
+                  "dedupeKey": "auto-integration:a:1",
+                  "entityId": "a",
+                  "phase": "started",
+                  "payload": {
+                    "expectedVersion": 2,
+                    "planRevision": 1,
+                    "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+                    "integrationId": "integration-28ef97bd-c4db-4bc2-86d9-d6778ae4717f",
+                    "runId": "run-6d011ac7-4d98-4119-b3e0-89b5e86cabae"
+                  },
+                  "createdAt": "2026-10-25T06:49:37.595Z"
+                }
+              ],
+              "integrations": [
+                {
+                  "id": "integration-28ef97bd-c4db-4bc2-86d9-d6778ae4717f",
+                  "taskId": "a",
+                  "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+                  "expectedTargetHead": "64d14d0106e52675150057389c9a0c5616f6b854",
+                  "candidateHead": "a76d69a80bd261f5f6fb13066f6a2b018bed039b",
+                  "checkIds": [
+                    "4fcb1172-cd7d-4c0b-9ccd-eca9faff3378"
+                  ],
+                  "reviewRunId": "run-6d011ac7-4d98-4119-b3e0-89b5e86cabae",
+                  "status": "publishing",
+                  "candidate": {
+                    "integrationId": "integration-28ef97bd-c4db-4bc2-86d9-d6778ae4717f",
+                    "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+                    "candidateHead": "a76d69a80bd261f5f6fb13066f6a2b018bed039b",
+                    "expectedTargetHead": "64d14d0106e52675150057389c9a0c5616f6b854",
+                    "cwd": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\publication\\managed\\ba9c736f19e7f60b7f6764ad\\reviews\\823eae06b1b3764f1d73b942",
+                    "checkIds": [
+                      "4fcb1172-cd7d-4c0b-9ccd-eca9faff3378"
+                    ]
+                  },
+                  "error": null
+                }
+              ],
+              "worktrees": [
+                {
+                  "id": "a:1",
+                  "taskId": "a",
+                  "attempt": 1,
+                  "kind": "task",
+                  "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\publication\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+                  "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+                  "baseCommit": "64d14d0106e52675150057389c9a0c5616f6b854",
+                  "headCommit": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+                  "writerRunId": null,
+                  "status": "active"
+                }
+              ],
+              "eventSeq": 20
+            },
+            "transaction": "Git ref advanced; SQLite acceptance BEGIN active, not COMMIT"
+          }
+        },
+        "nativeCleanup": null
+      },
+      "lease": null,
+      "recovery": {
+        "status": "pass",
+        "mode": "publication",
+        "boundary": "real DSH Host/SQLite/Git and abrupt OS termination; controlled activation except explicit native mode",
+        "before": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "OS crash acceptance",
+            "leadSessionId": "recovery-publication-1792910976622",
+            "planRevision": 1,
+            "version": 1,
+            "status": "running",
+            "integrationRef": "refs/heads/rift/recovery",
+            "baseCommit": "64d14d0106e52675150057389c9a0c5616f6b854",
+            "summary": null
+          },
+          "slots": {
+            "developers": 0,
+            "reviewers": 0,
+            "total": 0
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "change",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "integrating",
+              "attempt": 1,
+              "version": 3,
+              "acceptedCommit": null,
+              "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-d3eb9df0-3868-4aa0-ae59-520c9a779878",
+              "taskId": "a",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-d3eb9df0-3868-4aa0-ae59-520c9a779878",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:37.024Z",
+              "resultArtifactId": "artifact-83cd89b2-f86c-4a36-84fe-1f793bab8ec7"
+            },
+            {
+              "id": "run-6d011ac7-4d98-4119-b3e0-89b5e86cabae",
+              "taskId": "a",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-6d011ac7-4d98-4119-b3e0-89b5e86cabae",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:38.183Z",
+              "resultArtifactId": "artifact-e6a35cac-ef1f-4acd-95c3-1ed6000675b1"
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-d560ef94-b44d-43c2-b704-eadb1d9aea3b",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "completed",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-d3eb9df0-3868-4aa0-ae59-520c9a779878"
+              },
+              "createdAt": "2026-10-25T06:49:36.628Z"
+            },
+            {
+              "id": "request-c08b28e3-ded8-422f-b7ee-3bf9ddbb9c62",
+              "kind": "integration",
+              "dedupeKey": "auto-integration:a:1",
+              "entityId": "a",
+              "phase": "started",
+              "payload": {
+                "expectedVersion": 2,
+                "planRevision": 1,
+                "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+                "integrationId": "integration-28ef97bd-c4db-4bc2-86d9-d6778ae4717f",
+                "runId": "run-6d011ac7-4d98-4119-b3e0-89b5e86cabae"
+              },
+              "createdAt": "2026-10-25T06:49:37.595Z"
+            }
+          ],
+          "integrations": [
+            {
+              "id": "integration-28ef97bd-c4db-4bc2-86d9-d6778ae4717f",
+              "taskId": "a",
+              "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+              "expectedTargetHead": "64d14d0106e52675150057389c9a0c5616f6b854",
+              "candidateHead": "a76d69a80bd261f5f6fb13066f6a2b018bed039b",
+              "checkIds": [
+                "4fcb1172-cd7d-4c0b-9ccd-eca9faff3378"
+              ],
+              "reviewRunId": "run-6d011ac7-4d98-4119-b3e0-89b5e86cabae",
+              "status": "publishing",
+              "candidate": {
+                "integrationId": "integration-28ef97bd-c4db-4bc2-86d9-d6778ae4717f",
+                "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+                "candidateHead": "a76d69a80bd261f5f6fb13066f6a2b018bed039b",
+                "expectedTargetHead": "64d14d0106e52675150057389c9a0c5616f6b854",
+                "cwd": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\publication\\managed\\ba9c736f19e7f60b7f6764ad\\reviews\\823eae06b1b3764f1d73b942",
+                "checkIds": [
+                  "4fcb1172-cd7d-4c0b-9ccd-eca9faff3378"
+                ]
+              },
+              "error": null
+            }
+          ],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\publication\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "64d14d0106e52675150057389c9a0c5616f6b854",
+              "headCommit": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+              "writerRunId": null,
+              "status": "active"
+            }
+          ],
+          "eventSeq": 20
+        },
+        "recovery": {
+          "interruptedRunIds": [],
+          "recoveredIntegrationIds": [
+            "integration-28ef97bd-c4db-4bc2-86d9-d6778ae4717f"
+          ]
+        },
+        "after": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "OS crash acceptance",
+            "leadSessionId": "recovery-publication-1792910976622",
+            "planRevision": 1,
+            "version": 2,
+            "status": "paused",
+            "integrationRef": "refs/heads/rift/recovery",
+            "baseCommit": "64d14d0106e52675150057389c9a0c5616f6b854",
+            "summary": null
+          },
+          "slots": {
+            "developers": 0,
+            "reviewers": 0,
+            "total": 0
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "change",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "succeeded",
+              "attempt": 1,
+              "version": 4,
+              "acceptedCommit": "a76d69a80bd261f5f6fb13066f6a2b018bed039b",
+              "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-d3eb9df0-3868-4aa0-ae59-520c9a779878",
+              "taskId": "a",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-d3eb9df0-3868-4aa0-ae59-520c9a779878",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:37.024Z",
+              "resultArtifactId": "artifact-83cd89b2-f86c-4a36-84fe-1f793bab8ec7"
+            },
+            {
+              "id": "run-6d011ac7-4d98-4119-b3e0-89b5e86cabae",
+              "taskId": "a",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-6d011ac7-4d98-4119-b3e0-89b5e86cabae",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:38.183Z",
+              "resultArtifactId": "artifact-e6a35cac-ef1f-4acd-95c3-1ed6000675b1"
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-d560ef94-b44d-43c2-b704-eadb1d9aea3b",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "completed",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-d3eb9df0-3868-4aa0-ae59-520c9a779878"
+              },
+              "createdAt": "2026-10-25T06:49:36.628Z"
+            },
+            {
+              "id": "request-c08b28e3-ded8-422f-b7ee-3bf9ddbb9c62",
+              "kind": "integration",
+              "dedupeKey": "auto-integration:a:1",
+              "entityId": "a",
+              "phase": "completed",
+              "payload": {
+                "expectedVersion": 2,
+                "planRevision": 1,
+                "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+                "integrationId": "integration-28ef97bd-c4db-4bc2-86d9-d6778ae4717f",
+                "runId": "run-6d011ac7-4d98-4119-b3e0-89b5e86cabae"
+              },
+              "createdAt": "2026-10-25T06:49:37.595Z"
+            }
+          ],
+          "integrations": [
+            {
+              "id": "integration-28ef97bd-c4db-4bc2-86d9-d6778ae4717f",
+              "taskId": "a",
+              "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+              "expectedTargetHead": "64d14d0106e52675150057389c9a0c5616f6b854",
+              "candidateHead": "a76d69a80bd261f5f6fb13066f6a2b018bed039b",
+              "checkIds": [
+                "4fcb1172-cd7d-4c0b-9ccd-eca9faff3378"
+              ],
+              "reviewRunId": "run-6d011ac7-4d98-4119-b3e0-89b5e86cabae",
+              "status": "accepted",
+              "candidate": {
+                "integrationId": "integration-28ef97bd-c4db-4bc2-86d9-d6778ae4717f",
+                "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+                "candidateHead": "a76d69a80bd261f5f6fb13066f6a2b018bed039b",
+                "expectedTargetHead": "64d14d0106e52675150057389c9a0c5616f6b854",
+                "cwd": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\publication\\managed\\ba9c736f19e7f60b7f6764ad\\reviews\\823eae06b1b3764f1d73b942",
+                "checkIds": [
+                  "4fcb1172-cd7d-4c0b-9ccd-eca9faff3378"
+                ]
+              },
+              "error": null
+            }
+          ],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\publication\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "64d14d0106e52675150057389c9a0c5616f6b854",
+              "headCommit": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+              "writerRunId": null,
+              "status": "active"
+            }
+          ],
+          "eventSeq": 22
+        },
+        "afterExplicitResume": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "OS crash acceptance",
+            "leadSessionId": "recovery-publication-1792910976622",
+            "planRevision": 1,
+            "version": 3,
+            "status": "running",
+            "integrationRef": "refs/heads/rift/recovery",
+            "baseCommit": "64d14d0106e52675150057389c9a0c5616f6b854",
+            "summary": null
+          },
+          "slots": {
+            "developers": 0,
+            "reviewers": 0,
+            "total": 0
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "change",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "succeeded",
+              "attempt": 1,
+              "version": 4,
+              "acceptedCommit": "a76d69a80bd261f5f6fb13066f6a2b018bed039b",
+              "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-d3eb9df0-3868-4aa0-ae59-520c9a779878",
+              "taskId": "a",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-d3eb9df0-3868-4aa0-ae59-520c9a779878",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:37.024Z",
+              "resultArtifactId": "artifact-83cd89b2-f86c-4a36-84fe-1f793bab8ec7"
+            },
+            {
+              "id": "run-6d011ac7-4d98-4119-b3e0-89b5e86cabae",
+              "taskId": "a",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-6d011ac7-4d98-4119-b3e0-89b5e86cabae",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:38.183Z",
+              "resultArtifactId": "artifact-e6a35cac-ef1f-4acd-95c3-1ed6000675b1"
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-d560ef94-b44d-43c2-b704-eadb1d9aea3b",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "completed",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-d3eb9df0-3868-4aa0-ae59-520c9a779878"
+              },
+              "createdAt": "2026-10-25T06:49:36.628Z"
+            },
+            {
+              "id": "request-c08b28e3-ded8-422f-b7ee-3bf9ddbb9c62",
+              "kind": "integration",
+              "dedupeKey": "auto-integration:a:1",
+              "entityId": "a",
+              "phase": "completed",
+              "payload": {
+                "expectedVersion": 2,
+                "planRevision": 1,
+                "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+                "integrationId": "integration-28ef97bd-c4db-4bc2-86d9-d6778ae4717f",
+                "runId": "run-6d011ac7-4d98-4119-b3e0-89b5e86cabae"
+              },
+              "createdAt": "2026-10-25T06:49:37.595Z"
+            }
+          ],
+          "integrations": [
+            {
+              "id": "integration-28ef97bd-c4db-4bc2-86d9-d6778ae4717f",
+              "taskId": "a",
+              "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+              "expectedTargetHead": "64d14d0106e52675150057389c9a0c5616f6b854",
+              "candidateHead": "a76d69a80bd261f5f6fb13066f6a2b018bed039b",
+              "checkIds": [
+                "4fcb1172-cd7d-4c0b-9ccd-eca9faff3378"
+              ],
+              "reviewRunId": "run-6d011ac7-4d98-4119-b3e0-89b5e86cabae",
+              "status": "accepted",
+              "candidate": {
+                "integrationId": "integration-28ef97bd-c4db-4bc2-86d9-d6778ae4717f",
+                "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+                "candidateHead": "a76d69a80bd261f5f6fb13066f6a2b018bed039b",
+                "expectedTargetHead": "64d14d0106e52675150057389c9a0c5616f6b854",
+                "cwd": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\publication\\managed\\ba9c736f19e7f60b7f6764ad\\reviews\\823eae06b1b3764f1d73b942",
+                "checkIds": [
+                  "4fcb1172-cd7d-4c0b-9ccd-eca9faff3378"
+                ]
+              },
+              "error": null
+            }
+          ],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\publication\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "64d14d0106e52675150057389c9a0c5616f6b854",
+              "headCommit": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+              "writerRunId": null,
+              "status": "active"
+            }
+          ],
+          "eventSeq": 23
+        },
+        "providerRestarts": 0,
+        "publishCalls": 0,
+        "refHead": "a76d69a80bd261f5f6fb13066f6a2b018bed039b",
+        "journal": {
+          "integrationId": "integration-28ef97bd-c4db-4bc2-86d9-d6778ae4717f",
+          "taskId": "a",
+          "integrationRef": "refs/heads/rift/recovery",
+          "sourceHead": "2df9f7203eff66b9771b3b6359125205ebbfe8b8",
+          "expectedTargetHead": "64d14d0106e52675150057389c9a0c5616f6b854",
+          "candidatePath": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\publication\\managed\\ba9c736f19e7f60b7f6764ad\\candidates\\823eae06b1b3764f1d73b942",
+          "reviewPath": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\publication\\managed\\ba9c736f19e7f60b7f6764ad\\reviews\\823eae06b1b3764f1d73b942",
+          "phase": "ref_published",
+          "candidateHead": "a76d69a80bd261f5f6fb13066f6a2b018bed039b",
+          "checks": [
+            {
+              "id": "4fcb1172-cd7d-4c0b-9ccd-eca9faff3378",
+              "commandId": "whitespace",
+              "candidateHead": "a76d69a80bd261f5f6fb13066f6a2b018bed039b",
+              "exitCode": 0,
+              "stdout": "",
+              "stderr": "",
+              "truncated": false,
+              "startedAt": "2026-10-25T06:49:37.998Z",
+              "finishedAt": "2026-10-25T06:49:38.029Z"
+            }
+          ],
+          "review": {
+            "schemaVersion": 1,
+            "taskId": "a",
+            "runId": "run-6d011ac7-4d98-4119-b3e0-89b5e86cabae",
+            "verdict": "approve",
+            "reviewedCommit": "a76d69a80bd261f5f6fb13066f6a2b018bed039b",
+            "findings": []
+          }
+        }
+      }
+    }
+  ],
+  "controls": {
+    "status": "pass",
+    "boundary": "real DSH Host/SQLite/Git with controlled fake activations",
+    "cases": [
+      {
+        "name": "paused development queue",
+        "status": "pass",
+        "snapshot": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "pause-develop",
+            "leadSessionId": null,
+            "planRevision": 1,
+            "version": 3,
+            "status": "running",
+            "integrationRef": "refs/heads/rift/pause-develop",
+            "baseCommit": "d8c965a6afa1132ed95a7e3d4a7a265cd152bab2",
+            "summary": null
+          },
+          "slots": {
+            "developers": 0,
+            "reviewers": 0,
+            "total": 0
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "succeeded",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "b",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "b",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "b.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "succeeded",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "c",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "c",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "c.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "succeeded",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-e2f7ff4a-5d37-4ed0-8ec9-cf9c23349e2d",
+              "taskId": "a",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-e2f7ff4a-5d37-4ed0-8ec9-cf9c23349e2d",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:43.369Z",
+              "resultArtifactId": "artifact-bff160cc-40bd-4c9d-a523-4c64a365cc71"
+            },
+            {
+              "id": "run-f38cdf7d-5d61-4c7d-bfac-7e7f7c69c85f",
+              "taskId": "b",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-f38cdf7d-5d61-4c7d-bfac-7e7f7c69c85f",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:43.370Z",
+              "resultArtifactId": "artifact-0eb26a00-fc3f-454a-abed-9eede63071fc"
+            },
+            {
+              "id": "run-4c8bf32e-d248-46b1-bfca-0a70f1fb4e50",
+              "taskId": "c",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-4c8bf32e-d248-46b1-bfca-0a70f1fb4e50",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:43.748Z",
+              "resultArtifactId": "artifact-7c984e14-cd83-4832-8831-a90451941eb4"
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-f07a8da3-7826-4745-b099-599db2dd25eb",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "completed",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-e2f7ff4a-5d37-4ed0-8ec9-cf9c23349e2d"
+              },
+              "createdAt": "2026-10-25T06:49:42.855Z"
+            },
+            {
+              "id": "request-07c048ab-3063-46d6-8919-5ad7cfc7fdb7",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-b",
+              "entityId": "b",
+              "phase": "completed",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-f38cdf7d-5d61-4c7d-bfac-7e7f7c69c85f"
+              },
+              "createdAt": "2026-10-25T06:49:42.860Z"
+            },
+            {
+              "id": "request-9926a81f-a170-4cf3-a516-5fc866301b54",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-c",
+              "entityId": "c",
+              "phase": "completed",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-4c8bf32e-d248-46b1-bfca-0a70f1fb4e50"
+              },
+              "createdAt": "2026-10-25T06:49:42.864Z"
+            }
+          ],
+          "integrations": [],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\controls\\pause-develop\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "d8c965a6afa1132ed95a7e3d4a7a265cd152bab2",
+              "headCommit": "d8c965a6afa1132ed95a7e3d4a7a265cd152bab2",
+              "writerRunId": null,
+              "status": "active"
+            },
+            {
+              "id": "b:1",
+              "taskId": "b",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\controls\\pause-develop\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\34340f0e82d75a3446150f4a",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/3e23e8160039594a33894f65/1",
+              "baseCommit": "d8c965a6afa1132ed95a7e3d4a7a265cd152bab2",
+              "headCommit": "d8c965a6afa1132ed95a7e3d4a7a265cd152bab2",
+              "writerRunId": null,
+              "status": "active"
+            },
+            {
+              "id": "c:1",
+              "taskId": "c",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\controls\\pause-develop\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\7c9d30055291ef7b84cdc457",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/2e7d2c03a9507ae265ecf5b5/1",
+              "baseCommit": "d8c965a6afa1132ed95a7e3d4a7a265cd152bab2",
+              "headCommit": "d8c965a6afa1132ed95a7e3d4a7a265cd152bab2",
+              "writerRunId": null,
+              "status": "active"
+            }
+          ],
+          "eventSeq": 31
+        }
+      },
+      {
+        "name": "paused review admission and cancellation",
+        "status": "pass",
+        "snapshot": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "pause-review",
+            "leadSessionId": null,
+            "planRevision": 1,
+            "version": 2,
+            "status": "paused",
+            "integrationRef": "refs/heads/rift/pause-review",
+            "baseCommit": "15757a00397fc2f6f8294d245f254e395fc02ab1",
+            "summary": null
+          },
+          "slots": {
+            "developers": 0,
+            "reviewers": 0,
+            "total": 0
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "change",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "cancelled",
+              "attempt": 1,
+              "version": 4,
+              "acceptedCommit": null,
+              "sourceHead": "ea824503441c9956a355ad58e322c8826dc17b17",
+              "blockingReason": "CANCELLED",
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-a1057263-cfd9-4742-8dec-16528c8b0eb8",
+              "taskId": "a",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-a1057263-cfd9-4742-8dec-16528c8b0eb8",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:44.498Z",
+              "resultArtifactId": "artifact-64d961d0-0c0c-46e8-8862-35346bd044db"
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-5dc20a7d-7593-4092-837b-20dfee6e4d8a",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "completed",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-a1057263-cfd9-4742-8dec-16528c8b0eb8"
+              },
+              "createdAt": "2026-10-25T06:49:44.093Z"
+            },
+            {
+              "id": "request-0caf03d5-3023-4938-bd97-ad09e66307a5",
+              "kind": "integration",
+              "dedupeKey": "auto-integration:a:1",
+              "entityId": "a",
+              "phase": "cancelled",
+              "payload": {
+                "expectedVersion": 2,
+                "planRevision": 1,
+                "sourceHead": "ea824503441c9956a355ad58e322c8826dc17b17",
+                "integrationId": "integration-2d8b622c-e592-44b4-841f-fe0906a924c8",
+                "error": "Integration cancelled before review."
+              },
+              "createdAt": "2026-10-25T06:49:45.136Z"
+            }
+          ],
+          "integrations": [
+            {
+              "id": "integration-2d8b622c-e592-44b4-841f-fe0906a924c8",
+              "taskId": "a",
+              "sourceHead": "ea824503441c9956a355ad58e322c8826dc17b17",
+              "expectedTargetHead": "15757a00397fc2f6f8294d245f254e395fc02ab1",
+              "candidateHead": "b7a8c6dbe866c70652d2f318e9afc411a3526b9c",
+              "checkIds": [
+                "fb2f5407-0ae8-4134-ab4d-22ffc7b596ac"
+              ],
+              "reviewRunId": null,
+              "status": "blocked",
+              "candidate": {
+                "integrationId": "integration-2d8b622c-e592-44b4-841f-fe0906a924c8",
+                "sourceHead": "ea824503441c9956a355ad58e322c8826dc17b17",
+                "candidateHead": "b7a8c6dbe866c70652d2f318e9afc411a3526b9c",
+                "expectedTargetHead": "15757a00397fc2f6f8294d245f254e395fc02ab1",
+                "cwd": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\controls\\pause-review\\managed\\ba9c736f19e7f60b7f6764ad\\reviews\\e6a80624d7167046d2268136",
+                "checkIds": [
+                  "fb2f5407-0ae8-4134-ab4d-22ffc7b596ac"
+                ]
+              },
+              "error": "Integration cancelled before review."
+            }
+          ],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\controls\\pause-review\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "15757a00397fc2f6f8294d245f254e395fc02ab1",
+              "headCommit": "ea824503441c9956a355ad58e322c8826dc17b17",
+              "writerRunId": null,
+              "status": "active"
+            }
+          ],
+          "eventSeq": 17
+        }
+      },
+      {
+        "name": "whole workflow cancellation including cleanup timeout/failure",
+        "status": "pass",
+        "durationMs": 130,
+        "disposeCalls": [
+          {
+            "taskId": "a",
+            "purpose": "develop",
+            "count": 1
+          },
+          {
+            "taskId": "a",
+            "purpose": "review",
+            "count": 1
+          },
+          {
+            "taskId": "b",
+            "purpose": "develop",
+            "count": 1
+          },
+          {
+            "taskId": "c",
+            "purpose": "develop",
+            "count": 1
+          }
+        ],
+        "snapshot": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "cancel-all",
+            "leadSessionId": null,
+            "planRevision": 1,
+            "version": 2,
+            "status": "cancelled",
+            "integrationRef": "refs/heads/rift/cancel-all",
+            "baseCommit": "6ee8e851ebc8afa74bb9c0f9cf0c02dd6439451b",
+            "summary": null
+          },
+          "slots": {
+            "developers": 1,
+            "reviewers": 1,
+            "total": 2
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "change",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "cancelled",
+              "attempt": 1,
+              "version": 4,
+              "acceptedCommit": null,
+              "sourceHead": "84b44cb6b47ae33c34cccfa7e2691b9dbf446d05",
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "b",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "b",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "b.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "cancelled",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "c",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "c",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "c.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "cancelled",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "d",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "d",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "d.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "cancelled",
+              "attempt": 1,
+              "version": 1,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-c62960fa-2618-43cf-ad6e-cfbf8b2fcddf",
+              "taskId": "a",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-c62960fa-2618-43cf-ad6e-cfbf8b2fcddf",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:46.651Z",
+              "resultArtifactId": "artifact-617ec022-b234-4ad8-8e0d-e00292187324"
+            },
+            {
+              "id": "run-ef70988d-0725-4e5f-8a7e-e76f8fdcd036",
+              "taskId": "a",
+              "status": "cancelled",
+              "dshChildId": "controlled-fake-run-ef70988d-0725-4e5f-8a7e-e76f8fdcd036",
+              "cleanupStatus": "unknown",
+              "slotReleasedAt": null,
+              "resultArtifactId": "artifact-36c91640-a4a9-4e49-885f-081dbfad97a7"
+            },
+            {
+              "id": "run-7f8798a5-c23f-49c3-844d-e5782e48d255",
+              "taskId": "b",
+              "status": "cancelled",
+              "dshChildId": "controlled-fake-run-7f8798a5-c23f-49c3-844d-e5782e48d255",
+              "cleanupStatus": "failed",
+              "slotReleasedAt": null,
+              "resultArtifactId": "artifact-b71079e2-b360-44ce-aa2f-b9d5088c8526"
+            },
+            {
+              "id": "run-d2e4020c-397b-4421-b2bf-2288c53d0ce3",
+              "taskId": "c",
+              "status": "cancelled",
+              "dshChildId": "controlled-fake-run-d2e4020c-397b-4421-b2bf-2288c53d0ce3",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:48.212Z",
+              "resultArtifactId": "artifact-1c12ff29-9d30-4843-80e5-286b4395fa79"
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-46b930ec-5527-4051-9849-547b3826135e",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "completed",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-c62960fa-2618-43cf-ad6e-cfbf8b2fcddf"
+              },
+              "createdAt": "2026-10-25T06:49:46.261Z"
+            },
+            {
+              "id": "request-6cd48109-171c-4b25-b45b-f7e2a25a014b",
+              "kind": "integration",
+              "dedupeKey": "auto-integration:a:1",
+              "entityId": "a",
+              "phase": "cancelled",
+              "payload": {
+                "expectedVersion": 2,
+                "planRevision": 1,
+                "sourceHead": "84b44cb6b47ae33c34cccfa7e2691b9dbf446d05",
+                "integrationId": "integration-eb6f4ec9-0a48-4d10-9564-85f34711349c",
+                "runId": "run-ef70988d-0725-4e5f-8a7e-e76f8fdcd036",
+                "error": "Review cleanup is unconfirmed."
+              },
+              "createdAt": "2026-10-25T06:49:47.220Z"
+            },
+            {
+              "id": "request-232ab734-2454-4a33-9a0f-9ffc40ed3375",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-b",
+              "entityId": "b",
+              "phase": "cancelled",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-7f8798a5-c23f-49c3-844d-e5782e48d255"
+              },
+              "createdAt": "2026-10-25T06:49:47.776Z"
+            },
+            {
+              "id": "request-f43966dc-c843-4099-bad3-15633ff0462e",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-c",
+              "entityId": "c",
+              "phase": "cancelled",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-d2e4020c-397b-4421-b2bf-2288c53d0ce3"
+              },
+              "createdAt": "2026-10-25T06:49:47.780Z"
+            },
+            {
+              "id": "request-d6cb8b10-5dd2-477c-9430-a7758fcd0829",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-d",
+              "entityId": "d",
+              "phase": "cancelled",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1
+              },
+              "createdAt": "2026-10-25T06:49:47.784Z"
+            }
+          ],
+          "integrations": [
+            {
+              "id": "integration-eb6f4ec9-0a48-4d10-9564-85f34711349c",
+              "taskId": "a",
+              "sourceHead": "84b44cb6b47ae33c34cccfa7e2691b9dbf446d05",
+              "expectedTargetHead": "6ee8e851ebc8afa74bb9c0f9cf0c02dd6439451b",
+              "candidateHead": "656855791b0011e1061c1e0d567e1279f3590f12",
+              "checkIds": [
+                "bde7c3a9-ce01-4c32-89db-f2eb91d6a528"
+              ],
+              "reviewRunId": "run-ef70988d-0725-4e5f-8a7e-e76f8fdcd036",
+              "status": "cleanup_unknown",
+              "candidate": {
+                "integrationId": "integration-eb6f4ec9-0a48-4d10-9564-85f34711349c",
+                "sourceHead": "84b44cb6b47ae33c34cccfa7e2691b9dbf446d05",
+                "candidateHead": "656855791b0011e1061c1e0d567e1279f3590f12",
+                "expectedTargetHead": "6ee8e851ebc8afa74bb9c0f9cf0c02dd6439451b",
+                "cwd": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\controls\\cancel-all\\managed\\ba9c736f19e7f60b7f6764ad\\reviews\\dd144ec1269d4bee8951a728",
+                "checkIds": [
+                  "bde7c3a9-ce01-4c32-89db-f2eb91d6a528"
+                ]
+              },
+              "error": "Review cleanup is unconfirmed."
+            }
+          ],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\controls\\cancel-all\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "6ee8e851ebc8afa74bb9c0f9cf0c02dd6439451b",
+              "headCommit": "84b44cb6b47ae33c34cccfa7e2691b9dbf446d05",
+              "writerRunId": null,
+              "status": "active"
+            },
+            {
+              "id": "b:1",
+              "taskId": "b",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\controls\\cancel-all\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\34340f0e82d75a3446150f4a",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/3e23e8160039594a33894f65/1",
+              "baseCommit": "6ee8e851ebc8afa74bb9c0f9cf0c02dd6439451b",
+              "headCommit": "6ee8e851ebc8afa74bb9c0f9cf0c02dd6439451b",
+              "writerRunId": "run-7f8798a5-c23f-49c3-844d-e5782e48d255",
+              "status": "active"
+            },
+            {
+              "id": "c:1",
+              "taskId": "c",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\controls\\cancel-all\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\7c9d30055291ef7b84cdc457",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/2e7d2c03a9507ae265ecf5b5/1",
+              "baseCommit": "6ee8e851ebc8afa74bb9c0f9cf0c02dd6439451b",
+              "headCommit": "6ee8e851ebc8afa74bb9c0f9cf0c02dd6439451b",
+              "writerRunId": null,
+              "status": "active"
+            }
+          ],
+          "eventSeq": 42
+        }
+      },
+      {
+        "name": "one timeout leaves later sibling live",
+        "status": "pass",
+        "snapshot": {
+          "workflow": {
+            "id": "workflow",
+            "workspaceId": "probe",
+            "goal": "timeout",
+            "leadSessionId": null,
+            "planRevision": 1,
+            "version": 1,
+            "status": "running",
+            "integrationRef": "refs/heads/rift/timeout",
+            "baseCommit": "230179ca875f0337e2cd39632994c3acf7640400",
+            "summary": null
+          },
+          "slots": {
+            "developers": 0,
+            "reviewers": 0,
+            "total": 0
+          },
+          "tasks": [
+            {
+              "id": "a",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "a",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "a.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "cancelled",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": "CANCELLED",
+              "dependencyStatus": "ready"
+            },
+            {
+              "id": "b",
+              "workflowId": "workflow",
+              "roleId": null,
+              "kind": "analysis",
+              "title": "b",
+              "instructions": "Controlled acceptance task; no model is used unless this probe is explicitly run with --native.",
+              "expectedPaths": [
+                "b.txt"
+              ],
+              "acceptanceCriteria": [],
+              "status": "succeeded",
+              "attempt": 1,
+              "version": 2,
+              "acceptedCommit": null,
+              "sourceHead": null,
+              "blockingReason": null,
+              "dependencyStatus": "ready"
+            }
+          ],
+          "runs": [
+            {
+              "id": "run-15d8c9f0-0afd-4181-98e4-43a9b07cf73a",
+              "taskId": "a",
+              "status": "cancelled",
+              "dshChildId": "controlled-fake-run-15d8c9f0-0afd-4181-98e4-43a9b07cf73a",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:50.146Z",
+              "resultArtifactId": "artifact-9b09a4f8-1e5c-4986-bc7d-840e2cad17d4"
+            },
+            {
+              "id": "run-2f067841-3efd-4f5d-ae53-e1a5da88b169",
+              "taskId": "b",
+              "status": "succeeded",
+              "dshChildId": "controlled-fake-run-2f067841-3efd-4f5d-ae53-e1a5da88b169",
+              "cleanupStatus": "confirmed",
+              "slotReleasedAt": "2026-10-25T06:49:50.172Z",
+              "resultArtifactId": "artifact-ba6ec3eb-9250-4635-a5cb-1ecc4e8233e0"
+            }
+          ],
+          "operations": [
+            {
+              "id": "request-b0ef21d7-0fce-4066-93e8-093781404f0c",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-a",
+              "entityId": "a",
+              "phase": "cancelled",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-15d8c9f0-0afd-4181-98e4-43a9b07cf73a"
+              },
+              "createdAt": "2026-10-25T06:49:48.638Z"
+            },
+            {
+              "id": "request-2dc46fbe-0efd-4cef-8cc5-36f457192622",
+              "kind": "dispatch",
+              "dedupeKey": "dispatch-b",
+              "entityId": "b",
+              "phase": "completed",
+              "payload": {
+                "expectedVersion": 0,
+                "planRevision": 1,
+                "runId": "run-2f067841-3efd-4f5d-ae53-e1a5da88b169"
+              },
+              "createdAt": "2026-10-25T06:49:49.725Z"
+            }
+          ],
+          "integrations": [],
+          "worktrees": [
+            {
+              "id": "a:1",
+              "taskId": "a",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\controls\\timeout\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\2b2c40a6706d9e5f320d5536",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/ca978112ca1bbdcafac231b3/1",
+              "baseCommit": "230179ca875f0337e2cd39632994c3acf7640400",
+              "headCommit": "230179ca875f0337e2cd39632994c3acf7640400",
+              "writerRunId": null,
+              "status": "active"
+            },
+            {
+              "id": "b:1",
+              "taskId": "b",
+              "attempt": 1,
+              "kind": "task",
+              "path": "<RIFT_ROOT>\\.runtime-evidence\\recovery-acceptance-my0Ts3\\controls\\timeout\\managed\\ba9c736f19e7f60b7f6764ad\\worktrees\\34340f0e82d75a3446150f4a",
+              "branch": "rift/ba9c736f19e7f60b7f6764ad/3e23e8160039594a33894f65/1",
+              "baseCommit": "230179ca875f0337e2cd39632994c3acf7640400",
+              "headCommit": "230179ca875f0337e2cd39632994c3acf7640400",
+              "writerRunId": null,
+              "status": "active"
+            }
+          ],
+          "eventSeq": 20
+        }
+      }
+    ]
+  },
+  "subprocess": {
+    "status": "pass",
+    "boundary": "real public DSH subprocess service, controlled Node root plus Node grandchild; no model-triggered command",
+    "cases": [
+      {
+        "method": "terminate",
+        "status": "pass",
+        "before": [
+          {
+            "pid": 7828,
+            "parentPid": 35452,
+            "name": "node.exe",
+            "createdAt": "2026-10-25T06:49:52.0739030Z"
+          },
+          {
+            "pid": 35280,
+            "parentPid": 7828,
+            "name": "node.exe",
+            "createdAt": "2026-10-25T06:49:52.1011170Z"
+          }
+        ],
+        "outcome": {
+          "exitCode": 1,
+          "signal": null
+        },
+        "wholeRangeQuiescent": true,
+        "survivors": [],
+        "heartbeatStopped": true
+      },
+      {
+        "method": "service-dispose",
+        "status": "pass",
+        "before": [
+          {
+            "pid": 30168,
+            "parentPid": 34988,
+            "name": "node.exe",
+            "createdAt": "2026-10-25T06:49:53.2129350Z"
+          },
+          {
+            "pid": 12652,
+            "parentPid": 30168,
+            "name": "node.exe",
+            "createdAt": "2026-10-25T06:49:53.2408030Z"
+          }
+        ],
+        "outcome": {
+          "exitCode": 1,
+          "signal": null
+        },
+        "wholeRangeQuiescent": true,
+        "survivors": [],
+        "heartbeatStopped": true
+      }
+    ]
+  },
+  "status": "pass",
+  "evidence": {
+    "rawArtifact": ".runtime-evidence/recovery-acceptance.json",
+    "rawSha256": "21fbabcdce540baadb7c33f21f0bc2883d54bfcebe14e3cf9bd2c46c9991df5b",
+    "exportedAt": "2026-10-25T06:56:06.878Z",
+    "sanitization": "Workspace and user-home paths replaced; no credentials or raw environment values included. Native ready-file stability does not assert a pre-kill counter increase."
+  }
+}

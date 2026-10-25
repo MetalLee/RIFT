@@ -1,0 +1,3163 @@
+{
+  "probeId": "review-rework-1792910691240-e606506f",
+  "startedAt": "2026-10-25T06:44:51.242Z",
+  "driver": "Programmatic RiftHostService and TaskCoordinator; actual official Provider activations and actual Git acceptance.",
+  "models": {
+    "developer": "claude-opus-5-5",
+    "reviewer": "gpt-6.1-sol"
+  },
+  "notVerified": [
+    "LLM Lead planning or tool orchestration",
+    "Host crash recovery",
+    "OS subprocess-tree cancellation"
+  ],
+  "fixtureDisclosure": "The first age implementation deliberately uses age >= 21. The real reviewer must independently reject it against the age >= 18 acceptance criterion; no review result is synthesized.",
+  "repository": {
+    "path": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\真实审查 临时仓库",
+    "originalMain": "645da898b95c5b1f105a90e4ace6212fed3b779b",
+    "remoteCount": 0
+  },
+  "rework": {
+    "status": "pass",
+    "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+    "sharedOriginalBase": "645da898b95c5b1f105a90e4ace6212fed3b779b",
+    "originalSource": "577f98cfc2da3a7025f17ce447ed28e8f670624c",
+    "acceptedSibling": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+    "originalAttempt": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\worktrees\\5f794cd34393aea9b2d276ed",
+    "repairAttempt": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\worktrees\\52e7be50778e8846adf6cc55",
+    "originalChildId": "d0ef54cc-ed8e-46c4-a678-fb6a6e4d2e5c",
+    "repairChildId": "cbff998f-c76f-4d83-8b21-cafd2dddbacf",
+    "repairInputEvidence": {
+      "artifactId": "artifact-b18326dc-2007-45bd-a050-bca717383ba7",
+      "path": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304\\runs\\run-2391947f-7812-4d31-850e-97c65cb9a592\\artifacts\\artifact-b18326dc-2007-45bd-a050-bca717383ba7.json",
+      "sha256": "0b4c5445924eef3f17b2a54f35cda2f12314d8f3c06e17b23bb6ea19be507022",
+      "sourceDiffVerified": true,
+      "priorReviewVerified": true,
+      "currentTargetHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199"
+    },
+    "finalHead": "32bc283b35be526389d3403613618167ef34ebd5",
+    "postAcceptanceSemanticCheck": {
+      "candidateHead": "32bc283b35be526389d3403613618167ef34ebd5",
+      "commandId": "probe-full-age-boundary",
+      "exitCode": 0,
+      "stdout": "Full age-boundary acceptance verified.\n"
+    },
+    "reviews": [
+      {
+        "integrationId": "integration-67410ac2-87ab-40e1-82f8-18380157a821",
+        "taskId": "rework-label",
+        "status": "accepted",
+        "childId": "568895c6-ea57-4429-9bdb-13046565c769",
+        "reviewRunId": "run-39b100fb-bad2-4460-bfd3-4fe2ba09f635",
+        "verdict": "approve",
+        "sourceHead": "6b57a18d5f4fb1a16e86b045399615ab75dbd683",
+        "expectedTargetHead": "645da898b95c5b1f105a90e4ace6212fed3b779b",
+        "candidateHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+        "reviewedCommit": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+        "reviewCheckout": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\accf85755509456d37ce1aba",
+        "checkoutClean": true,
+        "checks": [
+          {
+            "id": "0481d343-69dc-4316-bef3-98690a4ba880",
+            "commandId": "probe-node-checks",
+            "candidateHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+            "exitCode": 0,
+            "stdout": "Trusted deterministic probe checks passed.\n",
+            "stderr": "",
+            "truncated": false,
+            "startedAt": "2026-10-25T06:45:02.716Z",
+            "finishedAt": "2026-10-25T06:45:02.757Z"
+          }
+        ]
+      },
+      {
+        "integrationId": "integration-54638e3d-4ac0-447d-a3f1-d57b43530533",
+        "taskId": "rework-age",
+        "status": "blocked",
+        "childId": "756e16fd-965c-4933-acf4-c05eb377bb3c",
+        "reviewRunId": "run-cde54899-da8b-44ef-8596-7392925e6aa2",
+        "verdict": "changes_requested",
+        "sourceHead": "577f98cfc2da3a7025f17ce447ed28e8f670624c",
+        "expectedTargetHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+        "candidateHead": "b9e972e6c0cde35f9ae05154f8361e16e8b388c7",
+        "reviewedCommit": "b9e972e6c0cde35f9ae05154f8361e16e8b388c7",
+        "reviewCheckout": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\c631f96256a77224c8b3ae04",
+        "checkoutClean": true,
+        "checks": [
+          {
+            "id": "5bac8da1-1b79-46ff-9921-86bcb6f102ef",
+            "commandId": "probe-node-checks",
+            "candidateHead": "b9e972e6c0cde35f9ae05154f8361e16e8b388c7",
+            "exitCode": 0,
+            "stdout": "Trusted deterministic probe checks passed.\n",
+            "stderr": "",
+            "truncated": false,
+            "startedAt": "2026-10-25T06:45:13.806Z",
+            "finishedAt": "2026-10-25T06:45:13.846Z"
+          }
+        ]
+      },
+      {
+        "integrationId": "integration-00d67761-2f7c-48b9-bc1e-cfdd350c1675",
+        "taskId": "rework-age",
+        "status": "accepted",
+        "childId": "e7275d55-bc52-4803-ab24-19e82508e72f",
+        "reviewRunId": "run-73a103dd-fdc2-471e-b3e4-4d97eb6bbf9e",
+        "verdict": "approve",
+        "sourceHead": "55f59555a76ec959f1ce22cdea0a08d245515466",
+        "expectedTargetHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+        "candidateHead": "32bc283b35be526389d3403613618167ef34ebd5",
+        "reviewedCommit": "32bc283b35be526389d3403613618167ef34ebd5",
+        "reviewCheckout": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\33110a89393b83efd7726efc",
+        "checkoutClean": true,
+        "checks": [
+          {
+            "id": "4fdcb3e4-2f33-4be6-83b6-921767632a8c",
+            "commandId": "probe-node-checks",
+            "candidateHead": "32bc283b35be526389d3403613618167ef34ebd5",
+            "exitCode": 0,
+            "stdout": "Trusted deterministic probe checks passed.\n",
+            "stderr": "",
+            "truncated": false,
+            "startedAt": "2026-10-25T06:45:48.129Z",
+            "finishedAt": "2026-10-25T06:45:48.168Z"
+          }
+        ]
+      }
+    ]
+  },
+  "conflict": {
+    "status": "pass",
+    "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+    "sharedBase": "32bc283b35be526389d3403613618167ef34ebd5",
+    "blockedTask": {
+      "id": "conflict-beta",
+      "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+      "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-b",
+      "kind": "change",
+      "title": "Set shared value beta",
+      "instructions": "Use Edit/Write to replace shared.txt with exactly beta followed by one newline.",
+      "expectedPaths": [
+        "shared.txt"
+      ],
+      "acceptanceCriteria": [
+        "shared.txt contains exactly beta followed by one newline."
+      ],
+      "status": "blocked",
+      "attempt": 1,
+      "version": 4,
+      "acceptedCommit": null,
+      "sourceHead": "6b357511489fac544880734bbe42a47296aebd55",
+      "blockingReason": "INTEGRATION_CONFLICT: "
+    },
+    "headAfterConflict": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+    "finalHead": "6d90e5376b11adf9e01ce103beb9ab2366d08607",
+    "reviews": [
+      {
+        "integrationId": "integration-aaf08f31-114f-4678-8f83-3e2cdb8f81d2",
+        "taskId": "conflict-alpha",
+        "status": "accepted",
+        "childId": "84775b98-cfd4-4b63-a214-1dd08fa32da9",
+        "reviewRunId": "run-1b650ee3-da64-499b-8fc9-272a8abafc6b",
+        "verdict": "approve",
+        "sourceHead": "dec973848055922155ad76e36f8060ab41ff3ccd",
+        "expectedTargetHead": "32bc283b35be526389d3403613618167ef34ebd5",
+        "candidateHead": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+        "reviewedCommit": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+        "reviewCheckout": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\fe089807f92271300fa14376",
+        "checkoutClean": true,
+        "checks": [
+          {
+            "id": "3a6869f6-1079-4eff-bcde-4f0f24254720",
+            "commandId": "probe-node-checks",
+            "candidateHead": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+            "exitCode": 0,
+            "stdout": "Trusted deterministic probe checks passed.\n",
+            "stderr": "",
+            "truncated": false,
+            "startedAt": "2026-10-25T06:46:16.822Z",
+            "finishedAt": "2026-10-25T06:46:16.862Z"
+          }
+        ]
+      },
+      {
+        "integrationId": "integration-323fbf26-62ec-4c1e-8eae-8cf9d49a02da",
+        "taskId": "conflict-independent",
+        "status": "accepted",
+        "childId": "64b42c48-19bd-4032-a4be-8b8298a6d76c",
+        "reviewRunId": "run-603b2a9f-9baf-4e0b-bbe7-74b0587462e0",
+        "verdict": "approve",
+        "sourceHead": "fb68d9f9f28057b61eae4e57f1605a492511ab63",
+        "expectedTargetHead": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+        "candidateHead": "6d90e5376b11adf9e01ce103beb9ab2366d08607",
+        "reviewedCommit": "6d90e5376b11adf9e01ce103beb9ab2366d08607",
+        "reviewCheckout": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\ac4307658f926a97353aa34b",
+        "checkoutClean": true,
+        "checks": [
+          {
+            "id": "e387fdd2-5874-4d19-bd87-a99a2812530c",
+            "commandId": "probe-node-checks",
+            "candidateHead": "6d90e5376b11adf9e01ce103beb9ab2366d08607",
+            "exitCode": 0,
+            "stdout": "Trusted deterministic probe checks passed.\n",
+            "stderr": "",
+            "truncated": false,
+            "startedAt": "2026-10-25T06:46:55.280Z",
+            "finishedAt": "2026-10-25T06:46:55.319Z"
+          }
+        ]
+      }
+    ]
+  },
+  "defaultBranchUnchanged": true,
+  "workflows": [
+    {
+      "status": {
+        "workflow": {
+          "id": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+          "goal": "Real review rejection and fresh-attempt repair, preserving an independent accepted change.",
+          "leadSessionId": "rift-lead-1babd070-d426-4820-b9fe-be102d09ad53",
+          "planRevision": 1,
+          "version": 2,
+          "status": "completed",
+          "integrationRef": "refs/heads/rift/probes/rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "baseCommit": "645da898b95c5b1f105a90e4ace6212fed3b779b",
+          "summary": "Real reviewer rejected the initial fixture; fresh repair and independent label both accepted."
+        },
+        "roles": [
+          {
+            "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-a",
+            "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+            "name": "developer-a",
+            "kind": "subagent",
+            "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+            "prompt": "Implement the supplied task in its assigned worktree using Read/Write/Edit tools. Change only expectedPaths. Do not commit, delegate or edit Git metadata. For a repair attempt, read previousResults, sourceEvidence and integrationEvidence before implementing feedback. Return exactly one strict resultSchema JSON object with the exact taskId/runId; checksClaimed must be empty because trusted checks run in the coordinator.",
+            "revision": 2
+          },
+          {
+            "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-b",
+            "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+            "name": "developer-b",
+            "kind": "subagent",
+            "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+            "prompt": "Implement the supplied task in its assigned worktree using Read/Write/Edit tools. Change only expectedPaths. Do not commit, delegate or edit Git metadata. For a repair attempt, read previousResults, sourceEvidence and integrationEvidence before implementing feedback. Return exactly one strict resultSchema JSON object with the exact taskId/runId; checksClaimed must be empty because trusted checks run in the coordinator.",
+            "revision": 2
+          },
+          {
+            "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:lead",
+            "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+            "name": "lead",
+            "kind": "dsh-lead",
+            "providerBindingId": null,
+            "prompt": "Coordinate a durable plan, parallel independent developers and exact-commit acceptance. Do not claim success before workflow_finish succeeds.",
+            "revision": 2
+          },
+          {
+            "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:reviewer",
+            "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+            "name": "reviewer",
+            "kind": "subagent",
+            "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:codex-review",
+            "prompt": "Independently review the exact candidate commit against acceptanceCriteria. Never modify files or commit. Developer instructions about intentionally producing an initial negative fixture apply only to the developer and do not permit approval of incorrect code. Return one strict resultSchema JSON object with the exact taskId, runId and candidate reviewedCommit. Return changes_requested with a concrete finding for any unmet criterion.",
+            "revision": 2
+          }
+        ],
+        "tasks": [
+          {
+            "id": "rework-age",
+            "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-a",
+            "kind": "change",
+            "title": "Age boundary review fixture",
+            "instructions": "This is a deliberate negative review fixture. For attempt 1 only, write age.mjs exactly as: export function classifyAge(age) { if (!Number.isInteger(age) || age < 0) throw new RangeError('age'); return age >= 21 ? 'adult' : 'minor'; }\nDo not correct the deliberate age-21 boundary on attempt 1; real independent review must detect it. For attempt 2 or later, use the prior review findings and acceptanceCriteria to correct the code. Do not edit any other file.",
+            "expectedPaths": [
+              "age.mjs"
+            ],
+            "acceptanceCriteria": [
+              "classifyAge accepts a nonnegative integer age and returns adult exactly when age >= 18, otherwise minor.",
+              "Invalid or negative ages throw RangeError. The module exports classifyAge as a named function.",
+              "The reviewer must inspect the actual fixed candidate and independently evaluate these requirements; an intentional initial fixture is not an exemption from the acceptance criteria."
+            ],
+            "status": "succeeded",
+            "attempt": 2,
+            "version": 9,
+            "acceptedCommit": "32bc283b35be526389d3403613618167ef34ebd5",
+            "sourceHead": "55f59555a76ec959f1ce22cdea0a08d245515466",
+            "blockingReason": null,
+            "dependencyStatus": "ready"
+          },
+          {
+            "id": "rework-label",
+            "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-b",
+            "kind": "change",
+            "title": "Independent stable label",
+            "instructions": "Create label.mjs containing exactly: export const label = 'RIFT stable';",
+            "expectedPaths": [
+              "label.mjs"
+            ],
+            "acceptanceCriteria": [
+              "label.mjs exports named constant label equal to 'RIFT stable'."
+            ],
+            "status": "succeeded",
+            "attempt": 1,
+            "version": 4,
+            "acceptedCommit": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+            "sourceHead": "6b57a18d5f4fb1a16e86b045399615ab75dbd683",
+            "blockingReason": null,
+            "dependencyStatus": "ready"
+          }
+        ],
+        "runs": [
+          {
+            "id": "run-6d47671a-2f05-4a7f-95e7-07d8abbf1829",
+            "taskId": "rework-age",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-a",
+            "purpose": "develop",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-a",
+                "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+                "name": "developer-a",
+                "kind": "subagent",
+                "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+                "prompt": "Implement the supplied task in its assigned worktree using Read/Write/Edit tools. Change only expectedPaths. Do not commit, delegate or edit Git metadata. For a repair attempt, read previousResults, sourceEvidence and integrationEvidence before implementing feedback. Return exactly one strict resultSchema JSON object with the exact taskId/runId; checksClaimed must be empty because trusted checks run in the coordinator.",
+                "revision": 2
+              },
+              "binding": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+                "providerName": "claude-code-dev",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:claude",
+                  "env:ANTHROPIC_API_KEY"
+                ]
+              }
+            },
+            "dshChildId": "d0ef54cc-ed8e-46c4-a678-fb6a6e4d2e5c",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T06:45:05.341Z",
+            "deadline": "2026-10-25T06:46:53.116Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "rework-age",
+              "runId": "run-6d47671a-2f05-4a7f-95e7-07d8abbf1829",
+              "outcome": "completed",
+              "summary": "Attempt 1: wrote age.mjs exactly as the fixture instructions specified. The code is intentionally wrong: it uses an age-21 boundary (age >= 21 ? 'adult' : 'minor'), but the acceptance criteria require age >= 18. That means ages 18, 19 and 20 are wrongly classified as 'minor', and this candidate does not meet the criteria. Review should reject it. Input validation does meet the criteria: non-integer or negative ages throw RangeError, and classifyAge is exported as a named function. The fix in a later attempt is to change the boundary to 18. No other files were touched.",
+              "changedPaths": [
+                "age.mjs"
+              ],
+              "checksClaimed": [],
+              "blockingReasons": []
+            },
+            "createdAt": "2026-10-25T06:44:53.116Z",
+            "startedAt": "2026-10-25T06:44:53.616Z",
+            "endedAt": "2026-10-25T06:45:05.340Z",
+            "resultArtifactId": "artifact-b817d396-b1cc-4ac9-8fe8-5c349e007553"
+          },
+          {
+            "id": "run-2ced7566-1b85-4f2c-a8b8-252118fd43a9",
+            "taskId": "rework-label",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-b",
+            "purpose": "develop",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-b",
+                "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+                "name": "developer-b",
+                "kind": "subagent",
+                "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+                "prompt": "Implement the supplied task in its assigned worktree using Read/Write/Edit tools. Change only expectedPaths. Do not commit, delegate or edit Git metadata. For a repair attempt, read previousResults, sourceEvidence and integrationEvidence before implementing feedback. Return exactly one strict resultSchema JSON object with the exact taskId/runId; checksClaimed must be empty because trusted checks run in the coordinator.",
+                "revision": 2
+              },
+              "binding": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+                "providerName": "claude-code-dev",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:claude",
+                  "env:ANTHROPIC_API_KEY"
+                ]
+              }
+            },
+            "dshChildId": "d9d1aaad-6365-48f6-b030-08e41d4950ec",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T06:45:01.744Z",
+            "deadline": "2026-10-25T06:46:53.120Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "rework-label",
+              "runId": "run-2ced7566-1b85-4f2c-a8b8-252118fd43a9",
+              "outcome": "completed",
+              "summary": "Created label.mjs with the single line export const label = 'RIFT stable'; plus a trailing newline. No other files were changed.",
+              "changedPaths": [
+                "label.mjs"
+              ],
+              "checksClaimed": [],
+              "blockingReasons": []
+            },
+            "createdAt": "2026-10-25T06:44:53.120Z",
+            "startedAt": "2026-10-25T06:44:53.653Z",
+            "endedAt": "2026-10-25T06:45:01.740Z",
+            "resultArtifactId": "artifact-28e0145d-49ea-42c9-963f-9b4545a3902b"
+          },
+          {
+            "id": "run-39b100fb-bad2-4460-bfd3-4fe2ba09f635",
+            "taskId": "rework-label",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:reviewer",
+            "purpose": "review",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:reviewer",
+                "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+                "name": "reviewer",
+                "kind": "subagent",
+                "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:codex-review",
+                "prompt": "Independently review the exact candidate commit against acceptanceCriteria. Never modify files or commit. Developer instructions about intentionally producing an initial negative fixture apply only to the developer and do not permit approval of incorrect code. Return one strict resultSchema JSON object with the exact taskId, runId and candidate reviewedCommit. Return changes_requested with a concrete finding for any unmet criterion.",
+                "revision": 2
+              },
+              "binding": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:codex-review",
+                "providerName": "codex-review",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:codex"
+                ]
+              }
+            },
+            "dshChildId": "568895c6-ea57-4429-9bdb-13046565c769",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T06:45:13.092Z",
+            "deadline": "2026-10-25T06:47:02.883Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "rework-label",
+              "runId": "run-39b100fb-bad2-4460-bfd3-4fe2ba09f635",
+              "verdict": "approve",
+              "reviewedCommit": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+              "findings": []
+            },
+            "createdAt": "2026-10-25T06:45:02.883Z",
+            "startedAt": "2026-10-25T06:45:04.324Z",
+            "endedAt": "2026-10-25T06:45:13.091Z",
+            "resultArtifactId": "artifact-443b2e03-b9a2-4de8-a0ad-ae94b7e0162f"
+          },
+          {
+            "id": "run-cde54899-da8b-44ef-8596-7392925e6aa2",
+            "taskId": "rework-age",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:reviewer",
+            "purpose": "review",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:reviewer",
+                "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+                "name": "reviewer",
+                "kind": "subagent",
+                "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:codex-review",
+                "prompt": "Independently review the exact candidate commit against acceptanceCriteria. Never modify files or commit. Developer instructions about intentionally producing an initial negative fixture apply only to the developer and do not permit approval of incorrect code. Return one strict resultSchema JSON object with the exact taskId, runId and candidate reviewedCommit. Return changes_requested with a concrete finding for any unmet criterion.",
+                "revision": 2
+              },
+              "binding": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:codex-review",
+                "providerName": "codex-review",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:codex"
+                ]
+              }
+            },
+            "dshChildId": "756e16fd-965c-4933-acf4-c05eb377bb3c",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T06:45:31.877Z",
+            "deadline": "2026-10-25T06:47:13.973Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "rework-age",
+              "runId": "run-cde54899-da8b-44ef-8596-7392925e6aa2",
+              "verdict": "changes_requested",
+              "reviewedCommit": "b9e972e6c0cde35f9ae05154f8361e16e8b388c7",
+              "findings": [
+                {
+                  "severity": "high",
+                  "file": "age.mjs",
+                  "line": 1,
+                  "reason": "The candidate uses age >= 21, violating the required age >= 18 boundary. Executing the exact candidate confirms that ages 18, 19, and 20 incorrectly return 'minor'.",
+                  "suggestion": "Change the comparison to age >= 18 while preserving the named export and RangeError validation."
+                }
+              ]
+            },
+            "createdAt": "2026-10-25T06:45:13.973Z",
+            "startedAt": "2026-10-25T06:45:14.344Z",
+            "endedAt": "2026-10-25T06:45:31.874Z",
+            "resultArtifactId": "artifact-e0c42c42-562c-4655-97fa-505ed7e4b077"
+          },
+          {
+            "id": "run-2391947f-7812-4d31-850e-97c65cb9a592",
+            "taskId": "rework-age",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-a",
+            "purpose": "repair",
+            "taskAttempt": 2,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-a",
+                "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+                "name": "developer-a",
+                "kind": "subagent",
+                "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+                "prompt": "Implement the supplied task in its assigned worktree using Read/Write/Edit tools. Change only expectedPaths. Do not commit, delegate or edit Git metadata. For a repair attempt, read previousResults, sourceEvidence and integrationEvidence before implementing feedback. Return exactly one strict resultSchema JSON object with the exact taskId/runId; checksClaimed must be empty because trusted checks run in the coordinator.",
+                "revision": 2
+              },
+              "binding": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+                "providerName": "claude-code-dev",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:claude",
+                  "env:ANTHROPIC_API_KEY"
+                ]
+              }
+            },
+            "dshChildId": "cbff998f-c76f-4d83-8b21-cafd2dddbacf",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T06:45:47.173Z",
+            "deadline": "2026-10-25T06:47:32.228Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "rework-age",
+              "runId": "run-2391947f-7812-4d31-850e-97c65cb9a592",
+              "outcome": "completed",
+              "summary": "Attempt 2: fixed the high-severity finding from review run-cde54899-da8b-44ef-8596-7392925e6aa2. In age.mjs the boundary was changed from age >= 21 to age >= 18, so ages 18, 19 and 20 now return 'adult', which matches the acceptance criteria. The rest is unchanged: classifyAge is still a named export, and non-integer or negative ages still throw RangeError. age.mjs is the only file changed. I did not run any checks; the coordinator runs the trusted checks.",
+              "changedPaths": [
+                "age.mjs"
+              ],
+              "checksClaimed": [],
+              "blockingReasons": []
+            },
+            "createdAt": "2026-10-25T06:45:32.228Z",
+            "startedAt": "2026-10-25T06:45:32.502Z",
+            "endedAt": "2026-10-25T06:45:47.170Z",
+            "resultArtifactId": "artifact-d5385560-609f-46e9-b8c2-dd07c479ce85"
+          },
+          {
+            "id": "run-73a103dd-fdc2-471e-b3e4-4d97eb6bbf9e",
+            "taskId": "rework-age",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:reviewer",
+            "purpose": "review",
+            "taskAttempt": 2,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:reviewer",
+                "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+                "name": "reviewer",
+                "kind": "subagent",
+                "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:codex-review",
+                "prompt": "Independently review the exact candidate commit against acceptanceCriteria. Never modify files or commit. Developer instructions about intentionally producing an initial negative fixture apply only to the developer and do not permit approval of incorrect code. Return one strict resultSchema JSON object with the exact taskId, runId and candidate reviewedCommit. Return changes_requested with a concrete finding for any unmet criterion.",
+                "revision": 2
+              },
+              "binding": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:codex-review",
+                "providerName": "codex-review",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:codex"
+                ]
+              }
+            },
+            "dshChildId": "e7275d55-bc52-4803-ab24-19e82508e72f",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T06:46:00.679Z",
+            "deadline": "2026-10-25T06:47:48.288Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "rework-age",
+              "runId": "run-73a103dd-fdc2-471e-b3e4-4d97eb6bbf9e",
+              "verdict": "approve",
+              "reviewedCommit": "32bc283b35be526389d3403613618167ef34ebd5",
+              "findings": []
+            },
+            "createdAt": "2026-10-25T06:45:48.288Z",
+            "startedAt": "2026-10-25T06:45:48.653Z",
+            "endedAt": "2026-10-25T06:46:00.676Z",
+            "resultArtifactId": "artifact-6530c929-3380-471d-a50d-9998f93f402b"
+          }
+        ],
+        "worktrees": [
+          {
+            "id": "rework-age:1",
+            "taskId": "rework-age",
+            "attempt": 1,
+            "kind": "task",
+            "path": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\worktrees\\5f794cd34393aea9b2d276ed",
+            "branch": "rift/4387bbe137f87d1b36583f59/55650eb486c32637a2567449/1",
+            "baseCommit": "645da898b95c5b1f105a90e4ace6212fed3b779b",
+            "headCommit": "577f98cfc2da3a7025f17ce447ed28e8f670624c",
+            "writerRunId": null,
+            "status": "active"
+          },
+          {
+            "id": "rework-label:1",
+            "taskId": "rework-label",
+            "attempt": 1,
+            "kind": "task",
+            "path": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\worktrees\\d90a03dd33f07527a630ed6c",
+            "branch": "rift/4387bbe137f87d1b36583f59/5e8876cfa72c1ecad311390e/1",
+            "baseCommit": "645da898b95c5b1f105a90e4ace6212fed3b779b",
+            "headCommit": "6b57a18d5f4fb1a16e86b045399615ab75dbd683",
+            "writerRunId": null,
+            "status": "active"
+          },
+          {
+            "id": "rework-age:2",
+            "taskId": "rework-age",
+            "attempt": 2,
+            "kind": "task",
+            "path": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\worktrees\\52e7be50778e8846adf6cc55",
+            "branch": "rift/4387bbe137f87d1b36583f59/55650eb486c32637a2567449/2",
+            "baseCommit": "577f98cfc2da3a7025f17ce447ed28e8f670624c",
+            "headCommit": "55f59555a76ec959f1ce22cdea0a08d245515466",
+            "writerRunId": null,
+            "status": "active"
+          }
+        ],
+        "operations": [
+          {
+            "id": "request-ba970014-6177-4626-ab0b-4c30aa329fc3",
+            "kind": "dispatch",
+            "dedupeKey": "review-rework-1792910691240-e606506f:rework-age",
+            "entityId": "rework-age",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 0,
+              "planRevision": 1,
+              "runId": "run-6d47671a-2f05-4a7f-95e7-07d8abbf1829"
+            },
+            "createdAt": "2026-10-25T06:44:53.115Z"
+          },
+          {
+            "id": "request-235d3b8a-6aad-4cbd-841c-76d336f2963e",
+            "kind": "dispatch",
+            "dedupeKey": "review-rework-1792910691240-e606506f:rework-label",
+            "entityId": "rework-label",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 0,
+              "planRevision": 1,
+              "runId": "run-2ced7566-1b85-4f2c-a8b8-252118fd43a9"
+            },
+            "createdAt": "2026-10-25T06:44:53.119Z"
+          },
+          {
+            "id": "request-acc573ee-20bb-4ec3-aa04-ad07fb77604f",
+            "kind": "integration",
+            "dedupeKey": "auto-integration:rework-label:1",
+            "entityId": "rework-label",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 2,
+              "planRevision": 1,
+              "sourceHead": "6b57a18d5f4fb1a16e86b045399615ab75dbd683",
+              "integrationId": "integration-67410ac2-87ab-40e1-82f8-18380157a821",
+              "runId": "run-39b100fb-bad2-4460-bfd3-4fe2ba09f635"
+            },
+            "createdAt": "2026-10-25T06:45:02.317Z"
+          },
+          {
+            "id": "request-52000264-a628-4b06-9ae6-1e53ed4b66a9",
+            "kind": "integration",
+            "dedupeKey": "auto-integration:rework-age:1",
+            "entityId": "rework-age",
+            "phase": "blocked",
+            "payload": {
+              "expectedVersion": 2,
+              "planRevision": 1,
+              "sourceHead": "577f98cfc2da3a7025f17ce447ed28e8f670624c",
+              "integrationId": "integration-54638e3d-4ac0-447d-a3f1-d57b43530533",
+              "runId": "run-cde54899-da8b-44ef-8596-7392925e6aa2",
+              "error": "Review must approve the exact checked candidate commit."
+            },
+            "createdAt": "2026-10-25T06:45:05.977Z"
+          },
+          {
+            "id": "request-8af2a532-f3cf-41b4-bb6f-3771da5f045d",
+            "kind": "dispatch",
+            "dedupeKey": "review-rework-1792910691240-e606506f:rework-age:repair",
+            "entityId": "rework-age",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 5,
+              "planRevision": 1,
+              "runId": "run-2391947f-7812-4d31-850e-97c65cb9a592"
+            },
+            "createdAt": "2026-10-25T06:45:32.228Z"
+          },
+          {
+            "id": "request-816eac84-81ad-444a-9f42-399d389407ac",
+            "kind": "integration",
+            "dedupeKey": "auto-integration:rework-age:2",
+            "entityId": "rework-age",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 7,
+              "planRevision": 1,
+              "sourceHead": "55f59555a76ec959f1ce22cdea0a08d245515466",
+              "integrationId": "integration-00d67761-2f7c-48b9-bc1e-cfdd350c1675",
+              "runId": "run-73a103dd-fdc2-471e-b3e4-4d97eb6bbf9e"
+            },
+            "createdAt": "2026-10-25T06:45:47.741Z"
+          }
+        ],
+        "integrations": [
+          {
+            "id": "integration-67410ac2-87ab-40e1-82f8-18380157a821",
+            "taskId": "rework-label",
+            "sourceHead": "6b57a18d5f4fb1a16e86b045399615ab75dbd683",
+            "expectedTargetHead": "645da898b95c5b1f105a90e4ace6212fed3b779b",
+            "candidateHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+            "checkIds": [
+              "0481d343-69dc-4316-bef3-98690a4ba880"
+            ],
+            "reviewRunId": "run-39b100fb-bad2-4460-bfd3-4fe2ba09f635",
+            "status": "accepted",
+            "candidate": {
+              "integrationId": "integration-67410ac2-87ab-40e1-82f8-18380157a821",
+              "sourceHead": "6b57a18d5f4fb1a16e86b045399615ab75dbd683",
+              "candidateHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+              "expectedTargetHead": "645da898b95c5b1f105a90e4ace6212fed3b779b",
+              "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\accf85755509456d37ce1aba",
+              "checkIds": [
+                "0481d343-69dc-4316-bef3-98690a4ba880"
+              ]
+            },
+            "error": null
+          },
+          {
+            "id": "integration-54638e3d-4ac0-447d-a3f1-d57b43530533",
+            "taskId": "rework-age",
+            "sourceHead": "577f98cfc2da3a7025f17ce447ed28e8f670624c",
+            "expectedTargetHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+            "candidateHead": "b9e972e6c0cde35f9ae05154f8361e16e8b388c7",
+            "checkIds": [
+              "5bac8da1-1b79-46ff-9921-86bcb6f102ef"
+            ],
+            "reviewRunId": "run-cde54899-da8b-44ef-8596-7392925e6aa2",
+            "status": "blocked",
+            "candidate": {
+              "integrationId": "integration-54638e3d-4ac0-447d-a3f1-d57b43530533",
+              "sourceHead": "577f98cfc2da3a7025f17ce447ed28e8f670624c",
+              "candidateHead": "b9e972e6c0cde35f9ae05154f8361e16e8b388c7",
+              "expectedTargetHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+              "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\c631f96256a77224c8b3ae04",
+              "checkIds": [
+                "5bac8da1-1b79-46ff-9921-86bcb6f102ef"
+              ]
+            },
+            "error": "Review must approve the exact checked candidate commit."
+          },
+          {
+            "id": "integration-00d67761-2f7c-48b9-bc1e-cfdd350c1675",
+            "taskId": "rework-age",
+            "sourceHead": "55f59555a76ec959f1ce22cdea0a08d245515466",
+            "expectedTargetHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+            "candidateHead": "32bc283b35be526389d3403613618167ef34ebd5",
+            "checkIds": [
+              "4fdcb3e4-2f33-4be6-83b6-921767632a8c"
+            ],
+            "reviewRunId": "run-73a103dd-fdc2-471e-b3e4-4d97eb6bbf9e",
+            "status": "accepted",
+            "candidate": {
+              "integrationId": "integration-00d67761-2f7c-48b9-bc1e-cfdd350c1675",
+              "sourceHead": "55f59555a76ec959f1ce22cdea0a08d245515466",
+              "candidateHead": "32bc283b35be526389d3403613618167ef34ebd5",
+              "expectedTargetHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+              "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\33110a89393b83efd7726efc",
+              "checkIds": [
+                "4fdcb3e4-2f33-4be6-83b6-921767632a8c"
+              ]
+            },
+            "error": null
+          }
+        ],
+        "slots": {
+          "developers": 0,
+          "reviewers": 0,
+          "total": 0
+        },
+        "eventSeq": 64
+      },
+      "events": [
+        {
+          "eventSeq": 1,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "workflow.created",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:44:53.107Z"
+        },
+        {
+          "eventSeq": 2,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "lead.attached",
+          "payload": {
+            "sessionId": "rift-lead-1babd070-d426-4820-b9fe-be102d09ad53"
+          },
+          "occurredAt": "2026-10-25T06:44:53.113Z"
+        },
+        {
+          "eventSeq": 3,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "plan.accepted",
+          "payload": {
+            "revision": 1,
+            "taskIds": [
+              "rework-age",
+              "rework-label"
+            ],
+            "acceptanceCriteria": []
+          },
+          "occurredAt": "2026-10-25T06:44:53.114Z"
+        },
+        {
+          "eventSeq": 4,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": null,
+          "requestId": "request-ba970014-6177-4626-ab0b-4c30aa329fc3",
+          "type": "dispatch.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:44:53.115Z"
+        },
+        {
+          "eventSeq": 5,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-6d47671a-2f05-4a7f-95e7-07d8abbf1829",
+          "requestId": "request-ba970014-6177-4626-ab0b-4c30aa329fc3",
+          "type": "dispatch.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:44:53.116Z"
+        },
+        {
+          "eventSeq": 6,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-6d47671a-2f05-4a7f-95e7-07d8abbf1829",
+          "requestId": "request-ba970014-6177-4626-ab0b-4c30aa329fc3",
+          "type": "dispatch_reserved",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:44:53.116Z"
+        },
+        {
+          "eventSeq": 7,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": null,
+          "requestId": "request-235d3b8a-6aad-4cbd-841c-76d336f2963e",
+          "type": "dispatch.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:44:53.119Z"
+        },
+        {
+          "eventSeq": 8,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": "run-2ced7566-1b85-4f2c-a8b8-252118fd43a9",
+          "requestId": "request-235d3b8a-6aad-4cbd-841c-76d336f2963e",
+          "type": "dispatch.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:44:53.120Z"
+        },
+        {
+          "eventSeq": 9,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": "run-2ced7566-1b85-4f2c-a8b8-252118fd43a9",
+          "requestId": "request-235d3b8a-6aad-4cbd-841c-76d336f2963e",
+          "type": "dispatch_reserved",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:44:53.120Z"
+        },
+        {
+          "eventSeq": 10,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-6d47671a-2f05-4a7f-95e7-07d8abbf1829",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-3181c848-0696-4809-ae80-9baa070a47ae",
+            "promptSha256": "ec1afcbac32b5012b8fb2825da4bd07b56122d78ebca15ff740352258d682767",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\worktrees\\5f794cd34393aea9b2d276ed",
+            "baseCommit": "645da898b95c5b1f105a90e4ace6212fed3b779b",
+            "sourceHead": null,
+            "candidateHead": null
+          },
+          "occurredAt": "2026-10-25T06:44:53.595Z"
+        },
+        {
+          "eventSeq": 11,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-6d47671a-2f05-4a7f-95e7-07d8abbf1829",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "d0ef54cc-ed8e-46c4-a678-fb6a6e4d2e5c"
+          },
+          "occurredAt": "2026-10-25T06:44:53.616Z"
+        },
+        {
+          "eventSeq": 12,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": "run-2ced7566-1b85-4f2c-a8b8-252118fd43a9",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-52c70923-0a1f-4aa3-afc0-eea3a61d2e57",
+            "promptSha256": "e757ec1036d9a252bd11d4a45cca42cac67908b861edc0e56fb598073a18e81a",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\worktrees\\d90a03dd33f07527a630ed6c",
+            "baseCommit": "645da898b95c5b1f105a90e4ace6212fed3b779b",
+            "sourceHead": null,
+            "candidateHead": null
+          },
+          "occurredAt": "2026-10-25T06:44:53.647Z"
+        },
+        {
+          "eventSeq": 13,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": "run-2ced7566-1b85-4f2c-a8b8-252118fd43a9",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "d9d1aaad-6365-48f6-b030-08e41d4950ec"
+          },
+          "occurredAt": "2026-10-25T06:44:53.653Z"
+        },
+        {
+          "eventSeq": 14,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": "run-2ced7566-1b85-4f2c-a8b8-252118fd43a9",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "rework-label",
+              "runId": "run-2ced7566-1b85-4f2c-a8b8-252118fd43a9",
+              "outcome": "completed",
+              "summary": "Created label.mjs with the single line export const label = 'RIFT stable'; plus a trailing newline. No other files were changed.",
+              "changedPaths": [
+                "label.mjs"
+              ],
+              "checksClaimed": [],
+              "blockingReasons": []
+            },
+            "artifactId": "artifact-28e0145d-49ea-42c9-963f-9b4545a3902b"
+          },
+          "occurredAt": "2026-10-25T06:45:01.740Z"
+        },
+        {
+          "eventSeq": 15,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": "run-2ced7566-1b85-4f2c-a8b8-252118fd43a9",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:01.744Z"
+        },
+        {
+          "eventSeq": 16,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": "run-2ced7566-1b85-4f2c-a8b8-252118fd43a9",
+          "requestId": "request-235d3b8a-6aad-4cbd-841c-76d336f2963e",
+          "type": "dispatch.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:02.316Z"
+        },
+        {
+          "eventSeq": 17,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": "run-2ced7566-1b85-4f2c-a8b8-252118fd43a9",
+          "requestId": null,
+          "type": "source.collected",
+          "payload": {
+            "sourceHead": "6b57a18d5f4fb1a16e86b045399615ab75dbd683",
+            "diff": "diff --git a/label.mjs b/label.mjs\nnew file mode 100644\nindex 0000000..0fcd989\n--- /dev/null\n+++ b/label.mjs\n@@ -0,0 +1 @@\n+export const label = 'RIFT stable';",
+            "changedPaths": [
+              "label.mjs"
+            ],
+            "taskAttempt": 1,
+            "eligibleForIntegration": true
+          },
+          "occurredAt": "2026-10-25T06:45:02.317Z"
+        },
+        {
+          "eventSeq": 18,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": null,
+          "requestId": "request-acc573ee-20bb-4ec3-aa04-ad07fb77604f",
+          "type": "integration.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:02.317Z"
+        },
+        {
+          "eventSeq": 19,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": null,
+          "requestId": "request-acc573ee-20bb-4ec3-aa04-ad07fb77604f",
+          "type": "integration.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:02.318Z"
+        },
+        {
+          "eventSeq": 20,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": null,
+          "requestId": "request-acc573ee-20bb-4ec3-aa04-ad07fb77604f",
+          "type": "candidate.prepared",
+          "payload": {
+            "integrationId": "integration-67410ac2-87ab-40e1-82f8-18380157a821",
+            "sourceHead": "6b57a18d5f4fb1a16e86b045399615ab75dbd683",
+            "candidateHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+            "expectedTargetHead": "645da898b95c5b1f105a90e4ace6212fed3b779b",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\accf85755509456d37ce1aba",
+            "checkIds": [
+              "0481d343-69dc-4316-bef3-98690a4ba880"
+            ]
+          },
+          "occurredAt": "2026-10-25T06:45:02.882Z"
+        },
+        {
+          "eventSeq": 21,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": "run-39b100fb-bad2-4460-bfd3-4fe2ba09f635",
+          "requestId": "request-acc573ee-20bb-4ec3-aa04-ad07fb77604f",
+          "type": "review.reserved",
+          "payload": {
+            "candidateHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199"
+          },
+          "occurredAt": "2026-10-25T06:45:02.883Z"
+        },
+        {
+          "eventSeq": 22,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": "run-39b100fb-bad2-4460-bfd3-4fe2ba09f635",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-ab17b0cc-1d18-4bce-9bd3-217cb979377b",
+            "promptSha256": "263c626ebc11ad21900814337a94267f96e8faa19b53a9cc94816c7e7e53c8ac",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\accf85755509456d37ce1aba",
+            "baseCommit": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+            "sourceHead": "6b57a18d5f4fb1a16e86b045399615ab75dbd683",
+            "candidateHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199"
+          },
+          "occurredAt": "2026-10-25T06:45:02.892Z"
+        },
+        {
+          "eventSeq": 23,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": "run-39b100fb-bad2-4460-bfd3-4fe2ba09f635",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "568895c6-ea57-4429-9bdb-13046565c769"
+          },
+          "occurredAt": "2026-10-25T06:45:04.324Z"
+        },
+        {
+          "eventSeq": 24,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-6d47671a-2f05-4a7f-95e7-07d8abbf1829",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "rework-age",
+              "runId": "run-6d47671a-2f05-4a7f-95e7-07d8abbf1829",
+              "outcome": "completed",
+              "summary": "Attempt 1: wrote age.mjs exactly as the fixture instructions specified. The code is intentionally wrong: it uses an age-21 boundary (age >= 21 ? 'adult' : 'minor'), but the acceptance criteria require age >= 18. That means ages 18, 19 and 20 are wrongly classified as 'minor', and this candidate does not meet the criteria. Review should reject it. Input validation does meet the criteria: non-integer or negative ages throw RangeError, and classifyAge is exported as a named function. The fix in a later attempt is to change the boundary to 18. No other files were touched.",
+              "changedPaths": [
+                "age.mjs"
+              ],
+              "checksClaimed": [],
+              "blockingReasons": []
+            },
+            "artifactId": "artifact-b817d396-b1cc-4ac9-8fe8-5c349e007553"
+          },
+          "occurredAt": "2026-10-25T06:45:05.340Z"
+        },
+        {
+          "eventSeq": 25,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-6d47671a-2f05-4a7f-95e7-07d8abbf1829",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:05.341Z"
+        },
+        {
+          "eventSeq": 26,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-6d47671a-2f05-4a7f-95e7-07d8abbf1829",
+          "requestId": "request-ba970014-6177-4626-ab0b-4c30aa329fc3",
+          "type": "dispatch.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:05.976Z"
+        },
+        {
+          "eventSeq": 27,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-6d47671a-2f05-4a7f-95e7-07d8abbf1829",
+          "requestId": null,
+          "type": "source.collected",
+          "payload": {
+            "sourceHead": "577f98cfc2da3a7025f17ce447ed28e8f670624c",
+            "diff": "diff --git a/age.mjs b/age.mjs\nnew file mode 100644\nindex 0000000..2398d8a\n--- /dev/null\n+++ b/age.mjs\n@@ -0,0 +1 @@\n+export function classifyAge(age) { if (!Number.isInteger(age) || age < 0) throw new RangeError('age'); return age >= 21 ? 'adult' : 'minor'; }",
+            "changedPaths": [
+              "age.mjs"
+            ],
+            "taskAttempt": 1,
+            "eligibleForIntegration": true
+          },
+          "occurredAt": "2026-10-25T06:45:05.976Z"
+        },
+        {
+          "eventSeq": 28,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": null,
+          "requestId": "request-52000264-a628-4b06-9ae6-1e53ed4b66a9",
+          "type": "integration.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:05.977Z"
+        },
+        {
+          "eventSeq": 29,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": "run-39b100fb-bad2-4460-bfd3-4fe2ba09f635",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "rework-label",
+              "runId": "run-39b100fb-bad2-4460-bfd3-4fe2ba09f635",
+              "verdict": "approve",
+              "reviewedCommit": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+              "findings": []
+            },
+            "artifactId": "artifact-443b2e03-b9a2-4de8-a0ad-ae94b7e0162f"
+          },
+          "occurredAt": "2026-10-25T06:45:13.091Z"
+        },
+        {
+          "eventSeq": 30,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": "run-39b100fb-bad2-4460-bfd3-4fe2ba09f635",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:13.092Z"
+        },
+        {
+          "eventSeq": 31,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": null,
+          "requestId": "request-acc573ee-20bb-4ec3-aa04-ad07fb77604f",
+          "type": "publication.intent",
+          "payload": {
+            "integrationId": "integration-67410ac2-87ab-40e1-82f8-18380157a821",
+            "sourceHead": "6b57a18d5f4fb1a16e86b045399615ab75dbd683",
+            "candidateHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+            "expectedTargetHead": "645da898b95c5b1f105a90e4ace6212fed3b779b",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\accf85755509456d37ce1aba",
+            "checkIds": [
+              "0481d343-69dc-4316-bef3-98690a4ba880"
+            ]
+          },
+          "occurredAt": "2026-10-25T06:45:13.093Z"
+        },
+        {
+          "eventSeq": 32,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": "run-39b100fb-bad2-4460-bfd3-4fe2ba09f635",
+          "requestId": "request-acc573ee-20bb-4ec3-aa04-ad07fb77604f",
+          "type": "integration.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:13.404Z"
+        },
+        {
+          "eventSeq": 33,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-label",
+          "runId": null,
+          "requestId": "request-acc573ee-20bb-4ec3-aa04-ad07fb77604f",
+          "type": "integration.accepted",
+          "payload": {
+            "integrationId": "integration-67410ac2-87ab-40e1-82f8-18380157a821",
+            "acceptedCommit": "b8a2a5e30c1bf631ae417a7eeca21580d3225199"
+          },
+          "occurredAt": "2026-10-25T06:45:13.404Z"
+        },
+        {
+          "eventSeq": 34,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": null,
+          "requestId": "request-52000264-a628-4b06-9ae6-1e53ed4b66a9",
+          "type": "integration.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:13.404Z"
+        },
+        {
+          "eventSeq": 35,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": null,
+          "requestId": "request-52000264-a628-4b06-9ae6-1e53ed4b66a9",
+          "type": "candidate.prepared",
+          "payload": {
+            "integrationId": "integration-54638e3d-4ac0-447d-a3f1-d57b43530533",
+            "sourceHead": "577f98cfc2da3a7025f17ce447ed28e8f670624c",
+            "candidateHead": "b9e972e6c0cde35f9ae05154f8361e16e8b388c7",
+            "expectedTargetHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\c631f96256a77224c8b3ae04",
+            "checkIds": [
+              "5bac8da1-1b79-46ff-9921-86bcb6f102ef"
+            ]
+          },
+          "occurredAt": "2026-10-25T06:45:13.972Z"
+        },
+        {
+          "eventSeq": 36,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-cde54899-da8b-44ef-8596-7392925e6aa2",
+          "requestId": "request-52000264-a628-4b06-9ae6-1e53ed4b66a9",
+          "type": "review.reserved",
+          "payload": {
+            "candidateHead": "b9e972e6c0cde35f9ae05154f8361e16e8b388c7"
+          },
+          "occurredAt": "2026-10-25T06:45:13.973Z"
+        },
+        {
+          "eventSeq": 37,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-cde54899-da8b-44ef-8596-7392925e6aa2",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-9a07fb25-09b7-4643-bfc9-c9fdc8ca32bd",
+            "promptSha256": "e0fd3832278866a5b6eaf4165eacaee9de1bdf3f56912017dc1ac470d6592c60",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\c631f96256a77224c8b3ae04",
+            "baseCommit": "b9e972e6c0cde35f9ae05154f8361e16e8b388c7",
+            "sourceHead": "577f98cfc2da3a7025f17ce447ed28e8f670624c",
+            "candidateHead": "b9e972e6c0cde35f9ae05154f8361e16e8b388c7"
+          },
+          "occurredAt": "2026-10-25T06:45:13.983Z"
+        },
+        {
+          "eventSeq": 38,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-cde54899-da8b-44ef-8596-7392925e6aa2",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "756e16fd-965c-4933-acf4-c05eb377bb3c"
+          },
+          "occurredAt": "2026-10-25T06:45:14.344Z"
+        },
+        {
+          "eventSeq": 39,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-cde54899-da8b-44ef-8596-7392925e6aa2",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "rework-age",
+              "runId": "run-cde54899-da8b-44ef-8596-7392925e6aa2",
+              "verdict": "changes_requested",
+              "reviewedCommit": "b9e972e6c0cde35f9ae05154f8361e16e8b388c7",
+              "findings": [
+                {
+                  "severity": "high",
+                  "file": "age.mjs",
+                  "line": 1,
+                  "reason": "The candidate uses age >= 21, violating the required age >= 18 boundary. Executing the exact candidate confirms that ages 18, 19, and 20 incorrectly return 'minor'.",
+                  "suggestion": "Change the comparison to age >= 18 while preserving the named export and RangeError validation."
+                }
+              ]
+            },
+            "artifactId": "artifact-e0c42c42-562c-4655-97fa-505ed7e4b077"
+          },
+          "occurredAt": "2026-10-25T06:45:31.875Z"
+        },
+        {
+          "eventSeq": 40,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-cde54899-da8b-44ef-8596-7392925e6aa2",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:31.877Z"
+        },
+        {
+          "eventSeq": 41,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": null,
+          "requestId": null,
+          "type": "task.blocked",
+          "payload": {
+            "reason": "Review must approve the exact checked candidate commit."
+          },
+          "occurredAt": "2026-10-25T06:45:32.022Z"
+        },
+        {
+          "eventSeq": 42,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-cde54899-da8b-44ef-8596-7392925e6aa2",
+          "requestId": "request-52000264-a628-4b06-9ae6-1e53ed4b66a9",
+          "type": "integration.blocked",
+          "payload": {
+            "error": "Review must approve the exact checked candidate commit."
+          },
+          "occurredAt": "2026-10-25T06:45:32.023Z"
+        },
+        {
+          "eventSeq": 43,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": null,
+          "requestId": null,
+          "type": "task.retry",
+          "payload": {
+            "reason": "Implement the independent reviewer findings using a new attempt and the supplied source/review/current-target context.",
+            "attempt": 2
+          },
+          "occurredAt": "2026-10-25T06:45:32.224Z"
+        },
+        {
+          "eventSeq": 44,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": null,
+          "requestId": "request-8af2a532-f3cf-41b4-bb6f-3771da5f045d",
+          "type": "dispatch.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:32.228Z"
+        },
+        {
+          "eventSeq": 45,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-2391947f-7812-4d31-850e-97c65cb9a592",
+          "requestId": "request-8af2a532-f3cf-41b4-bb6f-3771da5f045d",
+          "type": "dispatch.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:32.228Z"
+        },
+        {
+          "eventSeq": 46,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-2391947f-7812-4d31-850e-97c65cb9a592",
+          "requestId": "request-8af2a532-f3cf-41b4-bb6f-3771da5f045d",
+          "type": "dispatch_reserved",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:32.228Z"
+        },
+        {
+          "eventSeq": 47,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-2391947f-7812-4d31-850e-97c65cb9a592",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-b18326dc-2007-45bd-a050-bca717383ba7",
+            "promptSha256": "0b4c5445924eef3f17b2a54f35cda2f12314d8f3c06e17b23bb6ea19be507022",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\worktrees\\52e7be50778e8846adf6cc55",
+            "baseCommit": "577f98cfc2da3a7025f17ce447ed28e8f670624c",
+            "sourceHead": "577f98cfc2da3a7025f17ce447ed28e8f670624c",
+            "candidateHead": null
+          },
+          "occurredAt": "2026-10-25T06:45:32.495Z"
+        },
+        {
+          "eventSeq": 48,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-2391947f-7812-4d31-850e-97c65cb9a592",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "cbff998f-c76f-4d83-8b21-cafd2dddbacf"
+          },
+          "occurredAt": "2026-10-25T06:45:32.502Z"
+        },
+        {
+          "eventSeq": 49,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-2391947f-7812-4d31-850e-97c65cb9a592",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "rework-age",
+              "runId": "run-2391947f-7812-4d31-850e-97c65cb9a592",
+              "outcome": "completed",
+              "summary": "Attempt 2: fixed the high-severity finding from review run-cde54899-da8b-44ef-8596-7392925e6aa2. In age.mjs the boundary was changed from age >= 21 to age >= 18, so ages 18, 19 and 20 now return 'adult', which matches the acceptance criteria. The rest is unchanged: classifyAge is still a named export, and non-integer or negative ages still throw RangeError. age.mjs is the only file changed. I did not run any checks; the coordinator runs the trusted checks.",
+              "changedPaths": [
+                "age.mjs"
+              ],
+              "checksClaimed": [],
+              "blockingReasons": []
+            },
+            "artifactId": "artifact-d5385560-609f-46e9-b8c2-dd07c479ce85"
+          },
+          "occurredAt": "2026-10-25T06:45:47.171Z"
+        },
+        {
+          "eventSeq": 50,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-2391947f-7812-4d31-850e-97c65cb9a592",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:47.173Z"
+        },
+        {
+          "eventSeq": 51,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-2391947f-7812-4d31-850e-97c65cb9a592",
+          "requestId": "request-8af2a532-f3cf-41b4-bb6f-3771da5f045d",
+          "type": "dispatch.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:47.740Z"
+        },
+        {
+          "eventSeq": 52,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-2391947f-7812-4d31-850e-97c65cb9a592",
+          "requestId": null,
+          "type": "source.collected",
+          "payload": {
+            "sourceHead": "55f59555a76ec959f1ce22cdea0a08d245515466",
+            "diff": "diff --git a/age.mjs b/age.mjs\nindex 2398d8a..1f73490 100644\n--- a/age.mjs\n+++ b/age.mjs\n@@ -1 +1 @@\n-export function classifyAge(age) { if (!Number.isInteger(age) || age < 0) throw new RangeError('age'); return age >= 21 ? 'adult' : 'minor'; }\n+export function classifyAge(age) { if (!Number.isInteger(age) || age < 0) throw new RangeError('age'); return age >= 18 ? 'adult' : 'minor'; }",
+            "changedPaths": [
+              "age.mjs"
+            ],
+            "taskAttempt": 2,
+            "eligibleForIntegration": true
+          },
+          "occurredAt": "2026-10-25T06:45:47.740Z"
+        },
+        {
+          "eventSeq": 53,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": null,
+          "requestId": "request-816eac84-81ad-444a-9f42-399d389407ac",
+          "type": "integration.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:47.741Z"
+        },
+        {
+          "eventSeq": 54,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": null,
+          "requestId": "request-816eac84-81ad-444a-9f42-399d389407ac",
+          "type": "integration.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:45:47.741Z"
+        },
+        {
+          "eventSeq": 55,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": null,
+          "requestId": "request-816eac84-81ad-444a-9f42-399d389407ac",
+          "type": "candidate.prepared",
+          "payload": {
+            "integrationId": "integration-00d67761-2f7c-48b9-bc1e-cfdd350c1675",
+            "sourceHead": "55f59555a76ec959f1ce22cdea0a08d245515466",
+            "candidateHead": "32bc283b35be526389d3403613618167ef34ebd5",
+            "expectedTargetHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\33110a89393b83efd7726efc",
+            "checkIds": [
+              "4fdcb3e4-2f33-4be6-83b6-921767632a8c"
+            ]
+          },
+          "occurredAt": "2026-10-25T06:45:48.287Z"
+        },
+        {
+          "eventSeq": 56,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-73a103dd-fdc2-471e-b3e4-4d97eb6bbf9e",
+          "requestId": "request-816eac84-81ad-444a-9f42-399d389407ac",
+          "type": "review.reserved",
+          "payload": {
+            "candidateHead": "32bc283b35be526389d3403613618167ef34ebd5"
+          },
+          "occurredAt": "2026-10-25T06:45:48.288Z"
+        },
+        {
+          "eventSeq": 57,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-73a103dd-fdc2-471e-b3e4-4d97eb6bbf9e",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-e4ab487b-e814-4d93-8fdb-b4692486c87c",
+            "promptSha256": "db65fe46ccba07c2c98e674867287d962b25be0933711b1f5ffacbae9f895522",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\33110a89393b83efd7726efc",
+            "baseCommit": "32bc283b35be526389d3403613618167ef34ebd5",
+            "sourceHead": "55f59555a76ec959f1ce22cdea0a08d245515466",
+            "candidateHead": "32bc283b35be526389d3403613618167ef34ebd5"
+          },
+          "occurredAt": "2026-10-25T06:45:48.304Z"
+        },
+        {
+          "eventSeq": 58,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-73a103dd-fdc2-471e-b3e4-4d97eb6bbf9e",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "e7275d55-bc52-4803-ab24-19e82508e72f"
+          },
+          "occurredAt": "2026-10-25T06:45:48.653Z"
+        },
+        {
+          "eventSeq": 59,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-73a103dd-fdc2-471e-b3e4-4d97eb6bbf9e",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "rework-age",
+              "runId": "run-73a103dd-fdc2-471e-b3e4-4d97eb6bbf9e",
+              "verdict": "approve",
+              "reviewedCommit": "32bc283b35be526389d3403613618167ef34ebd5",
+              "findings": []
+            },
+            "artifactId": "artifact-6530c929-3380-471d-a50d-9998f93f402b"
+          },
+          "occurredAt": "2026-10-25T06:46:00.676Z"
+        },
+        {
+          "eventSeq": 60,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-73a103dd-fdc2-471e-b3e4-4d97eb6bbf9e",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:00.679Z"
+        },
+        {
+          "eventSeq": 61,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": null,
+          "requestId": "request-816eac84-81ad-444a-9f42-399d389407ac",
+          "type": "publication.intent",
+          "payload": {
+            "integrationId": "integration-00d67761-2f7c-48b9-bc1e-cfdd350c1675",
+            "sourceHead": "55f59555a76ec959f1ce22cdea0a08d245515466",
+            "candidateHead": "32bc283b35be526389d3403613618167ef34ebd5",
+            "expectedTargetHead": "b8a2a5e30c1bf631ae417a7eeca21580d3225199",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\33110a89393b83efd7726efc",
+            "checkIds": [
+              "4fdcb3e4-2f33-4be6-83b6-921767632a8c"
+            ]
+          },
+          "occurredAt": "2026-10-25T06:46:00.679Z"
+        },
+        {
+          "eventSeq": 62,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": "run-73a103dd-fdc2-471e-b3e4-4d97eb6bbf9e",
+          "requestId": "request-816eac84-81ad-444a-9f42-399d389407ac",
+          "type": "integration.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:00.988Z"
+        },
+        {
+          "eventSeq": 63,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": "rework-age",
+          "runId": null,
+          "requestId": "request-816eac84-81ad-444a-9f42-399d389407ac",
+          "type": "integration.accepted",
+          "payload": {
+            "integrationId": "integration-00d67761-2f7c-48b9-bc1e-cfdd350c1675",
+            "acceptedCommit": "32bc283b35be526389d3403613618167ef34ebd5"
+          },
+          "occurredAt": "2026-10-25T06:46:00.988Z"
+        },
+        {
+          "eventSeq": 64,
+          "workflowId": "rework-366b3d02-017a-4d60-b232-2ea0369ae7cf",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "workflow.completed",
+          "payload": {
+            "summary": "Real reviewer rejected the initial fixture; fresh repair and independent label both accepted."
+          },
+          "occurredAt": "2026-10-25T06:46:01.557Z"
+        }
+      ]
+    },
+    {
+      "status": {
+        "workflow": {
+          "id": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+          "goal": "Two real sources conflict; preserve prior acceptance and continue an independent task.",
+          "leadSessionId": "rift-lead-01310fa6-6c60-4b7b-9c7c-452bf46951cc",
+          "planRevision": 1,
+          "version": 6,
+          "status": "cancelled",
+          "integrationRef": "refs/heads/rift/probes/conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "baseCommit": "32bc283b35be526389d3403613618167ef34ebd5",
+          "summary": null
+        },
+        "roles": [
+          {
+            "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-a",
+            "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+            "name": "developer-a",
+            "kind": "subagent",
+            "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+            "prompt": "Implement the supplied task in its assigned worktree using Read/Write/Edit tools. Change only expectedPaths. Do not commit, delegate or edit Git metadata. For a repair attempt, read previousResults, sourceEvidence and integrationEvidence before implementing feedback. Return exactly one strict resultSchema JSON object with the exact taskId/runId; checksClaimed must be empty because trusted checks run in the coordinator.",
+            "revision": 2
+          },
+          {
+            "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-b",
+            "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+            "name": "developer-b",
+            "kind": "subagent",
+            "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+            "prompt": "Implement the supplied task in its assigned worktree using Read/Write/Edit tools. Change only expectedPaths. Do not commit, delegate or edit Git metadata. For a repair attempt, read previousResults, sourceEvidence and integrationEvidence before implementing feedback. Return exactly one strict resultSchema JSON object with the exact taskId/runId; checksClaimed must be empty because trusted checks run in the coordinator.",
+            "revision": 2
+          },
+          {
+            "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:lead",
+            "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+            "name": "lead",
+            "kind": "dsh-lead",
+            "providerBindingId": null,
+            "prompt": "Coordinate a durable plan, parallel independent developers and exact-commit acceptance. Do not claim success before workflow_finish succeeds.",
+            "revision": 2
+          },
+          {
+            "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:reviewer",
+            "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+            "name": "reviewer",
+            "kind": "subagent",
+            "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:codex-review",
+            "prompt": "Independently review the exact candidate commit against acceptanceCriteria. Never modify files or commit. Developer instructions about intentionally producing an initial negative fixture apply only to the developer and do not permit approval of incorrect code. Return one strict resultSchema JSON object with the exact taskId, runId and candidate reviewedCommit. Return changes_requested with a concrete finding for any unmet criterion.",
+            "revision": 2
+          }
+        ],
+        "tasks": [
+          {
+            "id": "conflict-alpha",
+            "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-a",
+            "kind": "change",
+            "title": "Set shared value alpha",
+            "instructions": "Use Edit/Write to replace shared.txt with exactly alpha followed by one newline.",
+            "expectedPaths": [
+              "shared.txt"
+            ],
+            "acceptanceCriteria": [
+              "shared.txt contains exactly alpha followed by one newline."
+            ],
+            "status": "succeeded",
+            "attempt": 1,
+            "version": 4,
+            "acceptedCommit": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+            "sourceHead": "dec973848055922155ad76e36f8060ab41ff3ccd",
+            "blockingReason": null,
+            "dependencyStatus": "ready"
+          },
+          {
+            "id": "conflict-beta",
+            "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-b",
+            "kind": "change",
+            "title": "Set shared value beta",
+            "instructions": "Use Edit/Write to replace shared.txt with exactly beta followed by one newline.",
+            "expectedPaths": [
+              "shared.txt"
+            ],
+            "acceptanceCriteria": [
+              "shared.txt contains exactly beta followed by one newline."
+            ],
+            "status": "cancelled",
+            "attempt": 1,
+            "version": 5,
+            "acceptedCommit": null,
+            "sourceHead": "6b357511489fac544880734bbe42a47296aebd55",
+            "blockingReason": "INTEGRATION_CONFLICT: ",
+            "dependencyStatus": "ready"
+          },
+          {
+            "id": "conflict-independent",
+            "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-a",
+            "kind": "change",
+            "title": "Preserve independent receipt",
+            "instructions": "Create receipt.mjs containing exactly: export const receipt = 'independent kept';",
+            "expectedPaths": [
+              "receipt.mjs"
+            ],
+            "acceptanceCriteria": [
+              "receipt.mjs exports named constant receipt equal to 'independent kept'."
+            ],
+            "status": "succeeded",
+            "attempt": 1,
+            "version": 4,
+            "acceptedCommit": "6d90e5376b11adf9e01ce103beb9ab2366d08607",
+            "sourceHead": "fb68d9f9f28057b61eae4e57f1605a492511ab63",
+            "blockingReason": null,
+            "dependencyStatus": "ready"
+          }
+        ],
+        "runs": [
+          {
+            "id": "run-48a3bd32-488e-4f8a-af1a-a326fbb88b05",
+            "taskId": "conflict-alpha",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-a",
+            "purpose": "develop",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-a",
+                "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+                "name": "developer-a",
+                "kind": "subagent",
+                "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+                "prompt": "Implement the supplied task in its assigned worktree using Read/Write/Edit tools. Change only expectedPaths. Do not commit, delegate or edit Git metadata. For a repair attempt, read previousResults, sourceEvidence and integrationEvidence before implementing feedback. Return exactly one strict resultSchema JSON object with the exact taskId/runId; checksClaimed must be empty because trusted checks run in the coordinator.",
+                "revision": 2
+              },
+              "binding": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+                "providerName": "claude-code-dev",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:claude",
+                  "env:ANTHROPIC_API_KEY"
+                ]
+              }
+            },
+            "dshChildId": "dd7caf80-41bc-42c1-9e79-c81d3ce17c09",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T06:46:15.655Z",
+            "deadline": "2026-10-25T06:48:01.565Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "conflict-alpha",
+              "runId": "run-48a3bd32-488e-4f8a-af1a-a326fbb88b05",
+              "outcome": "completed",
+              "summary": "Replaced the contents of shared.txt (previously 'baseline\\n') with 'alpha\\n'.",
+              "changedPaths": [
+                "shared.txt"
+              ],
+              "checksClaimed": [],
+              "blockingReasons": []
+            },
+            "createdAt": "2026-10-25T06:46:01.565Z",
+            "startedAt": "2026-10-25T06:46:01.938Z",
+            "endedAt": "2026-10-25T06:46:15.653Z",
+            "resultArtifactId": "artifact-fc81e408-82e6-4956-a4d2-07ae42c3ea1c"
+          },
+          {
+            "id": "run-1ee1b578-84b9-4fa8-b7c1-07fbb66658a2",
+            "taskId": "conflict-beta",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-b",
+            "purpose": "develop",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-b",
+                "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+                "name": "developer-b",
+                "kind": "subagent",
+                "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+                "prompt": "Implement the supplied task in its assigned worktree using Read/Write/Edit tools. Change only expectedPaths. Do not commit, delegate or edit Git metadata. For a repair attempt, read previousResults, sourceEvidence and integrationEvidence before implementing feedback. Return exactly one strict resultSchema JSON object with the exact taskId/runId; checksClaimed must be empty because trusted checks run in the coordinator.",
+                "revision": 2
+              },
+              "binding": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+                "providerName": "claude-code-dev",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:claude",
+                  "env:ANTHROPIC_API_KEY"
+                ]
+              }
+            },
+            "dshChildId": "524e0e5d-c628-4200-ad19-3787f19e268c",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T06:46:30.247Z",
+            "deadline": "2026-10-25T06:48:16.307Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "conflict-beta",
+              "runId": "run-1ee1b578-84b9-4fa8-b7c1-07fbb66658a2",
+              "outcome": "completed",
+              "summary": "Replaced the contents of shared.txt (previously 'baseline\\n') with exactly 'beta\\n'.",
+              "changedPaths": [
+                "shared.txt"
+              ],
+              "checksClaimed": [],
+              "blockingReasons": []
+            },
+            "createdAt": "2026-10-25T06:46:16.307Z",
+            "startedAt": "2026-10-25T06:46:16.628Z",
+            "endedAt": "2026-10-25T06:46:30.245Z",
+            "resultArtifactId": "artifact-030c96b2-7e22-43af-9ea3-a921641b6a51"
+          },
+          {
+            "id": "run-1b650ee3-da64-499b-8fc9-272a8abafc6b",
+            "taskId": "conflict-alpha",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:reviewer",
+            "purpose": "review",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:reviewer",
+                "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+                "name": "reviewer",
+                "kind": "subagent",
+                "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:codex-review",
+                "prompt": "Independently review the exact candidate commit against acceptanceCriteria. Never modify files or commit. Developer instructions about intentionally producing an initial negative fixture apply only to the developer and do not permit approval of incorrect code. Return one strict resultSchema JSON object with the exact taskId, runId and candidate reviewedCommit. Return changes_requested with a concrete finding for any unmet criterion.",
+                "revision": 2
+              },
+              "binding": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:codex-review",
+                "providerName": "codex-review",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:codex"
+                ]
+              }
+            },
+            "dshChildId": "84775b98-cfd4-4b63-a214-1dd08fa32da9",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T06:46:46.228Z",
+            "deadline": "2026-10-25T06:48:31.021Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "conflict-alpha",
+              "runId": "run-1b650ee3-da64-499b-8fc9-272a8abafc6b",
+              "verdict": "approve",
+              "reviewedCommit": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+              "findings": []
+            },
+            "createdAt": "2026-10-25T06:46:31.021Z",
+            "startedAt": "2026-10-25T06:46:33.086Z",
+            "endedAt": "2026-10-25T06:46:46.225Z",
+            "resultArtifactId": "artifact-b298c1ad-4755-4144-96e7-dd2b35089a4f"
+          },
+          {
+            "id": "run-00015bd1-730b-4bac-8faa-8489ea198444",
+            "taskId": "conflict-independent",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-a",
+            "purpose": "develop",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:developer-a",
+                "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+                "name": "developer-a",
+                "kind": "subagent",
+                "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+                "prompt": "Implement the supplied task in its assigned worktree using Read/Write/Edit tools. Change only expectedPaths. Do not commit, delegate or edit Git metadata. For a repair attempt, read previousResults, sourceEvidence and integrationEvidence before implementing feedback. Return exactly one strict resultSchema JSON object with the exact taskId/runId; checksClaimed must be empty because trusted checks run in the coordinator.",
+                "revision": 2
+              },
+              "binding": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:claude-code-dev",
+                "providerName": "claude-code-dev",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:claude",
+                  "env:ANTHROPIC_API_KEY"
+                ]
+              }
+            },
+            "dshChildId": "ff58deeb-6f44-48cc-a61e-7759044f83a1",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T06:46:54.314Z",
+            "deadline": "2026-10-25T06:48:47.167Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "conflict-independent",
+              "runId": "run-00015bd1-730b-4bac-8faa-8489ea198444",
+              "outcome": "completed",
+              "summary": "Created receipt.mjs. It exports the named constant receipt with the value 'independent kept'. No other files were changed.",
+              "changedPaths": [
+                "receipt.mjs"
+              ],
+              "checksClaimed": [],
+              "blockingReasons": []
+            },
+            "createdAt": "2026-10-25T06:46:47.167Z",
+            "startedAt": "2026-10-25T06:46:47.490Z",
+            "endedAt": "2026-10-25T06:46:54.312Z",
+            "resultArtifactId": "artifact-7e5cfee9-8acb-4e43-a6a7-b543f3ffb190"
+          },
+          {
+            "id": "run-603b2a9f-9baf-4e0b-bbe7-74b0587462e0",
+            "taskId": "conflict-independent",
+            "roleId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:reviewer",
+            "purpose": "review",
+            "taskAttempt": 1,
+            "status": "succeeded",
+            "providerSnapshot": {
+              "role": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:reviewer",
+                "workspaceId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304",
+                "name": "reviewer",
+                "kind": "subagent",
+                "providerBindingId": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:codex-review",
+                "prompt": "Independently review the exact candidate commit against acceptanceCriteria. Never modify files or commit. Developer instructions about intentionally producing an initial negative fixture apply only to the developer and do not permit approval of incorrect code. Return one strict resultSchema JSON object with the exact taskId, runId and candidate reviewedCommit. Return changes_requested with a concrete finding for any unmet criterion.",
+                "revision": 2
+              },
+              "binding": {
+                "id": "workspace-955f10f8-c169-4f0e-a917-2f19e1ccc304:codex-review",
+                "providerName": "codex-review",
+                "packageVersion": "0.2.1-rc.3",
+                "configRevision": 1,
+                "capabilities": {
+                  "agentOptions": false,
+                  "agentPreset": false,
+                  "outputSchema": false,
+                  "depthLimit": false
+                },
+                "credentialRefs": [
+                  "native:codex"
+                ]
+              }
+            },
+            "dshChildId": "64b42c48-19bd-4032-a4be-8b8298a6d76c",
+            "dshRunId": null,
+            "stopReason": "completed",
+            "cleanupStatus": "confirmed",
+            "slotReleasedAt": "2026-10-25T06:47:05.893Z",
+            "deadline": "2026-10-25T06:48:55.443Z",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "conflict-independent",
+              "runId": "run-603b2a9f-9baf-4e0b-bbe7-74b0587462e0",
+              "verdict": "approve",
+              "reviewedCommit": "6d90e5376b11adf9e01ce103beb9ab2366d08607",
+              "findings": []
+            },
+            "createdAt": "2026-10-25T06:46:55.443Z",
+            "startedAt": "2026-10-25T06:46:55.820Z",
+            "endedAt": "2026-10-25T06:47:05.890Z",
+            "resultArtifactId": "artifact-93cbd905-7ef8-49ee-9e83-3da96332f764"
+          }
+        ],
+        "worktrees": [
+          {
+            "id": "conflict-alpha:1",
+            "taskId": "conflict-alpha",
+            "attempt": 1,
+            "kind": "task",
+            "path": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\worktrees\\af2b2aa6148e9230ff0abd34",
+            "branch": "rift/4387bbe137f87d1b36583f59/13db25ed059f33d02646226c/1",
+            "baseCommit": "32bc283b35be526389d3403613618167ef34ebd5",
+            "headCommit": "dec973848055922155ad76e36f8060ab41ff3ccd",
+            "writerRunId": null,
+            "status": "active"
+          },
+          {
+            "id": "conflict-beta:1",
+            "taskId": "conflict-beta",
+            "attempt": 1,
+            "kind": "task",
+            "path": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\worktrees\\7007e7d903e2686387ac931a",
+            "branch": "rift/4387bbe137f87d1b36583f59/b3e6c122913fbfc83dd0a139/1",
+            "baseCommit": "32bc283b35be526389d3403613618167ef34ebd5",
+            "headCommit": "6b357511489fac544880734bbe42a47296aebd55",
+            "writerRunId": null,
+            "status": "active"
+          },
+          {
+            "id": "conflict-independent:1",
+            "taskId": "conflict-independent",
+            "attempt": 1,
+            "kind": "task",
+            "path": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\worktrees\\9797e6ccb422825540abdb09",
+            "branch": "rift/4387bbe137f87d1b36583f59/ad60b54551a78b7e36951240/1",
+            "baseCommit": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+            "headCommit": "fb68d9f9f28057b61eae4e57f1605a492511ab63",
+            "writerRunId": null,
+            "status": "active"
+          }
+        ],
+        "operations": [
+          {
+            "id": "request-fc24fedd-077c-4579-a13e-93cf64171d7c",
+            "kind": "dispatch",
+            "dedupeKey": "review-rework-1792910691240-e606506f:conflict-alpha",
+            "entityId": "conflict-alpha",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 0,
+              "planRevision": 1,
+              "runId": "run-48a3bd32-488e-4f8a-af1a-a326fbb88b05"
+            },
+            "createdAt": "2026-10-25T06:46:01.564Z"
+          },
+          {
+            "id": "request-0b8df8ee-73a5-4428-b6c5-74bfd3a8a757",
+            "kind": "integration",
+            "dedupeKey": "auto-integration:conflict-alpha:1",
+            "entityId": "conflict-alpha",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 2,
+              "planRevision": 1,
+              "sourceHead": "dec973848055922155ad76e36f8060ab41ff3ccd",
+              "integrationId": "integration-aaf08f31-114f-4678-8f83-3e2cdb8f81d2",
+              "runId": "run-1b650ee3-da64-499b-8fc9-272a8abafc6b"
+            },
+            "createdAt": "2026-10-25T06:46:16.228Z"
+          },
+          {
+            "id": "request-d0a80b61-40d0-42dc-bd96-7eb1ec665b86",
+            "kind": "dispatch",
+            "dedupeKey": "review-rework-1792910691240-e606506f:conflict-beta",
+            "entityId": "conflict-beta",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 0,
+              "planRevision": 1,
+              "runId": "run-1ee1b578-84b9-4fa8-b7c1-07fbb66658a2"
+            },
+            "createdAt": "2026-10-25T06:46:16.305Z"
+          },
+          {
+            "id": "request-69de5b9a-231d-405e-b865-41af0fbf551b",
+            "kind": "integration",
+            "dedupeKey": "auto-integration:conflict-beta:1",
+            "entityId": "conflict-beta",
+            "phase": "blocked",
+            "payload": {
+              "expectedVersion": 2,
+              "planRevision": 1,
+              "sourceHead": "6b357511489fac544880734bbe42a47296aebd55",
+              "integrationId": "integration-2ac2fcaa-d253-4366-871c-5136d0586c24",
+              "error": "INTEGRATION_CONFLICT: "
+            },
+            "createdAt": "2026-10-25T06:46:30.817Z"
+          },
+          {
+            "id": "request-e9684f95-3a0d-4382-a4df-fda8def78f13",
+            "kind": "dispatch",
+            "dedupeKey": "review-rework-1792910691240-e606506f:conflict-independent",
+            "entityId": "conflict-independent",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 0,
+              "planRevision": 1,
+              "runId": "run-00015bd1-730b-4bac-8faa-8489ea198444"
+            },
+            "createdAt": "2026-10-25T06:46:47.166Z"
+          },
+          {
+            "id": "request-558acf0a-b170-40d9-8855-bbfb5e1cd8d7",
+            "kind": "integration",
+            "dedupeKey": "auto-integration:conflict-independent:1",
+            "entityId": "conflict-independent",
+            "phase": "completed",
+            "payload": {
+              "expectedVersion": 2,
+              "planRevision": 1,
+              "sourceHead": "fb68d9f9f28057b61eae4e57f1605a492511ab63",
+              "integrationId": "integration-323fbf26-62ec-4c1e-8eae-8cf9d49a02da",
+              "runId": "run-603b2a9f-9baf-4e0b-bbe7-74b0587462e0"
+            },
+            "createdAt": "2026-10-25T06:46:54.887Z"
+          }
+        ],
+        "integrations": [
+          {
+            "id": "integration-aaf08f31-114f-4678-8f83-3e2cdb8f81d2",
+            "taskId": "conflict-alpha",
+            "sourceHead": "dec973848055922155ad76e36f8060ab41ff3ccd",
+            "expectedTargetHead": "32bc283b35be526389d3403613618167ef34ebd5",
+            "candidateHead": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+            "checkIds": [
+              "3a6869f6-1079-4eff-bcde-4f0f24254720"
+            ],
+            "reviewRunId": "run-1b650ee3-da64-499b-8fc9-272a8abafc6b",
+            "status": "accepted",
+            "candidate": {
+              "integrationId": "integration-aaf08f31-114f-4678-8f83-3e2cdb8f81d2",
+              "sourceHead": "dec973848055922155ad76e36f8060ab41ff3ccd",
+              "candidateHead": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+              "expectedTargetHead": "32bc283b35be526389d3403613618167ef34ebd5",
+              "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\fe089807f92271300fa14376",
+              "checkIds": [
+                "3a6869f6-1079-4eff-bcde-4f0f24254720"
+              ]
+            },
+            "error": null
+          },
+          {
+            "id": "integration-2ac2fcaa-d253-4366-871c-5136d0586c24",
+            "taskId": "conflict-beta",
+            "sourceHead": "6b357511489fac544880734bbe42a47296aebd55",
+            "expectedTargetHead": null,
+            "candidateHead": null,
+            "checkIds": [],
+            "reviewRunId": null,
+            "status": "blocked",
+            "candidate": null,
+            "error": "INTEGRATION_CONFLICT: "
+          },
+          {
+            "id": "integration-323fbf26-62ec-4c1e-8eae-8cf9d49a02da",
+            "taskId": "conflict-independent",
+            "sourceHead": "fb68d9f9f28057b61eae4e57f1605a492511ab63",
+            "expectedTargetHead": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+            "candidateHead": "6d90e5376b11adf9e01ce103beb9ab2366d08607",
+            "checkIds": [
+              "e387fdd2-5874-4d19-bd87-a99a2812530c"
+            ],
+            "reviewRunId": "run-603b2a9f-9baf-4e0b-bbe7-74b0587462e0",
+            "status": "accepted",
+            "candidate": {
+              "integrationId": "integration-323fbf26-62ec-4c1e-8eae-8cf9d49a02da",
+              "sourceHead": "fb68d9f9f28057b61eae4e57f1605a492511ab63",
+              "candidateHead": "6d90e5376b11adf9e01ce103beb9ab2366d08607",
+              "expectedTargetHead": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+              "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\ac4307658f926a97353aa34b",
+              "checkIds": [
+                "e387fdd2-5874-4d19-bd87-a99a2812530c"
+              ]
+            },
+            "error": null
+          }
+        ],
+        "slots": {
+          "developers": 0,
+          "reviewers": 0,
+          "total": 0
+        },
+        "eventSeq": 125
+      },
+      "events": [
+        {
+          "eventSeq": 65,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "workflow.created",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:01.559Z"
+        },
+        {
+          "eventSeq": 66,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "lead.attached",
+          "payload": {
+            "sessionId": "rift-lead-01310fa6-6c60-4b7b-9c7c-452bf46951cc"
+          },
+          "occurredAt": "2026-10-25T06:46:01.562Z"
+        },
+        {
+          "eventSeq": 67,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "plan.accepted",
+          "payload": {
+            "revision": 1,
+            "taskIds": [
+              "conflict-alpha",
+              "conflict-beta",
+              "conflict-independent"
+            ],
+            "acceptanceCriteria": []
+          },
+          "occurredAt": "2026-10-25T06:46:01.563Z"
+        },
+        {
+          "eventSeq": 68,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": null,
+          "requestId": "request-fc24fedd-077c-4579-a13e-93cf64171d7c",
+          "type": "dispatch.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:01.564Z"
+        },
+        {
+          "eventSeq": 69,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": "run-48a3bd32-488e-4f8a-af1a-a326fbb88b05",
+          "requestId": "request-fc24fedd-077c-4579-a13e-93cf64171d7c",
+          "type": "dispatch.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:01.565Z"
+        },
+        {
+          "eventSeq": 70,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": "run-48a3bd32-488e-4f8a-af1a-a326fbb88b05",
+          "requestId": "request-fc24fedd-077c-4579-a13e-93cf64171d7c",
+          "type": "dispatch_reserved",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:01.565Z"
+        },
+        {
+          "eventSeq": 71,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "workflow.paused",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:01.568Z"
+        },
+        {
+          "eventSeq": 72,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": "run-48a3bd32-488e-4f8a-af1a-a326fbb88b05",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-59ea9893-9d84-49d3-b172-6d79375ecf82",
+            "promptSha256": "1546619e1c1e9d2541e9f9314189d79d98924901cdfc9f2ab90b2d90567e53bb",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\worktrees\\af2b2aa6148e9230ff0abd34",
+            "baseCommit": "32bc283b35be526389d3403613618167ef34ebd5",
+            "sourceHead": null,
+            "candidateHead": null
+          },
+          "occurredAt": "2026-10-25T06:46:01.932Z"
+        },
+        {
+          "eventSeq": 73,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": "run-48a3bd32-488e-4f8a-af1a-a326fbb88b05",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "dd7caf80-41bc-42c1-9e79-c81d3ce17c09"
+          },
+          "occurredAt": "2026-10-25T06:46:01.938Z"
+        },
+        {
+          "eventSeq": 74,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": "run-48a3bd32-488e-4f8a-af1a-a326fbb88b05",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "conflict-alpha",
+              "runId": "run-48a3bd32-488e-4f8a-af1a-a326fbb88b05",
+              "outcome": "completed",
+              "summary": "Replaced the contents of shared.txt (previously 'baseline\\n') with 'alpha\\n'.",
+              "changedPaths": [
+                "shared.txt"
+              ],
+              "checksClaimed": [],
+              "blockingReasons": []
+            },
+            "artifactId": "artifact-fc81e408-82e6-4956-a4d2-07ae42c3ea1c"
+          },
+          "occurredAt": "2026-10-25T06:46:15.654Z"
+        },
+        {
+          "eventSeq": 75,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": "run-48a3bd32-488e-4f8a-af1a-a326fbb88b05",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:15.656Z"
+        },
+        {
+          "eventSeq": 76,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": "run-48a3bd32-488e-4f8a-af1a-a326fbb88b05",
+          "requestId": "request-fc24fedd-077c-4579-a13e-93cf64171d7c",
+          "type": "dispatch.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:16.227Z"
+        },
+        {
+          "eventSeq": 77,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": "run-48a3bd32-488e-4f8a-af1a-a326fbb88b05",
+          "requestId": null,
+          "type": "source.collected",
+          "payload": {
+            "sourceHead": "dec973848055922155ad76e36f8060ab41ff3ccd",
+            "diff": "diff --git a/shared.txt b/shared.txt\nindex 180b47c..4a58007 100644\n--- a/shared.txt\n+++ b/shared.txt\n@@ -1 +1 @@\n-baseline\n+alpha",
+            "changedPaths": [
+              "shared.txt"
+            ],
+            "taskAttempt": 1,
+            "eligibleForIntegration": true
+          },
+          "occurredAt": "2026-10-25T06:46:16.227Z"
+        },
+        {
+          "eventSeq": 78,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": null,
+          "requestId": "request-0b8df8ee-73a5-4428-b6c5-74bfd3a8a757",
+          "type": "integration.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:16.228Z"
+        },
+        {
+          "eventSeq": 79,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-beta",
+          "runId": null,
+          "requestId": "request-d0a80b61-40d0-42dc-bd96-7eb1ec665b86",
+          "type": "dispatch.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:16.305Z"
+        },
+        {
+          "eventSeq": 80,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "workflow.running",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:16.306Z"
+        },
+        {
+          "eventSeq": 81,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-beta",
+          "runId": "run-1ee1b578-84b9-4fa8-b7c1-07fbb66658a2",
+          "requestId": "request-d0a80b61-40d0-42dc-bd96-7eb1ec665b86",
+          "type": "dispatch.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:16.307Z"
+        },
+        {
+          "eventSeq": 82,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-beta",
+          "runId": "run-1ee1b578-84b9-4fa8-b7c1-07fbb66658a2",
+          "requestId": "request-d0a80b61-40d0-42dc-bd96-7eb1ec665b86",
+          "type": "dispatch_reserved",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:16.307Z"
+        },
+        {
+          "eventSeq": 83,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": null,
+          "requestId": "request-0b8df8ee-73a5-4428-b6c5-74bfd3a8a757",
+          "type": "integration.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:16.310Z"
+        },
+        {
+          "eventSeq": 84,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "workflow.paused",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:16.313Z"
+        },
+        {
+          "eventSeq": 85,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-beta",
+          "runId": "run-1ee1b578-84b9-4fa8-b7c1-07fbb66658a2",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-0b7bddfc-7133-46ff-bd55-a073a4c924f0",
+            "promptSha256": "e8f1b6ff10a1ec6edbebc485e60da78a7b3d5938577b1ffa90696791e9d37453",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\worktrees\\7007e7d903e2686387ac931a",
+            "baseCommit": "32bc283b35be526389d3403613618167ef34ebd5",
+            "sourceHead": null,
+            "candidateHead": null
+          },
+          "occurredAt": "2026-10-25T06:46:16.622Z"
+        },
+        {
+          "eventSeq": 86,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-beta",
+          "runId": "run-1ee1b578-84b9-4fa8-b7c1-07fbb66658a2",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "524e0e5d-c628-4200-ad19-3787f19e268c"
+          },
+          "occurredAt": "2026-10-25T06:46:16.628Z"
+        },
+        {
+          "eventSeq": 87,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": null,
+          "requestId": "request-0b8df8ee-73a5-4428-b6c5-74bfd3a8a757",
+          "type": "candidate.prepared",
+          "payload": {
+            "integrationId": "integration-aaf08f31-114f-4678-8f83-3e2cdb8f81d2",
+            "sourceHead": "dec973848055922155ad76e36f8060ab41ff3ccd",
+            "candidateHead": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+            "expectedTargetHead": "32bc283b35be526389d3403613618167ef34ebd5",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\fe089807f92271300fa14376",
+            "checkIds": [
+              "3a6869f6-1079-4eff-bcde-4f0f24254720"
+            ]
+          },
+          "occurredAt": "2026-10-25T06:46:16.993Z"
+        },
+        {
+          "eventSeq": 88,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-beta",
+          "runId": "run-1ee1b578-84b9-4fa8-b7c1-07fbb66658a2",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "conflict-beta",
+              "runId": "run-1ee1b578-84b9-4fa8-b7c1-07fbb66658a2",
+              "outcome": "completed",
+              "summary": "Replaced the contents of shared.txt (previously 'baseline\\n') with exactly 'beta\\n'.",
+              "changedPaths": [
+                "shared.txt"
+              ],
+              "checksClaimed": [],
+              "blockingReasons": []
+            },
+            "artifactId": "artifact-030c96b2-7e22-43af-9ea3-a921641b6a51"
+          },
+          "occurredAt": "2026-10-25T06:46:30.246Z"
+        },
+        {
+          "eventSeq": 89,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-beta",
+          "runId": "run-1ee1b578-84b9-4fa8-b7c1-07fbb66658a2",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:30.248Z"
+        },
+        {
+          "eventSeq": 90,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-beta",
+          "runId": "run-1ee1b578-84b9-4fa8-b7c1-07fbb66658a2",
+          "requestId": "request-d0a80b61-40d0-42dc-bd96-7eb1ec665b86",
+          "type": "dispatch.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:30.816Z"
+        },
+        {
+          "eventSeq": 91,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-beta",
+          "runId": "run-1ee1b578-84b9-4fa8-b7c1-07fbb66658a2",
+          "requestId": null,
+          "type": "source.collected",
+          "payload": {
+            "sourceHead": "6b357511489fac544880734bbe42a47296aebd55",
+            "diff": "diff --git a/shared.txt b/shared.txt\nindex 180b47c..65b2df8 100644\n--- a/shared.txt\n+++ b/shared.txt\n@@ -1 +1 @@\n-baseline\n+beta",
+            "changedPaths": [
+              "shared.txt"
+            ],
+            "taskAttempt": 1,
+            "eligibleForIntegration": true
+          },
+          "occurredAt": "2026-10-25T06:46:30.816Z"
+        },
+        {
+          "eventSeq": 92,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-beta",
+          "runId": null,
+          "requestId": "request-69de5b9a-231d-405e-b865-41af0fbf551b",
+          "type": "integration.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:30.817Z"
+        },
+        {
+          "eventSeq": 93,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "workflow.running",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:31.019Z"
+        },
+        {
+          "eventSeq": 94,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": "run-1b650ee3-da64-499b-8fc9-272a8abafc6b",
+          "requestId": "request-0b8df8ee-73a5-4428-b6c5-74bfd3a8a757",
+          "type": "review.reserved",
+          "payload": {
+            "candidateHead": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d"
+          },
+          "occurredAt": "2026-10-25T06:46:31.022Z"
+        },
+        {
+          "eventSeq": 95,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": "run-1b650ee3-da64-499b-8fc9-272a8abafc6b",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-9723de3a-3e9b-4fef-98ab-9b1bc2b45b4a",
+            "promptSha256": "d1d559691653a1f77fcd0514c27b8052d8ae4862d2c05dc8596d4bdca38a1fd3",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\fe089807f92271300fa14376",
+            "baseCommit": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+            "sourceHead": "dec973848055922155ad76e36f8060ab41ff3ccd",
+            "candidateHead": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d"
+          },
+          "occurredAt": "2026-10-25T06:46:31.030Z"
+        },
+        {
+          "eventSeq": 96,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": "run-1b650ee3-da64-499b-8fc9-272a8abafc6b",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "84775b98-cfd4-4b63-a214-1dd08fa32da9"
+          },
+          "occurredAt": "2026-10-25T06:46:33.087Z"
+        },
+        {
+          "eventSeq": 97,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": "run-1b650ee3-da64-499b-8fc9-272a8abafc6b",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "conflict-alpha",
+              "runId": "run-1b650ee3-da64-499b-8fc9-272a8abafc6b",
+              "verdict": "approve",
+              "reviewedCommit": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+              "findings": []
+            },
+            "artifactId": "artifact-b298c1ad-4755-4144-96e7-dd2b35089a4f"
+          },
+          "occurredAt": "2026-10-25T06:46:46.226Z"
+        },
+        {
+          "eventSeq": 98,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": "run-1b650ee3-da64-499b-8fc9-272a8abafc6b",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:46.228Z"
+        },
+        {
+          "eventSeq": 99,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": null,
+          "requestId": "request-0b8df8ee-73a5-4428-b6c5-74bfd3a8a757",
+          "type": "publication.intent",
+          "payload": {
+            "integrationId": "integration-aaf08f31-114f-4678-8f83-3e2cdb8f81d2",
+            "sourceHead": "dec973848055922155ad76e36f8060ab41ff3ccd",
+            "candidateHead": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+            "expectedTargetHead": "32bc283b35be526389d3403613618167ef34ebd5",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\fe089807f92271300fa14376",
+            "checkIds": [
+              "3a6869f6-1079-4eff-bcde-4f0f24254720"
+            ]
+          },
+          "occurredAt": "2026-10-25T06:46:46.228Z"
+        },
+        {
+          "eventSeq": 100,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": "run-1b650ee3-da64-499b-8fc9-272a8abafc6b",
+          "requestId": "request-0b8df8ee-73a5-4428-b6c5-74bfd3a8a757",
+          "type": "integration.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:46.555Z"
+        },
+        {
+          "eventSeq": 101,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-alpha",
+          "runId": null,
+          "requestId": "request-0b8df8ee-73a5-4428-b6c5-74bfd3a8a757",
+          "type": "integration.accepted",
+          "payload": {
+            "integrationId": "integration-aaf08f31-114f-4678-8f83-3e2cdb8f81d2",
+            "acceptedCommit": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d"
+          },
+          "occurredAt": "2026-10-25T06:46:46.555Z"
+        },
+        {
+          "eventSeq": 102,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-beta",
+          "runId": null,
+          "requestId": "request-69de5b9a-231d-405e-b865-41af0fbf551b",
+          "type": "integration.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:46.555Z"
+        },
+        {
+          "eventSeq": 103,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-beta",
+          "runId": null,
+          "requestId": null,
+          "type": "task.blocked",
+          "payload": {
+            "reason": "INTEGRATION_CONFLICT: "
+          },
+          "occurredAt": "2026-10-25T06:46:46.888Z"
+        },
+        {
+          "eventSeq": 104,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-beta",
+          "runId": null,
+          "requestId": "request-69de5b9a-231d-405e-b865-41af0fbf551b",
+          "type": "integration.blocked",
+          "payload": {
+            "error": "INTEGRATION_CONFLICT: "
+          },
+          "occurredAt": "2026-10-25T06:46:46.888Z"
+        },
+        {
+          "eventSeq": 105,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": null,
+          "requestId": "request-e9684f95-3a0d-4382-a4df-fda8def78f13",
+          "type": "dispatch.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:47.166Z"
+        },
+        {
+          "eventSeq": 106,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": "run-00015bd1-730b-4bac-8faa-8489ea198444",
+          "requestId": "request-e9684f95-3a0d-4382-a4df-fda8def78f13",
+          "type": "dispatch.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:47.168Z"
+        },
+        {
+          "eventSeq": 107,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": "run-00015bd1-730b-4bac-8faa-8489ea198444",
+          "requestId": "request-e9684f95-3a0d-4382-a4df-fda8def78f13",
+          "type": "dispatch_reserved",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:47.168Z"
+        },
+        {
+          "eventSeq": 108,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": "run-00015bd1-730b-4bac-8faa-8489ea198444",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-c876f2c3-8448-4c98-a61c-592a581115a2",
+            "promptSha256": "1d53f481c14af612bc9f4b2a39b610b04990d3db9a21190b6d1ca8bb93a538d6",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\worktrees\\9797e6ccb422825540abdb09",
+            "baseCommit": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+            "sourceHead": null,
+            "candidateHead": null
+          },
+          "occurredAt": "2026-10-25T06:46:47.484Z"
+        },
+        {
+          "eventSeq": 109,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": "run-00015bd1-730b-4bac-8faa-8489ea198444",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "ff58deeb-6f44-48cc-a61e-7759044f83a1"
+          },
+          "occurredAt": "2026-10-25T06:46:47.490Z"
+        },
+        {
+          "eventSeq": 110,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": "run-00015bd1-730b-4bac-8faa-8489ea198444",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "conflict-independent",
+              "runId": "run-00015bd1-730b-4bac-8faa-8489ea198444",
+              "outcome": "completed",
+              "summary": "Created receipt.mjs. It exports the named constant receipt with the value 'independent kept'. No other files were changed.",
+              "changedPaths": [
+                "receipt.mjs"
+              ],
+              "checksClaimed": [],
+              "blockingReasons": []
+            },
+            "artifactId": "artifact-7e5cfee9-8acb-4e43-a6a7-b543f3ffb190"
+          },
+          "occurredAt": "2026-10-25T06:46:54.312Z"
+        },
+        {
+          "eventSeq": 111,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": "run-00015bd1-730b-4bac-8faa-8489ea198444",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:54.314Z"
+        },
+        {
+          "eventSeq": 112,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": "run-00015bd1-730b-4bac-8faa-8489ea198444",
+          "requestId": "request-e9684f95-3a0d-4382-a4df-fda8def78f13",
+          "type": "dispatch.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:54.887Z"
+        },
+        {
+          "eventSeq": 113,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": "run-00015bd1-730b-4bac-8faa-8489ea198444",
+          "requestId": null,
+          "type": "source.collected",
+          "payload": {
+            "sourceHead": "fb68d9f9f28057b61eae4e57f1605a492511ab63",
+            "diff": "diff --git a/receipt.mjs b/receipt.mjs\nnew file mode 100644\nindex 0000000..5183860\n--- /dev/null\n+++ b/receipt.mjs\n@@ -0,0 +1 @@\n+export const receipt = 'independent kept';",
+            "changedPaths": [
+              "receipt.mjs"
+            ],
+            "taskAttempt": 1,
+            "eligibleForIntegration": true
+          },
+          "occurredAt": "2026-10-25T06:46:54.887Z"
+        },
+        {
+          "eventSeq": 114,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": null,
+          "requestId": "request-558acf0a-b170-40d9-8855-bbfb5e1cd8d7",
+          "type": "integration.queued",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:54.887Z"
+        },
+        {
+          "eventSeq": 115,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": null,
+          "requestId": "request-558acf0a-b170-40d9-8855-bbfb5e1cd8d7",
+          "type": "integration.started",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:46:54.888Z"
+        },
+        {
+          "eventSeq": 116,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": null,
+          "requestId": "request-558acf0a-b170-40d9-8855-bbfb5e1cd8d7",
+          "type": "candidate.prepared",
+          "payload": {
+            "integrationId": "integration-323fbf26-62ec-4c1e-8eae-8cf9d49a02da",
+            "sourceHead": "fb68d9f9f28057b61eae4e57f1605a492511ab63",
+            "candidateHead": "6d90e5376b11adf9e01ce103beb9ab2366d08607",
+            "expectedTargetHead": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\ac4307658f926a97353aa34b",
+            "checkIds": [
+              "e387fdd2-5874-4d19-bd87-a99a2812530c"
+            ]
+          },
+          "occurredAt": "2026-10-25T06:46:55.442Z"
+        },
+        {
+          "eventSeq": 117,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": "run-603b2a9f-9baf-4e0b-bbe7-74b0587462e0",
+          "requestId": "request-558acf0a-b170-40d9-8855-bbfb5e1cd8d7",
+          "type": "review.reserved",
+          "payload": {
+            "candidateHead": "6d90e5376b11adf9e01ce103beb9ab2366d08607"
+          },
+          "occurredAt": "2026-10-25T06:46:55.444Z"
+        },
+        {
+          "eventSeq": 118,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": "run-603b2a9f-9baf-4e0b-bbe7-74b0587462e0",
+          "requestId": null,
+          "type": "run.input_prepared",
+          "payload": {
+            "artifactId": "artifact-af90b7ef-9e25-4559-b250-53ec204370d1",
+            "promptSha256": "ce52330705df551f9a98e7f14b35e196bc7067ea3e603934ac930078b77f057a",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\ac4307658f926a97353aa34b",
+            "baseCommit": "6d90e5376b11adf9e01ce103beb9ab2366d08607",
+            "sourceHead": "fb68d9f9f28057b61eae4e57f1605a492511ab63",
+            "candidateHead": "6d90e5376b11adf9e01ce103beb9ab2366d08607"
+          },
+          "occurredAt": "2026-10-25T06:46:55.453Z"
+        },
+        {
+          "eventSeq": 119,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": "run-603b2a9f-9baf-4e0b-bbe7-74b0587462e0",
+          "requestId": null,
+          "type": "activation_accepted",
+          "payload": {
+            "childId": "64b42c48-19bd-4032-a4be-8b8298a6d76c"
+          },
+          "occurredAt": "2026-10-25T06:46:55.820Z"
+        },
+        {
+          "eventSeq": 120,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": "run-603b2a9f-9baf-4e0b-bbe7-74b0587462e0",
+          "requestId": null,
+          "type": "result_recorded",
+          "payload": {
+            "status": "succeeded",
+            "stopReason": "completed",
+            "result": {
+              "schemaVersion": 1,
+              "taskId": "conflict-independent",
+              "runId": "run-603b2a9f-9baf-4e0b-bbe7-74b0587462e0",
+              "verdict": "approve",
+              "reviewedCommit": "6d90e5376b11adf9e01ce103beb9ab2366d08607",
+              "findings": []
+            },
+            "artifactId": "artifact-93cbd905-7ef8-49ee-9e83-3da96332f764"
+          },
+          "occurredAt": "2026-10-25T06:47:05.891Z"
+        },
+        {
+          "eventSeq": 121,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": "run-603b2a9f-9baf-4e0b-bbe7-74b0587462e0",
+          "requestId": null,
+          "type": "cleanup.confirmed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:47:05.893Z"
+        },
+        {
+          "eventSeq": 122,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": null,
+          "requestId": "request-558acf0a-b170-40d9-8855-bbfb5e1cd8d7",
+          "type": "publication.intent",
+          "payload": {
+            "integrationId": "integration-323fbf26-62ec-4c1e-8eae-8cf9d49a02da",
+            "sourceHead": "fb68d9f9f28057b61eae4e57f1605a492511ab63",
+            "candidateHead": "6d90e5376b11adf9e01ce103beb9ab2366d08607",
+            "expectedTargetHead": "05a4bf9f76f8d2bb1b7c1490e072bf3d36658a7d",
+            "cwd": "<RIFT_ROOT>\\.runtime-evidence\\review-rework-1792910691240-e606506f\\rift-home\\workspaces\\4387bbe137f87d1b36583f59\\reviews\\ac4307658f926a97353aa34b",
+            "checkIds": [
+              "e387fdd2-5874-4d19-bd87-a99a2812530c"
+            ]
+          },
+          "occurredAt": "2026-10-25T06:47:05.893Z"
+        },
+        {
+          "eventSeq": 123,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": "run-603b2a9f-9baf-4e0b-bbe7-74b0587462e0",
+          "requestId": "request-558acf0a-b170-40d9-8855-bbfb5e1cd8d7",
+          "type": "integration.completed",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:47:06.217Z"
+        },
+        {
+          "eventSeq": 124,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": "conflict-independent",
+          "runId": null,
+          "requestId": "request-558acf0a-b170-40d9-8855-bbfb5e1cd8d7",
+          "type": "integration.accepted",
+          "payload": {
+            "integrationId": "integration-323fbf26-62ec-4c1e-8eae-8cf9d49a02da",
+            "acceptedCommit": "6d90e5376b11adf9e01ce103beb9ab2366d08607"
+          },
+          "occurredAt": "2026-10-25T06:47:06.217Z"
+        },
+        {
+          "eventSeq": 125,
+          "workflowId": "conflict-ea95339a-2769-49c8-8317-c29fbba970d7",
+          "taskId": null,
+          "runId": null,
+          "requestId": null,
+          "type": "workflow.cancel_requested",
+          "payload": {},
+          "occurredAt": "2026-10-25T06:47:06.502Z"
+        }
+      ]
+    }
+  ],
+  "businessCleanup": "confirmed",
+  "hostCleanup": "confirmed",
+  "databaseLockReleased": true,
+  "status": "pass",
+  "exitCode": 0,
+  "endedAt": "2026-10-25T06:47:06.568Z",
+  "evidenceProvenance": {
+    "sourceReport": ".runtime-evidence/review-rework-1792910691240-e606506f/report.json",
+    "sourceSha256": "548378c315d8996b5f7815c62676bd4afe55d282a369fce1949da2978cb095ad",
+    "exportedAt": "2026-10-25T06:49:07.918Z",
+    "pathRedaction": "Absolute RIFT workspace prefix replaced by <RIFT_ROOT>."
+  },
+  "permissionConfiguration": {
+    "classification": "configuration evidence, not native enforcement logs",
+    "loadedProfile": "profiles/rift.patch.yml",
+    "snapshotCapturedAt": "2026-10-25T06:49:07.918Z",
+    "snapshotSha256": "07d54e5874853c3b8003e88372c7ed585a72004d7396dc1841adf2cda758b2ce",
+    "providerModes": {
+      "claude": "acceptEdits",
+      "codex": "never"
+    },
+    "note": "Post-run snapshot of the loaded profile records Claude acceptEdits and Codex never. This probe verifies unchanged review checkouts and confirmed activation cleanup, not all native permission decisions. The dormant parent received no model turn."
+  }
+}
