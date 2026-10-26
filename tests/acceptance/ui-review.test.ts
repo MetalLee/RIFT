@@ -3,7 +3,7 @@ import http from 'node:http';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Context } from '@deepseek-ai/cordis';
@@ -109,7 +109,8 @@ describe('Independent real-Git multi-repository boundaries', () => {
       const take = (destinationPath?: string) => service.takeover(workspace.id, linked.id, { expectedVersion: linked.version, confirmExclusiveOwnership: true, ...(destinationPath ? { destinationPath } : {}) });
       const inspectRepository = git.inspectRepository.bind(git); let inspecting = false, resumeInspect!: () => void;
       const inspectGate = new Promise<void>(resolve => { resumeInspect = resolve; });
-      git.inspectRepository = async (directory, ref) => { if (directory === externalPath) { inspecting = true; await inspectGate; } return inspectRepository(directory, ref); };
+      // The service stores canonical paths; macOS temporary paths may use /var aliases.
+      git.inspectRepository = async (directory, ref) => { if (directory === linked.path) { inspecting = true; await inspectGate; } return inspectRepository(directory, ref); };
       const racingTakeover = take(path.join(git.managedRoot, 'racing-destination'));
       await expect.poll(() => inspecting, { timeout: 1_000, interval: 10 }).toBe(true);
       service.detach(workspace.id, linked.id, linked.version); resumeInspect();
@@ -124,7 +125,7 @@ describe('Independent real-Git multi-repository boundaries', () => {
       await expect(take()).rejects.toMatchObject({ code: 'WORKTREE_IN_USE' });
       store.exec("UPDATE execution_leases SET cleanup_status='confirmed',released_at=? WHERE id='lease-takeover'", new Date().toISOString());
       const target = path.join(git.managedRoot, 'chosen-destination'); const owned = await take(target);
-      expect(owned).toMatchObject({ origin: 'managed', status: 'active', path: target });
+      expect(owned).toMatchObject({ origin: 'managed', status: 'active', path: await realpath(target) });
       expect(await readFile(path.join(target, 'README.md'), 'utf8')).toBe('Preserve content');
       expect((await git.inspectRepository(target, 'HEAD')).commonGitDir).toBe(inspected.commonGitDir);
       await expect(readFile(path.join(externalPath, 'README.md'))).rejects.toMatchObject({ code: 'ENOENT' });
