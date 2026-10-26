@@ -353,8 +353,14 @@ export class RiftHostService implements ApiHandler {
       const workspaceId = decodeURIComponent(repositoryRoute[1]!), repositoryId = repositoryRoute[2] ? decodeURIComponent(repositoryRoute[2]) : undefined;
       if (!repositoryId && method === 'GET') return { repositories: this.repositories.list(workspaceId) };
       if (!repositoryId && method === 'POST') return this.repositories.connect(workspaceId, z.object({ repositoryPath: z.string().min(1), baseRef: z.string().min(1).default('HEAD'), expectedVersion: z.number().int().nonnegative() }).strict().parse(body));
-      if (repositoryId && repositoryRoute[3] === 'worktrees' && method === 'GET') return { worktrees: this.repositories.worktrees(workspaceId, repositoryId), discovered: await this.repositories.discover(workspaceId, repositoryId) };
+      if (repositoryId && repositoryRoute[3] === 'worktrees' && method === 'GET') return { worktrees: this.repositories.worktrees(workspaceId, repositoryId), discovered: await this.repositories.discover(workspaceId, repositoryId), removals: await this.repositories.removals.list(workspaceId, repositoryId) };
       if (repositoryId && repositoryRoute[3] === 'worktrees' && method === 'POST') return this.repositories.createWorktree(workspaceId, repositoryId, z.object({ origin: z.enum(['managed','external']), path: z.string().min(1).optional(), baseRef: z.string().min(1).optional(), branch: z.string().min(1).max(200).optional() }).strict().parse(body));
+    }
+    const removalRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/worktree-removals\/(user|task|candidate|review)\/([^/]+)\/(delete|reconcile)$/.exec(pathname);
+    if (removalRoute && method === 'POST') {
+      const workspaceId = decodeURIComponent(removalRoute[1]!), kind = removalRoute[2] as import('../project/worktree-removals.js').RemovalKind, recordId = decodeURIComponent(removalRoute[3]!);
+      if (removalRoute[4] === 'reconcile') return this.repositories.removals.reconcile(workspaceId, kind, recordId, z.object({ expectedVersion: z.string().min(1) }).strict().parse(body).expectedVersion);
+      return this.repositories.removals.remove(workspaceId, kind, recordId, z.object({ expectedVersion: z.string().min(1), confirmDelete: z.literal(true) }).strict().parse(body));
     }
     const worktreeRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/worktrees\/([^/]+)\/(archive|detach|takeover|reconcile)$/.exec(pathname);
     if (worktreeRoute && method === 'POST') {
@@ -475,7 +481,11 @@ export class RiftHostService implements ApiHandler {
         invariant(!this.store.get("SELECT id FROM agent_turns WHERE workspace_id=? AND status IN ('queued','running','stopping')", id) && !this.store.get('SELECT id FROM execution_leases WHERE workspace_id=? AND released_at IS NULL', id), 'WORKSPACE_ACTIVE', 'Finish or stop queued discussions and confirm all execution cleanup before archiving.');
         if (this.store.get("SELECT id FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','cancelled','failed')",id)) throw new RiftError('WORKSPACE_ACTIVE','Finish or cancel the active workflow first.');
         const trees=this.store.all<Worktree>('SELECT w.* FROM worktrees w JOIN tasks t ON t.id=w.task_id JOIN workflows f ON f.id=t.workflow_id WHERE f.workspace_id=?',id);
-        for(const worktree of trees) {const unknown=Boolean(this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',worktree.taskId));const task=this.store.task(worktree.taskId),repository=task.repositoryId?this.repositories.get(id,task.repositoryId):undefined;await this.git.archiveWorktree({workspace:repository?{...workspace,repositoryPath:repository.canonicalPath,commonGitDir:repository.commonGitDir,baseRef:repository.baseRef}:workspace,worktree,active:unknown,cleanupConfirmed:!unknown,artifactsSaved:true});}
+        for(const worktree of trees) {
+          if (worktree.status === 'archived') continue;
+          const expectedVersion = await this.repositories.removals.versionFor(id, 'task', worktree.id);
+          await this.repositories.removals.remove(id, 'task', worktree.id, { expectedVersion, confirmDelete: true });
+        }
         this.store.exec('UPDATE workspaces SET status=? WHERE id=?','archived',id); return this.store.workspace(id);
       }
     }

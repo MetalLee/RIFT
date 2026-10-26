@@ -6,15 +6,16 @@ import type { LocalGitService } from '../git/integration.js';
 import { gitOk } from '../git/process.js';
 import { checkoutClean, key, managedPath, withMetadataLock } from '../git/worktree-binding.js';
 import { provesPreviousBootExited } from '../agent/boot-identity.js';
+import { WorktreeRemovalService } from './worktree-removals.js';
 
 export interface Repository { id: string; workspaceId: string; canonicalPath: string; commonGitDir: string; baseRef: string }
 export interface WorkspaceWorktree { id: string; workspaceId: string; repositoryId: string; origin: 'managed' | 'external'; path: string; pendingPath?: string | null; baseCommit: string; branch: string | null; status: string; version: number; createdAt: string }
 export class RepositoryService {
   private bootIdentity:string|null=null;
   private readonly operationReceipts=new Set<string>();
-  private readonly archivesInFlight=new Set<string>();
-  constructor(private readonly store: RiftStore, private readonly git: LocalGitService) {}
-  setBootIdentity(identity:string|null):void{this.bootIdentity=identity;}
+  readonly removals: WorktreeRemovalService;
+  constructor(private readonly store: RiftStore, private readonly git: LocalGitService) { this.removals = new WorktreeRemovalService(store, git); }
+  setBootIdentity(identity:string|null):void{this.bootIdentity=identity;this.removals.setBootIdentity(identity);}
   private tree(worktreeId:string):WorkspaceWorktree{return this.store.require('SELECT id,workspace_id,repository_id,origin,path,pending_path,base_commit,branch,status,version,created_at FROM workspace_worktrees WHERE id=?',worktreeId);}
   list(workspaceId: string): Repository[] { this.store.workspace(workspaceId); return this.store.all('SELECT * FROM repositories WHERE workspace_id=? ORDER BY id', workspaceId); }
   get(workspaceId: string, repositoryId: string): Repository { return this.store.require('SELECT * FROM repositories WHERE workspace_id=? AND id=?', workspaceId, repositoryId); }
@@ -146,15 +147,12 @@ export class RepositoryService {
     invariant(tree.version === expectedVersion, 'VERSION_CONFLICT', 'Worktree state changed.');
     if (tree.status === 'archived') return this.tree(tree.id);
     invariant(tree.status === 'active', 'WORKTREE_STATE_UNKNOWN', 'Inspect the unfinished worktree operation before archiving.');
-    invariant(!this.archivesInFlight.has(tree.id),'WORKTREE_IN_USE','This worktree is already being archived.');
-    const repo = this.get(workspaceId, tree.repositoryId), workspace = { ...this.store.workspace(workspaceId), repositoryPath: repo.canonicalPath, commonGitDir: repo.commonGitDir, baseRef: repo.baseRef };
-    const active = Boolean(this.store.get('SELECT id FROM worktrees WHERE path=? AND writer_run_id IS NOT NULL', tree.path));
-    this.archivesInFlight.add(tree.id);
-    try {
-      await this.git.archiveWorktree({ workspace, worktree: { id: tree.id, taskId: '', attempt: 0, kind: 'task', path: tree.path, baseCommit: tree.baseCommit }, active, cleanupConfirmed: !active, artifactsSaved: true });
-      this.store.exec("UPDATE workspace_worktrees SET status='archived',version=version+1 WHERE id=?", tree.id);
-      return this.tree(tree.id);
-    } finally { this.archivesInFlight.delete(tree.id); }
+    const deletionVersion = await this.removals.versionFor(workspaceId, 'user', tree.id);
+    // The legacy archive endpoint remains compatible, but shares all deletion
+    // guards, persistent receipts and optimistic binding with the explicit API.
+    invariant(this.tree(tree.id).version === expectedVersion, 'VERSION_CONFLICT', 'Worktree state changed.');
+    await this.removals.remove(workspaceId, 'user', tree.id, { expectedVersion: deletionVersion, confirmDelete: true });
+    return this.tree(tree.id);
   }
   detach(workspaceId: string, worktreeId: string, expectedVersion: number): WorkspaceWorktree {
     return this.store.transaction(() => {
