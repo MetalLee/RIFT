@@ -7,6 +7,7 @@ import { tokenMatches, publicError, redact } from './security.js';
 import { RiftError } from '../contracts/index.js';
 import { BrowserService, type BrowserOptions } from './browser-service.js';
 import type { WorkspaceEventPage } from '../events/workspace-events.js';
+import { isIPv4 } from 'node:net';
 
 export interface ApiHandler {
   handle(method: string, pathname: string, body: unknown, idempotencyKey?: string): Promise<unknown>;
@@ -18,7 +19,9 @@ async function readBody(req: IncomingMessage): Promise<unknown> {
   for await (const part of req) { const chunk = Buffer.from(part); size += chunk.length; if (size > 256 * 1024) throw new RiftError('BODY_TOO_LARGE', 'Request exceeds 256 KiB.'); parts.push(chunk); }
   return size ? JSON.parse(Buffer.concat(parts).toString('utf8')) : {};
 }
-export async function startLocalApi(handler: ApiHandler, options: { home: string; port: number; uiDist?: string; uiEnabled?: boolean; browser?: Omit<BrowserOptions, 'uiDist'> }) {
+export async function startLocalApi(handler: ApiHandler, options: { home: string; port: number; uiDist?: string; uiEnabled?: boolean; tailnetAddress?: string; browser?: Omit<BrowserOptions, 'uiDist'> }) {
+  const tailnetAddress = options.tailnetAddress ?? process.env.RIFT_TAILSCALE_IP;
+  if (tailnetAddress && (!isIPv4(tailnetAddress) || Number(tailnetAddress.split('.')[0]) !== 100 || Number(tailnetAddress.split('.')[1]) < 64 || Number(tailnetAddress.split('.')[1]) > 127)) throw new RiftError('INVALID_HOST', 'Use an assigned Tailscale IPv4 address in 100.64.0.0/10.');
   await mkdir(options.home, { recursive: true });
   const tokenPath = path.join(options.home, 'management.token');
   let token: string;
@@ -33,14 +36,16 @@ export async function startLocalApi(handler: ApiHandler, options: { home: string
     res.setHeader('Referrer-Policy', 'no-referrer');
     res.setHeader('X-Frame-Options', 'DENY');
     try {
-      const expectedHost = `127.0.0.1:${(server.address() as import('node:net').AddressInfo).port}`;
+      const isTailnet = !!tailnetAddress && req.socket.localAddress === tailnetAddress;
+      const expectedHost = `${isTailnet ? tailnetAddress : '127.0.0.1'}:${(server.address() as import('node:net').AddressInfo).port}`;
       const origin = `http://${expectedHost}`;
       const requestUrl = new URL(req.url ?? '/', origin), pathname = requestUrl.pathname;
       if(handler.handleBrowser&&!browser&&(!pathname.startsWith('/v1/')||pathname==='/v1/ui/bootstrap'))throw new RiftError('NOT_FOUND','Browser UI is disabled by this Host configuration.');
       const isBrowser = browser && !pathname.startsWith('/v1/') && pathname !== '/v1';
+      if (isTailnet && !isBrowser) throw new RiftError('FORBIDDEN', 'Management API is only available on loopback.');
       // The management surface retains its Bearer + no-Origin boundary.
       if (!isBrowser && (req.headers.origin || !tokenMatches(req.headers.authorization, token))) { res.statusCode = 401; res.end(JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'A local management token is required.' } })); return; }
-      if (req.headers.host !== expectedHost) throw new RiftError('INVALID_HOST', 'Only the exact loopback endpoint is accepted.');
+      if (req.headers.host !== expectedHost) throw new RiftError('INVALID_HOST', 'Only the exact listener endpoint is accepted.');
       if (isBrowser && !pathname.startsWith('/ui-api/')) {
         if (req.headers.origin && req.headers.origin !== origin) throw new RiftError('FORBIDDEN', 'Origin does not match this Host.');
         await browser.static(req, res); return;
@@ -50,7 +55,7 @@ export async function startLocalApi(handler: ApiHandler, options: { home: string
       let value: unknown;
       if (isBrowser) {
         const write = req.method !== 'GET';
-        browser.checkSource(req, origin, write);
+        browser.checkSource(req, origin, write, isTailnet);
         if (req.method === 'POST' && pathname === '/ui-api/v1/session') value = browser.exchange(await readBody(req), expectedHost, res);
         else {
           const session = browser.authenticate(req, expectedHost, write);
@@ -89,7 +94,11 @@ export async function startLocalApi(handler: ApiHandler, options: { home: string
         }
       } else {
         if (req.method !== 'GET' && !key) throw new RiftError('IDEMPOTENCY_KEY_REQUIRED', 'Write requests require Idempotency-Key.');
-        if (browser && req.method === 'POST' && pathname === '/v1/ui/bootstrap') { await readBody(req); value = browser.issue(origin, key!); }
+        if (browser && req.method === 'POST' && pathname === '/v1/ui/bootstrap') {
+          const input = await readBody(req) as { remote?: boolean };
+          if (input?.remote && !tailnetAddress) throw new RiftError('INVALID_HOST', 'No Tailscale listener is configured.');
+          value = browser.issue(input?.remote ? `http://${tailnetAddress}:${(server.address() as import('node:net').AddressInfo).port}` : origin, key!);
+        }
         else value = await handler.handle(req.method ?? 'GET', pathname, await readBody(req), key);
       }
       // Redact scalar values without truncating JSON or corrupting its wire format.
@@ -103,6 +112,12 @@ export async function startLocalApi(handler: ApiHandler, options: { home: string
   server.requestTimeout = 35000;
   await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(options.port, '127.0.0.1', () => { server.off('error', reject); resolve(); }); });
   const port = (server.address() as import('node:net').AddressInfo).port;
-  await writeFile(path.join(options.home, 'endpoint.json'), JSON.stringify({ url: `http://127.0.0.1:${port}`, pid: process.pid }));
-  return { port, server, close: () => new Promise<void>((resolve, reject) => { server.closeAllConnections(); server.close(error => error ? reject(error) : resolve()); }) };
+  const tailnetServer = tailnetAddress ? http.createServer(server.listeners('request')[0] as http.RequestListener) : undefined;
+  if (tailnetServer) {
+    tailnetServer.requestTimeout = 35000;
+    try { await new Promise<void>((resolve, reject) => { tailnetServer.once('error', reject); tailnetServer.listen(port, tailnetAddress, () => { tailnetServer.off('error', reject); resolve(); }); }); }
+    catch (error) { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); throw error; }
+  }
+  await writeFile(path.join(options.home, 'endpoint.json'), JSON.stringify({ url: `http://127.0.0.1:${port}`, ...(tailnetAddress ? { browserUrl: `http://${tailnetAddress}:${port}` } : {}), pid: process.pid }));
+  return { port, server, close: async () => { await Promise.all([server, ...(tailnetServer ? [tailnetServer] : [])].map(listener => new Promise<void>((resolve, reject) => { listener.closeAllConnections(); listener.close(error => error ? reject(error) : resolve()); }))); } };
 }

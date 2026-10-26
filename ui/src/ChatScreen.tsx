@@ -1,3 +1,4 @@
+import { randomId } from './browser-platform';
 import { NativeSelect, NativeSelectOption } from './components/ui/native-select';
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
@@ -82,14 +83,14 @@ function ConversationView({ conversationId, data, csrf, onAuthError }: { convers
   const disabledReason = !chosen ? '所选成员已失效，请明确选择接收者。' : chosen.enabled === 0 ? '所选成员已停用，请选择其他接收者。' : connectionMissing ? '所选成员尚未配置对话连接。' : invalidContext ? '所选上下文已失效，请在上下文选择器中移除或重新选择。' : data.workspace.status !== 'active' ? '已归档工作区不能接收新消息。' : '';
   async function send() {
     const text = draft.trim(); if (sending || !text || disabledReason) return;
-    if (!pending.current || pending.current.text !== text || pending.current.recipient !== recipient || JSON.stringify(pending.current.contextRefs ?? []) !== JSON.stringify(contextRefs)) pending.current = { text, recipient, clientMessageId: crypto.randomUUID(), key: crypto.randomUUID(), contextRefs, mentions: chosen ? [{ agentId: chosen.id, label: displayName(chosen) }] : [] };
+    if (!pending.current || pending.current.text !== text || pending.current.recipient !== recipient || JSON.stringify(pending.current.contextRefs ?? []) !== JSON.stringify(contextRefs)) pending.current = { text, recipient, clientMessageId: randomId(), key: randomId(), contextRefs, mentions: chosen ? [{ agentId: chosen.id, label: displayName(chosen) }] : [] };
     const submission = pending.current; persistPending(data.workspace.id, conversationId, submission); setSending(true); setActionError('');
     try {
       const result = await mutate<{ message: ChatMessage; turn: AgentTurn }>(base, csrf, { content: submission.text, recipientAgentId: submission.recipient, clientMessageId: submission.clientMessageId, contextRefs: submission.contextRefs ?? [], mentions: submission.mentions ?? [] }, 'POST', submission.key);
       if (!alive.current) return;
       if (result.message.conversationId !== conversationId || result.message.workspaceId !== data.workspace.id) throw new Error('返回的消息不属于当前对话，请重新同步。');
       setDraft(''); saveDraft(data.workspace.id, '', conversationId); pending.current = null; persistPending(data.workspace.id, conversationId, null); nearBottom.current = true; await sync();
-    } catch (e) { if (alive.current) { if (isDefinitiveRejection(e) && pending.current) { pending.current = { ...pending.current, key: crypto.randomUUID() }; persistPending(data.workspace.id, conversationId, pending.current); } setActionError(`${errorText(e)} 草稿已保留；再次发送同一内容会复用消息标识。`); onAuthError(e); } } finally { if (alive.current) setSending(false); }
+    } catch (e) { if (alive.current) { if (isDefinitiveRejection(e) && pending.current) { pending.current = { ...pending.current, key: randomId() }; persistPending(data.workspace.id, conversationId, pending.current); } setActionError(`${errorText(e)} 草稿已保留；再次发送同一内容会复用消息标识。`); onAuthError(e); } } finally { if (alive.current) setSending(false); }
   }
   async function loadEarlier() { const cursor = earlierCursor === undefined ? page?.nextBefore : earlierCursor; if (!cursor || loadingEarlier) return; setLoadingEarlier(true); const height = document.documentElement.scrollHeight; const scroll = window.scrollY; nearBottom.current = false; try { const result = await request<ChatPage>(`${base}?before=${segment(cursor)}`); if (!alive.current) return; setEarlier(items => mergeChatHistory(result, items)); setEarlierCursor(result.nextBefore); requestAnimationFrame(() => window.scrollTo(0, scroll + document.documentElement.scrollHeight - height)); } catch (e) { if (alive.current) { setActionError(errorText(e)); onAuthError(e); } } finally { if (alive.current) setLoadingEarlier(false); } }
   const history = mergeChatHistory(earlier, page ?? { messages: [], turns: [], chunks: [] }); const { messages } = history;

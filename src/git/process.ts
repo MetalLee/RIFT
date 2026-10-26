@@ -5,7 +5,7 @@ export interface CommandResult { exitCode: number; stdout: string; stderr: strin
 /** No shell is involved; even spaces, quotes and metacharacters remain one argument. */
 export function execute(executable: string, args: readonly string[], cwd: string, options: { timeoutMs?: number; maxOutputBytes?: number; env?: NodeJS.ProcessEnv } = {}): Promise<CommandResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(executable, [...args], { cwd, shell: false, windowsHide: true, env: { ...process.env, ...options.env }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(executable, [...args], { cwd, shell: false, windowsHide: true, detached: process.platform !== 'win32', env: { ...process.env, ...options.env }, stdio: ['ignore', 'pipe', 'pipe'] });
     const limit = options.maxOutputBytes ?? 1_048_576;
     let stdout = '', stderr = '', bytes = 0, truncated = false, timedOut = false;
     const capture = (chunk: Buffer, stream: 'stdout' | 'stderr'): void => {
@@ -16,9 +16,39 @@ export function execute(executable: string, args: readonly string[], cwd: string
     };
     child.stdout.on('data', (data: Buffer) => capture(data, 'stdout'));
     child.stderr.on('data', (data: Buffer) => capture(data, 'stderr'));
-    const timer = setTimeout(() => { timedOut = true; child.kill(); }, options.timeoutMs ?? 120_000);
-    child.on('error', error => { clearTimeout(timer); reject(error); });
-    child.on('close', code => { clearTimeout(timer); resolve({ exitCode: timedOut ? 124 : code ?? 1, stdout, stderr: stderr + (timedOut ? '\nCommand timed out; execution cleanup requires verification.' : ''), truncated }); });
+    let settled = false;
+    const finish = (code: number | null): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({ exitCode: timedOut ? 124 : code ?? 1, stdout, stderr: stderr + (timedOut ? '\nCommand timed out; execution cleanup requires verification.' : ''), truncated });
+    };
+    const stopWaiting = (): void => { child.stdout.destroy(); child.stderr.destroy(); finish(124); };
+    const timer = setTimeout(() => {
+      timedOut = true;
+      if (child.pid !== undefined) {
+        if (process.platform === 'win32') {
+          // Kill descendants before the parent disappears from the Windows tree.
+          const killer = spawn('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+          const watchdog = setTimeout(() => { killer.kill(); child.kill(); stopWaiting(); }, 500);
+          killer.on('error', () => { clearTimeout(watchdog); child.kill(); stopWaiting(); });
+          killer.on('close', code => { clearTimeout(watchdog); if (code !== 0) child.kill(); stopWaiting(); });
+          return;
+        } else {
+          // Each command owns a process group. SIGKILL also handles descendants
+          // which ignore SIGTERM or retain inherited stdout/stderr after exit.
+          try { process.kill(-child.pid, 'SIGKILL'); }
+          catch { child.kill('SIGKILL'); }
+        }
+      }
+      // Escaped descendants can retain pipes indefinitely. Timeout is still
+      // unknown cleanup evidence, never permission to release a safety lease.
+      child.stdout.destroy();
+      child.stderr.destroy();
+      finish(124);
+    }, options.timeoutMs ?? 120_000);
+    child.on('error', error => { if (!settled) { settled = true; clearTimeout(timer); reject(error); } });
+    child.on('close', code => finish(code));
   });
 }
 

@@ -1,3 +1,4 @@
+import { copyText } from '../browser-platform';
 import { useState, type ReactNode } from 'react';
 import type { UiWorkspaceDetail, UiWorkspaceList } from '../../../src/api/ui-contracts';
 import { routeHref, type Page } from '../state';
@@ -48,7 +49,7 @@ export function AppChrome({ workspaceId, page, list, current, connected, onNewCh
     <Sheet open={mobileOpen} onOpenChange={setMobileOpen}><SheetContent side="left" className="mobile-navigation"><SheetTitle className="sr-only">工作区导航</SheetTitle><SheetDescription className="sr-only">切换工作区或打开工作区页面。</SheetDescription><div className="mobile-sidebar">{side}</div></SheetContent></Sheet>
     <div className="main-shell"><header className="topbar"><div className="topbar-left"><Button variant="ghost" size="icon" className="mobile-menu" aria-label="展开导航" onClick={()=>setMobileOpen(true)}><Icon name="menu"/></Button><span className="topbar-title">会话画布</span><span id="conversation-menu-slot"/>{selected&&<code className="session-tag" title={selected.id}>#{selected.id.slice(-8).toUpperCase()}</code>}</div>
       <div className="topbar-actions"><Button variant="ghost" asChild><a className="status-link" href={link('activity')}><span className="dot accent-dot"/><span>{current?`Agent ${running} 运行 · ${attention} 待定`:'Agent 状态'}</span><Icon name="down" size={13}/></a></Button>
-        <IconAction label={copied?'链接已复制':'复制页面链接'} onClick={()=>{void navigator.clipboard.writeText(location.origin+location.pathname+location.hash).then(()=>setCopied(true),()=>setCopied(false));}}><Icon name={copied?'check':'copy'} size={17}/></IconAction>
+        <IconAction label={copied?'链接已复制':'复制页面链接'} onClick={()=>{void copyText(location.origin+location.pathname+location.hash).then(()=>setCopied(true),()=>setCopied(false));}}><Icon name={copied?'check':'copy'} size={17}/></IconAction>
         <IconAction label="刷新工作区状态" onClick={onRefresh}><Icon name="refresh" size={17}/></IconAction>
         <Button variant="default" size="icon" className="profile-button" asChild><a href={link('settings')} aria-label="系统设置"><Icon name="user" size={18}/></a></Button>
       </div></header>{children}</div>

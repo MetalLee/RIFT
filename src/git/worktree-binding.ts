@@ -10,13 +10,25 @@ export function inside(root: string, candidate: string): boolean { const relativ
 export async function managedPath(root: string, candidate: string): Promise<string> {
   await mkdir(root, { recursive: true });
   const canonicalRoot = await realpath(root), absolute = path.resolve(candidate);
-  if (!inside(canonicalRoot, absolute)) throw new Error('UNSAFE_PATH: outside managed root');
+  // Resolve the existing ancestor before comparing: macOS /var and /private/var
+  // (and Windows junction aliases) must be in the same coordinate system.
   let existing = absolute;
   for (;;) {
-    try { const canonical = await realpath(existing); if (canonical !== canonicalRoot && !inside(canonicalRoot, canonical)) throw new Error('UNSAFE_PATH: symlink escapes managed root'); break; }
-    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; existing = path.dirname(existing); }
+    try {
+      const canonical = await realpath(existing);
+      const resolved = path.resolve(canonical, path.relative(existing, absolute));
+      if (!inside(canonicalRoot, resolved)) throw new Error('UNSAFE_PATH: outside managed root or escaping symlink');
+      return resolved;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      // A dangling symlink must not become an apparently safe missing directory.
+      try { if ((await lstat(existing)).isSymbolicLink()) throw new Error('UNSAFE_PATH: dangling symlink'); }
+      catch (statError) { if ((statError as NodeJS.ErrnoException).code !== 'ENOENT') throw statError; }
+      const parent = path.dirname(existing);
+      if (parent === existing) throw error;
+      existing = parent;
+    }
   }
-  return absolute;
 }
 export async function inspectRepository(repositoryPath: string, baseRef: string): Promise<RepositoryInfo> {
   const rootPath = await realpath(await gitOk(repositoryPath, ['rev-parse', '--show-toplevel']));

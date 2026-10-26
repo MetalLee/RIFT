@@ -1,3 +1,4 @@
+import { randomId } from './browser-platform';
 import { WorkspaceTopology } from './components/WorkspaceTopology';
 import { useRef, useState, type FormEvent } from 'react';
 import type { UiWorkspaceList } from '../../src/api/ui-contracts';
@@ -26,7 +27,7 @@ export function WorkspaceDirectory({ list, selectedId, csrf, onCreate, onAuthErr
     const repositoryPath = String(form.get('repositoryPath') ?? '').trim();
     const value = {name:String(form.get('name')).trim(), ...(repositoryPath?{repositoryPath,baseRef:String(form.get('baseRef')??'').trim()||'HEAD'}:{})};
     const body = JSON.stringify(value);
-    if(idempotency.current?.body!==body) idempotency.current={body,key:crypto.randomUUID()};
+    if(idempotency.current?.body!==body) idempotency.current={body,key:randomId()};
     setBusy(true);setError('');
     try { const workspace=await api.createWorkspace(value,csrf,idempotency.current!.key);setCreating(false);onCreate(workspace.id); }
     catch(e){setError(errorText(e));onAuthError(e);}finally{setBusy(false);}

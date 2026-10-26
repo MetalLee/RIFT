@@ -1,3 +1,4 @@
+import { randomId } from './browser-platform';
 import type { UiSession, UiWorkspaceCreate, UiWorkspaceDetail, UiWorkspaceList } from '../../src/api/ui-contracts';
 
 export class ApiError extends Error {
@@ -26,10 +27,10 @@ export const api = {
   createWorkspace: (value: UiWorkspaceCreate, csrf: string, key: string) => request<UiWorkspaceDetail['workspace']>('/workspaces', {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf, 'Idempotency-Key': key }, body: JSON.stringify(value),
   }),
-  logout: (csrf: string) => request<void>('/logout', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf, 'Idempotency-Key': crypto.randomUUID() }, body: '{}' }),
+  logout: (csrf: string) => request<void>('/logout', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf, 'Idempotency-Key': randomId() }, body: '{}' }),
 };
 
-export function mutate<T>(path: string, csrf: string, body: unknown, method = 'POST', idempotencyKey: string = crypto.randomUUID()) {
+export function mutate<T>(path: string, csrf: string, body: unknown, method = 'POST', idempotencyKey: string = randomId()) {
   return request<T>(path, { method, headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf, 'Idempotency-Key': idempotencyKey }, body: JSON.stringify(body) });
 }
 

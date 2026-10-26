@@ -38,8 +38,10 @@ export class BrowserService {
     return `${this.cookieName(host)}=${value}; HttpOnly; SameSite=Strict; Path=/ui-api/v1; Max-Age=${maxAge}`;
   }
   /** Cross-port loopback is same-site, but is deliberately not same-origin. */
-  checkSource(req: IncomingMessage, origin: string, write: boolean): void {
-    if (req.headers['sec-fetch-site'] !== 'same-origin') throw new RiftError('FORBIDDEN', 'Browser API requires same-origin Fetch Metadata.');
+  checkSource(req: IncomingMessage, origin: string, write: boolean, allowMissingFetchMetadata = false): void {
+    // Browsers omit Fetch Metadata on HTTP tailnet IPs. Writes still require the
+    // exact Origin, JSON, a session and CSRF; explicit cross-site metadata fails.
+    if (req.headers['sec-fetch-site'] !== 'same-origin' && !(allowMissingFetchMetadata && req.headers['sec-fetch-site'] === undefined)) throw new RiftError('FORBIDDEN', 'Browser API requires same-origin Fetch Metadata.');
     if (req.headers.origin !== undefined && req.headers.origin !== origin) throw new RiftError('FORBIDDEN', 'Origin does not match this Host.');
     if (req.headers['sec-fetch-mode'] === 'navigate' || req.headers['sec-fetch-dest'] && req.headers['sec-fetch-dest'] !== 'empty') throw new RiftError('FORBIDDEN', 'Browser API only accepts fetch requests.');
     if (write && req.headers.origin !== origin) throw new RiftError('FORBIDDEN', 'Write requests require an exact Origin.');

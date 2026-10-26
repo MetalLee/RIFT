@@ -10,11 +10,23 @@ import { startLocalApi } from '../../src/api/local-api.js';
 import { RiftHostService } from '../../src/api/host-service.js';
 import type { UiSession, UiWorkspaceDetail, UiWorkspaceList } from '../../src/api/ui-contracts.js';
 import { seedWorkspace } from './fixtures.js';
+import { BrowserService } from '../../src/api/browser-service.js';
 
 const exec = promisify(execFile);
 const source = (origin: string) => ({ Origin: origin, 'Sec-Fetch-Site': 'same-origin', 'Content-Type': 'application/json' });
 
 describe('U0/U2 browser bootstrap and same-Host read model', () => {
+  it('allows absent Fetch Metadata only for explicitly selected HTTP tailnet requests, never cross-origin writes', () => {
+    const browser = new BrowserService({ uiDist: '.' });
+    const origin = 'http://100.64.0.10:48080';
+    const req = (headers: Record<string,string>) => ({ headers }) as http.IncomingMessage;
+    expect(() => browser.checkSource(req({}), origin, false)).toThrow();
+    expect(() => browser.checkSource(req({}), origin, false, true)).not.toThrow();
+    expect(() => browser.checkSource(req({origin,'content-type':'application/json'}), origin, true, true)).not.toThrow();
+    expect(() => browser.checkSource(req({'content-type':'application/json'}), origin, true, true)).toThrow();
+    expect(() => browser.checkSource(req({origin:'http://evil.invalid','content-type':'application/json'}), origin, true, true)).toThrow();
+    expect(() => browser.checkSource(req({origin,'content-type':'application/json','sec-fetch-site':'cross-site'}), origin, true, true)).toThrow();
+  });
   it('exchanges once, isolates management authentication, enforces CSRF/metadata/expiry/logout and serves bounded static assets', async () => {
     const folder = await mkdtemp(path.join(tmpdir(), 'rift-browser-security-'));
     const assets = path.join(folder, 'ui'); await mkdir(path.join(assets, 'assets'), { recursive: true });

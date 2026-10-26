@@ -1,3 +1,4 @@
+import { copyText } from './browser-platform';
 import { AppChrome } from './components/AppChrome';
 import { WorkspaceDirectory } from './WorkspaceDirectory';
 import { Icon } from './components/Icon';
@@ -26,7 +27,7 @@ export function Pill({ children, active = false }: { children: ReactNode; active
 export function Field({ name, children }: { name: string; children: ReactNode }) { return <div className="field"><dt>{name}</dt><dd>{children ?? '未提供'}</dd></div>; }
 export function Copy({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
-  return <div className="copy-field"><code>{value}</code><Button variant="ghost" className="text-button" onClick={async () => { try { await navigator.clipboard.writeText(value); setCopied(true); } catch { setCopied(false); } }} aria-label={`复制 ${value}`}>{copied ? '已复制' : '复制'}</Button></div>;
+  return <div className="copy-field"><code>{value}</code><Button variant="ghost" className="text-button" onClick={async () => { try { await copyText(value); setCopied(true); } catch { setCopied(false); } }} aria-label={`复制 ${value}`}>{copied ? '已复制' : '复制'}</Button></div>;
 }
 export function time(value: string) { return new Date(value).toLocaleString('zh-CN', { hour12: false }); }
 

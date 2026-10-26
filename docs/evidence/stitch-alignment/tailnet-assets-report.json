@@ -1,0 +1,45 @@
+{
+  "mode": "Actual production Host, authenticated browser, no API mocks or business writes",
+  "assets": {
+    "iconFontLoaded": true,
+    "fontFaces": [
+      "JetBrains Mono",
+      "JetBrains Mono",
+      "Newsreader",
+      "Newsreader",
+      "Noto Sans SC",
+      "Noto Sans SC",
+      "Noto Sans SC",
+      "Noto Sans SC",
+      "Noto Sans SC",
+      "Noto Sans SC",
+      "Noto Sans SC",
+      "Noto Sans SC",
+      "Noto Sans SC",
+      "Noto Sans SC",
+      "Noto Sans SC",
+      "Noto Sans SC",
+      "Noto Sans SC",
+      "Plus Jakarta Sans",
+      "Plus Jakarta Sans",
+      "Plus Jakarta Sans",
+      "Material Symbols Outlined"
+    ],
+    "images": [
+      {
+        "src": "/assets/workspace-studio-stitch.jpg",
+        "complete": true,
+        "width": 512
+      }
+    ]
+  },
+  "failed": [],
+  "errors": [],
+  "tailnet": {
+    "secureContext": false,
+    "session": 200,
+    "invalidWrite": 400,
+    "managementBlocked": true,
+    "crossOriginBlocked": true
+  }
+}

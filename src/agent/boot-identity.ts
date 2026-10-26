@@ -24,6 +24,17 @@ export function localBootIdentity(): Promise<string | null> {
         machine = data.machine.trim(); boot = data.boot.trim();
       } else if (process.platform === 'linux') {
         [machine, boot] = (await Promise.all([readFile('/etc/machine-id', 'utf8'), readFile('/proc/sys/kernel/random/boot_id', 'utf8')])).map(value => value.trim()) as [string, string];
+      } else if (process.platform === 'darwin') {
+        const options = { timeout: 5000, maxBuffer: 65536 };
+        const [{ stdout: hardware }, { stdout: session }] = await Promise.all([
+          execute('/usr/sbin/ioreg', ['-rd1', '-c', 'IOPlatformExpertDevice'], options),
+          execute('/usr/sbin/sysctl', ['-n', 'kern.bootsessionuuid'], options),
+        ]);
+        const ids = [...hardware.matchAll(/"IOPlatformUUID"\s*=\s*"([^"]+)"/g)];
+        if (ids.length !== 1) return null;
+        machine = ids[0]![1]!.toLowerCase(); boot = session.trim().toLowerCase();
+        const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+        if (![machine, boot].every(value => uuid.test(value) && value !== '00000000-0000-0000-0000-000000000000')) return null;
       } else return null;
       if (!machine || !boot || machine.length > 256 || boot.length > 256) return null;
       const hash = (value: string) => createHash('sha256').update(value).digest('hex');
