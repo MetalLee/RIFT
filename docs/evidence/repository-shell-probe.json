@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-26T10:46:42.786Z",
+  "mode": "real pinned OS sandbox and DSH subprocess; no inference, remote push or PR",
+  "folder": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\repository-shell-9wPTXW",
+  "commands": {
+    "primary": {
+      "exitCode": 0,
+      "stdout": "[shell-probe 7752fc8] shell commit\n 1 file changed, 1 insertion(+)\n create mode 100644 native.txt\n",
+      "stderr": "",
+      "truncated": false
+    },
+    "other": {
+      "exitCode": 0,
+      "stdout": "[main 0343333] second commit\n 1 file changed, 1 insertion(+)\n create mode 100644 second.txt\n",
+      "stderr": "",
+      "truncated": false
+    },
+    "outside": {
+      "exitCode": 0,
+      "stdout": "DENIED\r\n",
+      "stderr": "",
+      "truncated": false
+    },
+    "gh": {
+      "exitCode": 0,
+      "stdout": "gh version 2.103.2 (2026-10-23)\nhttps://github.com/cli/cli/releases/tag/v2.103.2\n",
+      "stderr": "",
+      "truncated": false
+    }
+  },
+  "checks": {
+    "worktreeCommit": true,
+    "secondRepositoryCommit": true,
+    "outsideWriteDenied": true,
+    "outsideCwdDenied": true,
+    "ghAvailable": true,
+    "cancelledCommandSettled": true
+  },
+  "passed": true
+}

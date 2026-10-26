@@ -22,7 +22,7 @@ export interface UiWorkspaceList { workspaces: UiWorkspaceSummary[]; capabilitie
 export interface UiBinding {
   id: string; providerName: string; packageVersion: string; configRevision: number;
   capabilities: Record<string, boolean>; runtime: string | null; model: string | null;
-  registered: boolean; authentication: 'not-verified';
+  registered: boolean; authentication: 'not-verified'; executionConnection?: ChatConnection | null;
 }
 export interface UiRepository { id: string; workspaceId: string; canonicalPath: string; commonGitDir: string; baseRef: string }
 export interface UiTask extends Task { dependsOn: string[] }

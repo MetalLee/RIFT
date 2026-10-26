@@ -60,12 +60,44 @@ async function fixture(check = 'process.exit(0)') {
 }
 
 describe('real Git with persistent coordinator and controlled fake activations', () => {
+  it('reuses a proven collected source after an infrastructure failure without inventing an empty commit or skipping review',async()=>{
+    const f=await fixture('const fs=require("node:fs"),p=require("node:path").resolve("..","check-once");if(fs.existsSync("a.txt")&&!fs.existsSync(p)){fs.writeFileSync(p,"first infrastructure failure");process.exit(1)}');
+    f.plan([{id:'seed',expectedPaths:['seed.txt']},{id:'a',expectedPaths:['a.txt']}]);f.dispatch('seed');
+    await f.develop(await f.started('seed','develop'),{'seed.txt':'previous accepted task'});f.review(await f.started('seed','review'));await f.settled('seed','succeeded');
+    f.dispatch('a');const first=await f.started('a','develop');await f.develop(first,{'a.txt':'complete implementation'});await f.settled('a','blocked');
+    const source=f.store.task('a').sourceHead!;expect(f.store.task('a').blockingReason).toContain('CHECK_FAILED');
+    f.coordinator.retry({taskId:'a',reason:'Host check infrastructure recovered; implementation unchanged',expectedVersion:f.store.task('a').version});f.dispatch('a','-no-op');
+    const repair=await f.started('a','repair',2);expect(await gitOk(repair.cwd,['rev-parse','HEAD'])).toBe(source);
+    await f.develop(repair,{});const review=await f.started('a','review',2);
+    expect(f.store.task('a').sourceHead).toBe(source);expect(f.store.task('a').acceptedCommit).toBeNull();expect(await gitOk(repair.cwd,['rev-parse','HEAD'])).toBe(source);
+    const candidate=f.review(review);expect(candidate.checks?.every(check=>check.exitCode===0&&check.candidateHead===candidate.candidateHead)).toBe(true);await f.settled('a','succeeded');
+    expect(await gitOk(f.repo,['show',`${f.workflow.integrationRef}:seed.txt`])).toBe('previous accepted task');
+    expect(await gitOk(f.repo,['show',`${f.workflow.integrationRef}:a.txt`])).toBe('complete implementation');
+  });
+  it('collects declared glob paths through Host Git while still rejecting files outside a narrow glob',async()=>{
+    const f=await fixture();f.plan([{id:'wide',expectedPaths:['**/*']},{id:'narrow',expectedPaths:['src/**/*.ts']}]);f.dispatch('wide');
+    const wide=await f.started('wide','develop');
+    expect(JSON.parse(wide.prompt).developmentProtocol.instructions).toContain('Local git add/commit is permitted');
+    expect(JSON.parse(wide.prompt).developmentProtocol.instructions).toContain('only when explicitly requested by the user');
+    expect(JSON.parse(wide.prompt).developmentProtocol.instructions).toContain('not that the Task is accepted');
+    await f.develop(wide,{'root.txt':'Root file'});const review=await f.started('wide','review');f.review(review);await f.settled('wide','succeeded');
+    f.dispatch('narrow');const narrow=await f.started('narrow','develop');await f.develop(narrow,{'outside.txt':'Keep for inspection'});await f.settled('narrow','blocked');
+    expect(f.store.task('narrow').blockingReason).toContain('PATH_SCOPE_VIOLATION');expect(f.store.task('narrow').acceptedCommit).toBeNull();expect(await readFile(path.join(narrow.cwd,'outside.txt'),'utf8')).toBe('Keep for inspection');
+  });
   it('starts both developers, accepts the second result first and retains both through serial reviews', async () => {
     const f = await fixture(); f.plan([{ id: 'a', expectedPaths: ['a.txt'] }, { id: 'b', expectedPaths: ['b.txt'] }]);
     f.dispatch('a'); f.dispatch('b');
     const [a, b] = await Promise.all([f.started('a', 'develop'), f.started('b', 'develop')]);
     expect(a.cwd).not.toBe(b.cwd); expect(f.coordinator.status(f.workflow.id).slots.developers).toBe(2);
     await f.develop(b, { 'b.txt': 'B' }); const rb = await f.started('b', 'review');
+    const reviewInput=JSON.parse(rb.prompt) as {candidate:Candidate;reviewProtocol:{stage:string;instructions:string}};
+    expect(reviewInput.reviewProtocol.stage).toBe('pre-publication-independent-review');
+    expect(reviewInput.reviewProtocol.instructions).toContain('cannot be preconditions');
+    expect(reviewInput.candidate.checks?.map(check=>check.id)).toEqual(reviewInput.candidate.checkIds);
+    expect(reviewInput.candidate.checks).toHaveLength(1);
+    expect(reviewInput.candidate.checks![0]).toMatchObject({commandId:'unit',candidateHead:reviewInput.candidate.candidateHead,exitCode:0,startedAt:expect.any(String),finishedAt:expect.any(String)});
+    const operationEvidence=await f.git.readOperation(f.workspace,reviewInput.candidate.integrationId);
+    expect(reviewInput.candidate.checks).toEqual(operationEvidence.checks);
     expect(f.coordinator.status(f.workflow.id).slots).toEqual({ developers: 1, reviewers: 1, total: 2 });
     const cb = f.review(rb); await f.settled('b', 'succeeded');
     await f.develop(a, { 'a.txt': 'A' }); const ra = await f.started('a', 'review'); const ca = f.review(ra); await f.settled('a', 'succeeded');

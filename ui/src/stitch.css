@@ -45,16 +45,14 @@ code { font-size: 13px; }
 .topbar { position: fixed; inset: 0 0 auto 240px; height: 56px; padding: 0 24px; border: 0; background: #faf9f5d9; backdrop-filter: blur(12px); box-shadow: 0 1px 6px rgb(0 0 0 / 2%); z-index: 35; }
 .topbar-left, .topbar-actions { display: flex; align-items: center; gap: 12px; min-width: 0; }
 #conversation-menu-slot:empty { display: none; }
-#conversation-menu-slot:not(:empty) { margin-left: -10px; margin-right: -6px; }
-.conversation-menu-trigger { width: 20px; min-height: 28px; height: 28px; padding: 0; color: #55433d; }
+#conversation-menu-slot { min-width: 0; display: flex; }
+.topbar-left { flex: 1; }
+.topbar-actions { flex-shrink: 0; }
+.conversation-menu-trigger { max-width: 100%; min-width: 0; min-height: 32px; height: 32px; padding: 0 6px; gap: 8px; color: #55433d; }
 .conversation-menu { width: 288px; max-height: 400px; overflow-y: auto; }
 .conversation-menu [role=menuitem]>span:first-child { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-.topbar-left>.topbar-title { font: 500 20px/28px var(--font-display); letter-spacing: -.025em; white-space: nowrap; }
-.session-tag { background: #e9e8e4; padding: 2px 6px; border-radius: 4px; color: #55433d; font-size: 11px; line-height: 16px; }
+.topbar-title { font: 500 20px/28px var(--font-display); letter-spacing: -.025em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .status-link { display: inline-flex; gap: 8px; border-radius: 999px; background: #ffdbd066; padding: 4px 10px; font-size: 11px; line-height: 16px; min-height: 24px; }
-.icon-button { display: inline-flex; width: 30px; height: 30px; min-height: 30px; padding: 6px; color: #55433d; border-radius: 8px; }
-.topbar-actions .icon-button+.icon-button { margin-left: -8px; }
-.profile-button { width: 32px; height: 32px; min-height: 32px; padding: 0; border-radius: 50%; }
 .workspace-menu { width: 288px; padding: 6px; }
 .workspace-menu-search { display: flex; align-items: center; padding: 4px 8px; gap: 8px; }
 .workspace-menu-search input { border: 0; box-shadow: none; }
@@ -396,11 +394,9 @@ button.card { height: auto; text-align: left; }
   .main-shell { padding-top: 56px; }
   .topbar { left: 0; padding: 0 12px; height: 56px; }
   .topbar-left, .topbar-actions { gap: 8px; }
-  .topbar-left>.topbar-title { font-size: 18px; }
-  .session-tag, .topbar-actions>.icon-button { display: none; }
+  .topbar-title { font-size: 18px; }
   .status-link { font-size: 10px; padding: 4px 8px; gap: 5px; }
   .status-link>.rift-icon { display: none; }
-  .profile-button { width: 28px; height: 28px; min-height: 28px; }
   .mobile-menu { display: inline-flex; width: 32px; height: 36px; padding: 4px; }
   .mobile-sidebar .host-status { display: flex; }
   .main-content { padding: 24px 16px; }

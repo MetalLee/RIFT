@@ -1,10 +1,11 @@
+import { ChatTimeline } from './ChatTimeline';
+import { subscribeWorkspaceEvents } from './workspace-stream';
 import { randomId } from './browser-platform';
 import { NativeSelect, NativeSelectOption } from './components/ui/native-select';
 import { Button } from './components/ui/button';
-import { Input } from './components/ui/input';
 import { Checkbox } from './components/ui/checkbox';
 import { Textarea } from './components/ui/textarea';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AgentTurn, ChatMessage, ChatPage, Conversation, ContextRef } from '../../src/chat/contracts';
 import type { UiWorkspaceDetail } from '../../src/api/ui-contracts';
 import { ApiError, errorText, isDefinitiveRejection, mutate, request } from './api';
@@ -20,36 +21,49 @@ const segment = encodeURIComponent;
 const turnLabel: Record<AgentTurn['status'], string> = { queued: '排队中', running: '正在回复', stopping: '正在停止', completed: '回复完成', failed: '回复失败', cancelled: '已停止', interrupted: '执行中断' };
 function displayName(role: UiWorkspaceDetail['roles'][number]) { return (role as typeof role & { displayName?: string }).displayName ?? role.name; }
 export function ChatScreen({ data, csrf, onAuthError, newConversationRequest = 0, onNewConversationHandled }: { data: UiWorkspaceDetail; csrf: string; onAuthError: (e: unknown) => void; newConversationRequest?: number; onNewConversationHandled: () => void }) {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>(data.conversations);
   const [menuSlot, setMenuSlot] = useState<HTMLElement | null>(null);
   useEffect(() => { setMenuSlot(document.getElementById('conversation-menu-slot')); }, []);
-  useEffect(() => { if (newConversationRequest) { setCreating(true); onNewConversationHandled(); } }, [newConversationRequest]);
+  const creating = useRef(false);
+  const handledRequest = useRef(0);
+  useEffect(() => { if (newConversationRequest && handledRequest.current !== newConversationRequest) { handledRequest.current = newConversationRequest; void create(); onNewConversationHandled(); } if (!newConversationRequest) handledRequest.current = 0; }, [newConversationRequest]);
   const selectionKey = `rift:conversation:${encodeURIComponent(data.workspace.id)}`;
-  const [selected, setSelected] = useState(() => { try { return sessionStorage.getItem(selectionKey) ?? ''; } catch { return ''; } });
+  const [selected, setSelected] = useState(() => { let saved = ''; try { saved = sessionStorage.getItem(selectionKey) ?? ''; } catch { /* Storage is optional. */ } return data.conversations.some(c => c.id === saved) ? saved : data.conversations[0]?.id ?? ''; });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [creating, setCreating] = useState(false);
   const base = `/workspaces/${segment(data.workspace.id)}`;
   const mutation = useMutation(csrf);
   function selectConversation(id: string) { setSelected(id); try { sessionStorage.setItem(selectionKey, id); } catch { /* Keep the in-memory selection. */ } }
-  useEffect(() => { const controller = new AbortController(); request<{ conversations: Conversation[] }>(`${base}/conversations`, { signal: controller.signal }).then(result => { if (controller.signal.aborted) return; setConversations(result.conversations); setSelected(value => result.conversations.some(c => c.id === value) ? value : result.conversations[0]?.id ?? ''); }, e => { if (!controller.signal.aborted) { setError(errorText(e)); onAuthError(e); } }); return () => controller.abort(); }, [base]);
-  async function create(title: string) { if (busy) return; setBusy(true); setError(''); try { const c = await mutation<Conversation>(`${base}/conversations`, { title }); setConversations(items => [c, ...items]); selectConversation(c.id); setCreating(false); } catch (e) { setError(errorText(e)); onAuthError(e); } finally { setBusy(false); } }
-  return <div className="chat-page live-chat">{menuSlot && createPortal(<DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="conversation-menu-trigger" aria-label="切换对话"><Icon name="down" size={14}/></Button></DropdownMenuTrigger><DropdownMenuContent align="start" className="conversation-menu">{conversations.map(c=><DropdownMenuItem key={c.id} onSelect={()=>selectConversation(c.id)}><span>{c.title}</span>{selected===c.id&&<Icon name="check" size={16}/>}</DropdownMenuItem>)}<DropdownMenuSeparator/><DropdownMenuItem onSelect={()=>setCreating(true)}><Icon name="plus"/>新对话</DropdownMenuItem></DropdownMenuContent></DropdownMenu>,menuSlot)}
-    {creating && <form className="inline-form" onSubmit={e => { e.preventDefault(); const form = new FormData(e.currentTarget); void create(String(form.get('title')).trim()); }}><label>对话标题<Input name="title" required maxLength={240} placeholder="这次想讨论什么？" /></label><Button variant="default" className="primary" disabled={busy}>{busy ? '正在创建…' : '创建'}</Button><Button variant="secondary" className="secondary" type="button" onClick={() => setCreating(false)}>取消</Button></form>}
+  useEffect(() => {
+    setConversations(items => {
+      const merged = new Map(items.map(item => [item.id, item]));
+      for (const incoming of data.conversations) {
+        const existing = merged.get(incoming.id);
+        if (!existing || existing.version < incoming.version) merged.set(incoming.id, incoming);
+      }
+      return [...merged.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+    });
+    setSelected(value => value || data.conversations[0]?.id || '');
+  }, [data.conversations]);
+  async function create() { if (creating.current) return; creating.current = true; setBusy(true); setError(''); try { const c = await mutation<Conversation>(`${base}/conversations`, {}); setConversations(items => [c, ...items.filter(item => item.id !== c.id)]); selectConversation(c.id); } catch (e) { setError(errorText(e)); onAuthError(e); } finally { creating.current = false; setBusy(false); } }
+  const updateConversation = useCallback((conversation: Conversation) => setConversations(items => items.map(item => item.id === conversation.id && item.version <= conversation.version ? conversation : item)), []);
+  const title = conversations.find(c => c.id === selected)?.title ?? '新对话';
+  return <div className="chat-page live-chat">{menuSlot && createPortal(<DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="conversation-menu-trigger" aria-label={`切换对话：${title}`} title={title}><span className="topbar-title">{title}</span><Icon name="down" size={14}/></Button></DropdownMenuTrigger><DropdownMenuContent align="start" className="conversation-menu">{conversations.map(c=><DropdownMenuItem key={c.id} onSelect={()=>selectConversation(c.id)}><span>{c.title}</span>{selected===c.id&&<Icon name="check" size={16}/>}</DropdownMenuItem>)}<DropdownMenuSeparator/><DropdownMenuItem disabled={busy} onSelect={()=>void create()}><Icon name="plus"/>{busy ? '正在创建…' : '新对话'}</DropdownMenuItem></DropdownMenuContent></DropdownMenu>,menuSlot)}
     {error && <Notice>{error}</Notice>}
-    {selected ? <ConversationView key={selected} conversationId={selected} data={data} csrf={csrf} onAuthError={onAuthError} /> : <Empty icon="chat" title="开始一段新的对话">创建对话后，默认由主 Agent 接收。也可以选择一个已配置连接的成员。</Empty>}
+    {selected ? <ConversationView key={selected} conversationId={selected} data={data} csrf={csrf} onAuthError={onAuthError} onConversation={updateConversation} /> : <Empty icon="chat" title="开始一段新的对话">创建对话后，默认由主 Agent 接收。也可以选择一个已配置连接的成员。<Button disabled={busy} onClick={()=>void create()}>新建对话</Button></Empty>}
   </div>;
 }
 
-function ConversationView({ conversationId, data, csrf, onAuthError }: { conversationId: string; data: UiWorkspaceDetail; csrf: string; onAuthError: (e: unknown) => void }) {
+function ConversationView({ conversationId, data, csrf, onAuthError, onConversation }: { conversationId: string; data: UiWorkspaceDetail; csrf: string; onAuthError: (e: unknown) => void; onConversation: (conversation: Conversation) => void }) {
   const [page, setPage] = useState<ChatPage | null>(null);
+  useEffect(() => { if (page) onConversation(page.conversation); }, [page?.conversation.id, page?.conversation.version, onConversation]);
   const [earlier, setEarlier] = useState<Pick<ChatPage, 'messages' | 'turns' | 'chunks'>>({ messages: [], turns: [], chunks: [] });
   const [earlierCursor, setEarlierCursor] = useState<string | null | undefined>(undefined);
   const [draft, setDraft] = useState(() => readDraft(data.workspace.id, conversationId));
   const [recipient, setRecipient] = useState(() => { try { return sessionStorage.getItem(`rift:recipient:${data.workspace.id}:${conversationId}`) || data.roles.find(r => r.kind === 'dsh-lead')?.id || ''; } catch { return data.roles.find(r => r.kind === 'dsh-lead')?.id || ''; } });
   const [error, setError] = useState(''); const [sending, setSending] = useState(false); const [loadingEarlier, setLoadingEarlier] = useState(false);
   const [actionError, setActionError] = useState(''); const [eventError, setEventError] = useState(''); const [observedAt, setObservedAt] = useState(0); const [clock, setClock] = useState(Date.now());
-  const [streamVersion, setStreamVersion] = useState(0); const streamCursor = useRef(data.snapshotCursor); const historicalTurns = useRef(earlier.turns); historicalTurns.current = earlier.turns;
+  const historyGeneration = useRef(0); const historicalMessageCount = useRef(earlier.messages.length); historicalMessageCount.current = earlier.messages.length; const historicalTurns = useRef(earlier.turns); historicalTurns.current = earlier.turns;
   const [saved, setSaved] = useState(true); const [mentions, setMentions] = useState(false); const [newContent, setNewContent] = useState(false);
   const contextKey = `rift:context:${encodeURIComponent(data.workspace.id)}:${encodeURIComponent(conversationId)}`;
   const [contextOpen, setContextOpen] = useState(false);
@@ -64,22 +78,37 @@ function ConversationView({ conversationId, data, csrf, onAuthError }: { convers
   useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 5000); return () => clearInterval(timer); }, []);
   useEffect(() => {
     if (!data.capabilities.events.available) return;
-    const events = new EventSource(`/ui-api/v1/workspaces/${segment(data.workspace.id)}/events?after=${streamCursor.current}`);
-    let live = true; const resync = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const schedule = () => { if (timer) clearTimeout(timer); timer = setTimeout(() => { void sync(); }, 100); };
-    events.addEventListener('workspace', schedule);
-    events.addEventListener('resync_required', () => { events.close(); void request<ChatPage>(base, { signal: resync.signal }).then(result => { if (!live) return; setEarlier({ messages: [], turns: [], chunks: [] }); setEarlierCursor(undefined); setPage(previous => previous && previous.snapshotCursor > result.snapshotCursor ? previous : result); streamCursor.current = result.snapshotCursor; setObservedAt(Date.now()); setStreamVersion(v => v + 1); }, e => { if (live) { setError(errorText(e)); onAuthError(e); } }); });
-    events.addEventListener('session_expired', () => { events.close(); onAuthError(new ApiError(401, '浏览器会话已过期。')); });
-    events.onopen = () => setEventError(''); events.onerror = () => setEventError('实时连接中断，正在重连；当前继续定时同步。');
-    return () => { live = false; resync.abort(); events.close(); if (timer) clearTimeout(timer); };
-  }, [base, data.capabilities.events.available, streamVersion]);
+    const close = subscribeWorkspaceEvents(data.workspace.id, data.snapshotCursor, {
+      changed: () => { if (!timer) timer = setTimeout(() => { timer = undefined; void sync(); }, 60); },
+      snapshot: async signal => {
+        const generation = ++historyGeneration.current;
+        latest.current.cancel();
+        const first = await request<ChatPage>(base, { signal });
+        let older: Pick<ChatPage, 'messages' | 'turns' | 'chunks'> = { messages: [], turns: [], chunks: [] };
+        let cursor = first.nextBefore;
+        const retained = historicalMessageCount.current;
+        // Re-read the history the user loaded; a gap never discards visible pages.
+        while (cursor && older.messages.length < retained) {
+          const next = await request<ChatPage>(`${base}?before=${segment(cursor)}`, { signal });
+          older = mergeChatHistory(next, older); cursor = next.nextBefore;
+        }
+        if (!signal.aborted && generation === historyGeneration.current) {
+          setEarlier(previous => mergeChatHistory(older,previous)); setEarlierCursor(cursor); setPage(previous => previous && previous.snapshotCursor > first.snapshotCursor ? previous : first); setObservedAt(Date.now()); setError('');
+        }
+        return first.snapshotCursor;
+      },
+      error: setEventError,
+      expired: () => onAuthError(new ApiError(401, '浏览器会话已过期。')),
+    });
+    return () => { close(); if (timer) clearTimeout(timer); };
+  }, [base, data.capabilities.events.available]);
   useEffect(() => { alive.current = true; void sync(); const interval = setInterval(() => { if (!document.hidden) void sync(); }, 1800); const visibility = () => { if (!document.hidden) void sync(); }; const scroll = () => { nearBottom.current = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 160; }; addEventListener('scroll', scroll, { passive: true }); document.addEventListener('visibilitychange', visibility); return () => { alive.current = false; latest.current.cancel(); clearInterval(interval); removeEventListener('scroll', scroll); document.removeEventListener('visibilitychange', visibility); }; }, [base]);
-  const contentRevision = `${page?.messages.at(-1)?.id}:${page?.chunks.at(-1)?.seq}:${page?.turns.at(-1)?.status}`;
+  const contentRevision = `${page?.messages.at(-1)?.id}:${page?.chunks.at(-1)?.seq}:${page?.turns.at(-1)?.version}`;
   useEffect(() => { if (!page) return; if (nearBottom.current) bottom.current?.scrollIntoView({ block: 'end' }); else setNewContent(true); }, [contentRevision]);
   function chooseRecipient(id: string) { setRecipient(id); setMentions(false); setDraft(current => { const next = current.endsWith('@') ? current.slice(0,-1) : current; saveDraft(data.workspace.id, next, conversationId); return next; }); try { sessionStorage.setItem(`rift:recipient:${data.workspace.id}:${conversationId}`, id); } catch { /* Session storage is optional. */ } composer.current?.focus(); }
   const chosen = data.roles.find(r => r.id === recipient);
-  const connectionMissing = chosen?.kind !== 'dsh-lead' && !(chosen as typeof chosen & { chatConnection?: unknown })?.chatConnection;
+  const connectionMissing = chosen?.kind !== 'dsh-lead' && !chosen?.chatConnection && !data.bindings.find(binding=>binding.id===chosen?.providerBindingId)?.executionConnection;
   const disabledReason = !chosen ? '所选成员已失效，请明确选择接收者。' : chosen.enabled === 0 ? '所选成员已停用，请选择其他接收者。' : connectionMissing ? '所选成员尚未配置对话连接。' : invalidContext ? '所选上下文已失效，请在上下文选择器中移除或重新选择。' : data.workspace.status !== 'active' ? '已归档工作区不能接收新消息。' : '';
   async function send() {
     const text = draft.trim(); if (sending || !text || disabledReason) return;
@@ -92,12 +121,12 @@ function ConversationView({ conversationId, data, csrf, onAuthError }: { convers
       setDraft(''); saveDraft(data.workspace.id, '', conversationId); pending.current = null; persistPending(data.workspace.id, conversationId, null); nearBottom.current = true; await sync();
     } catch (e) { if (alive.current) { if (isDefinitiveRejection(e) && pending.current) { pending.current = { ...pending.current, key: randomId() }; persistPending(data.workspace.id, conversationId, pending.current); } setActionError(`${errorText(e)} 草稿已保留；再次发送同一内容会复用消息标识。`); onAuthError(e); } } finally { if (alive.current) setSending(false); }
   }
-  async function loadEarlier() { const cursor = earlierCursor === undefined ? page?.nextBefore : earlierCursor; if (!cursor || loadingEarlier) return; setLoadingEarlier(true); const height = document.documentElement.scrollHeight; const scroll = window.scrollY; nearBottom.current = false; try { const result = await request<ChatPage>(`${base}?before=${segment(cursor)}`); if (!alive.current) return; setEarlier(items => mergeChatHistory(result, items)); setEarlierCursor(result.nextBefore); requestAnimationFrame(() => window.scrollTo(0, scroll + document.documentElement.scrollHeight - height)); } catch (e) { if (alive.current) { setActionError(errorText(e)); onAuthError(e); } } finally { if (alive.current) setLoadingEarlier(false); } }
+  async function loadEarlier() { const cursor = earlierCursor === undefined ? page?.nextBefore : earlierCursor; if (!cursor || loadingEarlier) return; setLoadingEarlier(true); const generation = historyGeneration.current; const height = document.documentElement.scrollHeight; const scroll = window.scrollY; nearBottom.current = false; try { const result = await request<ChatPage>(`${base}?before=${segment(cursor)}`); if (!alive.current || generation !== historyGeneration.current) return; setEarlier(items => mergeChatHistory(result, items)); setEarlierCursor(result.nextBefore); requestAnimationFrame(() => window.scrollTo(0, scroll + document.documentElement.scrollHeight - height)); } catch (e) { if (alive.current) { setActionError(errorText(e)); onAuthError(e); } } finally { if (alive.current) setLoadingEarlier(false); } }
   const history = mergeChatHistory(earlier, page ?? { messages: [], turns: [], chunks: [] }); const { messages } = history;
   const stale = !!error || !!eventError || clock - observedAt > 15000;
   return <><span className="sr-only" role="status" aria-live="polite">{history.turns.length ? `最新回复状态：${turnLabel[history.turns[history.turns.length - 1].status]}` : '对话记录已载入'}</span><div className="chat-scope sr-only"><span className="eyebrow">{data.workspace.name}</span><span className="muted">单一接收者 · 历史由 Host 保存</span></div>{(error || actionError || eventError) && <div className="error-banner" role="status"><p>{actionError || error || eventError}</p><Button variant="secondary" className="secondary" onClick={() => void sync()}>重新同步</Button></div>}
     {(earlierCursor === undefined ? page?.nextBefore : earlierCursor) && <Button variant="secondary" className="secondary history-button" onClick={() => void loadEarlier()} disabled={loadingEarlier}>{loadingEarlier ? '正在读取…' : '读取更早消息'}</Button>}
-    {!page ? <div className="loading">正在读取对话记录…</div> : !messages.length ? <div className="live-chat-welcome"><span className="chat-monogram"><Icon name="skill" size={32} /></span><h1>今天，想一起完成什么？</h1><p>默认与主 Agent 讨论目标，使用 @ 选择其他成员。<br />代码执行会进入独立的任务流程。</p></div> : <section className="message-list" aria-label="对话消息">{messages.map(message => { const role = data.roles.find(r => r.id === message.recipientAgentId); const turn = history.turns.find(t => t.messageId === message.id); return <article className={`message ${message.role}`} key={message.id}><div className="message-heading"><span className="message-avatar">{message.role === 'user' ? '我' : (role ? displayName(role) : 'Agent').slice(0, 1)}</span><strong>{message.role === 'user' ? '你' : role ? displayName(role) : '历史成员'}</strong><span>{message.role === 'user' ? `发给 ${role ? displayName(role) : message.recipientAgentId}` : '回复'}</span><time>{time(message.createdAt)}</time></div><MessageBody text={message.content} />{turn?.configuration.request?.contextRefs?.length ? <div className="message-context-refs">{turn.configuration.request.contextRefs.map(ref => <span className="chip" key={`${ref.type}:${ref.id}`}>{contexts.find(c => c.type === ref.type && c.id === ref.id)?.name ?? `${ref.type} · ${ref.id}`}</span>)}</div> : null}{turn && <div className="turn-state"><Pill active={!stale && turn.status === 'running'}>{stale && ['running', 'queued', 'stopping'].includes(turn.status) ? `上次状态：${turnLabel[turn.status]}` : turnLabel[turn.status]}</Pill>{['queued', 'running', 'stopping'].includes(turn.status) && <Button variant="ghost" className="text-button" disabled={turn.status === 'stopping'} onClick={async () => { try { await mutate(`/workspaces/${segment(data.workspace.id)}/turns/${segment(turn.id)}/stop`, csrf, {}); if (alive.current) await sync(); } catch (e) { if (alive.current) { setError(errorText(e)); onAuthError(e); } } }}>停止这次回复</Button>}{turn.error && <p>{turn.error}</p>}</div>}{turn && ['running', 'stopping'].includes(turn.status) && history.chunks.some(c => c.turnId === turn.id) && <div className="message-stream"><span className="eyebrow">AGENT RESPONSE</span><div className="message-content">{history.chunks.filter(c => c.turnId === turn.id).map(c => c.text).join('')}</div></div>}</article>; })}</section>}
+    {!page ? <div className="loading">正在读取对话记录…</div> : !messages.length ? <div className="live-chat-welcome"><span className="chat-monogram"><Icon name="skill" size={32} /></span><h1>今天，想一起完成什么？</h1><p>默认与主 Agent 讨论目标，使用 @ 选择其他成员。<br />代码执行会进入独立的任务流程。</p></div> : <ChatTimeline messages={messages} turns={history.turns} chunks={history.chunks} receipts={page.receipts} data={data} stale={stale} onStop={async turn => { try { await mutate(`/workspaces/${segment(data.workspace.id)}/turns/${segment(turn.id)}/stop`,csrf,{}); if(alive.current)await sync(); } catch(error) { if(alive.current){setError(errorText(error));onAuthError(error);} } }} />}
     {newContent && <Button variant="secondary" className="new-content secondary" onClick={() => { nearBottom.current = true; bottom.current?.scrollIntoView({ block: 'end' }); setNewContent(false); }}>有新消息 · 跳至底部</Button>}
     <div className="composer-dock"><div className="composer-context"><Button variant="ghost" className="chip recipient-button" aria-expanded={mentions} onClick={() => setMentions(v => !v)}>@ {chosen ? displayName(chosen) : '选择接收者'} <Icon name="chevron" size={14} /></Button><Button variant="ghost" className="chip recipient-button" aria-expanded={contextOpen} onClick={() => setContextOpen(value => !value)}><Icon name="branch" size={15} />上下文 · {contextRefs.length}</Button></div>{contextOpen && <fieldset className="context-picker"><legend>当前工作区的任务与代码上下文（最多 20 项）</legend>{contexts.map(ref => { const checked = contextRefs.some(item => item.id === ref.id && item.type === ref.type); return <label key={`${ref.type}:${ref.id}`}><Checkbox  checked={checked} disabled={!checked && contextRefs.length >= 20} onCheckedChange={checked => selectContext({ type: ref.type, id: ref.id }, checked === true)} /><span>{ref.name}</span></label>; })}{!contexts.length && <p>还没有可引用的任务、仓库或工作目录。</p>}{contextRefs.filter(ref => !contexts.some(c => c.id === ref.id && c.type === ref.type)).map(ref => <Button variant="ghost" className="text-button" key={`${ref.type}:${ref.id}`} onClick={() => selectContext(ref, false)}>移除失效上下文 · {ref.id}</Button>)}</fieldset>}{mentions && <div className="mention-menu" aria-label="选择消息接收者">{data.roles.map(r => <Button variant="ghost" key={r.id} className={recipient === r.id ? 'selected' : ''} onClick={() => chooseRecipient(r.id)} disabled={r.enabled === 0}><span>{displayName(r)}</span><span>{r.enabled === 0 ? '已停用' : r.kind === 'dsh-lead' ? '主 Agent' : '子 Agent'}</span></Button>)}</div>}<div className="composer live-composer"><label className="sr-only" htmlFor="live-draft">消息内容</label><Textarea id="live-draft" ref={composer} value={draft} maxLength={32000} disabled={sending} placeholder="输入消息，或用 @ 选择接收者…" onChange={e => { e.target.style.height = 'auto'; e.target.style.height = `${Math.min(180, e.target.scrollHeight)}px`; setDraft(e.target.value); setSaved(saveDraft(data.workspace.id, e.target.value, conversationId)); if (e.target.value.endsWith('@') && !(e.nativeEvent as InputEvent).isComposing) setMentions(true); }} onKeyDown={e => { if (e.key === 'Escape') setMentions(false); if (shouldSendOnKey({ key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, isComposing: e.nativeEvent.isComposing, keyCode: e.nativeEvent.keyCode })) { e.preventDefault(); void send(); } }} /><div className="composer-bottom"><span>{saved ? 'Ctrl / ⌘ + Enter 发送 · Enter 换行' : '浏览器无法保存草稿，请勿关闭此页'}</span><Button variant="default" className="send-button" aria-label={sending ? '正在发送' : '发送消息'} disabled={sending || !draft.trim() || !!disabledReason} onClick={() => void send()}><Icon name="up" /></Button></div></div><p className="composer-help">{disabledReason || '停止回复不会取消已登记的任务。每条消息仅投递给当前选定的成员。'}</p></div><div ref={bottom} />
   </>;

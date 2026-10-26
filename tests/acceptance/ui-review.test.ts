@@ -298,7 +298,7 @@ describe('Independent domain migration and Skill boundaries', () => {
       mutate = false; const repair = host.coordinator.retry({ taskId: 'text-mutation', expectedVersion: host.store.task('text-mutation').version, reason: 'Use the restricted text path' });
       host.coordinator.dispatch({ taskId: repair.id, expectedVersion: repair.version, idempotencyKey: 'text-repair' });
       await expect.poll(() => host.store.task('text-mutation').status, { timeout: 800, interval: 10 }).toBe('succeeded');
-      expect(inputs).toHaveLength(2); expect(inputs.every(input => input.tools.length === 0)).toBe(true); expect(inputs[0]!.cwd).not.toBe(inputs[1]!.cwd);
+      expect(inputs).toHaveLength(2); expect(inputs.every(input => input.tools.length === 1 && input.tools[0]!.name === 'rift_send_message')).toBe(true); expect(inputs[0]!.cwd).not.toBe(inputs[1]!.cwd);
       expect(host.store.all('SELECT * FROM worktrees')).toEqual([]); expect(host.store.all('SELECT * FROM workflow_repositories')).toEqual([]);
       expect(host.store.task('text-mutation')).toMatchObject({ repositoryId: null, acceptedCommit: null });
       expect(host.coordinator.finish({ workflowId: workflow.id, summary: 'Restricted text verified' }).status).toBe('completed');
@@ -336,7 +336,7 @@ describe('Independent domain migration and Skill boundaries', () => {
       const workspace = await service.handleBrowser('POST', '/ui-api/v1/workspaces', { name: 'Discussion without repository', leadConnection: { runtime: 'codex', model: 'test-model' } }, 'no-repo') as { id: string; repositoryPath: string | null };
       expect(workspace.repositoryPath).toBeFalsy();
       const roles = service.store.all<{id:string}>('SELECT id FROM roles WHERE workspace_id=?', workspace.id); expect(roles).toHaveLength(1);
-      const conversation = service.chat.list(workspace.id)[0]!;
+      const conversation = service.chat.createConversation(workspace.id, 'Skill snapshot verification');
       const directory = path.join(home, 'skill-source'); await mkdir(directory); await writeFile(path.join(directory, 'SKILL.md'), 'HOST_SKILL_VERSION_ONE');
       const preview = service.skills.previewImport({ workspaceId: workspace.id, directory });
       const first = service.skills.saveImport({ workspaceId: workspace.id, previewId: preview.previewId });
@@ -589,7 +589,7 @@ describe('Independent durable chat boundaries', () => {
     const starts: RuntimeTurnInput[] = []; const finishes: ((value: RuntimeTurnResult) => void)[] = [];
     const chat = new ChatService({ store, home, defaultConnection: () => ({ runtime: 'dsh', provider: 'test', model: 'test' }), validateConnection: () => {}, tools: () => [], runtime: () => ({ async start(input) { starts.push(input); return { result: new Promise<RuntimeTurnResult>(resolve => finishes.push(resolve)), async dispose() {} }; } }) });
     try {
-      const conversation = chat.createConversation(alpha.workspace.id), other = chat.createConversation(beta.workspace.id);
+      const conversation = chat.createConversation(alpha.workspace.id, 'Agent queue verification'), other = chat.createConversation(beta.workspace.id);
       const input = { clientMessageId: 'one', recipientAgentId: role.id, content: 'First' };
       const first = chat.send(alpha.workspace.id, conversation.id, input);
       expect(chat.send(alpha.workspace.id, conversation.id, input).turn.id).toBe(first.turn.id);
@@ -606,7 +606,7 @@ describe('Independent durable chat boundaries', () => {
       await expect.poll(() => starts.length, { timeout: 500, interval: 10 }).toBe(2);
       expect(starts[1]?.model).toBe('model-before');
       expect(starts[1]?.instructions).not.toContain('New prompt');
-      expect(starts[1]?.messages.some(message => message.content === 'First result')).toBe(true);
+      expect(starts[1]?.messages.some(message => message.role==='assistant' && message.content.includes('First result') && message.content.includes('Quoted conversation data'))).toBe(true);
       finishes[1]!({ text: 'Second result', stopReason: 'completed' });
       await expect.poll(() => chat.turn(alpha.workspace.id, second.turn.id).status, { timeout: 500, interval: 10 }).toBe('completed');
       expect(chat.page(alpha.workspace.id, conversation.id).messages).toHaveLength(4);

@@ -14,13 +14,15 @@
 node dist/cli/main.js serve --home C:\RiftExample --port 48080 --profile rift-ui --patch profiles/rift.codex.patch.yml --tailscale-ip 100.64.0.10
 ```
 
-另一个终端生成首次登录链接：
+在可访问该服务的 tailnet 设备上直接打开固定地址即可自动连接，无需登录码。服务重启或会话过期后刷新页面即可重新连接。RIFT 不再额外验证访问者身份，访问范围由 Tailscale 网络与访问规则决定。
+
+也可以在另一个终端生成兼容的一次性链接：
 
 ```powershell
 node dist/cli/main.js ui --home C:\RiftExample --remote
 ```
 
-在已连接 tailnet 的设备上打开返回链接。启动码一次性使用，60 秒有效；登录后可直接访问固定地址，浏览器会话默认 8 小时。服务重启需要重新登录。无 `--remote` 时仍生成本机链接。
+一次性链接仍可使用：启动码 60 秒有效，浏览器会话默认 8 小时。无 `--remote` 时仍生成本机链接。
 
 ## HTTP 兼容与验证
 

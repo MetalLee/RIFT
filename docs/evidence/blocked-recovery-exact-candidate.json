@@ -1,0 +1,496 @@
+{
+  "observedAt": "2026-10-26T10:07:15.940Z",
+  "readOnlySiteInspection": true,
+  "noTestsRerun": true,
+  "workflow": {
+    "id": "workflow-3b359d55-f771-41ce-b71a-7403ad2bd704",
+    "status": "completed",
+    "version": 8,
+    "integration_ref": "refs/heads/rift/workspace-b3db9af0-ec60-4258-b6d8-6c0d050a5574/workflow-3b359d55-f771-41ce-b71a-7403ad2bd704",
+    "base_commit": "3e51134a77147c78f431a1805798cfd09636dded"
+  },
+  "tasks": [
+    {
+      "id": "workspace-default-members",
+      "title": "调整新建 workspace 的默认成员并增加回归测试",
+      "status": "succeeded",
+      "attempt": 3,
+      "source_head": "a22f4bffbf967d2fcc024b49125ae9719c5b0c09",
+      "accepted_commit": "6639bc3123f524044ed49d14139ae86c4d54a7f6",
+      "blocking_reason": null
+    },
+    {
+      "id": "audit-workspace-member-defaults",
+      "title": "独立核查默认成员初始化与兼容性风险",
+      "status": "succeeded",
+      "attempt": 2,
+      "source_head": null,
+      "accepted_commit": null,
+      "blocking_reason": null
+    }
+  ],
+  "runs": [
+    {
+      "id": "run-87951442-9f9a-412d-a0ef-0fa52b86d833",
+      "task_id": "workspace-default-members",
+      "purpose": "develop",
+      "task_attempt": 1,
+      "status": "succeeded",
+      "cleanup_status": "confirmed",
+      "slot_released_at": "2026-10-26T09:07:34.018Z",
+      "ended_at": "2026-10-26T09:07:34.003Z"
+    },
+    {
+      "id": "run-6f8c1aa6-c544-4e28-8dc3-da8953da9f59",
+      "task_id": "audit-workspace-member-defaults",
+      "purpose": "develop",
+      "task_attempt": 1,
+      "status": "failed",
+      "cleanup_status": "confirmed",
+      "slot_released_at": "2026-10-26T09:07:34.707Z",
+      "ended_at": "2026-10-26T09:07:34.707Z"
+    },
+    {
+      "id": "run-ab0fed3e-88ba-4d54-92c7-a6d3eae8ae0b",
+      "task_id": "workspace-default-members",
+      "purpose": "repair",
+      "task_attempt": 2,
+      "status": "succeeded",
+      "cleanup_status": "confirmed",
+      "slot_released_at": "2026-10-26T09:44:09.059Z",
+      "ended_at": "2026-10-26T09:44:09.043Z"
+    },
+    {
+      "id": "run-67f5b1cb-694d-42bc-adf0-e80c24247cac",
+      "task_id": "audit-workspace-member-defaults",
+      "purpose": "repair",
+      "task_attempt": 2,
+      "status": "succeeded",
+      "cleanup_status": "confirmed",
+      "slot_released_at": "2026-10-26T09:50:53.165Z",
+      "ended_at": "2026-10-26T09:50:53.163Z"
+    },
+    {
+      "id": "run-61b23b7a-189a-453c-ba3f-2046f7508a09",
+      "task_id": "workspace-default-members",
+      "purpose": "repair",
+      "task_attempt": 3,
+      "status": "succeeded",
+      "cleanup_status": "confirmed",
+      "slot_released_at": "2026-10-26T09:52:56.663Z",
+      "ended_at": "2026-10-26T09:52:56.646Z"
+    },
+    {
+      "id": "run-c8119ff0-e1df-41e5-977e-bc75c8b7a88f",
+      "task_id": "workspace-default-members",
+      "purpose": "review",
+      "task_attempt": 3,
+      "status": "succeeded",
+      "cleanup_status": "confirmed",
+      "slot_released_at": "2026-10-26T10:04:57.331Z",
+      "ended_at": "2026-10-26T10:04:57.308Z"
+    }
+  ],
+  "integrations": [
+    {
+      "id": "integration-ed284326-f9e3-4dd3-8142-b1fe5ba0703b",
+      "task_id": "workspace-default-members",
+      "source_head": "a22f4bffbf967d2fcc024b49125ae9719c5b0c09",
+      "expected_target_head": null,
+      "candidate_head": null,
+      "check_ids": "[]",
+      "review_run_id": null,
+      "status": "blocked",
+      "error": "Git output exceeds evidence limit"
+    },
+    {
+      "id": "integration-dfe6b735-2e13-470e-867f-721f2f371d17",
+      "task_id": "workspace-default-members",
+      "source_head": "a22f4bffbf967d2fcc024b49125ae9719c5b0c09",
+      "expected_target_head": "3e51134a77147c78f431a1805798cfd09636dded",
+      "candidate_head": "6639bc3123f524044ed49d14139ae86c4d54a7f6",
+      "check_ids": "[\"6c7f17c3-c62b-4609-8e07-c93c2184e91d\",\"1bd94d5e-7e8c-41da-8868-9b8ae0cbdb9c\"]",
+      "review_run_id": "run-c8119ff0-e1df-41e5-977e-bc75c8b7a88f",
+      "status": "accepted",
+      "error": null
+    }
+  ],
+  "activeLeases": [],
+  "noActiveLeases": true,
+  "originalDraft": {
+    "path": "D:/RiftUI/workspaces/6d2e3f9220f5bc64bea641ca/worktrees/64d77f7935dcd0a78bca6e34",
+    "expectedHead": "3e51134a77147c78f431a1805798cfd09636dded",
+    "actualHead": "3e51134a77147c78f431a1805798cfd09636dded",
+    "files": [
+      {
+        "file": "README.md",
+        "expectedSha256": "e642094a932c8f0d375cdfe4d1f4d6a51c5fd8268279e40bcfb526226edab871",
+        "actualSha256": "e642094a932c8f0d375cdfe4d1f4d6a51c5fd8268279e40bcfb526226edab871",
+        "unchanged": true
+      },
+      {
+        "file": "docs/e1-guide.md",
+        "expectedSha256": "8c1ffd8d041093a4173208c3a86e06861e8e2eea2def1a7843516dba34b45b1f",
+        "actualSha256": "8c1ffd8d041093a4173208c3a86e06861e8e2eea2def1a7843516dba34b45b1f",
+        "unchanged": true
+      },
+      {
+        "file": "docs/ui-guide.md",
+        "expectedSha256": "f4d72bcd08479d275bce681672dd79fc7f769dec77fb0caefe967456bd3a6bc0",
+        "actualSha256": "f4d72bcd08479d275bce681672dd79fc7f769dec77fb0caefe967456bd3a6bc0",
+        "unchanged": true
+      },
+      {
+        "file": "docs/usage.md",
+        "expectedSha256": "1a3fef87d46f9a4540032aac926154f308a846143038e778dafe2ccda231729b",
+        "actualSha256": "1a3fef87d46f9a4540032aac926154f308a846143038e778dafe2ccda231729b",
+        "unchanged": true
+      },
+      {
+        "file": "src/api/host-service.ts",
+        "expectedSha256": "04775815c87fe3c499b41a85018ebf11435a8f80748c3a20bf72e82eb88d0785",
+        "actualSha256": "04775815c87fe3c499b41a85018ebf11435a8f80748c3a20bf72e82eb88d0785",
+        "unchanged": true
+      },
+      {
+        "file": "src/api/workspace-views.ts",
+        "expectedSha256": "baa9e6ddb469068b31f3b271f49cef6496ac1fdce1d8ba99db6639c0578cfe6f",
+        "actualSha256": "baa9e6ddb469068b31f3b271f49cef6496ac1fdce1d8ba99db6639c0578cfe6f",
+        "unchanged": true
+      },
+      {
+        "file": "tests/acceptance/browser-domain.test.ts",
+        "expectedSha256": "0877200a0e419d7e5742c2b59a923c3322af6ee02aff2c26ba177f0cf48ca6a7",
+        "actualSha256": "0877200a0e419d7e5742c2b59a923c3322af6ee02aff2c26ba177f0cf48ca6a7",
+        "unchanged": true
+      },
+      {
+        "file": "tests/acceptance/browser-service.test.ts",
+        "expectedSha256": "fb491944afb1fc275fab99a3c47c13c383302f55839b2f3f38442749205e50e5",
+        "actualSha256": "fb491944afb1fc275fab99a3c47c13c383302f55839b2f3f38442749205e50e5",
+        "unchanged": true
+      },
+      {
+        "file": "tests/acceptance/e1-management.test.ts",
+        "expectedSha256": "3041baa2385eaf9699fe4d3e3d4988a434721545d97d13e8ded5aeef6fcd7a4f",
+        "actualSha256": "3041baa2385eaf9699fe4d3e3d4988a434721545d97d13e8ded5aeef6fcd7a4f",
+        "unchanged": true
+      },
+      {
+        "file": "tests/acceptance/ui-review.test.ts",
+        "expectedSha256": "8fbda0bc4c6b4b824d9bf32436f0ed863076ffc665791068be9edafddaacbb27",
+        "actualSha256": "8fbda0bc4c6b4b824d9bf32436f0ed863076ffc665791068be9edafddaacbb27",
+        "unchanged": true
+      },
+      {
+        "file": "tests/acceptance/workspace-default-members.test.ts",
+        "expectedSha256": "e2abc177e4a54ae3fde353fffdec5dade9e4826571e1bec188cd97055a36fd56",
+        "actualSha256": "e2abc177e4a54ae3fde353fffdec5dade9e4826571e1bec188cd97055a36fd56",
+        "unchanged": true
+      }
+    ],
+    "allElevenHashesUnchanged": true
+  },
+  "candidates": [
+    {
+      "operationPath": "D:\\RiftUI\\workspaces\\6d2e3f9220f5bc64bea641ca\\operations\\af7a600614428140fbc22174\\operation.json",
+      "integrationId": "integration-ed284326-f9e3-4dd3-8142-b1fe5ba0703b",
+      "phase": "blocked",
+      "reason": "Error: Git output exceeds evidence limit",
+      "candidatePath": "D:\\RiftUI\\workspaces\\6d2e3f9220f5bc64bea641ca\\candidates\\af7a600614428140fbc22174",
+      "sourceHead": "a22f4bffbf967d2fcc024b49125ae9719c5b0c09",
+      "expectedTargetHead": "3e51134a77147c78f431a1805798cfd09636dded",
+      "candidateHead": "c4b43aaf7545b25023e277151ed1b3d51ee1b3ee",
+      "observedHeadBefore": "c4b43aaf7545b25023e277151ed1b3d51ee1b3ee",
+      "observedHeadAfter": "c4b43aaf7545b25023e277151ed1b3d51ee1b3ee",
+      "headUnchangedAndMatches": true,
+      "treeMatchesSource": true,
+      "changedFiles": [
+        "README.md",
+        "docs/e1-guide.md",
+        "docs/ui-guide.md",
+        "docs/usage.md",
+        "src/api/host-service.ts",
+        "src/api/workspace-views.ts",
+        "tests/acceptance/browser-domain.test.ts",
+        "tests/acceptance/browser-service.test.ts",
+        "tests/acceptance/e1-management.test.ts",
+        "tests/acceptance/ui-review.test.ts",
+        "tests/acceptance/workspace-default-members.test.ts"
+      ],
+      "sourceFiles": [
+        "README.md",
+        "docs/e1-guide.md",
+        "docs/ui-guide.md",
+        "docs/usage.md",
+        "src/api/host-service.ts",
+        "src/api/workspace-views.ts",
+        "tests/acceptance/browser-domain.test.ts",
+        "tests/acceptance/browser-service.test.ts",
+        "tests/acceptance/e1-management.test.ts",
+        "tests/acceptance/ui-review.test.ts",
+        "tests/acceptance/workspace-default-members.test.ts"
+      ],
+      "expectedElevenFiles": true,
+      "newTestTracked": true,
+      "files": [
+        {
+          "file": "README.md",
+          "blobSha256": "0767a58fceb67fa7eaa59bacbac16c777ef52e46009e35a405ae5381c3f5e3d1",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "docs/e1-guide.md",
+          "blobSha256": "d778c04544f7d9b9763be77556aa8e560845979a1432b70a8c482dca6d62f0cc",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "docs/ui-guide.md",
+          "blobSha256": "6d2debd57dda072dd826a20e358e53876ea8111eed4f6b9db3f6b66e4a53b271",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "docs/usage.md",
+          "blobSha256": "6dc2f53881ed2ac8139db0efde51ce77181799dbeb8dbb5030259f3595e63221",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "src/api/host-service.ts",
+          "blobSha256": "83cdfea2b24aa1732b3bdd8c2753c601e4da0e09f92a32cc8607c51d4f390e47",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "src/api/workspace-views.ts",
+          "blobSha256": "4d3f94795b9928dc490f15dba145a9dbd884ceb3ce4e3723a8c9281136c8293b",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "tests/acceptance/browser-domain.test.ts",
+          "blobSha256": "95ca964f2d565d0ccb864bdbedf1170ffccb7efd76f715d0d6cd9180ce19185c",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "tests/acceptance/browser-service.test.ts",
+          "blobSha256": "2a8f9fddfd652dbe0e78ba4d297a2de388e16200bf54914621da2137ef9b97ad",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "tests/acceptance/e1-management.test.ts",
+          "blobSha256": "e3c287ac91c7010e0f0c44f4d60cb0d87eb8046b02425f7edd26658597ce90c0",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "tests/acceptance/ui-review.test.ts",
+          "blobSha256": "af740365ad876a787dd8b588848969223b81ea6347531ed4f7ce2bca6653def1",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "tests/acceptance/workspace-default-members.test.ts",
+          "blobSha256": "e2abc177e4a54ae3fde353fffdec5dade9e4826571e1bec188cd97055a36fd56",
+          "matchesOriginalDraftIgnoringCRLF": true
+        }
+      ],
+      "statusIncludingIgnored": "",
+      "cleanIncludingIgnored": true,
+      "checks": [
+        {
+          "id": "38b887aa-12e8-4ff6-a2d3-c13c08e18e1a",
+          "commandId": "diff-check",
+          "candidateHead": "c4b43aaf7545b25023e277151ed1b3d51ee1b3ee",
+          "exitCode": 0,
+          "startedAt": "2026-10-26T09:44:12.051Z",
+          "finishedAt": "2026-10-26T09:44:12.083Z",
+          "truncated": false,
+          "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "testSummary": []
+        },
+        {
+          "id": "b909380b-880b-4508-b38f-d73ddb743a44",
+          "commandId": "rift-recovery-regression",
+          "candidateHead": "c4b43aaf7545b25023e277151ed1b3d51ee1b3ee",
+          "exitCode": 0,
+          "startedAt": "2026-10-26T09:44:12.206Z",
+          "finishedAt": "2026-10-26T09:44:34.239Z",
+          "truncated": false,
+          "stdoutSha256": "ef675ac98ad2bd6b4c4d34c5101455a53f1c0d89de96ba101cdb77231a10aac9",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "testSummary": [
+            "Host exact-candidate check: [\"D:\\\\Codex Workspace\\\\RIFT\\\\node_modules\\\\typescript\\\\bin\\\\tsc\",\"--noEmit\"]",
+            "Host exact-candidate check: [\"D:\\\\Codex Workspace\\\\RIFT\\\\node_modules\\\\typescript\\\\bin\\\\tsc\",\"-p\",\"ui/tsconfig.json\"]",
+            "Host exact-candidate check: [\"D:\\\\Codex Workspace\\\\RIFT\\\\node_modules\\\\vitest\\\\vitest.mjs\",\"run\",\"tests/acceptance/workspace-default-members.test.ts\",\"tests/acceptance/browser-domain.test.ts\",\"tests/acceptance/browser-service.test.ts\",\"tests/acceptance/e1-management.test.ts\",\"tests/acceptance/ui-review.test.ts\",\"tests/core/persistence.test.ts\",\"tests/core/roles-and-reuse.test.ts\"]",
+            "Test Files  6 passed (6)",
+            "Tests  55 passed (55)"
+          ]
+        }
+      ],
+      "checksMatchExactCandidate": true,
+      "allChecksPassed": true,
+      "review": null,
+      "reviewRun": null,
+      "integrationRefHead": "6639bc3123f524044ed49d14139ae86c4d54a7f6",
+      "ledgerStatus": "blocked"
+    },
+    {
+      "operationPath": "D:\\RiftUI\\workspaces\\6d2e3f9220f5bc64bea641ca\\operations\\f3fca79c38be88b7b6dd0e59\\operation.json",
+      "integrationId": "integration-dfe6b735-2e13-470e-867f-721f2f371d17",
+      "phase": "ref_published",
+      "reason": null,
+      "candidatePath": "D:\\RiftUI\\workspaces\\6d2e3f9220f5bc64bea641ca\\candidates\\f3fca79c38be88b7b6dd0e59",
+      "sourceHead": "a22f4bffbf967d2fcc024b49125ae9719c5b0c09",
+      "expectedTargetHead": "3e51134a77147c78f431a1805798cfd09636dded",
+      "candidateHead": "6639bc3123f524044ed49d14139ae86c4d54a7f6",
+      "observedHeadBefore": "6639bc3123f524044ed49d14139ae86c4d54a7f6",
+      "observedHeadAfter": "6639bc3123f524044ed49d14139ae86c4d54a7f6",
+      "headUnchangedAndMatches": true,
+      "treeMatchesSource": true,
+      "changedFiles": [
+        "README.md",
+        "docs/e1-guide.md",
+        "docs/ui-guide.md",
+        "docs/usage.md",
+        "src/api/host-service.ts",
+        "src/api/workspace-views.ts",
+        "tests/acceptance/browser-domain.test.ts",
+        "tests/acceptance/browser-service.test.ts",
+        "tests/acceptance/e1-management.test.ts",
+        "tests/acceptance/ui-review.test.ts",
+        "tests/acceptance/workspace-default-members.test.ts"
+      ],
+      "sourceFiles": [
+        "README.md",
+        "docs/e1-guide.md",
+        "docs/ui-guide.md",
+        "docs/usage.md",
+        "src/api/host-service.ts",
+        "src/api/workspace-views.ts",
+        "tests/acceptance/browser-domain.test.ts",
+        "tests/acceptance/browser-service.test.ts",
+        "tests/acceptance/e1-management.test.ts",
+        "tests/acceptance/ui-review.test.ts",
+        "tests/acceptance/workspace-default-members.test.ts"
+      ],
+      "expectedElevenFiles": true,
+      "newTestTracked": true,
+      "files": [
+        {
+          "file": "README.md",
+          "blobSha256": "0767a58fceb67fa7eaa59bacbac16c777ef52e46009e35a405ae5381c3f5e3d1",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "docs/e1-guide.md",
+          "blobSha256": "d778c04544f7d9b9763be77556aa8e560845979a1432b70a8c482dca6d62f0cc",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "docs/ui-guide.md",
+          "blobSha256": "6d2debd57dda072dd826a20e358e53876ea8111eed4f6b9db3f6b66e4a53b271",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "docs/usage.md",
+          "blobSha256": "6dc2f53881ed2ac8139db0efde51ce77181799dbeb8dbb5030259f3595e63221",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "src/api/host-service.ts",
+          "blobSha256": "83cdfea2b24aa1732b3bdd8c2753c601e4da0e09f92a32cc8607c51d4f390e47",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "src/api/workspace-views.ts",
+          "blobSha256": "4d3f94795b9928dc490f15dba145a9dbd884ceb3ce4e3723a8c9281136c8293b",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "tests/acceptance/browser-domain.test.ts",
+          "blobSha256": "95ca964f2d565d0ccb864bdbedf1170ffccb7efd76f715d0d6cd9180ce19185c",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "tests/acceptance/browser-service.test.ts",
+          "blobSha256": "2a8f9fddfd652dbe0e78ba4d297a2de388e16200bf54914621da2137ef9b97ad",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "tests/acceptance/e1-management.test.ts",
+          "blobSha256": "e3c287ac91c7010e0f0c44f4d60cb0d87eb8046b02425f7edd26658597ce90c0",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "tests/acceptance/ui-review.test.ts",
+          "blobSha256": "af740365ad876a787dd8b588848969223b81ea6347531ed4f7ce2bca6653def1",
+          "matchesOriginalDraftIgnoringCRLF": true
+        },
+        {
+          "file": "tests/acceptance/workspace-default-members.test.ts",
+          "blobSha256": "e2abc177e4a54ae3fde353fffdec5dade9e4826571e1bec188cd97055a36fd56",
+          "matchesOriginalDraftIgnoringCRLF": true
+        }
+      ],
+      "statusIncludingIgnored": "",
+      "cleanIncludingIgnored": true,
+      "checks": [
+        {
+          "id": "6c7f17c3-c62b-4609-8e07-c93c2184e91d",
+          "commandId": "diff-check",
+          "candidateHead": "6639bc3123f524044ed49d14139ae86c4d54a7f6",
+          "exitCode": 0,
+          "startedAt": "2026-10-26T10:03:52.607Z",
+          "finishedAt": "2026-10-26T10:03:52.653Z",
+          "truncated": false,
+          "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "testSummary": []
+        },
+        {
+          "id": "1bd94d5e-7e8c-41da-8868-9b8ae0cbdb9c",
+          "commandId": "rift-recovery-regression",
+          "candidateHead": "6639bc3123f524044ed49d14139ae86c4d54a7f6",
+          "exitCode": 0,
+          "startedAt": "2026-10-26T10:03:52.854Z",
+          "finishedAt": "2026-10-26T10:04:17.070Z",
+          "truncated": false,
+          "stdoutSha256": "186eb10b2f7e7fbf05afd48dc5272a8316066f1919fbe53f0d6e49feb0e50297",
+          "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "testSummary": [
+            "Host exact-candidate check: [\"D:\\\\Codex Workspace\\\\RIFT\\\\node_modules\\\\typescript\\\\bin\\\\tsc\",\"--noEmit\"]",
+            "Host exact-candidate check: [\"D:\\\\Codex Workspace\\\\RIFT\\\\node_modules\\\\typescript\\\\bin\\\\tsc\",\"-p\",\"ui/tsconfig.json\"]",
+            "Host exact-candidate check: [\"D:\\\\Codex Workspace\\\\RIFT\\\\node_modules\\\\vitest\\\\vitest.mjs\",\"run\",\"tests/acceptance/workspace-default-members.test.ts\",\"tests/acceptance/browser-domain.test.ts\",\"tests/acceptance/browser-service.test.ts\",\"tests/acceptance/e1-management.test.ts\",\"tests/acceptance/ui-review.test.ts\",\"tests/core/persistence.test.ts\",\"tests/core/roles-and-reuse.test.ts\"]",
+            "Test Files  6 passed (6)",
+            "Tests  55 passed (55)"
+          ]
+        }
+      ],
+      "checksMatchExactCandidate": true,
+      "allChecksPassed": true,
+      "review": {
+        "schemaVersion": 1,
+        "taskId": "workspace-default-members",
+        "runId": "run-c8119ff0-e1df-41e5-977e-bc75c8b7a88f",
+        "verdict": "approve",
+        "reviewedCommit": "6639bc3123f524044ed49d14139ae86c4d54a7f6",
+        "findings": []
+      },
+      "reviewRun": {
+        "id": "run-c8119ff0-e1df-41e5-977e-bc75c8b7a88f",
+        "task_id": "workspace-default-members",
+        "purpose": "review",
+        "task_attempt": 3,
+        "status": "succeeded",
+        "cleanup_status": "confirmed",
+        "slot_released_at": "2026-10-26T10:04:57.331Z",
+        "ended_at": "2026-10-26T10:04:57.308Z"
+      },
+      "integrationRefHead": "6639bc3123f524044ed49d14139ae86c4d54a7f6",
+      "ledgerStatus": "accepted"
+    }
+  ],
+  "acceptanceVerified": true,
+  "workflowCompletionVerified": true,
+  "limitations": [
+    "Host check evidence is read from persisted Git operations; this inspection did not rerun tests.",
+    "A passed candidate check is not publication or independent review approval."
+  ]
+}

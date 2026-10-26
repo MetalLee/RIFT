@@ -1,0 +1,70 @@
+import { createRequire } from 'node:module';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+const require = createRequire(import.meta.url);
+const { chromium } = require(process.env.RIFT_PLAYWRIGHT_MODULE || 'playwright');
+const origin = process.env.RIFT_UI_URL || 'http://127.0.0.1:5173';
+const output = path.resolve('docs/evidence/chat-orchestration-ui');
+await mkdir(output, { recursive: true });
+const now = () => new Date().toISOString();
+const connection = { runtime: 'codex', model: 'gpt-6.1-sol' };
+const capabilities = Object.fromEntries(['workspaceCreate', 'chat', 'agentConfiguration', 'skills', 'multipleRepositories', 'worktreeManagement', 'workflowActions', 'events', 'pagination'].map(key => [key, { available: key !== 'events', reason: 'Deterministic browser fixture' }]));
+const workspace = { id: 'c1-workspace', name: '对话协作验收', repositoryPath: '/acceptance/repository', rootPath: '/acceptance', baseRef: 'main', status: 'active', version: 1, leadConnection: connection, defaultConversationId: 'c1-conversation', workflowCount: 1, activeWorkflowId: 'c1-workflow', taskCount: 1, createdAt: now() };
+const roles = [{ id: 'c1-lead', name: 'lead', displayName: '协调者', kind: 'dsh-lead', purpose: 'lead', enabled: 1, prompt: '协调任务', version: 1 }, { id: 'c1-developer', name: 'developer-a', displayName: '开发成员', kind: 'subagent', purpose: 'developer', enabled: 1, prompt: '实现任务', version: 1, chatConnection: connection }];
+const conversation = { id: 'c1-conversation', workspaceId: workspace.id, title: '短轮次与后台任务', version: 1, createdAt: now() };
+const task = { id: 'c1-task', workflowId: 'c1-workflow', title: '登录校验与边界测试', instructions: '完成登录校验', status: 'running', version: 1, roleId: 'c1-developer', dependsOn: [], expectedPaths: ['feature.mjs'], acceptanceCriteria: ['边界检查通过'], attempt: 1 };
+const configuration = { connection, agent: { id: 'c1-lead', displayName: '协调者', prompt: '协调任务', version: 1, purpose: 'lead' } };
+const activity = (seq, type, phase, summary, payload = {}) => ({ seq, turnId: 'c1-turn', type, phase, toolName: type.startsWith('tool') ? 'rift_task_dispatch' : null, toolCallId: type.startsWith('tool') ? 'native-call-1' : null, summary, payload, createdAt: now() });
+let state = 'handoff';
+const turns = () => [{ id: 'c1-turn', workspaceId: workspace.id, conversationId: conversation.id, messageId: 'c1-user', agentId: 'c1-lead', status: state === 'unknown' ? 'completed' : 'running', configuration, version: state === 'unknown' ? 4 : 3, cleanupStatus: state === 'unknown' ? 'unknown' : 'pending', phase: state === 'unknown' ? 'cleanup_unknown' : 'handoff', phaseStartedAt: now(), lastProgressAt: now(), lastModelEventAt: now(), modelEndedAt: state === 'unknown' ? now() : null, cleanupStartedAt: state === 'unknown' ? now() : null, createdAt: now(), startedAt: now(), endedAt: null, error: null, activities: [activity(1, 'tool.started', 'tool', '正在调用 rift_task_dispatch'), activity(2, 'tool.completed', 'generating', '任务派发已提交', { taskId: task.id, requestId: 'c1-request', workflowId: 'c1-workflow' }), activity(3, 'handoff_requested', 'handoff', '交接已登记，任务在后台继续')] }, { id: 'c1-event-turn', workspaceId: workspace.id, conversationId: conversation.id, messageId: null, triggerId: 'c1-trigger', agentId: 'c1-lead', status: 'queued', configuration, version: 0, cleanupStatus: 'pending', phase: 'queued', createdAt: now(), startedAt: null, endedAt: null, error: null, activities: [] }];
+const messages = [{ id: 'c1-user', workspaceId: workspace.id, conversationId: conversation.id, recipientAgentId: 'c1-lead', role: 'user', content: '请实现登录校验，并补充边界测试。', status: 'completed', version: 0, createdAt: now() }];
+const detail = () => ({ workspace, roles, bindings: [], repositories: [], tasks: [task], workflows: [{ id: 'c1-workflow', goal: task.title, status: 'running', planRevision: 1, version: 1 }], runs: [], worktrees: [], integrations: [], managedWorktrees: [], workflowRepositories: [], presence: roles.map(role => ({ roleId: role.id, state: 'running', runIds: [], turnIds: [], taskIds: [task.id], reason: '任务正在执行', observedAt: now() })), capabilities, observedAt: now(), conversations: [conversation], snapshotCursor: state === 'unknown' ? 4 : 3, leadConfiguration: { ...connection, source: 'workspace' }, hostCapacity: { limits: { developers: 2, reviewers: 1, total: 3, lead: 1 }, occupied: { developers: 1, reviewers: 0, total: 1, lead: 1 } } });
+const browser = await chromium.launch({ channel: 'msedge', headless: true });
+const context = await browser.newContext({ viewport: { width: 1280, height: 960 }, deviceScaleFactor: 1 });
+const page = await context.newPage();
+const errors = [];
+page.on('pageerror', error => errors.push(error.message));
+await page.route('**/ui-api/v1/**', async route => {
+  const pathname = new URL(route.request().url()).pathname.replace('/ui-api/v1', '');
+  let body;
+  if (pathname === '/session') body = { csrfToken: 'fixture', expiresAt: '2099-01-01T00:00:00Z' };
+  else if (pathname === '/workspaces') body = { workspaces: [workspace], capabilities, observedAt: now() };
+  else if (pathname.endsWith('/messages')) body = { conversation, messages, turns: turns(), chunks: [], receipts: [{ id: 'c1-receipt', workspaceId: workspace.id, conversationId: conversation.id, workflowId: 'c1-workflow', eventSeq: 1, payload: { eventSeq: 1, type: 'dispatch.queued', workflowId: 'c1-workflow', taskId: task.id, requestId: 'c1-request' }, createdAt: now() }], nextBefore: null, snapshotCursor: state === 'unknown' ? 4 : 3 };
+  else if (pathname.endsWith('/conversations')) body = { conversations: [conversation] };
+  else if (pathname.includes('/turns/')) body = turns().find(turn => pathname.endsWith(turn.id));
+  else body = detail();
+  await route.fulfill({ json: body });
+});
+const report = { date: now(), mode: 'real Edge browser; deterministic API fixtures; no Host/model or latency proof', checks: [], screenshots: [], errors };
+try {
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 960 });
+    state = 'handoff';
+    await page.goto(`${origin}/#/workspace/${workspace.id}/chat`);
+    await page.locator('#live-draft').waitFor();
+    await page.getByText(/任务派发已提交/).waitFor();
+    await page.getByText('系统回执', { exact: true }).waitFor();
+    await page.getByText('系统唤醒协调者', { exact: true }).waitFor();
+    assert.equal(await page.getByText(/阶段开始|最后有效进展/).count(), 0);
+    assert.equal(await page.getByText('failed', { exact: true }).count(), 0);
+    assert.equal(await page.locator('.message.user').count(), 1, 'event turns must not produce fake user bubbles');
+    await page.locator('#live-draft').fill('请继续保留旧接口兼容。');
+    assert.equal(await page.getByRole('button', { name: '发送消息', exact: true }).isEnabled(), true);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, 'no horizontal page overflow');
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({ path: path.join(output, `handoff-${width}.png`), fullPage: true });
+    report.screenshots.push(`handoff-${width}.png`);
+    report.checks.push({ width, committedReceiptVisible: true, noFakeUserBubble: true, composerEnabledDuringExecution: true, noHorizontalOverflow: true, noInlineDiagnostics: true });
+  }
+  state = 'unknown';
+  await page.reload();
+  await page.locator('#live-draft').waitFor();
+  await page.getByText(/清理待确认|清理未确认|清理未知|执行资源仍被占用/).first().waitFor();
+  await page.screenshot({ path: path.join(output, 'cleanup-unknown-390.png'), fullPage: true });
+  report.screenshots.push('cleanup-unknown-390.png');
+  report.checks.push({ unknownCleanupVisible: true });
+  assert.deepEqual(errors, []);
+  report.status = 'pass';
+} catch (error) { report.status = 'fail'; report.error = error.message; process.exitCode = 1; }
+finally { await browser.close(); await writeFile(path.join(output, 'report.json'), JSON.stringify(report, null, 2)); console.log(JSON.stringify(report, null, 2)); }

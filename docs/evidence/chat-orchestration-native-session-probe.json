@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-26T07:35:15.501Z",
+  "payload": "0.164.0",
+  "mode": "real app-server; local controlled Responses endpoint; no external model calls",
+  "chat": {
+    "sameThread": true,
+    "distinctTurns": true,
+    "firstCalls": 1,
+    "secondCalls": 1,
+    "historyRestored": true,
+    "freshClosureObserved": true
+  },
+  "tasks": {
+    "repairSameThread": true,
+    "reviewIndependent": true,
+    "repairHistoryRestored": true,
+    "reviewDoesNotInheritDeveloper": true,
+    "repairNewCwd": true,
+    "executions": [
+      {
+        "executionId": "run-1",
+        "nativeTurnId": "01a17722-9ca9-7832-9ada-0a8da72980f8",
+        "status": "completed"
+      },
+      {
+        "executionId": "run-2",
+        "nativeTurnId": "01a17722-9e80-7841-bd37-7b5995017258",
+        "status": "completed"
+      },
+      {
+        "executionId": "run-3",
+        "nativeTurnId": "01a17722-a025-70b1-b996-d4e2efa848d7",
+        "status": "completed"
+      }
+    ]
+  },
+  "processes": 5,
+  "httpCalls": 7,
+  "status": "pass"
+}

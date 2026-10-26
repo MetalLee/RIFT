@@ -1,3 +1,4 @@
+import { bindingConnection } from '../agent/execution-connection.js';
 import type { ProviderBinding, Role, Workflow } from '../contracts/index.js';
 import type { RiftStore } from '../storage/database.js';
 import type { UiBinding, UiCapabilities, UiIntegration, UiPresence, UiRun, UiTask, UiWorkspaceDetail, UiWorkspaceList, UiWorkspaceSummary } from './ui-contracts.js';
@@ -71,6 +72,7 @@ export function workspaceDetail(store: RiftStore, id: string, providers: Readonl
     const bindings = store.all<ProviderBinding>('SELECT DISTINCT b.* FROM provider_bindings b JOIN roles r ON r.provider_binding_id=b.id WHERE r.workspace_id=? ORDER BY b.id', id).map((binding): UiBinding => ({
       id: binding.id, providerName: binding.providerName, packageVersion: binding.packageVersion,
       configRevision: binding.configRevision, capabilities: binding.capabilities, runtime: binding.runtime ?? null,
+      executionConnection: bindingConnection(binding),
       model: binding.spawn?.model ?? binding.model ?? null, registered: providers.has(binding.providerName), authentication: 'not-verified',
     }));
     const workflows = store.all<Workflow>('SELECT * FROM workflows WHERE workspace_id=? ORDER BY rowid DESC', id);

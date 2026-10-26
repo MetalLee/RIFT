@@ -56,7 +56,12 @@ export async function startLocalApi(handler: ApiHandler, options: { home: string
       if (isBrowser) {
         const write = req.method !== 'GET';
         browser.checkSource(req, origin, write, isTailnet);
-        if (req.method === 'POST' && pathname === '/ui-api/v1/session') value = browser.exchange(await readBody(req), expectedHost, res);
+        if (req.method === 'POST' && (pathname === '/ui-api/v1/session/connect' || pathname === '/ui-api/v1/session/local')) {
+          const input = await readBody(req);
+          if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length) throw new RiftError('INVALID_REQUEST', 'Use an empty JSON object.');
+          value = browser.connect(req, expectedHost, res);
+        }
+        else if (req.method === 'POST' && pathname === '/ui-api/v1/session') value = browser.exchange(await readBody(req), expectedHost, res);
         else {
           const session = browser.authenticate(req, expectedHost, write);
           if (write && !key) throw new RiftError('IDEMPOTENCY_KEY_REQUIRED', 'Write requests require Idempotency-Key.');
@@ -78,7 +83,7 @@ export async function startLocalApi(handler: ApiHandler, options: { home: string
               }
               // Global gaps are legal; a sparse workspace still advances with
               // the server cursor once this page has fully drained.
-              if (page.events.length < 100) cursor = page.cursor;
+              cursor = page.nextAfter;
               if (Date.now() - heartbeatAt >= 15000) { res.write(`id: ${cursor}\nevent: heartbeat\ndata: ${JSON.stringify({ cursor })}\n\n`); heartbeatAt = Date.now(); }
             };
             const timer = setInterval(() => {

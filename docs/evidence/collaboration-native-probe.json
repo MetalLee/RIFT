@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-26T10:47:12.004Z",
+  "payload": "0.164.0",
+  "mode": "real pinned app-server; local controlled Responses; no external inference",
+  "restoredDeclaration": "### `rift_send_message`\\nSend a scoped collaboration message to one workspace member. The Host supplies your identity and task; sending does not start another execution for you. Use progress for updates, discussion for questions, blocker for a decision request. Task assignment and acceptance require their separate gates.\\n\\nexec tool declaration:\\n```ts\\ndeclare const tools: { rift_send_message(args: { content: string; idempotencyKey: string; kind?: \\\"discussion\\\" | \\\"progress\\\" | \\\"blocker\\\"; recipientAgentId: string; replyToMessageId?: string; taskId?: string; }): Promise<unknown>; };\\n```\\n\\n",
+  "permissionContract": "A changed task worktree starts a fresh native thread. Host task envelopes supply durable prior results and source evidence; stale native paths and authority are not restored.",
+  "checks": {
+    "changedWorktreeChangesThread": true,
+    "reviewIndependent": true,
+    "oldNativeHistoryExcluded": true,
+    "reviewIsolated": true,
+    "repairCwdUpdated": true,
+    "freshToolDeclaration": true,
+    "freshRunClosures": true,
+    "authorship": true,
+    "staleRejected": true,
+    "noSecondSenderLease": true,
+    "noDiscussionTurns": true,
+    "hostPriorResultInjected": true,
+    "hostTaskInboxInjected": true,
+    "hostTaskInboxAccepted": true
+  },
+  "messages": [
+    {
+      "runId": "run-1",
+      "senderAgentId": "workspace:developer",
+      "content": "CONTROLLED_RUN_1_PROGRESS",
+      "senderType": "agent"
+    },
+    {
+      "runId": "run-2",
+      "senderAgentId": "workspace:developer",
+      "content": "CONTROLLED_RUN_2_PROGRESS",
+      "senderType": "agent"
+    },
+    {
+      "runId": "run-3",
+      "senderAgentId": "workspace:reviewer",
+      "content": "CONTROLLED_RUN_3_PROGRESS",
+      "senderType": "agent"
+    }
+  ],
+  "httpCalls": 6,
+  "status": "pass"
+}

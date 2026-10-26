@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-25T17:00:19.244Z",
+  "date": "2026-10-26T10:47:17.175Z",
   "payload": "0.164.0",
   "mode": "real app-server; local controlled Responses endpoint; no external model calls",
   "chat": {
@@ -11,29 +11,31 @@
     "freshClosureObserved": true
   },
   "tasks": {
-    "repairSameThread": true,
+    "repairScopeChangedThread": true,
     "reviewIndependent": true,
-    "repairHistoryRestored": true,
+    "repairOldNativeHistoryExcluded": true,
+    "hostPriorResultInjected": true,
     "reviewDoesNotInheritDeveloper": true,
     "repairNewCwd": true,
     "executions": [
       {
         "executionId": "run-1",
-        "nativeTurnId": "01a17401-920a-7d21-8540-7b3c749cc201",
+        "nativeTurnId": "01a177d2-6ab8-7473-99df-2ecde589fe5d",
         "status": "completed"
       },
       {
         "executionId": "run-2",
-        "nativeTurnId": "01a17401-93b5-79e3-846b-4399ae432a54",
+        "nativeTurnId": "01a177d2-6d24-7332-8d73-ec8ba2e89e4b",
         "status": "completed"
       },
       {
         "executionId": "run-3",
-        "nativeTurnId": "01a17401-9513-7782-b8c9-d86877db4224",
+        "nativeTurnId": "01a177d2-6f2f-7ab0-bfa9-557e1228136d",
         "status": "completed"
       }
     ]
   },
+  "permissionContract": "Changed task cwd/worktree now starts a fresh native thread; Host previous results, source evidence and collaboration input carry required context. Same cwd and permissions still resume the native conversation.",
   "processes": 5,
   "httpCalls": 7,
   "status": "pass"

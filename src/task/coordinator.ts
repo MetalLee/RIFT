@@ -1,3 +1,4 @@
+import type { RepositoryAccess } from '../agent/repository-access.js';
 import { invariant, RiftError, type ActivationBridge, type ActivationHandle, type Candidate, type DevelopmentResult, type GitService, type Operation, type PlanTask, type ReviewResult, type Role, type Run, type Task, type TaskEvent, type Workflow, type Worktree } from '../contracts/index.js';
 import { id, now, RiftStore } from '../storage/database.js';
 import { dependencyStatus, normalizeExpectedPaths, pathsOverlap, validateDag, schedulerLimits, schedulingOrder, validatePriority, type SchedulerLimits } from './scheduler.js';
@@ -12,7 +13,7 @@ import { provesPreviousBootExited } from '../agent/boot-identity.js';
 
 interface Active { controller:AbortController; handle?:ActivationHandle; cleanup?:Promise<boolean>; cancelled:boolean; cancelReason?:string }
 interface IntegrationRecord { id:string; taskId:string; status:string; candidate:Candidate|null; reviewRunId:string|null; error:string|null }
-export interface CoordinatorOptions { store:RiftStore; bridge:ActivationBridge; git:GitService; runTimeoutMs?:number;cleanupTimeoutMs?:number; limits?:Partial<SchedulerLimits>; skillSnapshot?:(workspaceId:string,agentId:string,runtime:string,runId:string)=>{instructions:string;versions:unknown[]}; textAnalysisBridge?:ActivationBridge; textAnalysisRoot?:string }
+export interface CoordinatorOptions { repositoryAccess?(workspaceId:string):Promise<RepositoryAccess|undefined>; store:RiftStore; bridge:ActivationBridge; git:GitService; runTimeoutMs?:number;cleanupTimeoutMs?:number; limits?:Partial<SchedulerLimits>; skillSnapshot?:(workspaceId:string,agentId:string,runtime:string,runId:string)=>{instructions:string;versions:unknown[]}; textAnalysisBridge?:ActivationBridge; textAnalysisRoot?:string;runTools?(run:Run):import('../agent/runtime-types.js').RuntimeTool[];captureRunInbox?(run:Run):unknown[];acceptRunInbox?(runId:string):void }
 export interface CreateWorkflowInput { id?:string; workspaceId:string; goal:string; integrationRef:string; baseCommit:string; leadSessionId?:string; repositorySnapshots?:{repositoryId:string;baseCommit:string;integrationRef:string}[]; repositoryFree?:boolean }
 export interface DispatchInput {taskId:string;idempotencyKey:string;expectedVersion:number;roleName?:string}
 export interface ReplanInput {workflowId:string;expectedRevision:number;updates:{taskId:string;expectedVersion:number;dependsOn?:string[];priority?:number}[];tasks?:PlanTask[]}
@@ -37,10 +38,12 @@ export class TaskCoordinator {
   private bootIdentity:string|null=null;
   private readonly cleanupReceipts=new Set<string>();
   private readonly integrationCleanupReceipts=new Set<string>();
+  private readonly sourceRecoveries=new Set<string>();
   private readonly skillSnapshot: CoordinatorOptions['skillSnapshot'];
   private readonly textAnalysisBridge: ActivationBridge | undefined;
   private readonly textAnalysisRoot: string | undefined;
-  constructor(options:CoordinatorOptions) {this.store=options.store;this.bridge=options.bridge;this.git=options.git;this.runTimeoutMs=options.runTimeoutMs??30*60_000;this.cleanupTimeoutMs=options.cleanupTimeoutMs??10_000;this.skillSnapshot=options.skillSnapshot;this.textAnalysisBridge=options.textAnalysisBridge;this.textAnalysisRoot=options.textAnalysisRoot;
+  private readonly collaboration:Pick<CoordinatorOptions,'runTools'|'captureRunInbox'|'acceptRunInbox'|'repositoryAccess'>;
+  constructor(options:CoordinatorOptions) {this.store=options.store;this.bridge=options.bridge;this.git=options.git;this.runTimeoutMs=options.runTimeoutMs??30*60_000;this.cleanupTimeoutMs=options.cleanupTimeoutMs??10_000;this.skillSnapshot=options.skillSnapshot;this.textAnalysisBridge=options.textAnalysisBridge;this.textAnalysisRoot=options.textAnalysisRoot;this.collaboration=options;
     if(options.limits){const limits=schedulerLimits(options.limits);this.store.transaction(()=>{
       const occupied=this.globalSlots();
       invariant(occupied.total<=limits.total&&occupied.developers<=limits.developers,'LIMITS_IN_USE','New limits cannot be lower than retained execution slots.');
@@ -137,9 +140,9 @@ export class TaskCoordinator {
       return this.store.all<Task>('SELECT * FROM tasks WHERE workflow_id=? ORDER BY rowid',workflow.id);
     });
   }
-  dispatch(input:DispatchInput):Operation {
+  dispatch(input:DispatchInput,deferWake=false):Operation {
     const operation=this.enqueue('dispatch',input.taskId,input.idempotencyKey,input.expectedVersion,undefined,input.roleName);
-    this.pump();return this.store.operation(operation.id);
+    if(!deferWake)this.pump();return this.store.operation(operation.id);
   }
   /** Change the future graph atomically; already running or accepted work is immutable. */
   replan(input:ReplanInput):Task[] {
@@ -155,6 +158,7 @@ export class TaskCoordinator {
       const existing=this.store.all<Task>('SELECT * FROM tasks WHERE workflow_id=?',workflow.id);
       for(const update of input.updates){
         const task=this.store.task(update.taskId);
+        invariant(!this.sourceRecoveries.has(task.id),'SOURCE_RECOVERY_ACTIVE','Wait for source recovery before replanning this task.');
         invariant(task.workflowId===workflow.id,'CROSS_WORKFLOW','Replan task belongs to another workflow.');
         invariant(task.version===update.expectedVersion,'VERSION_CONFLICT','Task version changed.');
         invariant(['pending','ready'].includes(task.status)||(task.status==='blocked'&&task.blockingReason==='DEPENDENCY_BLOCKED'),'TASK_ALREADY_STARTED','Only tasks awaiting their first execution may be replanned.');
@@ -202,9 +206,70 @@ export class TaskCoordinator {
     const operation=this.enqueue('integration',input.taskId,input.idempotencyKey,input.expectedVersion,input.sourceHead);
     this.pump();return this.store.operation(operation.id);
   }
+  /** A previous collected source is Host evidence, never a model-provided base.
+   * Skip later no-op recollections whose attempt base is already that source. */
+  private priorCollectedSource(task:Task):{sourceHead:string;baseCommit:string}|undefined {
+    if(!task.sourceHead)return;
+    const records=this.store.all<{payload:{sourceHead?:string};baseCommit:string}>("SELECT e.payload,w.base_commit FROM task_events e JOIN runs r ON r.id=e.run_id AND r.task_id=e.task_id JOIN worktrees w ON w.task_id=r.task_id AND w.attempt=r.task_attempt AND w.kind='task' WHERE e.task_id=? AND e.type='source.collected' ORDER BY e.event_seq DESC",task.id);
+    const prior=records.find(record=>record.payload.sourceHead===task.sourceHead&&record.baseCommit!==task.sourceHead&&/^[a-f0-9]{40,64}$/.test(record.baseCommit));
+    return prior?{sourceHead:task.sourceHead,baseCommit:prior.baseCommit}:undefined;
+  }
+  /** Recollect a completed, quiescent developer attempt without running a model
+   * or spending another repair. Actual Git checks and normal integration remain mandatory. */
+  async recoverSource(input:{taskId:string;expectedVersion:number}):Promise<{task:Task;operation:Operation;runId:string;sourceHead:string}> {
+    invariant(!this.stopping,'HOST_STOPPING','Host is shutting down and cannot recover source.');
+    invariant(!this.sourceRecoveries.has(input.taskId),'SOURCE_RECOVERY_ACTIVE','This task already has a source recovery in progress.');
+    this.sourceRecoveries.add(input.taskId);
+    const work=(async()=>{
+      const check=()=>{
+        invariant(!this.stopping,'HOST_STOPPING','Host stopped accepting source recovery.');
+        const task=this.store.task(input.taskId),workflow=this.store.workflow(task.workflowId);
+        invariant(task.version===input.expectedVersion,'VERSION_CONFLICT','Task changed; reload before recovering source.');
+        invariant(task.kind==='change'&&task.status==='blocked'&&!task.acceptedCommit&&['running','paused'].includes(workflow.status),'INVALID_STATE','Only a blocked change task in an active workflow may recover source.');
+        const run=this.store.get<Run & {version:number}>('SELECT * FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1',task.id);
+        invariant(run&&run.taskAttempt===task.attempt&&run.purpose!=='review'&&run.status==='succeeded','INVALID_STATE','The current attempt must end with a successful developer Run, not a review or failed execution.');
+        const result=parseResult(JSON.stringify(run.result),{taskId:task.id,runId:run.id,purpose:run.purpose}) as DevelopmentResult;
+        invariant(result.outcome==='completed','INVALID_STATE','A blocked model result cannot be recovered as completed source.');
+        invariant(run.cleanupStatus==='confirmed'&&run.slotReleasedAt&&this.store.get("SELECT id FROM execution_leases WHERE owner_type='run' AND owner_id=? AND agent_id=? AND workspace_id=? AND cleanup_status='confirmed' AND released_at IS NOT NULL",run.id,run.roleId,workflow.workspaceId),'CLEANUP_UNKNOWN','The completed Run and its execution lease must both have confirmed cleanup.');
+        invariant(!this.active.has(run.id)&&!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',task.id),'CLEANUP_UNKNOWN','Task still owns execution or unconfirmed cleanup.');
+        invariant(!this.store.get("SELECT id FROM operations WHERE entity_id=? AND phase IN ('queued','started')",task.id),'FINALIZATION_PENDING','Task still owns unfinished dispatch or integration requests.');
+        invariant(!this.store.get("SELECT id FROM integrations WHERE task_id=? AND status IN ('preparing','reviewing','publishing','cleanup_unknown')",task.id),'INTEGRATION_ACTIVE','Task still owns an integration operation.');
+        const worktree=this.store.get<Worktree>("SELECT * FROM worktrees WHERE task_id=? AND attempt=? AND kind='task'",task.id,task.attempt);
+        invariant(worktree&&worktree.writerRunId===null&&worktree.status==='active','WORKTREE_OWNERSHIP','Recovery requires this attempt\'s active worktree with no writer.');
+        return{task,run,worktree};
+      };
+      const snapshot=this.store.transaction(check);
+      this.store.event(snapshot.task.workflowId,'source.recovery_started',{taskAttempt:snapshot.task.attempt,worktreeId:snapshot.worktree.id,expectedVersion:input.expectedVersion},{taskId:snapshot.task.id,runId:snapshot.run.id});
+      try{
+        // The ledger writer stays NULL: this is Git collection after proven
+        // cleanup, not reacquisition of a model execution lease.
+        const source=await this.git.collectSource({...this.context(snapshot.task),run:snapshot.run,worktree:{...snapshot.worktree,writerRunId:snapshot.run.id},priorSource:this.priorCollectedSource(snapshot.task)});
+        const queued=this.store.transaction(()=>{
+          const current=check();
+          invariant(current.run.id===snapshot.run.id&&current.run.version===snapshot.run.version&&JSON.stringify(current.worktree)===JSON.stringify(snapshot.worktree),'VERSION_CONFLICT','Run or worktree changed during source verification.');
+          invariant(/^[a-f0-9]{40,64}$/.test(source.sourceHead)&&source.changedPaths.length>0,'INVALID_SOURCE','Git did not return a nonempty collected source.');
+          this.store.exec('UPDATE tasks SET status=?,source_head=?,blocking_reason=NULL,version=version+1 WHERE id=? AND version=?','validating',source.sourceHead,current.task.id,input.expectedVersion);
+          this.store.exec('UPDATE worktrees SET head_commit=? WHERE id=?',source.sourceHead,current.worktree.id);
+          this.store.event(current.task.workflowId,'source.collected',{...source,diff:redact(source.diff),taskAttempt:current.task.attempt,eligibleForIntegration:true,recovered:true,previousBlockingReason:snapshot.task.blockingReason},{taskId:current.task.id,runId:current.run.id});
+          const task=this.store.task(current.task.id),idempotencyKey=`source-recovery-integration:${current.run.id}:${input.expectedVersion}`;
+          // Commit the real source fact and its normal gated queue intent together.
+          const operation=this.enqueue('integration',task.id,idempotencyKey,task.version,source.sourceHead);
+          return{task,operation,runId:current.run.id,sourceHead:source.sourceHead};
+        });
+        const operation=this.requestIntegration({taskId:queued.task.id,sourceHead:queued.sourceHead,idempotencyKey:queued.operation.dedupeKey,expectedVersion:queued.task.version});
+        return{...queued,operation,task:this.store.task(queued.task.id)};
+      }catch(error){
+        if(!this.closed)this.store.event(snapshot.task.workflowId,'source.recovery_failed',{error:errorMessage(error)},{taskId:snapshot.task.id,runId:snapshot.run.id});
+        throw error;
+      }
+    })();
+    this.track(work.then(()=>{},()=>{}));
+    try{return await work;}finally{this.sourceRecoveries.delete(input.taskId);}
+  }
   private enqueue(kind:'dispatch'|'integration',taskId:string,key:string,expectedVersion:number,sourceHead?:string,roleName?:string):Operation {
     invariant(!this.stopping,'HOST_STOPPING','Host is shutting down and cannot accept queue requests.');
     invariant(key.trim()&&key.length<=256,'INVALID_DEDUPE_KEY','A bounded nonempty idempotency key is required.');
+    invariant(kind!=='dispatch'||!this.sourceRecoveries.has(taskId),'SOURCE_RECOVERY_ACTIVE','Wait for source recovery before dispatching this task.');
     return this.store.transaction(()=>{
       const prior=this.store.get<Operation>('SELECT * FROM operations WHERE dedupe_key=?',key);
       if(prior){invariant(prior.kind===kind&&prior.entityId===taskId&&(kind!=='integration'||prior.payload.sourceHead===sourceHead),'IDEMPOTENCY_CONFLICT','Idempotency key belongs to a different request.');return prior;}
@@ -241,7 +306,7 @@ export class TaskCoordinator {
       if(slots.total>=this.limits.total||slots.developers>=this.limits.developers||occupied.some(run=>run.taskId===task.id))return;
       if(occupied.some(run=>run.purpose!=='review'&&this.sameRepository(task,this.store.task(run.taskId))&&pathsOverlap(task.expectedPaths,this.store.task(run.taskId).expectedPaths)))return;
       const textOnly=this.isTextAnalysis(task);
-      const roles=this.store.all<Role>(`SELECT r.* FROM roles r JOIN provider_bindings b ON b.id=r.provider_binding_id WHERE r.workspace_id=? AND r.purpose='developer' AND r.enabled=1 AND ${textOnly?"(r.chat_connection IS NOT NULL OR b.spawn IS NOT NULL)":"b.provider_name<>'discussion-only'"} ORDER BY r.name`,workflow.workspaceId);
+      const roles=this.store.all<Role>(`SELECT r.* FROM roles r JOIN provider_bindings b ON b.id=r.provider_binding_id WHERE r.workspace_id=? AND r.purpose='developer' AND r.enabled=1 AND ${textOnly?"(r.chat_connection IS NOT NULL OR b.spawn IS NOT NULL OR (b.runtime='codex' AND b.model IS NOT NULL))":"b.provider_name<>'discussion-only'"} ORDER BY r.name`,workflow.workspaceId);
       const previousNativeRole=task.attempt>1?this.store.get<{roleId:string}>("SELECT r.role_id FROM runs r JOIN native_executions e ON e.execution_id=r.id OR instr(e.execution_id,r.id||':item:')=1 JOIN native_sessions s ON s.id=e.session_id WHERE r.task_id=? AND r.purpose<>'review' AND s.thread_id IS NOT NULL ORDER BY r.rowid DESC LIMIT 1",task.id)?.roleId:undefined;
       const requestedRole=operation.payload.roleId??task.roleId??previousNativeRole;
       if(!roles.length||(requestedRole&&!roles.some(role=>role.id===requestedRole))){const reason=textOnly?'CONNECTION_REQUIRED':'ROLE_UNAVAILABLE';this.blockTask(task.id,reason);this.operationPhase(operation,'blocked',reason);return;}
@@ -257,7 +322,7 @@ export class TaskCoordinator {
   private createRun(task:Task,role:Role,purpose:Run['purpose']):Run {
     const runId=id('run'),binding=role.providerBindingId?this.store.binding(role.providerBindingId):null;
     invariant(binding,'BINDING_NOT_FOUND','Child role needs a registered provider binding.');
-    const skills=this.skillSnapshot?.(this.store.workflow(task.workflowId).workspaceId,role.id,(this.isTextAnalysis(task)?(role as Role & {chatConnection?:{runtime:string}}).chatConnection?.runtime:undefined)??binding.runtime??binding.providerName,runId);
+    const skills=this.skillSnapshot?.(this.store.workflow(task.workflowId).workspaceId,role.id,binding.runtime??(this.isTextAnalysis(task)?(role as Role & {chatConnection?:{runtime:string}}).chatConnection?.runtime:undefined)??binding.providerName,runId);
     this.store.exec('INSERT INTO runs(id,task_id,role_id,purpose,task_attempt,status,provider_snapshot,deadline,created_at,runtime_boot_id) VALUES(?,?,?,?,?,?,?,?,?,?)',runId,task.id,role.id,purpose,task.attempt,'preparing',JSON.stringify({role,binding,...skills?{skills:skills.versions,skillInstructions:skills.instructions}:{}}),new Date(Date.now()+this.runTimeoutMs).toISOString(),now(),this.bootIdentity);
     return this.store.run(runId);
   }
@@ -297,12 +362,17 @@ export class TaskCoordinator {
   }
   private isTextAnalysis(task:Task):boolean {return task.kind==='analysis'&&!this.store.get('SELECT repository_id FROM workflow_repositories WHERE workflow_id=? LIMIT 1',task.workflowId);}
   private saveWorktree(worktree:Worktree,run:Run):void {this.store.exec('INSERT INTO worktrees(id,task_id,attempt,kind,path,branch,base_commit,head_commit,writer_run_id,status) VALUES(?,?,?,?,?,?,?,?,?,?)',worktree.id,run.taskId,run.taskAttempt,worktree.kind,worktree.path,worktree.branch??null,worktree.baseCommit,worktree.headCommit??null,run.id,'active');}
-  private async prompt(run:Run,task:Task,cwd:string,candidate?:Candidate,worktree?:Worktree):Promise<string> {
+  private async prompt(run:Run,task:Task,cwd:string,candidate?:Candidate,worktree?:Worktree,repositoryAccess?:RepositoryAccess):Promise<string> {
     const previous=this.store.all<Run>('SELECT * FROM runs WHERE task_id=? AND id<>? ORDER BY created_at',task.id,run.id);
     const sourceEvidence=this.store.all<{payload:unknown}>('SELECT payload FROM task_events WHERE task_id=? AND type=? ORDER BY event_seq DESC LIMIT 1',task.id,'source.collected').map(event=>event.payload);
     const integrationEvidence=this.store.all<IntegrationRecord>('SELECT * FROM integrations WHERE task_id=? ORDER BY rowid',task.id);
     const currentTargetHead=candidate?.expectedTargetHead??(!this.isTextAnalysis(task)&&this.git.currentHead?await this.git.currentHead(this.context(task)):null);
-    return JSON.stringify({role:run.providerSnapshot.role.prompt,skillInstructions:run.providerSnapshot.skillInstructions??'',skillVersions:run.providerSnapshot.skills??[],taskId:task.id,runId:run.id,goal:this.store.workflow(task.workflowId).goal,title:task.title,instructions:task.instructions,cwd,expectedPaths:task.expectedPaths,acceptanceCriteria:task.acceptanceCriteria,attempt:task.attempt,sourceHead:task.sourceHead,baseCommit:worktree?.baseCommit??candidate?.candidateHead??this.store.workflow(task.workflowId).baseCommit,currentTargetHead,candidate,sourceEvidence,integrationEvidence,previousResults:previous.map(prior=>({runId:prior.id,status:prior.status,result:prior.result,stopReason:prior.stopReason})),resultSchema:run.purpose==='review'?{schemaVersion:1,taskId:task.id,runId:run.id,verdict:'approve|changes_requested|blocked',reviewedCommit:candidate?.candidateHead,findings:[{severity:'critical|high|medium|low',file:'string',line:1,reason:'string',suggestion:'string'}]}:{schemaVersion:1,taskId:task.id,runId:run.id,outcome:'completed|blocked',summary:'string',changedPaths:[],checksClaimed:[],blockingReasons:[]}});
+    if(candidate?.checks)invariant(JSON.stringify(candidate.checks.map(check=>check.id))===JSON.stringify(candidate.checkIds)&&candidate.checks.every(check=>check.candidateHead===candidate.candidateHead&&check.exitCode===0),'CANDIDATE_EVIDENCE_MISMATCH','Review check evidence must match the exact candidate and successful Host checks.');
+    const reviewProtocol=run.purpose==='review'?{stage:'pre-publication-independent-review',instructions:'Review the exact candidate commit against the task requirements. candidate.checks contains actual Host command results, not developer checksClaimed; absent check evidence is unavailable, never assumed passed. Your verdict is a prerequisite for publication. Acceptance, acceptedCommit, final Workflow completion, and cleanup of this very reviewer happen only after your result and Host cleanup checks; they cannot be preconditions for returning your review verdict. Approve only when the implementation and available check evidence satisfy the reviewable requirements. The Host separately enforces runtime cleanup, exact-commit publication and final acceptance.',evidenceSource:'Host Git operation',integrationId:candidate?.integrationId}:undefined;
+    const developmentProtocol=task.kind==='change'&&run.purpose!=='review'?{stage:'development-before-host-source-collection',instructions:'Implement and inspect the assigned files in the CURRENT cwd. Local git add/commit is permitted in the assigned current worktree. You may use the Host-authorized workspace repository set, but preserve other active work and use the task checkout for assigned changes. Push or create/update a PR only when explicitly requested by the user. After your result and confirmed cleanup the Host verifies the actual source commits and diff, collects any remaining edits, runs candidate checks and starts independent review. A local commit or PR does not replace those acceptance gates. outcome completed means implementation is ready for Host validation, not that the Task is accepted. Report local test failures or unavailable commands honestly in checksClaimed/summary; sandbox denial of Git writes or test subprocesses alone must not block a ready implementation waiting for Host validation. Actual incomplete implementation or failed behavior remains blocked. Never claim tests passed when they did not. Finish your result promptly; do not wait for Host submission or review inside this Run.'}:undefined;
+    const previousAttemptWorktrees=run.purpose!=='review'?this.store.all('SELECT w.attempt,w.path,w.base_commit,w.head_commit FROM worktrees w WHERE w.task_id=? AND w.kind=\'task\' AND w.attempt<? AND w.writer_run_id IS NULL AND NOT EXISTS(SELECT 1 FROM runs r WHERE r.task_id=w.task_id AND r.task_attempt=w.attempt AND r.slot_released_at IS NULL) ORDER BY w.attempt DESC LIMIT 2',task.id,run.taskAttempt):[];
+    const retryContext=this.store.get<{payload:unknown}>("SELECT payload FROM task_events WHERE task_id=? AND type='task.retry' ORDER BY event_seq DESC LIMIT 1",task.id)?.payload;
+    return JSON.stringify({repositoryAccess,collaborationMessages:this.collaboration.captureRunInbox?.(run)??[],developmentProtocol,reviewProtocol,retryContext,previousAttemptWorktrees,previousAttemptPolicy:'Previous attempt checkouts are preserved evidence, not current cwd. If instructed to recover unfinished edits, inspect them read-only and explicitly reapply appropriate changes in the current checkout, then validate. Never edit or commit the old checkout. They may contain uncommitted/untracked files absent from the new attempt base.',role:run.providerSnapshot.role.prompt,skillInstructions:run.providerSnapshot.skillInstructions??'',skillVersions:run.providerSnapshot.skills??[],taskId:task.id,runId:run.id,goal:this.store.workflow(task.workflowId).goal,title:task.title,instructions:task.instructions,cwd,expectedPaths:task.expectedPaths,acceptanceCriteria:task.acceptanceCriteria,attempt:task.attempt,sourceHead:task.sourceHead,baseCommit:worktree?.baseCommit??candidate?.candidateHead??this.store.workflow(task.workflowId).baseCommit,currentTargetHead,candidate,sourceEvidence,integrationEvidence,previousResults:previous.map(prior=>({runId:prior.id,status:prior.status,result:prior.result,stopReason:prior.stopReason})),resultSchema:run.purpose==='review'?{schemaVersion:1,taskId:task.id,runId:run.id,verdict:'approve|changes_requested|blocked',reviewedCommit:candidate?.candidateHead,findings:[{severity:'critical|high|medium|low',file:'string',line:1,reason:'string',suggestion:'string'}]}:{schemaVersion:1,taskId:task.id,runId:run.id,outcome:'completed|blocked',summary:'string',changedPaths:[],checksClaimed:[],blockingReasons:[]}});
   }
   private async cleanup(runId:string,state:Active):Promise<boolean> {
     if(state.cleanup)return state.cleanup;
@@ -327,17 +397,18 @@ export class TaskCoordinator {
     const aborted=new Promise<never>((_,reject)=>{abortListener=()=>reject(new RiftError('CANCELLED','Run was cancelled.'));state.controller.signal.addEventListener('abort',abortListener,{once:true});});
     void aborted.catch(()=>undefined);
     try {
-      const prompt=await this.prompt(run,task,cwd,candidate,worktree);
+      const repositoryAccess=task.kind==='change'&&run.purpose!=='review'?await this.collaboration.repositoryAccess?.(this.store.workflow(task.workflowId).workspaceId):undefined;
+      const prompt=await this.prompt(run,task,cwd,candidate,worktree,repositoryAccess);
       if(state.controller.signal.aborted)throw new RiftError('ABORTED_BEFORE_START','Run was cancelled before provider invocation.');
       this.store.transaction(()=>{const input=safeValue(JSON.parse(prompt));const artifactId=saveResultArtifact(this.store,this.store.workflow(task.workflowId).workspaceId,run.id,input,'input');this.store.event(task.workflowId,'run.input_prepared',{artifactId,promptSha256:createHash('sha256').update(JSON.stringify(input)).digest('hex'),cwd,baseCommit:worktree?.baseCommit??candidate?.candidateHead??null,sourceHead:task.sourceHead,candidateHead:candidate?.candidateHead??null},{taskId:task.id,runId:run.id});});
       startAttempted=true;
       const bridge=this.isTextAnalysis(task)?this.textAnalysisBridge:this.bridge;
       invariant(bridge,'START_NOT_PUBLISHED','A restricted text-analysis runtime is not configured.');
-      const starting=bridge.start({run,task,role:run.providerSnapshot.role,cwd,prompt,signal:state.controller.signal});
+      const starting=bridge.start({run,task,role:run.providerSnapshot.role,cwd,...repositoryAccess?{repositoryAccess}:{},prompt,signal:state.controller.signal,tools:this.collaboration.runTools?.(run),onAccepted:()=>this.collaboration.acceptRunInbox?.(run.id)});
       void starting.then(late=>{if(!state.handle&&state.controller.signal.aborted){void late.result.catch(()=>undefined);void late.dispose().then(()=>this.cleanupReceipt(run.id)).catch(()=>undefined);}},()=>undefined);
       const handle=await Promise.race([starting,aborted]);state.handle=handle;
       if(state.cleanup)state.cleanup=undefined;
-      this.store.transaction(()=>{this.store.exec('UPDATE runs SET dsh_child_id=?,status=?,started_at=? WHERE id=?',handle.childId,state.cancelled?'cancelling':'running',now(),run.id);this.store.event(task.workflowId,'activation_accepted',{childId:handle.childId},{taskId:task.id,runId:run.id});});
+      this.store.transaction(()=>{this.store.exec('UPDATE runs SET dsh_child_id=?,status=?,started_at=? WHERE id=?',handle.childId,state.cancelled?'cancelling':'running',now(),run.id);this.collaboration.acceptRunInbox?.(run.id);this.store.event(task.workflowId,'activation_accepted',{childId:handle.childId},{taskId:task.id,runId:run.id});});
       if(state.cancelled){await this.cleanup(run.id,state);this.store.transaction(()=>this.recordResult(run.id,'cancelled',state.cancelReason??'CANCELLED',null));return;}
       const result=await Promise.race([handle.result,aborted]);
       rawText=result.text;
@@ -379,7 +450,8 @@ export class TaskCoordinator {
           this.store.exec('UPDATE tasks SET status=?,version=version+1 WHERE id=?','succeeded',task.id);this.operationPhase(this.store.operation(operation.id),'completed');this.store.event(task.workflowId,'task.succeeded',{}, {taskId:task.id,runId:run.id});
         });return;
       }
-      const source=await this.git.collectSource({...this.context(this.store.task(task.id)),run:completed,worktree:worktree!});
+      const sourceTask=this.store.task(task.id);
+      const source=await this.git.collectSource({...this.context(sourceTask),run:completed,worktree:worktree!,priorSource:this.priorCollectedSource(sourceTask)});
       const eligible=this.store.transaction(()=>{
         const latest=this.store.task(task.id),workflow=this.store.workflow(task.workflowId);
         const sameAttempt=latest.attempt===run.taskAttempt;
@@ -444,6 +516,7 @@ export class TaskCoordinator {
   }
   retry(input:{taskId:string;reason:string;expectedVersion:number}):Task {
     invariant(!this.stopping,'HOST_STOPPING','Host is shutting down and cannot accept retries.');
+    invariant(!this.sourceRecoveries.has(input.taskId),'SOURCE_RECOVERY_ACTIVE','Wait for source recovery before retrying this task.');
     return this.store.transaction(()=>{
       const task=this.store.task(input.taskId);
       invariant(task.version===input.expectedVersion,'VERSION_CONFLICT','Task version changed.');

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { id, now, type RiftStore } from '../storage/database.js';
 import { invariant } from '../contracts/index.js';
 import type { RuntimeSession } from './runtime-types.js';
+import { REPOSITORY_PERMISSION_VERSION } from './repository-access.js';
 
 export interface NativeSessionRecord { id: string; threadId: string | null; runtimeHome: string; cwd: string }
 export const codexHome = (env: NodeJS.ProcessEnv = process.env): string => path.resolve(env.CODEX_HOME || path.join(homedir(), '.codex'));
@@ -11,7 +12,7 @@ export const codexHome = (env: NodeJS.ProcessEnv = process.env): string => path.
 /** RIFT records ownership; Codex owns the actual persisted history and compaction. */
 export function nativeSession(store: RiftStore, input: { workspaceId: string; scope: 'chat'|'task'; scopeId: string; agentId: string; configuration: unknown; cwd: string; runtimeHome?: string }): NativeSessionRecord {
   const runtimeHome = input.runtimeHome ?? codexHome();
-  const key = createHash('sha256').update(JSON.stringify([input.configuration, runtimeHome, 'codex-0.164.0'])).digest('hex');
+  const key = createHash('sha256').update(JSON.stringify([input.configuration, runtimeHome, path.resolve(input.cwd), REPOSITORY_PERMISSION_VERSION, 'codex-0.164.0'])).digest('hex');
   return store.transaction(() => {
     invariant(store.get('SELECT id FROM roles WHERE id=? AND workspace_id=?',input.agentId,input.workspaceId),'NOT_FOUND','Native session member does not belong to this workspace.');
     const prior = store.get<NativeSessionRecord>('SELECT * FROM native_sessions WHERE workspace_id=? AND scope=? AND scope_id=? AND agent_id=? AND configuration_key=?', input.workspaceId,input.scope,input.scopeId,input.agentId,key);

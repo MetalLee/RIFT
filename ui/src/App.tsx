@@ -1,3 +1,4 @@
+import { subscribeWorkspaceEvents } from './workspace-stream';
 import { copyText } from './browser-platform';
 import { AppChrome } from './components/AppChrome';
 import { WorkspaceDirectory } from './WorkspaceDirectory';
@@ -42,7 +43,7 @@ export function App({ initialSession }: { initialSession: Promise<UiSession> }) 
   const [refresh, setRefresh] = useState(0);
   const [newChatRequest, setNewChatRequest] = useState(0);
   const [clock, setClock] = useState(Date.now());
-  const [streamCursor, setStreamCursor] = useState<{ workspaceId: string; cursor: number } | null>(null);
+
   const requests = useRef(new LatestRequest());
   const listRequests = useRef(new LatestRequest());
   const authRequests = useRef(new LatestRequest());
@@ -72,25 +73,33 @@ export function App({ initialSession }: { initialSession: Promise<UiSession> }) 
   }, [session, route.workspaceId, refresh]);
   useEffect(() => {
     if (!session || detail?.workspace.id !== route.workspaceId || !detail?.capabilities.events.available) return;
-    const events = new EventSource(`/ui-api/v1/workspaces/${encodeURIComponent(route.workspaceId)}/events?after=${streamCursor?.workspaceId === route.workspaceId ? streamCursor.cursor : detail.snapshotCursor}`);
-    let live = true; const resync = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const update = () => { if (timer) clearTimeout(timer); timer = setTimeout(() => setRefresh(n => n + 1), 200); };
-    events.addEventListener('workspace', update); events.addEventListener('resync_required', () => { events.close(); void api.detail(route.workspaceId, resync.signal).then(value => { if (live && value.workspace.id === route.workspaceId) { setDetail(previous => previous?.workspace.id === value.workspace.id && previous.snapshotCursor > value.snapshotCursor ? previous : value); setStreamCursor({ workspaceId: value.workspace.id, cursor: value.snapshotCursor }); } }, e => { if (live) { setError(errorText(e)); fail(e); } }); });
-    events.addEventListener('session_expired', () => { events.close(); fail(new ApiError(401, '浏览器会话已过期。')); });
-    return () => { live = false; resync.abort(); events.close(); if (timer) clearTimeout(timer); };
-  }, [session, route.workspaceId, detail?.workspace.id, detail?.capabilities.events.available, streamCursor]);
+    const close = subscribeWorkspaceEvents(route.workspaceId, detail.snapshotCursor, {
+      changed: event => {
+        if(route.page==='chat') { try { const type=JSON.parse(event.data).type as string; if(type.startsWith('message.')||type==='turn.activity'||type==='turn.chunk')return; } catch { /* Unknown payload still requests a snapshot. */ } }
+        if (!timer) timer = setTimeout(() => { timer = undefined; setRefresh(n => n + 1); }, 200); },
+      snapshot: async signal => { const value = await api.detail(route.workspaceId, signal); if (!signal.aborted && value.workspace.id === route.workspaceId) setDetail(previous => previous?.workspace.id === value.workspace.id && previous.snapshotCursor > value.snapshotCursor ? previous : value); return value.snapshotCursor; },
+      error: message => { if (message) setError(message); else setError(''); },
+      expired: () => fail(new ApiError(401, '浏览器会话已过期。')),
+    });
+    return () => { close(); if (timer) clearTimeout(timer); };
+  }, [session, route.workspaceId, route.page, detail?.workspace.id, detail?.capabilities.events.available]);
   // Never expose the previous workspace while the new request is still loading.
   const current = detail?.workspace.id === route.workspaceId ? detail : null;
   const stale = !!error || !!current && (clock - Date.parse(current.observedAt) > 35000 || document.hidden);
   const actualPage = !route.workspaceId ? 'workspaces' : route.page;
   const navigate = (id: string, page: Page) => { location.hash = routeHref(id, page); };
-  const retry = () => setRefresh(n => n + 1);
+  const retry = () => {
+    if (!session) {
+      const token = authRequests.current.begin(); setSessionError('');
+      api.session(null).then(value => { if (token.current()) setSession(value); }, e => { if (token.current()) setSessionError(errorText(e)); });
+    } else setRefresh(n => n + 1);
+  };
   const newChat = () => { setNewChatRequest(n => n + 1); navigate(route.workspaceId, 'chat'); };
   useEffect(() => { const key = (event: KeyboardEvent) => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && route.workspaceId) { event.preventDefault(); setNewChatRequest(n=>n+1); location.hash=routeHref(route.workspaceId,'chat'); } }; addEventListener('keydown',key); return ()=>removeEventListener('keydown',key); },[route.workspaceId]);
-  return <AppChrome workspaceId={route.workspaceId} page={actualPage} list={list} current={current} connected={!!session && !error && !listError} onNewChat={newChat} onRefresh={retry}>
+  return <AppChrome workspaceId={route.workspaceId} page={actualPage} list={list} current={current} connected={!!session && !error && !listError} onNewChat={newChat}>
     <main id="main" tabIndex={-1} className={`main-content page-${actualPage}${actualPage === 'chat' ? ' chat-main' : ''}`}>
-      {!session ? <div className="auth-card"><div className="eyebrow">LOCAL CONNECTION</div><h1>{sessionError ? '连接你的本机工作区' : '正在建立安全会话'}</h1><p role="status">{sessionError || '正在向本机 Host 确认浏览器会话…'}</p>{sessionError && <Notice>请在运行 RIFT 的终端使用浏览器入口打开新的链接。已有内容与草稿不会因此发送。</Notice>}</div> : <>
+      {!session ? <div className="auth-card"><div className="eyebrow">LOCAL CONNECTION</div><h1>{sessionError ? '暂时无法连接 RIFT' : '正在连接 RIFT'}</h1><p role="status">{sessionError || '正在自动连接并确认浏览器会话…'}</p>{sessionError && <><Notice>请确认 RIFT 服务已启动、当前网络可以访问该地址，然后重新连接。</Notice><Button onClick={retry}>重新连接</Button></>}</div> : <>
         {(error || listError) && <div className="error-banner" role="status"><div><strong>数据尚未同步</strong><p>{error || listError}</p>{current && <small>以下为 {time(current.observedAt)} 的记录。</small>}</div><Button variant="secondary" className="secondary" onClick={retry}>重新同步</Button></div>}
         {actualPage === 'workspaces' ? <WorkspaceDirectory selectedId={route.workspaceId} list={list} csrf={session.csrfToken} onCreate={id => { retry(); navigate(id, 'chat'); }} onAuthError={fail} /> : !current ? error ? <Empty title="暂时无法读取这个工作区">请重试同步，或从左侧选择其他工作区。</Empty> : <div className="loading" role="status">正在读取工作区记录<span className="loading-dots">…</span></div> : <>
           {actualPage === 'chat' && (current.capabilities.chat.available ? <ChatScreen onNewConversationHandled={()=>setNewChatRequest(0)} newConversationRequest={newChatRequest} key={route.workspaceId} data={current} csrf={session.csrfToken} onAuthError={fail} /> : <Chat key={route.workspaceId} data={current} />)}
@@ -98,9 +107,9 @@ export function App({ initialSession }: { initialSession: Promise<UiSession> }) 
           {actualPage === 'agents' && <Agents key={route.workspaceId} data={current} stale={stale} csrf={session.csrfToken} onSaved={retry} />}
           {actualPage === 'skills' && (current.capabilities.skills.available ? <SkillLibrary key={route.workspaceId} data={current} csrf={session.csrfToken} /> : <Skills />)}
           {actualPage === 'repositories' && (current.capabilities.multipleRepositories.available ? <RepositoryManager key={route.workspaceId} data={current} csrf={session.csrfToken} onChanged={retry} /> : <Repositories data={current} />)}
-          {actualPage === 'tasks' && <Tasks key={route.workspaceId} data={current} csrf={session.csrfToken} onChanged={retry} />}
+          {actualPage === 'tasks' && <Tasks key={route.workspaceId} taskId={route.taskId} data={current} csrf={session.csrfToken} onChanged={retry} />}
           {actualPage === 'activity' && <Activity key={route.workspaceId} data={current} stale={stale} csrf={session.csrfToken} onChanged={retry} />}
-          {actualPage === 'settings' && <Settings key={route.workspaceId} data={current} csrf={session.csrfToken} onSaved={retry} onLogout={async () => { try { await api.logout(session.csrfToken); setSession(null); setList(null); setDetail(null); setSessionError('浏览器会话已退出。请从终端重新打开 RIFT。'); } catch (e) { setError(errorText(e)); fail(e); } }} />}
+          {actualPage === 'settings' && <Settings key={route.workspaceId} data={current} csrf={session.csrfToken} onSaved={retry} onLogout={async () => { try { await api.logout(session.csrfToken); setSession(null); setList(null); setDetail(null); setSessionError('浏览器会话已退出。可以重新连接 RIFT。'); } catch (e) { setError(errorText(e)); fail(e); } }} />}
           {actualPage !== 'chat' && <footer className="data-footer"><span>记录同步于 {time(current.observedAt)}</span><Button variant="ghost" className="text-button" onClick={retry}>刷新记录</Button></footer>}
         </>}
       </>}

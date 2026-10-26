@@ -3,7 +3,7 @@ export interface RuntimeTool {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
-  execute(args: unknown, signal: AbortSignal): Promise<unknown>;
+  execute(args: unknown, signal: AbortSignal, context?: { callId: string }): Promise<unknown>;
 }
 
 export interface RuntimeTurnInput {
@@ -12,8 +12,12 @@ export interface RuntimeTurnInput {
   workspaceId: string;
   agentId: string;
   turnId: string;
-  /** Host-owned staging directory; native discussion never runs in a repository. */
+  /** Host-selected staging directory or registered repository/worktree cwd. */
   cwd: string;
+  /** Host-selected repository roots from this workspace's ledger. Never model
+   * arguments. Native execution verifies Git roots and derives exact metadata
+   * directories; formal review/analysis modes cannot elevate through this field. */
+  repositoryAccess?: { repositoryPaths: string[] };
   model: string;
   reasoningEffort?: string;
   instructions: string;

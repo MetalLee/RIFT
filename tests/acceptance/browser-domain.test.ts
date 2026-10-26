@@ -26,7 +26,7 @@ describe('U1–U5 browser domain routes', () => {
       await expect(host.handle('POST',`/v1/workflows/${workflow.id}/plan`,{expectedRevision:1,tasks:[{kind:'change',title:'Forbidden',instructions:'Write a file',expectedPaths:['file.txt']}]},'forbidden-change')).rejects.toMatchObject({code:'REPOSITORY_REQUIRED'});
       host.coordinator.dispatch({taskId:'text-only-task',expectedVersion:0,idempotencyKey:'text-dispatch'});
       await waitUntil(()=>host.store.task('text-only-task').status==='succeeded');
-      expect(prepare).not.toHaveBeenCalled(); expect(calls).toHaveLength(1); expect(calls[0]!.tools).toEqual([]); expect(calls[0]!.agentId).toBe(agent.id);
+      expect(prepare).not.toHaveBeenCalled(); expect(calls).toHaveLength(1); expect(calls[0]!.tools.map(tool=>tool.name)).toEqual(['rift_send_message']); expect(calls[0]!.agentId).toBe(agent.id);
       expect(host.store.all('SELECT * FROM worktrees')).toEqual([]); expect(host.store.all('SELECT * FROM workflow_repositories')).toEqual([]);
       expect(host.store.task('text-only-task')).toMatchObject({repositoryId:null,acceptedCommit:null});
       expect(host.coordinator.finish({workflowId:workflow.id,summary:'Text analysis verified.'}).status).toBe('completed');

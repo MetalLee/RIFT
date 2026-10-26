@@ -11,6 +11,9 @@ export function installLeadTools(ctx: Context, lead: Agent, workflowId: string, 
   // An unpublished Agent scope gets only the business tools below. Global
   // shell/delegation tools would bypass task registration and are masked.
   ctx.tools.restrict({ allow: [] });
+  // Chat-owned workflows use the durable Lead queue exclusively. This parent
+  // remains live for activation bridging, but cannot make independent decisions.
+  if(coordinator.store.get('SELECT workflow_id FROM workflow_conversations WHERE workflow_id=?',workflowId))return;
   const taskOwned = (id: string): void => {
     if (coordinator.store.task(id).workflowId !== workflowId) throw new RiftError('CROSS_WORKFLOW', 'Task belongs to another workflow.');
   };
@@ -22,6 +25,7 @@ export function installLeadTools(ctx: Context, lead: Agent, workflowId: string, 
       parameters: JSON.parse(JSON.stringify(z.toJSONSchema(schema, { io: 'input' }))) as ToolDefinition['parameters'],
       output: { schema: {}, render: (_args, value) => [{ type: 'text', text: redact(JSON.stringify(value)) }] },
       async execute(args, exec) {
+        if(coordinator.store.get('SELECT workflow_id FROM workflow_conversations WHERE workflow_id=?',workflowId))throw new RiftError('COORDINATION_OWNED','This Workflow is coordinated by its primary conversation.');
         if (exec.agent !== lead || ctx.agents.get(lead.id) !== lead) throw new RiftError('UNAUTHORIZED', 'Only this workflow live Lead may manage it.');
         exec.signal.throwIfAborted();
         const value = await execute(schema.parse(args));

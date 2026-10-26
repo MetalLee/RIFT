@@ -1,3 +1,6 @@
+import { workspaceRepositoryAccess } from '../agent/repository-access.js';
+import { createRepositoryShell } from '../agent/repository-shell.js';
+import type { ToolDefinition } from '@deepseek-ai/dsh-tools';
 import type { Context } from '@deepseek-ai/cordis';
 import type { Agent, AgentHandle } from '@deepseek-ai/dsh-agent';
 import { SessionId } from '@deepseek-ai/dsh-session';
@@ -32,14 +35,21 @@ import { localBootIdentity } from '../agent/boot-identity.js';
 import { ApiConnectionService } from '../agent/connections.js';
 import type { ActivationBridge } from '../contracts/index.js';
 import { nativeSession, sessionCallbacks } from '../agent/native-sessions.js';
+import { bindingConnection } from '../agent/execution-connection.js';
+import { PersistentCodexProvider } from '../agent/codex-provider.js';
+import { validateBinding } from '../project/provider-bindings.js';
+import { ChatOrchestration } from '../chat/orchestration.js';
+import { CollaborationService,delegateSchema,sendCollaborationMessageSchema } from '../chat/collaboration.js';
 
-export interface HostConfig { home: string; port: number; uiDist?: string; uiEnabled?: boolean; leadTurnLimit?: number; leadProvider: string; leadModel: string; developerProvider?: string; reviewerProvider?: string; limits?: z.infer<typeof schemas.limitsSchema>; checks: CheckCommand[]; runTimeoutMs?: number }
+export interface HostConfig { home: string; port: number; uiDist?: string; uiEnabled?: boolean; leadTurnLimit?: number; leadProvider: string; leadModel: string; developerProvider?: string; reviewerProvider?: string; limits?: z.infer<typeof schemas.limitsSchema>; checks: CheckCommand[]; runTimeoutMs?: number; chatOrchestration?:boolean; coordinationToolLimit?:number; coordinationStagnantLimit?:number; coordinationAutomaticTurnLimit?:number; coordinationTimeoutMs?:number }
 export class RiftHostService implements ApiHandler {
   readonly store: RiftStore;
   readonly project: ProjectService;
   readonly git: LocalGitService;
   readonly coordinator: TaskCoordinator;
   readonly chat: ChatService;
+  readonly orchestration: ChatOrchestration;
+  readonly collaboration: CollaborationService;
   readonly skills: SkillService;
   readonly repositories: RepositoryService;
   readonly connections: ApiConnectionService;
@@ -49,6 +59,7 @@ export class RiftHostService implements ApiHandler {
   private readonly leads = new Map<string, AgentHandle>();
   private readonly leadStarts = new Map<string, Promise<AgentHandle>>();
   private readonly providerNames = new Set<string>();
+  private readonly executionProviderDisposers: (() => void)[] = [];
   private closing = false;
   constructor(private readonly ctx: Context, readonly config: HostConfig) {
     this.store = new RiftStore(path.join(config.home, 'rift.db'));
@@ -65,16 +76,25 @@ export class RiftHostService implements ApiHandler {
     this.connections = new ApiConnectionService(ctx, this.store, config.home);
     const bridge = new DshActivationBridge(ctx, taskId => this.leads.get(this.store.task(taskId).workflowId)?.agent, this.store);
     this.skills = new SkillService(this.store);
-    this.coordinator = new TaskCoordinator({ store: this.store, bridge, git: this.git, runTimeoutMs: config.runTimeoutMs, limits: config.limits, textAnalysisRoot: path.join(config.home,'text-analysis'), textAnalysisBridge: { start: input => this.startTextAnalysis(input) }, skillSnapshot: (workspaceId, agentId, runtime, runId) => this.skills.snapshotExecution(workspaceId, agentId, 'run', runId, this.skills.resolveEffective(workspaceId, agentId, runtime)) });
-    this.chat = new ChatService({ store: this.store, home: config.home, defaultConnection: () => ({ runtime: 'dsh', provider: config.leadProvider, model: config.leadModel }), validateConnection: connection => this.validateChatConnection(connection), runtime: connection => connection.runtime === 'dsh' ? new DshChatRuntime(ctx, connection.provider!) : this.chatRuntimes.get(connection.runtime)!, tools: turn => this.chatTools(turn), resolveContext: (workspaceId, refs) => this.contextSnapshots(workspaceId, refs), onLeaseReleased: () => this.coordinator.wake(), skillSnapshot: (workspaceId, agentId, runtime, turnId) => this.skills.snapshotExecution(workspaceId, agentId, 'turn', turnId, this.skills.resolveEffective(workspaceId, agentId, runtime)) });
+    this.coordinator = new TaskCoordinator({ store: this.store, repositoryAccess:workspaceId=>workspaceRepositoryAccess(this.store,workspaceId), bridge, runTools:run=>this.collaboration.runTools(run),captureRunInbox:run=>this.collaboration.captureRunInbox(run),acceptRunInbox:runId=>this.collaboration.acceptRunInbox(runId), git: this.git, runTimeoutMs: config.runTimeoutMs, limits: config.limits, textAnalysisRoot: path.join(config.home,'text-analysis'), textAnalysisBridge: { start: input => this.startTextAnalysis(input) }, skillSnapshot: (workspaceId, agentId, runtime, runId) => this.skills.snapshotExecution(workspaceId, agentId, 'run', runId, this.skills.resolveEffective(workspaceId, agentId, runtime)) });
+    this.chat = new ChatService({ store: this.store, repositoryAccess:workspaceId=>workspaceRepositoryAccess(this.store,workspaceId), home: config.home, turnTimeoutMs:turn=>turn.configuration.agent.purpose==='lead'&&!turn.configuration.conversationTitle&&(this.orchestration.forTurn(turn)||config.chatOrchestration!==false&&!this.store.get("SELECT id FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','failed','cancelled')",turn.workspaceId))?config.coordinationTimeoutMs:undefined, defaultConnection: () => ({ runtime: 'dsh', provider: config.leadProvider, model: config.leadModel }), validateConnection: connection => this.validateChatConnection(connection), runtime: connection => connection.runtime === 'dsh' ? new DshChatRuntime(ctx, connection.provider!) : this.chatRuntimes.get(connection.runtime)!, tools: turn => this.chatTools(turn), resolveContext: (workspaceId, refs) => this.contextSnapshots(workspaceId, refs), onLeaseReleased: () => this.coordinator.wake(), canStart:turn=>this.orchestration.canStart(turn), beforeStart:turn=>this.orchestration.beforeStart(turn), onTurnSettled:turn=>{this.orchestration.settled(turn);this.collaboration.settleTurn(turn);}, skillSnapshot: (workspaceId, agentId, runtime, turnId) => this.skills.snapshotExecution(workspaceId, agentId, 'turn', turnId, this.skills.resolveEffective(workspaceId, agentId, runtime)) });
+    this.collaboration=new CollaborationService(this.store,this.coordinator,{enqueueMessage:(workspaceId,conversationId,messageId)=>this.chat.enqueueMessage(workspaceId,conversationId,messageId),validateDiscussion:(workspaceId,agentId)=>{this.chat.validateAgentConnection(workspaceId,agentId);},validateRecipient:(role,workflowId)=>{if(this.store.workflow(workflowId).baseCommit){this.refreshProviders();invariant(role.providerBindingId&&this.providerNames.has(this.store.binding(role.providerBindingId).providerName),'PROVIDER_UNAVAILABLE','Recipient has no registered executable binding.');}}});
+    this.orchestration=new ChatOrchestration(this.store,{projectReceipt:input=>this.collaboration.projectReceipt(input),enqueue:(workspaceId,conversationId,triggerId,content)=>this.chat.enqueueTrigger(workspaceId,conversationId,triggerId,content),ensureParent:workflowId=>this.ensureLead(workflowId),stop:turn=>this.chat.stop(turn.workspaceId,turn.id),maxTools:config.coordinationToolLimit,maxStagnant:config.coordinationStagnantLimit,maxAutomaticTurns:config.coordinationAutomaticTurnLimit});
     const subprocess = ctx.get?.('subprocess');
     if (subprocess) {
-      try { nativeCodexPackage(); this.registerChatRuntime('codex', new NativeCodexRuntime({ spawn: specification => subprocess.spawn(specification) }), VERIFIED_NATIVE_CODEX_MODELS); }
+      try {
+        nativeCodexPackage();
+        this.registerChatRuntime('codex', new NativeCodexRuntime({ spawn: specification => subprocess.spawn(specification) }), VERIFIED_NATIVE_CODEX_MODELS);
+        for (const model of VERIFIED_NATIVE_CODEX_MODELS) {
+          const providerName = `rift-native-codex-${model}`;
+          this.executionProviderDisposers.push(ctx.subagents.registerProvider(new PersistentCodexProvider({ providerName, model }, spec => subprocess.spawn(spec))));
+        }
+      }
       catch (error) { this.nativeRuntimeUnavailable = publicError(error).message; }
     }
     } catch (error) { this.store.close(); throw error; }
   }
-  async initialize(): Promise<void> { await this.connections.initialize(); const boot=await localBootIdentity();this.repositories.setBootIdentity(boot);this.coordinator.setBootIdentity(boot);await this.coordinator.recover();this.store.exec("UPDATE native_executions SET status='interrupted',updated_at=? WHERE status IN ('starting','running')",new Date().toISOString());this.chat.setBootIdentity(boot);this.chat.initialize(); }
+  async initialize(): Promise<void> { await this.connections.initialize(); const boot=await localBootIdentity();this.repositories.setBootIdentity(boot);this.coordinator.setBootIdentity(boot);await this.coordinator.recover();this.store.exec("UPDATE native_executions SET status='interrupted',updated_at=? WHERE status IN ('starting','running')",new Date().toISOString());this.chat.setBootIdentity(boot);this.chat.initialize();this.orchestration.initialize();this.collaboration.initialize(); }
   registerChatRuntime(name: 'codex', runtime: AgentRuntime, models: readonly string[]): void { this.chatRuntimes.set(name, runtime); this.runtimeModels.set(name, models); }
   browserEvents(workspaceId: string, after: number) { return readWorkspaceEvents(this.store, workspaceId, after); }
   private validateChatConnection(connection: ChatConnection): void {
@@ -89,6 +109,26 @@ export class RiftHostService implements ApiHandler {
     if (!this.store.get('SELECT id FROM provider_bindings WHERE id=?', bindingId)) this.store.exec('INSERT INTO provider_bindings(id,workspace_id,provider_name,package_version,config_revision,capabilities,credential_refs,runtime,spawn) VALUES(?,?,?,?,1,?,?,?,?)', bindingId, workspaceId, providerName, '0.2.1-rc.3', JSON.stringify(provider.capabilities), '[]', providerName === 'spawn' ? 'dsh' : null, providerName === 'spawn' ? JSON.stringify({ provider: this.config.leadProvider, model: this.config.leadModel }) : null);
     return bindingId;
   }
+  private configuredExecutionBinding(workspaceId: string, connection: ChatConnection): string {
+    this.store.workspace(workspaceId);
+    this.validateChatConnection(connection);
+    const providerName = connection.runtime === 'dsh' ? 'spawn' : `rift-native-codex-${connection.model}`;
+    this.refreshProviders();
+    const provider = this.ctx.subagents.getProvider(providerName);
+    invariant(provider, 'PROVIDER_UNAVAILABLE', 'The selected execution runtime is not available in this Host.');
+    if (connection.runtime === 'codex' && connection.reasoningEffort) invariant(['low','medium','high','xhigh','max','ultra'].includes(connection.reasoningEffort), 'INVALID_CONFIG', 'Choose a supported Codex reasoning effort.');
+    const saved = connection.runtime === 'dsh' ? this.connections.list().find(item => item.provider === connection.provider) : undefined;
+    invariant(!saved || saved.model === connection.model, 'INVALID_CONFIG', 'Use the model configured for this API connection.');
+    const binding: ProviderBinding = {
+      id: `${workspaceId}:execution:${randomUUID()}`, providerName, packageVersion: '0.2.1-rc.3', configRevision: 1,
+      capabilities: { ...provider.capabilities }, credentialRefs: connection.runtime === 'codex' ? ['native:codex'] : saved ? [`env:${saved.credentialRef}`] : [],
+      runtime: connection.runtime, model: connection.model,
+      ...(connection.runtime === 'dsh' ? { spawn: { provider: connection.provider!, model: connection.model, ...(connection.reasoningEffort ? { reasoningEffort: connection.reasoningEffort } : {}) } } : { reasoningEffort: connection.reasoningEffort ?? null }),
+    };
+    validateBinding(binding, this.providerNames);
+    this.store.exec('INSERT INTO provider_bindings(id,workspace_id,provider_name,package_version,config_revision,capabilities,credential_refs,runtime,model,reasoning_effort,spawn) VALUES(?,?,?,?,?,?,?,?,?,?,?)', binding.id, workspaceId, binding.providerName, binding.packageVersion, binding.configRevision, JSON.stringify(binding.capabilities), JSON.stringify(binding.credentialRefs), binding.runtime!, binding.model!, binding.reasoningEffort ?? null, binding.spawn ? JSON.stringify(binding.spawn) : null);
+    return binding.id;
+  }
   private contextSnapshots(workspaceId: string, refs: ContextRef[]): ContextSnapshot[] {
     return refs.map(ref => {
       let value: unknown, version: number | null = null;
@@ -100,39 +140,45 @@ export class RiftHostService implements ApiHandler {
   }
   private async startTextAnalysis(input: Parameters<ActivationBridge['start']>[0]) {
     const role=input.run.providerSnapshot.role as import('../project/browser-agents.js').BrowserAgent,binding=input.run.providerSnapshot.binding;
-    const connection=role.chatConnection??(binding?.spawn?{runtime:'dsh' as const,provider:binding.spawn.provider,model:binding.spawn.model,reasoningEffort:binding.spawn.reasoningEffort}:null);
-    invariant(connection,'START_NOT_PUBLISHED','Configure a supported discussion connection for this text-analysis Agent.');
+    const connection=bindingConnection(binding)??role.chatConnection;
+    invariant(connection,'START_NOT_PUBLISHED','Configure a supported execution connection for this text-analysis Agent.');
     this.validateChatConnection(connection);
     const runtime:AgentRuntime=connection.runtime==='dsh'?new DshChatRuntime(this.ctx,connection.provider!):this.chatRuntimes.get(connection.runtime)!;
-    const session=runtime.persistentSessions?nativeSession(this.store,{workspaceId:role.workspaceId,scope:'task',scopeId:input.task.id,agentId:role.id,cwd:input.cwd,configuration:{connection,mode:'text-analysis',prompt:role.prompt,skills:input.run.providerSnapshot.skillInstructions??''}}):undefined;
-    const handle=await runtime.start({workspaceId:role.workspaceId,agentId:role.id,turnId:input.run.id,cwd:input.cwd,model:connection.model,reasoningEffort:connection.reasoningEffort,...session?{session:sessionCallbacks(this.store,session,input.run.id,input.cwd)}:{},instructions:`You are executing a registered text-only analysis task. Analyze only the supplied text, do not access files or delegate. The latest task envelope and runId supersede previous execution details.\n${role.prompt}\n${input.run.providerSnapshot.skillInstructions??''}`,messages:[{role:'user',content:input.prompt}],tools:[],signal:input.signal});
+    const session=runtime.persistentSessions?nativeSession(this.store,{workspaceId:role.workspaceId,scope:'task',scopeId:input.task.id,agentId:role.id,cwd:input.cwd,configuration:{connection,mode:'text-analysis',prompt:role.prompt,skills:input.run.providerSnapshot.skillInstructions??'',tools:(input.tools??[]).map(({name,description,inputSchema})=>({name,description,inputSchema}))}}):undefined;
+    const handle=await runtime.start({workspaceId:role.workspaceId,agentId:role.id,turnId:input.run.id,cwd:input.cwd,model:connection.model,reasoningEffort:connection.reasoningEffort,...session?{session:sessionCallbacks(this.store,session,input.run.id,input.cwd,input.onAccepted)}:{},instructions:`You are executing a registered text-only analysis task. Analyze only the supplied text, do not access files or delegate. The latest task envelope and runId supersede previous execution details.\n${role.prompt}\n${input.run.providerSnapshot.skillInstructions??''}`,messages:[{role:'user',content:input.prompt}],tools:input.tools??[],signal:input.signal});
     return{childId:`text-${input.run.id}`,dispose:()=>handle.dispose(),result:handle.result.then(result=>({stopReason:result.stopReason,text:JSON.stringify({schemaVersion:1,taskId:input.task.id,runId:input.run.id,outcome:'completed',summary:result.text,changedPaths:[],checksClaimed:[],blockingReasons:[]})}))};
   }
   private chatTools(turn: AgentTurn): RuntimeTool[] {
     const tools: RuntimeTool[] = [];
+    const existing=this.store.get<Workflow>("SELECT * FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','failed','cancelled')",turn.workspaceId);
+    const shortMode=Boolean(existing?this.orchestration.owner(existing.id):this.config.chatOrchestration!==false&&turn.configuration.agent.purpose==='lead');
+    let calls=0,reads=0;
+    const assertLive=()=>{const current=this.chat.turn(turn.workspaceId,turn.id);invariant(current.status==='running'&&current.agentId===turn.agentId&&this.store.get("SELECT id FROM execution_leases WHERE owner_type='turn' AND owner_id=? AND released_at IS NULL",turn.id),'UNAUTHORIZED','This Turn no longer owns an active execution lease.');};
     const activeWorkflow = () => this.store.require<Workflow>("SELECT * FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','failed','cancelled')", turn.workspaceId);
     const register = (name: string, description: string, schema: z.ZodType, execute: (input: any) => unknown): void => {
       tools.push({ name, description, inputSchema: JSON.parse(JSON.stringify(z.toJSONSchema(schema, { io: 'input' }))), execute: async (args, signal) => {
         signal.throwIfAborted();
-        const current = this.chat.turn(turn.workspaceId, turn.id);
-        invariant(current.status === 'running' && current.agentId === turn.agentId && this.store.get("SELECT id FROM execution_leases WHERE owner_type='turn' AND owner_id=? AND released_at IS NULL", turn.id), 'UNAUTHORIZED', 'This Turn no longer owns an active execution lease.');
+        assertLive();
+        if(shortMode){calls++;reads=name==='rift_status'?reads+1:0;if(calls>(this.config.coordinationToolLimit??48)||reads>(this.config.coordinationStagnantLimit??12)){this.store.exec("UPDATE coordination_decisions SET error='COORDINATION_TOOL_BUDGET' WHERE turn_id=?",turn.id);this.store.exec("INSERT INTO turn_activities(turn_id,type,phase,summary,payload,created_at) VALUES(?,'coordination.limit','tool','Coordination tool budget exceeded.',?,?)",turn.id,JSON.stringify({reason:'COORDINATION_TOOL_BUDGET'}),new Date().toISOString());this.chat.stop(turn.workspaceId,turn.id);throw new RiftError('COORDINATION_TOOL_BUDGET','Coordination tool budget exceeded.');}}
+        if(name!=='rift_send_message')this.orchestration.authorize(turn,name!=='rift_status');
         return JSON.parse(JSON.stringify(await execute(schema.parse(args)) ?? null, (_key, item) => typeof item === 'string' ? redact(item) : item));
       } });
     };
     const startWorkflow = async (goal: string, repositoryIds?: string[], mode: 'code'|'analysis' = 'code') => {
       const existing = this.store.get<Workflow>("SELECT * FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','failed','cancelled')", turn.workspaceId);
-      if (existing) { if(existing.baseCommit)await this.ensureLead(existing.id); return existing; }
+      if (existing) { if(existing.baseCommit)await this.ensureLead(existing.id); assertLive();return existing; }
       const workspace = this.store.workspace(turn.workspaceId);
       invariant(mode==='analysis'||workspace.repositoryPath, 'REPOSITORY_REQUIRED', 'Connect a Git repository before requesting code work.');
       this.refreshProviders();
       if(mode==='code')for (const purpose of ['developer','reviewer']) invariant(this.store.all<{providerName:string}>("SELECT b.provider_name FROM roles r JOIN provider_bindings b ON b.id=r.provider_binding_id WHERE r.workspace_id=? AND r.purpose=? AND r.enabled=1", turn.workspaceId, purpose).some(row => this.providerNames.has(row.providerName)), 'ROLES_NOT_CONFIGURED', `Configure an executable ${purpose} before requesting code work.`);
-      const workflow = await this.route('POST', '/v1/workflows', { workspaceId: turn.workspaceId, goal, mode, startLead: false, ...(repositoryIds ? { repositoryIds } : {}) }) as Workflow;
-      if(mode==='code')await this.ensureLead(workflow.id); return workflow;
+      const workflow = await this.createChatWorkflow(turn,{workspaceId:turn.workspaceId,goal,mode,startLead:false,...(repositoryIds?{repositoryIds}:{})},assertLive);
+      if(mode==='code')await this.ensureLead(workflow.id); assertLive();return workflow;
     };
     register('rift_status', 'Read this workspace and its current workflow. All scopes are fixed by the Host.', z.object({}).strict(), () => {
       const workflow = this.store.get<Workflow>("SELECT * FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','failed','cancelled')", turn.workspaceId);
-      return workflow ? this.coordinator.status(workflow.id) : { workspace: this.store.workspace(turn.workspaceId), repositories: this.repositories.list(turn.workspaceId), roles: this.store.all('SELECT * FROM roles WHERE workspace_id=?', turn.workspaceId), workflow: null };
+      return workflow ? {...this.coordinator.status(workflow.id),coordination:this.orchestration.owner(workflow.id)??null} : { workspace: this.store.workspace(turn.workspaceId), repositories: this.repositories.list(turn.workspaceId), roles: this.store.all('SELECT * FROM roles WHERE workspace_id=?', turn.workspaceId), workflow: null };
     });
+    register('rift_send_message','Send a scoped message to one workspace member. Progress is recorded; questions and blockers queue a reply. Sending never claims acceptance or assigns a task.',sendCollaborationMessageSchema,input=>this.collaboration.send({type:'turn',id:turn.id},input));
     if (turn.configuration.agent.purpose !== 'lead') {
       register('rift_task_request', 'Register one task assigned to yourself and return its receipt. Use kind analysis without repositoryId for supplied-text analysis. End this discussion turn before the task can run; never wait for it here.', z.object({ goal: z.string().min(1).max(32000),kind:z.enum(['change','analysis']).default('change'), title: z.string().min(1).max(240), instructions: z.string().min(1).max(32000), expectedPaths: z.array(z.string()).max(100), repositoryId: z.string().min(1).max(160).optional(), acceptanceCriteria: z.array(z.string()).max(100).default([]) }).strict(), async input => {
         invariant(turn.configuration.agent.purpose === 'developer', 'ROLE_UNAVAILABLE', 'Only a developer can register a self-assigned change task.');
@@ -145,12 +191,14 @@ export class RiftHostService implements ApiHandler {
       });
       return tools;
     }
+    register('rift_delegate','Atomically assign an existing task or task draft to one developer, save its collaboration message, and persist dispatch. Returns task/request/message receipts. Do not wait for task completion here.',delegateSchema,input=>this.collaboration.delegate(turn,input));
     register('rift_workflow_start', 'Start or attach this workspace workflow. Use mode analysis for registered text-only tasks without Git; code mode selects repositoryIds explicitly when more than one is connected.', z.object({ goal: z.string().min(1).max(32000), mode:z.enum(['code','analysis']).default('code'), repositoryIds: z.array(z.string().min(1)).min(1).max(20).optional() }).strict(), input => startWorkflow(input.goal, input.repositoryIds,input.mode));
     const taskOwned = (taskId: string, workflowId: string) => invariant(this.store.task(taskId).workflowId === workflowId, 'CROSS_WORKFLOW', 'Task does not belong to this workspace workflow.');
-    register('rift_plan_submit', 'Submit a durable dependency plan to the current workflow.', schemas.planSchema, input => this.coordinator.submitPlan({ workflowId: activeWorkflow().id, ...schemas.planForCoordinator(input) }));
+    register('rift_plan_submit', 'Submit a durable dependency plan to the current workflow.', schemas.planSchema, input => this.collaboration.plan(turn,{ workflowId: activeWorkflow().id, ...schemas.planForCoordinator(input) }));
     register('rift_plan_replan', 'Update unstarted tasks using current versions.', schemas.replanSchema, input => { const workflowId = activeWorkflow().id; for (const update of input.updates) taskOwned(update.taskId, workflowId); return this.coordinator.replan({ workflowId, ...input }); });
-    register('rift_task_dispatch', 'Queue an approved task. Returns a durable receipt.', schemas.dispatchSchema, input => { taskOwned(input.taskId, activeWorkflow().id); return this.coordinator.dispatch(input); });
-    register('rift_wait', 'Wait for this workflow task events; never infer completion without evidence.', schemas.waitSchema, input => this.coordinator.wait({ workflowId: activeWorkflow().id, ...input }));
+    register('rift_task_dispatch', 'Queue an approved task. Returns a durable receipt.', schemas.dispatchSchema, input => { taskOwned(input.taskId, activeWorkflow().id); return this.collaboration.dispatch(turn,input); });
+    if(!shortMode)register('rift_wait', 'Wait for this workflow task events; never infer completion without evidence.', schemas.waitSchema, input => this.coordinator.wait({ workflowId: activeWorkflow().id, ...input }));
+    else register('rift_yield','Record durable handoff after dispatching this batch. Finish your final reply immediately; no more tools are allowed in this decision. Workflow events will resume the Lead after runtime cleanup.',z.object({summary:z.string().min(1).max(2000),taskIds:z.array(z.string().min(1)).max(100).default([]),requestIds:z.array(z.string().min(1)).max(100).default([])}).strict(),input=>this.orchestration.yield(turn,input));
     register('rift_task_retry', 'Retry this workflow task after cleanup and within repair limits.', schemas.retrySchema, input => { taskOwned(input.taskId, activeWorkflow().id); return this.coordinator.retry(input); });
     register('rift_integration_request', 'Request exact-commit checking and independent review.', schemas.integrationSchema, input => { taskOwned(input.taskId, activeWorkflow().id); return this.coordinator.requestIntegration(input); });
     register('rift_workflow_finish', 'Complete only when all registered tasks passed real acceptance gates.', schemas.finishSchema, input => this.coordinator.finish({ workflowId: activeWorkflow().id, ...input }));
@@ -182,7 +230,21 @@ export class RiftHostService implements ApiHandler {
       let pending = this.leadStarts.get(workflowId);
       if (!pending) {
         pending = (async () => {
-          const created = await this.ctx.agents.create({ sessionId: SessionId(`rift-lead-${randomUUID()}`), meta: { cwd: this.store.workspace(workflow.workspaceId).repositoryPath || this.config.home }, agentOptions: { provider: this.config.leadProvider, model: this.config.leadModel }, setup: (scope, agent) => installLeadTools(scope, agent, workflowId, this.coordinator) });
+          const repositoryAccess=await workspaceRepositoryAccess(this.store,workflow.workspaceId);
+          const cwd=repositoryAccess?.repositoryPaths[0]??this.config.home;
+          const stop=new AbortController();
+          const chatOwned=!!this.orchestration.owner(workflowId);
+          const shell=repositoryAccess&&!chatOwned?await createRepositoryShell(this.ctx.subprocess,{cwd,repositoryAccess,signal:stop.signal}):undefined;
+          let underlying:AgentHandle;
+          try { underlying=await this.ctx.agents.create({ sessionId: SessionId(`rift-lead-${randomUUID()}`), meta: { cwd }, agentOptions: { provider: this.config.leadProvider, model: this.config.leadModel }, setup: (scope, agent) => {
+            installLeadTools(scope, agent, workflowId, this.coordinator);
+            if(shell)scope.tools.register({name:shell.tool.name,description:shell.tool.description,parameters:shell.tool.inputSchema as ToolDefinition['parameters'],output:{schema:{},render:(_args,value)=>[{type:'text',text:redact(JSON.stringify(value))}]},execute:async(args,execution)=>{
+              invariant(execution.agent===agent&&scope.agents.get(agent.id)===agent,'UNAUTHORIZED','Only this live Lead may execute repository commands.');
+              invariant(!this.closing&&!this.orchestration.owner(workflowId)&&!['completed','cancelled','failed'].includes(this.store.workflow(workflowId).status),'INVALID_STATE','This Lead no longer owns an active workflow.');
+              return shell.tool.execute(args,execution.signal);
+            }});
+          }}); } catch(error) {stop.abort();await shell?.dispose();throw error;}
+          const created:AgentHandle={agent:underlying.agent,dispose:async()=>{stop.abort();try{await shell?.dispose();}finally{await underlying.dispose();}}};
           try {
             if (this.closing || ['completed','cancelled','failed'].includes(this.store.workflow(workflowId).status)) throw new RiftError('HOST_CLOSING', 'Lead attachment is no longer admitted.');
             this.store.transaction(() => { this.store.exec('UPDATE workflows SET lead_session_id=? WHERE id=?',created.agent.id,workflowId); this.store.event(workflowId,'lead.attached',{sessionId:created.agent.id}); });
@@ -198,13 +260,19 @@ export class RiftHostService implements ApiHandler {
     return { leadSessionId: handle.agent.id };
   }
   async startLead(workflowId: string, instruction?: string): Promise<{ leadSessionId: string }> {
+    if(this.orchestration.owner(workflowId)){
+      const workflow=this.store.workflow(workflowId);invariant(!['completed','cancelled','failed'].includes(workflow.status),'INVALID_STATE','Workflow is terminal.');
+      if(workflow.baseCommit)await this.ensureLead(workflowId);
+      this.orchestration.wake(workflowId,`manual:${randomUUID()}`,instruction??'Explicit Lead wake requested. Inspect current workflow status.',true);
+      await this.orchestration.pump();return {leadSessionId:workflow.leadSessionId??`chat:${this.orchestration.owner(workflowId)!.conversationId}`};
+    }
     if (!this.ctx.llm.listProviders().some(provider => provider.id === this.config.leadProvider)) throw new RiftError('LEAD_PROVIDER_UNAVAILABLE', `Profile is missing Lead provider ${this.config.leadProvider}. Inspect doctor and the registered model routes.`);
     const attached = await this.ensureLead(workflowId);
     const handle = this.leads.get(workflowId)!;
     const workflow = this.store.workflow(workflowId);
     if (this.closing || ['completed','cancelled','failed'].includes(workflow.status)) throw new RiftError('INVALID_STATE', 'Workflow no longer accepts Lead input.');
     const leadRole = this.store.require<{prompt:string}>("SELECT prompt FROM roles WHERE workspace_id=? AND purpose='lead' AND enabled=1", workflow.workspaceId);
-    const prompt = `You are the RIFT Lead for workflow ${workflowId}. Goal: ${workflow.goal}\nUse only RIFT tools. First inspect status. Submit a small explicit DAG and expected write paths. Read configured roles and global limits from status; dispatch independent tasks up to the available developer budget BEFORE waiting and queue additional requested tasks. Use plan_replan with current versions to update unstarted task dependencies or priority. Batch analysis may use analysisItems; write tasks must remain registered change tasks. Use returned versions and request IDs. Wait for any results using the cursor, then handle blocked tasks or retry with context (maximum two repairs). Development automatically queues integration. All candidate checks and reviews are enforced by RIFT. Never finish until workflow_finish accepts. Do not invent execution evidence. If blocked by credentials or unknown cleanup, explain the blocker and stop.\n${instruction ?? ''}`;
+    const prompt = `You are the RIFT Lead for workflow ${workflowId}. Goal: ${workflow.goal}\nUse RIFT tools for durable coordination and the repository shell for user-requested Git commits and authenticated PR commands. First inspect status. Submit a small explicit DAG and expected write paths. Read configured roles and global limits from status; dispatch independent tasks up to the available developer budget BEFORE waiting and queue additional requested tasks. Use plan_replan with current versions to update unstarted task dependencies or priority. Batch analysis may use analysisItems; write tasks must remain registered change tasks. Use returned versions and request IDs. Wait for any results using the cursor, then handle blocked tasks or retry with context (maximum two repairs). Development automatically queues integration. All candidate checks and reviews are enforced by RIFT. Never finish until workflow_finish accepts. Do not invent execution evidence. If blocked by credentials or unknown cleanup, explain the blocker and stop.\n${instruction ?? ''}`;
     handle.agent.followup({ id: MessageId(randomUUID()), role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: `${leadRole.prompt}\n${prompt}` }] });
     return attached;
   }
@@ -239,7 +307,7 @@ export class RiftHostService implements ApiHandler {
     if(method==='POST'&&pathname==='/ui-api/v1/connections')return this.connections.create(body);
     const connectionVerify=/^\/ui-api\/v1\/connections\/([^/]+)\/verify$/.exec(pathname);
     if(method==='POST'&&connectionVerify){z.object({}).strict().parse(body);return this.connections.verify(decodeURIComponent(connectionVerify[1]!));}
-    if (method === 'GET' && pathname === '/ui-api/v1/connections') return { savedConnections: this.connections.list(), configuration: this.connections.configurationCapability(), executionProviders: this.ctx.subagents.list().map(name => ({ name, capabilities: this.ctx.subagents.getProvider(name)?.capabilities ?? {}, authentication: 'not-verified' })), connections: [...(this.ctx.llm?.listProviders() ?? []).map(provider => ({ id: `dsh:${provider.id}`, runtime: 'dsh', provider: provider.id, available: true, authentication: 'not-verified', modelSelection: 'explicit', models: [], tools: true, streaming: false, output: 'buffered-for-redaction' })), { id: 'codex', runtime: 'codex', available: this.chatRuntimes.has('codex'), authentication: 'not-verified', modelSelection: 'verified-only', models: this.runtimeModels.get('codex') ?? [], disabledReason: this.chatRuntimes.has('codex') ? null : this.nativeRuntimeUnavailable, tools: true, streaming: false, output: 'buffered-for-redaction' }] };
+    if (method === 'GET' && pathname === '/ui-api/v1/connections') return { savedConnections: this.connections.list(), configuration: this.connections.configurationCapability(), executionProviders: this.ctx.subagents.list().map(name => ({ name, capabilities: this.ctx.subagents.getProvider(name)?.capabilities ?? {}, authentication: 'not-verified' })), connections: [...(this.ctx.llm?.listProviders() ?? []).map(provider => ({ id: `dsh:${provider.id}`, runtime: 'dsh', provider: provider.id, available: true, authentication: 'not-verified', modelSelection: 'explicit', models: [], executionAvailable: Boolean(this.ctx.subagents.getProvider('spawn')?.capabilities.agentOptions), tools: true, streaming: false, output: 'buffered-for-redaction' })), { id: 'codex', runtime: 'codex', available: this.chatRuntimes.has('codex'), authentication: 'not-verified', modelSelection: 'verified-only', models: this.runtimeModels.get('codex') ?? [], executionAvailable: VERIFIED_NATIVE_CODEX_MODELS.every(model => Boolean(this.ctx.subagents.getProvider(`rift-native-codex-${model}`))), disabledReason: this.chatRuntimes.has('codex') ? null : this.nativeRuntimeUnavailable, tools: true, streaming: false, output: 'buffered-for-redaction' }] };
     if (method === 'GET' && pathname === '/ui-api/v1/workspaces') return workspaceList(this.store);
     const match = /^\/ui-api\/v1\/workspaces\/([^/]+)$/.exec(pathname);
     if (method === 'GET' && match) {
@@ -266,6 +334,8 @@ export class RiftHostService implements ApiHandler {
     }
     const archiveWorkspace=/^\/ui-api\/v1\/workspaces\/([^/]+)\/archive$/.exec(pathname);
     if(archiveWorkspace&&method==='POST'){z.object({}).strict().parse(body);return this.route('POST',`/v1/workspaces/${archiveWorkspace[1]}/archive`,{});}
+    const retryDelivery=/^\/ui-api\/v1\/workspaces\/([^/]+)\/messages\/([^/]+)\/retry-delivery$/.exec(pathname);
+    if(retryDelivery&&method==='POST'){z.object({}).strict().parse(body);return this.collaboration.retryDelivery(decodeURIComponent(retryDelivery[1]!),decodeURIComponent(retryDelivery[2]!));}
     const taskList=/^\/ui-api\/v1\/workspaces\/([^/]+)\/tasks$/.exec(pathname);
     if(taskList&&method==='GET')return workspaceTasks(this.store,decodeURIComponent(taskList[1]!),url.searchParams);
     const repositoryRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/repositories(?:\/([^/]+)(?:\/(worktrees))?)?$/.exec(pathname);
@@ -282,7 +352,7 @@ export class RiftHostService implements ApiHandler {
       if(worktreeRoute[3]==='takeover')return this.repositories.takeover(workspaceId,treeId,z.object({expectedVersion:z.number().int().nonnegative(),confirmExclusiveOwnership:z.literal(true),destinationPath:z.string().min(1).optional()}).strict().parse(body));
       const input = z.object({ expectedVersion: z.number().int().nonnegative() }).strict().parse(body); if(worktreeRoute[3]==='reconcile')return this.repositories.reconcile(workspaceId,treeId,input.expectedVersion);return this.repositories[worktreeRoute[3] === 'archive' ? 'archive' : 'detach'](workspaceId,treeId,input.expectedVersion);
     }
-    const taskRoute=/^\/ui-api\/v1\/workspaces\/([^/]+)\/tasks\/([^/]+)\/(retry|evidence)$/.exec(pathname);
+    const taskRoute=/^\/ui-api\/v1\/workspaces\/([^/]+)\/tasks\/([^/]+)(?:\/(retry|evidence))?$/.exec(pathname);
     const runReconcile=/^\/ui-api\/v1\/workspaces\/([^/]+)\/runs\/([^/]+)\/reconcile$/.exec(pathname);
     if(runReconcile&&method==='POST'){const workspaceId=decodeURIComponent(runReconcile[1]!),runId=decodeURIComponent(runReconcile[2]!),run=this.store.run(runId);invariant(this.store.workflow(this.store.task(run.taskId).workflowId).workspaceId===workspaceId,'NOT_FOUND','Run does not belong to this workspace.');this.coordinator.reconcileRun(runId,z.object({expectedVersion:z.number().int().nonnegative()}).strict().parse(body).expectedVersion);return this.store.require('SELECT id,task_id,status,version,cleanup_status,slot_released_at FROM runs WHERE id=?',runId);}
     const integrationReconcile=/^\/ui-api\/v1\/workspaces\/([^/]+)\/integrations\/([^/]+)\/reconcile$/.exec(pathname);
@@ -290,6 +360,7 @@ export class RiftHostService implements ApiHandler {
     if(taskRoute){
       const workspaceId=decodeURIComponent(taskRoute[1]!),taskId=decodeURIComponent(taskRoute[2]!),task=this.store.task(taskId);
       invariant(this.store.workflow(task.workflowId).workspaceId===workspaceId,'NOT_FOUND','Task does not belong to this workspace.');
+      if(method==='GET'&&!taskRoute[3])return{...task,dependsOn:this.store.all<{dependsOnTaskId:string}>('SELECT depends_on_task_id FROM task_dependencies WHERE task_id=? ORDER BY depends_on_task_id',task.id).map(row=>row.dependsOnTaskId)};
       if(method==='POST'&&taskRoute[3]==='retry'){
         const workflow=this.store.workflow(task.workflowId);if(workflow.baseCommit)await this.ensureLead(workflow.id);
         const retried=await this.route('POST',`/v1/tasks/${encodeURIComponent(taskId)}/retry`,body) as import('../contracts/index.js').Task;
@@ -337,8 +408,8 @@ export class RiftHostService implements ApiHandler {
       if (section === 'snapshot' && method === 'GET') return this.routeBrowser('GET', `/ui-api/v1/workspaces/${encodeURIComponent(workspaceId)}`, {});
       if (section === 'agents') {
         if (method === 'GET' && !entityId) return { agents: this.store.all('SELECT * FROM roles WHERE workspace_id=? ORDER BY name', workspaceId) };
-        if (method === 'POST' && !entityId) { const input = createAgentSchema.parse(body); if (input.chatConnection) this.validateChatConnection(input.chatConnection); invariant(!input.executionProviderName || !input.providerBindingId, 'INVALID_CONFIG', 'Select one execution provider or existing binding.'); return this.store.transaction(() => createBrowserAgent(this.store, workspaceId, { ...input, ...(input.executionProviderName ? { providerBindingId: this.executionBinding(workspaceId, input.executionProviderName) } : {}) })); }
-        if (method === 'PATCH' && entityId) { const input = updateAgentSchema.parse(body); if (input.chatConnection) this.validateChatConnection(input.chatConnection); invariant(!input.executionProviderName || !input.providerBindingId, 'INVALID_CONFIG', 'Select one execution provider or existing binding.'); return this.store.transaction(() => updateBrowserAgent(this.store, workspaceId, entityId, { ...input, ...(input.executionProviderName ? { providerBindingId: this.executionBinding(workspaceId, input.executionProviderName) } : {}) })); }
+        if (method === 'POST' && !entityId) { const input = createAgentSchema.parse(body); if (input.chatConnection) this.validateChatConnection(input.chatConnection); invariant([input.executionConnection, input.executionProviderName, input.providerBindingId].filter(Boolean).length <= 1, 'INVALID_CONFIG', 'Select one execution connection.'); return this.store.transaction(() => createBrowserAgent(this.store, workspaceId, { ...input, ...(input.executionConnection ? { providerBindingId: this.configuredExecutionBinding(workspaceId, input.executionConnection) } : input.executionProviderName ? { providerBindingId: this.executionBinding(workspaceId, input.executionProviderName) } : {}) })); }
+        if (method === 'PATCH' && entityId) { const input = updateAgentSchema.parse(body); if (input.chatConnection) this.validateChatConnection(input.chatConnection); invariant([input.executionConnection, input.executionProviderName, input.providerBindingId].filter(Boolean).length <= 1, 'INVALID_CONFIG', 'Select one execution connection.'); return this.store.transaction(() => updateBrowserAgent(this.store, workspaceId, entityId, { ...input, ...(input.executionConnection ? { providerBindingId: this.configuredExecutionBinding(workspaceId, input.executionConnection) } : input.executionProviderName ? { providerBindingId: this.executionBinding(workspaceId, input.executionProviderName) } : {}) })); }
       }
       if (section === 'conversations') {
         if (method === 'GET' && !entityId) return { conversations: this.chat.list(workspaceId) };
@@ -353,6 +424,25 @@ export class RiftHostService implements ApiHandler {
     }
     throw new RiftError('NOT_FOUND', 'Unknown browser route.');
   }
+  private async createChatWorkflow(turn:AgentTurn|undefined,body:unknown,assertLive:()=>void=()=>{}):Promise<Workflow> {
+      const create=(input:Parameters<TaskCoordinator['createWorkflow']>[0])=>this.store.transaction(()=>{assertLive();const workflow=this.coordinator.createWorkflow(input);if(turn&&this.config.chatOrchestration!==false&&turn.configuration.agent.purpose==='lead')this.orchestration.bind(workflow.id,turn);return workflow;});
+      const input = schemas.workflowSchema.parse(body), workspace = this.store.workspace(input.workspaceId), available = this.repositories.list(workspace.id), id = `workflow-${randomUUID()}`;
+      if(input.mode==='analysis'){
+        invariant(!input.repositoryIds,'INVALID_REPOSITORIES','Text-only analysis does not select repositories.');
+        assertLive();
+        const workflow=create({id,workspaceId:workspace.id,goal:input.goal,baseCommit:'',integrationRef:'',repositoryFree:true});
+        if(input.startLead)await this.startLead(workflow.id);
+        return this.store.workflow(workflow.id);
+      }
+      invariant(available.length, 'REPOSITORY_REQUIRED', 'Connect a repository before starting a workflow.');
+      invariant(input.repositoryIds || available.length === 1, 'AMBIGUOUS_REPOSITORY', 'Specify repositoryIds when this workspace has multiple repositories.');
+      const selected = input.repositoryIds ? input.repositoryIds.map(repositoryId => this.repositories.get(workspace.id, repositoryId)) : available;
+      const snapshots = await Promise.all(selected.map(async repository => ({ repositoryId: repository.id, baseCommit: (await this.git.inspectRepository(repository.canonicalPath, repository.baseRef)).baseCommit, integrationRef: `refs/heads/rift/${workspace.id}/${id}${selected.length > 1 ? `/${repository.id}` : ''}` })));
+      assertLive();
+      const workflow = create({ id,workspaceId:workspace.id,goal:input.goal,baseCommit:snapshots[0]!.baseCommit,integrationRef:snapshots[0]!.integrationRef,repositorySnapshots:snapshots });
+      if (input.startLead) await this.startLead(id);
+      return this.store.workflow(workflow.id);
+  }
   private async route(method:string, pathname:string, body:unknown):Promise<unknown> {
     if (pathname.startsWith('/ui-api/')) return this.routeBrowser(method, pathname, body);
     if (method === 'GET' && pathname === '/v1/doctor') return this.doctor();
@@ -362,23 +452,8 @@ export class RiftHostService implements ApiHandler {
       const workspace = this.store.transaction(() => { const workspace = this.project.createWorkspace({ id,name:input.name,rootPath:path.join(this.config.home,'workspaces',id),repositoryPath:repo.rootPath,commonGitDir:repo.commonGitDir,baseRef:input.baseRef }); this.defaults(id); return workspace; });
       return workspace;
     }
-    if (method === 'POST' && pathname === '/v1/workflows') {
-      const input = schemas.workflowSchema.parse(body), workspace = this.store.workspace(input.workspaceId), available = this.repositories.list(workspace.id), id = `workflow-${randomUUID()}`;
-      if(input.mode==='analysis'){
-        invariant(!input.repositoryIds,'INVALID_REPOSITORIES','Text-only analysis does not select repositories.');
-        const workflow=this.coordinator.createWorkflow({id,workspaceId:workspace.id,goal:input.goal,baseCommit:'',integrationRef:'',repositoryFree:true});
-        if(input.startLead)await this.startLead(workflow.id);
-        return this.store.workflow(workflow.id);
-      }
-      invariant(available.length, 'REPOSITORY_REQUIRED', 'Connect a repository before starting a workflow.');
-      invariant(input.repositoryIds || available.length === 1, 'AMBIGUOUS_REPOSITORY', 'Specify repositoryIds when this workspace has multiple repositories.');
-      const selected = input.repositoryIds ? input.repositoryIds.map(repositoryId => this.repositories.get(workspace.id, repositoryId)) : available;
-      const snapshots = await Promise.all(selected.map(async repository => ({ repositoryId: repository.id, baseCommit: (await this.git.inspectRepository(repository.canonicalPath, repository.baseRef)).baseCommit, integrationRef: `refs/heads/rift/${workspace.id}/${id}${selected.length > 1 ? `/${repository.id}` : ''}` })));
-      const workflow = this.coordinator.createWorkflow({ id,workspaceId:workspace.id,goal:input.goal,baseCommit:snapshots[0]!.baseCommit,integrationRef:snapshots[0]!.integrationRef,repositorySnapshots:snapshots });
-      if (input.startLead) await this.startLead(id);
-      return this.store.workflow(workflow.id);
-    }
-    const match = /^\/v1\/(workspaces|workflows|tasks|runs)\/([^/]+)(?:\/(roles|plan|replan|dispatch|integration|retry|cancel|pause|resume|lead|finish|wait|logs|archive|report))?$/.exec(pathname);
+    if (method === 'POST' && pathname === '/v1/workflows') return this.createChatWorkflow(undefined,body);
+    const match = /^\/v1\/(workspaces|workflows|tasks|runs)\/([^/]+)(?:\/(roles|plan|replan|dispatch|integration|retry|recover-source|cancel|pause|resume|lead|finish|wait|logs|archive|report))?$/.exec(pathname);
     if (!match) throw new RiftError('NOT_FOUND','Unknown management route.');
     const [,entity,rawId,action] = match; const id = decodeURIComponent(rawId);
     if (entity === 'workspaces') {
@@ -412,13 +487,14 @@ export class RiftHostService implements ApiHandler {
         return result;
       }
       if (method === 'POST' && (action === 'pause'||action === 'resume')) {const input=z.object({expectedVersion:z.number().int().nonnegative()}).strict().parse(body); if(action==='resume'&&this.store.workflow(id).baseCommit&&!this.leads.has(id))throw new RiftError('LIVE_LEAD_REQUIRED','Attach a new Lead before resuming queues.');return this.coordinator[action](id,input.expectedVersion);}
-      if (method === 'POST' && action === 'lead') return this.startLead(id);
+      if (method === 'POST' && action === 'lead') return this.startLead(id,z.object({instruction:z.string().trim().min(1).max(16000).optional()}).strict().parse(body).instruction);
     }
     if (entity === 'tasks') {
       if (method === 'GET' && !action) return this.store.task(id);
       if (method === 'POST' && action === 'dispatch') return this.coordinator.dispatch(schemas.dispatchSchema.parse({...body as object,taskId:id}));
       if (method === 'POST' && action === 'integration') return this.coordinator.requestIntegration(schemas.integrationSchema.parse({...body as object,taskId:id}));
       if (method === 'POST' && action === 'retry') return this.coordinator.retry(schemas.retrySchema.parse({...body as object,taskId:id}));
+      if (method === 'POST' && action === 'recover-source') return this.coordinator.recoverSource(schemas.recoverSourceSchema.parse({...body as object,taskId:id}));
       if (method === 'POST' && action === 'cancel') return this.coordinator.cancelTask(id);
     }
     if (entity === 'runs') {
@@ -441,5 +517,5 @@ export class RiftHostService implements ApiHandler {
       restrictions:['External providers use one-shot activations.','Reviewer permission never inherits native sandbox; independent checkout and mutation gate enforce acceptance.','Authentication and model availability require real activation evidence; doctor does not run a model.'],
     };
   }
-  async close():Promise<void>{this.closing=true;await this.chat.close();await this.coordinator.shutdown();await this.connections.close();await Promise.allSettled([...this.leadStarts.values()]);await Promise.allSettled([...this.leads.values()].map(handle=>handle.dispose()));this.store.close();}
+  async close():Promise<void>{this.closing=true;this.orchestration.close();this.collaboration.close();await this.chat.close();await this.coordinator.shutdown();await this.connections.close();await Promise.allSettled([...this.leadStarts.values()]);await Promise.allSettled([...this.leads.values()].map(handle=>handle.dispose()));for (const dispose of this.executionProviderDisposers.splice(0)) dispose();this.store.close();}
 }

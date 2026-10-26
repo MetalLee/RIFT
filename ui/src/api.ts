@@ -21,7 +21,14 @@ export function consumeBootstrap(location: Pick<Location, 'hash' | 'pathname' | 
 }
 
 export const api = {
-  session: (code: string | null) => request<UiSession>('/session', code === null ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) }),
+  session: async (code: string | null): Promise<UiSession> => {
+    if (code !== null) return request<UiSession>('/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+    try { return await request<UiSession>('/session'); }
+    catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 401) throw error;
+      return request<UiSession>('/session/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    }
+  },
   workspaces: (signal?: AbortSignal) => request<UiWorkspaceList>('/workspaces', { signal }),
   detail: (id: string, signal?: AbortSignal) => request<UiWorkspaceDetail>(`/workspaces/${encodeURIComponent(id)}`, { signal }),
   createWorkspace: (value: UiWorkspaceCreate, csrf: string, key: string) => request<UiWorkspaceDetail['workspace']>('/workspaces', {
@@ -35,7 +42,7 @@ export function mutate<T>(path: string, csrf: string, body: unknown, method = 'P
 }
 
 export function errorText(error: unknown): string {
-  if (error instanceof ApiError && error.status === 401) return '浏览器会话已过期，请从终端重新打开 RIFT。';
+  if (error instanceof ApiError && error.status === 401) return '浏览器会话已过期，请重新连接 RIFT。';
   if (error instanceof TypeError) return '无法连接本机 Host。请确认服务仍在运行，然后重试。';
   return error instanceof Error ? error.message : '请求未完成，请重试。';
 }

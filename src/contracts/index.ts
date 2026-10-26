@@ -5,7 +5,7 @@ export type WorkflowStatus = 'created' | 'planning' | 'running' | 'paused' | 'bl
 export type RunStatus = 'preparing' | 'running' | 'cancelling' | 'succeeded' | 'failed' | 'cancelled' | 'interrupted';
 export type RunPurpose = 'develop' | 'repair' | 'review';
 export interface Workspace { id: string; version?: number; defaultRepositoryId?: string | null; defaultConversationId?: string | null; leadConnection?: import('../chat/contracts.js').ChatConnection | null; name: string; rootPath: string; repositoryPath: string; commonGitDir: string; baseRef: string; status: string }
-export interface ProviderBinding { id: string; providerName: string; packageVersion: string; configRevision: number; capabilities: Record<string, boolean>; credentialRefs: string[]; runtime?:'dsh'|'codex'|'claude'|null; model?:string|null; spawn?:{provider:string;model:string;reasoningEffort?:string;agentPreset?:string;maxTokens?:number}|null }
+export interface ProviderBinding { id: string; providerName: string; packageVersion: string; configRevision: number; capabilities: Record<string, boolean>; credentialRefs: string[]; runtime?:'dsh'|'codex'|'claude'|null; model?:string|null; reasoningEffort?:string|null; spawn?:{provider:string;model:string;reasoningEffort?:string;agentPreset?:string;maxTokens?:number}|null }
 export interface Role { id: string; workspaceId: string; name: RoleName; purpose?:RolePurpose; enabled?:number; kind: 'dsh-lead' | 'subagent'; providerBindingId: string | null; prompt: string; revision: number }
 export interface ProviderSnapshot { role: Role; binding: ProviderBinding | null; skills?: unknown[]; skillInstructions?: string }
 export interface Workflow { id: string; workspaceId: string; goal: string; leadSessionId: string | null; planRevision: number; version: number; status: WorkflowStatus; integrationRef: string; baseCommit: string; summary: string | null }
@@ -20,13 +20,13 @@ export interface ReviewResult { schemaVersion: 1; taskId: string; runId: string;
 export interface ActivationResult { stopReason: string; text: string; dshRunId?: string }
 export interface ActivationHandle { childId: string; result: Promise<ActivationResult>; dispose(): Promise<void> }
 /** Owns only DSH activation handles. A live parent is supplied by the host bridge. */
-export interface ActivationBridge { start(input: { run: Run; task: Task; role: Role; cwd: string; prompt: string; signal: AbortSignal }): Promise<ActivationHandle> }
+export interface ActivationBridge { start(input: { run: Run; task: Task; role: Role; cwd: string; repositoryAccess?: import('../agent/repository-access.js').RepositoryAccess; prompt: string; signal: AbortSignal; tools?: import('../agent/runtime-types.js').RuntimeTool[]; onAccepted?():void }): Promise<ActivationHandle> }
 export interface GitContext { workspace: Workspace; workflow: Workflow; task: Task }
-export interface Candidate { integrationId: string; sourceHead: string; candidateHead: string; expectedTargetHead: string; cwd: string; checkIds: string[] }
+export interface Candidate { integrationId: string; sourceHead: string; candidateHead: string; expectedTargetHead: string; cwd: string; checkIds: string[]; checks?: import('../git/types.js').CheckEvidence[] }
 /** Git facts are determined by the implementation, never by model claims. */
 export interface GitService {
   prepareTask(input: GitContext & { run: Run }): Promise<Worktree>;
-  collectSource(input: GitContext & { run: Run; worktree: Worktree }): Promise<{ sourceHead: string; diff: string; changedPaths: string[] }>;
+  collectSource(input: GitContext & { run: Run; worktree: Worktree; priorSource?: { sourceHead: string; baseCommit: string } }): Promise<{ sourceHead: string; diff: string; changedPaths: string[] }>;
   /** Production Git implementation proves analysis did not change HEAD or any checkout content. */
   verifyAnalysis?(input: GitContext & { run: Run; worktree: Worktree }): Promise<{headCommit:string}>;
   prepareCandidate(input: GitContext & { sourceHead: string; integrationId: string }): Promise<Candidate>;

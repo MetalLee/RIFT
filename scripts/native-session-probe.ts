@@ -67,21 +67,23 @@ try {
     const cwd=path.join(temporary,`attempt-${attempt}`);await mkdir(cwd);
     const role=attempt===3?reviewer:developer,purpose=attempt===1?'develop':attempt===2?'repair':'review',runId=`run-${attempt}`;
     store.exec('INSERT INTO runs(id,task_id,role_id,purpose,task_attempt,status,provider_snapshot,deadline,created_at) VALUES(?,?,?,?,?,?,?,?,?)',runId,'task',role.id,purpose,attempt,'running',JSON.stringify({role,binding}),'later','now');
-    handle=await provider.startTask(store,{run:store.run(runId),task:store.task('task'),role,cwd,prompt:JSON.stringify({runId,cwd,instructions:attempt===1?'Remember TASK_MEMORY_SENTINEL.':'Use current cwd; continue with new evidence.'}),signal:AbortSignal.timeout(60000)});
-    await handle.result;await handle.dispose();handle=undefined;
+    const previousResults=attempt===2?store.all('SELECT id,result FROM runs WHERE task_id=? AND id<>? AND result IS NOT NULL','task',runId):[];
+    handle=await provider.startTask(store,{run:store.run(runId),task:store.task('task'),role,cwd,prompt:JSON.stringify({runId,cwd,previousResults,instructions:attempt===1?'Remember TASK_MEMORY_SENTINEL.':'Use current cwd; continue with Host-supplied prior result evidence.'}),signal:AbortSignal.timeout(60000)});
+    const output=await handle.result;await handle.dispose();handle=undefined;
     taskThreads.push(store.require<{threadId:string}>('SELECT s.thread_id FROM native_sessions s JOIN native_executions e ON e.session_id=s.id WHERE e.execution_id=?',runId).threadId);
-    store.exec("UPDATE runs SET cleanup_status='confirmed',slot_released_at='now' WHERE id=?",runId);
+    store.exec("UPDATE runs SET result=?,cleanup_status='confirmed',slot_released_at='now' WHERE id=?",JSON.stringify({text:output.text,stopReason:output.stopReason}),runId);
     if(attempt===1){store.close();store=new RiftStore(file);}
   }
   const permissionUpdates=JSON.parse(requests[5]!.input).filter((item:{role?:string})=>item.role==='developer').flatMap((item:{content?:{text?:string}[]})=>item.content??[]).map((item:{text?:string})=>item.text??'').filter((text:string)=>text.includes('<permissions instructions>')) as string[];
   const currentPermissions=permissionUpdates.at(-1)??'';
-  report.tasks={repairSameThread:taskThreads[0]===taskThreads[1],reviewIndependent:taskThreads[2]!==taskThreads[0],repairHistoryRestored:requests[5]?.input.includes('TASK_MEMORY_SENTINEL'),reviewDoesNotInheritDeveloper:!requests[6]?.input.includes('TASK_MEMORY_SENTINEL'),repairNewCwd:currentPermissions.includes('attempt-2')&&!currentPermissions.includes('attempt-1'),executions:store.all('SELECT execution_id,native_turn_id,status FROM native_executions')};
+  report.tasks={repairScopeChangedThread:taskThreads[0]!==taskThreads[1],reviewIndependent:taskThreads[2]!==taskThreads[0],repairOldNativeHistoryExcluded:!requests[5]?.input.includes('TASK_MEMORY_SENTINEL'),hostPriorResultInjected:requests[5]?.input.includes('previousResults')&&requests[5]?.input.includes('Protocol probe only')&&requests[5]?.input.includes('run-5'),reviewDoesNotInheritDeveloper:!requests[6]?.input.includes('TASK_MEMORY_SENTINEL'),repairNewCwd:currentPermissions.includes('attempt-2')&&!currentPermissions.includes('attempt-1'),executions:store.all('SELECT execution_id,native_turn_id,status FROM native_executions')};
+  report.permissionContract='Changed task cwd/worktree now starts a fresh native thread; Host previous results, source evidence and collaboration input carry required context. Same cwd and permissions still resume the native conversation.';
   const chat=report.chat as Record<string,unknown>,tasks=report.tasks as Record<string,unknown>;
   report.processes=processes;report.httpCalls=requests.length;
-  report.status=chat.sameThread&&chat.distinctTurns&&firstCalls===1&&secondCalls===1&&chat.historyRestored&&chat.freshClosureObserved&&tasks.repairSameThread&&tasks.reviewIndependent&&tasks.repairHistoryRestored&&tasks.reviewDoesNotInheritDeveloper&&tasks.repairNewCwd?'pass':'fail';
+  report.status=chat.sameThread&&chat.distinctTurns&&firstCalls===1&&secondCalls===1&&chat.historyRestored&&chat.freshClosureObserved&&tasks.repairScopeChangedThread&&tasks.reviewIndependent&&tasks.repairOldNativeHistoryExcluded&&tasks.hostPriorResultInjected&&tasks.reviewDoesNotInheritDeveloper&&tasks.repairNewCwd?'pass':'fail';
 }catch(error){report.status='fail';report.error=publicError(error);report.httpCalls=requests.length;}
 finally {
   if(handle)await handle.dispose().catch(error=>{report.cleanupError=publicError(error);});
   store?.close();await shutdown.shutdown(0);server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));
-  await writeFile(path.resolve('docs/evidence/native-session-probe.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));if(report.status!=='pass')process.exitCode=1;
+  await writeFile(path.resolve(process.env.RIFT_NATIVE_SESSION_PROBE_REPORT || 'docs/evidence/native-session-probe.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));if(report.status!=='pass')process.exitCode=1;
 }

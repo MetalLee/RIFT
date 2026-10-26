@@ -1,0 +1,127 @@
+{
+  "date": "2026-10-26T08:22:47.076Z",
+  "status": "pass",
+  "mode": "read-only SQLite plus exact git object semantic verification, after real model probe closed",
+  "acceptedCommit": "c3da7de30ca87b37c095fb43739b94298b5d18aa",
+  "records": [
+    {
+      "taskId": "stable-label",
+      "status": "accepted",
+      "candidateHead": "3dde60dc0c88246d5a213758115a54d48f982fbc",
+      "reviewedCommit": "3dde60dc0c88246d5a213758115a54d48f982fbc",
+      "verdict": "approve",
+      "checks": [
+        {
+          "id": "8a1427d2-9d82-48bf-a54c-1b55d1b20fa1",
+          "candidateHead": "3dde60dc0c88246d5a213758115a54d48f982fbc",
+          "exitCode": 0
+        },
+        {
+          "id": "d93c1e5a-0b1b-44b6-9a4b-f9f130ddf6ea",
+          "candidateHead": "3dde60dc0c88246d5a213758115a54d48f982fbc",
+          "exitCode": 0
+        }
+      ],
+      "reviewCleanup": "confirmed"
+    },
+    {
+      "taskId": "age-boundary",
+      "status": "blocked",
+      "candidateHead": "a6dac9f8b38c2507cf84eb19e5ce6c7da1620395",
+      "reviewedCommit": "a6dac9f8b38c2507cf84eb19e5ce6c7da1620395",
+      "verdict": "changes_requested",
+      "checks": [
+        {
+          "id": "9f42cef7-3f81-4716-b0bf-02aec8ca777e",
+          "candidateHead": "a6dac9f8b38c2507cf84eb19e5ce6c7da1620395",
+          "exitCode": 0
+        },
+        {
+          "id": "3580b976-bfac-4790-8b13-eed834b07430",
+          "candidateHead": "a6dac9f8b38c2507cf84eb19e5ce6c7da1620395",
+          "exitCode": 0
+        }
+      ],
+      "reviewCleanup": "confirmed"
+    },
+    {
+      "taskId": "age-boundary",
+      "status": "accepted",
+      "candidateHead": "c3da7de30ca87b37c095fb43739b94298b5d18aa",
+      "reviewedCommit": "c3da7de30ca87b37c095fb43739b94298b5d18aa",
+      "verdict": "approve",
+      "checks": [
+        {
+          "id": "df2227a4-fc07-4bae-8ef9-34fbd02ad44d",
+          "candidateHead": "c3da7de30ca87b37c095fb43739b94298b5d18aa",
+          "exitCode": 0
+        },
+        {
+          "id": "10c74451-039b-462c-a5a5-5e0c1f02587f",
+          "candidateHead": "c3da7de30ca87b37c095fb43739b94298b5d18aa",
+          "exitCode": 0
+        }
+      ],
+      "reviewCleanup": "confirmed"
+    }
+  ],
+  "runs": [
+    {
+      "id": "run-7b2ce2e9-96ba-4bfc-baaa-4f89ab9966b0",
+      "task_id": "age-boundary",
+      "purpose": "develop",
+      "status": "succeeded",
+      "cleanup_status": "confirmed",
+      "slot_released_at": "2026-10-26T08:16:26.199Z"
+    },
+    {
+      "id": "run-43dd9560-4e39-49c7-9317-fd906db34d8f",
+      "task_id": "stable-label",
+      "purpose": "develop",
+      "status": "succeeded",
+      "cleanup_status": "confirmed",
+      "slot_released_at": "2026-10-26T08:16:18.491Z"
+    },
+    {
+      "id": "run-10d535b9-1eed-46ec-9442-f63908288437",
+      "task_id": "stable-label",
+      "purpose": "review",
+      "status": "succeeded",
+      "cleanup_status": "confirmed",
+      "slot_released_at": "2026-10-26T08:16:55.171Z"
+    },
+    {
+      "id": "run-16eb684a-98f6-4a24-b7fd-ef8c2ff15a14",
+      "task_id": "age-boundary",
+      "purpose": "review",
+      "status": "succeeded",
+      "cleanup_status": "confirmed",
+      "slot_released_at": "2026-10-26T08:17:29.137Z"
+    },
+    {
+      "id": "run-8491284e-180f-4736-828e-22014acd48ee",
+      "task_id": "age-boundary",
+      "purpose": "repair",
+      "status": "succeeded",
+      "cleanup_status": "confirmed",
+      "slot_released_at": "2026-10-26T08:18:39.129Z"
+    },
+    {
+      "id": "run-554849b4-44ee-4734-892b-cfe61443839e",
+      "task_id": "age-boundary",
+      "purpose": "review",
+      "status": "succeeded",
+      "cleanup_status": "confirmed",
+      "slot_released_at": "2026-10-26T08:19:15.766Z"
+    }
+  ],
+  "checks": {
+    "exactCandidateReview": true,
+    "checksBoundToCommit": true,
+    "fullAgeBoundary": true,
+    "independentLabelPreserved": true,
+    "unassignedFilesUnchanged": true,
+    "originalCheckoutClean": true,
+    "allCleanupConfirmed": true
+  }
+}

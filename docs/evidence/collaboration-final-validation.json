@@ -1,0 +1,181 @@
+{
+  "date": "2026-10-26T08:41:25.584Z",
+  "status": "pass",
+  "scope": "C2-C4 implementation; new chat workflows default enabled; existing workflow ownership retained",
+  "team": "Three Astra high agents: two implementation, one independent review; main coordination and integration",
+  "validation": {
+    "typecheck": "pass",
+    "productionBuild": "pass",
+    "diffCheck": "pass",
+    "tests": {
+      "files": 47,
+      "total": 270,
+      "passed": 269,
+      "failed": 0,
+      "skipped": 1,
+      "skipReason": "Non-Windows owned process-group test"
+    },
+    "independent": {
+      "passed": 19,
+      "failed": 0
+    },
+    "finalStatusProjectionTargeted": {
+      "files": 4,
+      "passed": 27,
+      "failed": 0
+    },
+    "nativeProtocol": {
+      "status": "pass",
+      "checks": {
+        "sameTaskThread": true,
+        "reviewIndependent": true,
+        "repairHistoryRestored": true,
+        "reviewIsolated": true,
+        "repairCwdUpdated": true,
+        "restoredToolDeclaration": true,
+        "freshRunClosures": true,
+        "authorship": true,
+        "staleRejected": true,
+        "noSecondSenderLease": true,
+        "noDiscussionTurns": true
+      }
+    },
+    "realModel": {
+      "status": "pass",
+      "acceptedCommit": "c3da7de30ca87b37c095fb43739b94298b5d18aa",
+      "checks": {
+        "firstReplyBeforeWorkflowComplete": true,
+        "automaticTurnWithoutFakeUser": true,
+        "resumedSameThread": true,
+        "noWaitTool": true,
+        "atomicDelegates": true,
+        "workflowCompleted": true,
+        "twoAcceptedTasks": true,
+        "actualReviewRejection": true,
+        "actualReviewApproval": true,
+        "repairSameTaskThread": true,
+        "runMessagesAttributed": true,
+        "semanticBoundaryVerified": true,
+        "testUnchanged": true,
+        "repositoryClean": true
+      }
+    },
+    "exactCommitAudit": {
+      "status": "pass",
+      "checks": {
+        "exactCandidateReview": true,
+        "checksBoundToCommit": true,
+        "fullAgeBoundary": true,
+        "independentLabelPreserved": true,
+        "unassignedFilesUnchanged": true,
+        "originalCheckoutClean": true,
+        "allCleanupConfirmed": true
+      }
+    },
+    "browser": {
+      "status": "pass",
+      "checks": {
+        "headerLifecycleFresh": true,
+        "healthySseP95": true,
+        "consultationDidNotCreateWorkflow": true,
+        "defaultMode": true,
+        "tagAttached": true,
+        "composerEnabled": true,
+        "firstReplyWhileMemberRunning": true,
+        "taskTagDeepLink": true,
+        "mobileNoOverflow": true,
+        "noDiagnosticNoise": true,
+        "backlogAndHistory": true,
+        "historyNoDuplicates": true,
+        "retentionSnapshot": true,
+        "refreshNoDuplicate": true,
+        "pollingFallback": true,
+        "noBrowserErrors": true
+      },
+      "performance": {
+        "receiptToVisible": {
+          "samples": 20,
+          "p95Ms": 819,
+          "minMs": 200,
+          "maxMs": 985,
+          "values": [
+            303,
+            281,
+            200,
+            271,
+            266,
+            268,
+            269,
+            285,
+            324,
+            407,
+            350,
+            249,
+            257,
+            512,
+            312,
+            819,
+            598,
+            619,
+            387,
+            985
+          ]
+        },
+        "settledToFinalVisible": {
+          "samples": 20,
+          "p95Ms": 738,
+          "minMs": 136,
+          "maxMs": 863,
+          "values": [
+            290,
+            223,
+            225,
+            371,
+            136,
+            246,
+            412,
+            414,
+            333,
+            333,
+            403,
+            414,
+            247,
+            738,
+            539,
+            581,
+            863,
+            484,
+            379,
+            663
+          ]
+        },
+        "excludes": "External inference, task duration and runtime cleanup time",
+        "pollingFallback": {
+          "samples": 1,
+          "visibleMs": 1851,
+          "healthySseTargetApplied": false,
+          "configuredChatPollingMs": 1800,
+          "blockedSseAttempts": 4,
+          "failedSseRequests": 4,
+          "appendedAfterPollMs": 12,
+          "pollingResponseTimes": [
+            1793004011810,
+            1793004013627,
+            1793004015429
+          ]
+        }
+      }
+    }
+  },
+  "limits": [
+    "C-A02 uses an unresolved controlled Run to verify lifecycle separation; no ten-minute wall-clock run.",
+    "Final inbox/causality/status projection refinements verified by focused tests and final browser; real model probe predates these boundary refinements.",
+    "External providers without scoped dynamic tools retain Host event projections.",
+    "Existing frontend bundle >500 kB warning remains."
+  ],
+  "deployment": {
+    "built": true,
+    "userHostRestarted": false,
+    "gitCommitCreated": false
+  }
+}

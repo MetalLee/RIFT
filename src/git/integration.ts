@@ -81,7 +81,7 @@ export class LocalGitService implements GitService {
     });
     return { id, taskId: task.id, attempt: task.attempt, kind: 'task', path: cwd, branch, baseCommit, headCommit: baseCommit, writerRunId: run.id, status: 'active' };
   }
-  async collectSource(input: GitContext & { run: Run; worktree: Worktree }): Promise<{ sourceHead: string; diff: string; changedPaths: string[] }> {
+  async collectSource(input: GitContext & { run: Run; worktree: Worktree; priorSource?: { sourceHead: string; baseCommit: string } }): Promise<{ sourceHead: string; diff: string; changedPaths: string[] }> {
     const { workspace, task, run, worktree } = input;
     if (run.cleanupStatus !== 'confirmed' || worktree.taskId !== task.id || worktree.attempt !== task.attempt || worktree.writerRunId !== run.id) throw new Error('WORKTREE_OWNERSHIP: cleanup and exclusive writer required');
     const cwd = await managedPath(this.managedRoot, worktree.path);
@@ -90,22 +90,38 @@ export class LocalGitService implements GitService {
     if (actualRepository.commonGitDir !== expectedCommon || actualRepository.rootPath !== await realpath(cwd)) throw new Error('WORKTREE_OWNERSHIP: repository mismatch');
     await gitOk(cwd, ['merge-base', '--is-ancestor', worktree.baseCommit, 'HEAD']);
     const split = (value: string): string[] => value.split('\0').filter(Boolean);
-    const changedPaths = [...new Set([
+    let comparisonBase = worktree.baseCommit;
+    let reusedSource = false;
+    let changedPaths = [...new Set([
       ...split((await git(cwd, ['diff', '--name-only', '-z', '--no-renames', worktree.baseCommit, '--'])).stdout),
       ...split((await git(cwd, ['diff', '--cached', '--name-only', '-z', '--no-renames', worktree.baseCommit, '--'])).stdout),
       ...split((await git(cwd, ['ls-files', '--others', '--exclude-standard', '-z'])).stdout),
     ])].sort();
+    if (!changedPaths.length) {
+      const head = await gitOk(cwd, ['rev-parse', 'HEAD']);
+      const prior = input.priorSource;
+      // A Host infrastructure retry may have no new edits. Reuse only the
+      // already collected source proven by this task's durable collection
+      // event, never an empty first attempt or an arbitrary committed HEAD.
+      if (task.attempt <= 1 || !prior || prior.sourceHead !== task.sourceHead || head !== task.sourceHead || worktree.baseCommit !== head || !/^[a-f0-9]{40,64}$/.test(prior.baseCommit)) throw new Error('EMPTY_CHANGE: no new diff or verified prior source');
+      await gitOk(cwd, ['merge-base', '--is-ancestor', prior.baseCommit, head]);
+      comparisonBase = prior.baseCommit;
+      changedPaths = split((await git(cwd, ['diff', '--name-only', '-z', '--no-renames', comparisonBase, head, '--'])).stdout).sort();
+      reusedSource = true;
+    }
     await assertSafeFiles(cwd, changedPaths);
     const allowed = task.expectedPaths.map(value => value.replace(/\\/g, '/').replace(/\/\*\*$/, '').replace(/\/$/, ''));
     if (allowed.some(value => value.startsWith('/') || value.includes('..') || /^[A-Za-z]:/.test(value))) throw new Error('INVALID_EXPECTED_PATH');
-    if (allowed.length && changedPaths.some(file => !allowed.some(prefix => file === prefix || file.startsWith(`${prefix}/`)))) throw new Error('PATH_SCOPE_VIOLATION: changes preserved for inspection');
+    if (allowed.length && changedPaths.some(file => !allowed.some(prefix => file === prefix || file.startsWith(`${prefix}/`) || path.posix.matchesGlob(file.replaceAll('\\','/'),prefix)))) throw new Error('PATH_SCOPE_VIOLATION: changes preserved for inspection');
     if (!changedPaths.length) throw new Error('EMPTY_CHANGE: change task has no actual diff');
-    await gitOk(cwd, ['add', '--', ...changedPaths]);
-    const staged = await git(cwd, ['diff', '--cached', '--quiet']);
-    if (staged.exitCode === 1) await gitOk(cwd, ['-c', 'user.name=RIFT', '-c', 'user.email=rift@localhost', 'commit', '-m', `RIFT task ${task.id} attempt ${task.attempt}`]);
-    else if (staged.exitCode !== 0) throw new Error('SOURCE_INDEX_INVALID');
+    if (!reusedSource) {
+      await gitOk(cwd, ['add', '--', ...changedPaths]);
+      const staged = await git(cwd, ['diff', '--cached', '--quiet']);
+      if (staged.exitCode === 1) await gitOk(cwd, ['-c', 'user.name=RIFT', '-c', 'user.email=rift@localhost', 'commit', '-m', `RIFT task ${task.id} attempt ${task.attempt}`]);
+      else if (staged.exitCode !== 0) throw new Error('SOURCE_INDEX_INVALID');
+    }
     const sourceHead = await gitOk(cwd, ['rev-parse', 'HEAD']);
-    const diff = await gitOk(cwd, ['diff', '--no-ext-diff', '--no-textconv', worktree.baseCommit, sourceHead, '--']);
+    const diff = await gitOk(cwd, ['diff', '--no-ext-diff', '--no-textconv', comparisonBase, sourceHead, '--']);
     if (!diff) throw new Error('EMPTY_CHANGE: final source has no actual diff from its attempt base');
     return { sourceHead, diff, changedPaths };
   }
@@ -156,7 +172,10 @@ export class LocalGitService implements GitService {
         if (await gitOk(candidatePath, ['rev-parse', 'HEAD']) !== candidateHead || !(await checkoutClean(candidatePath))) throw new Error('CHECK_MODIFIED_CANDIDATE: changes preserved');
       }
       await withMetadataLock(repository.commonGitDir, async () => { await mkdir(path.dirname(reviewPath), { recursive: true }); await gitOk(repository.rootPath, ['worktree', 'add', '--detach', '--', reviewPath, candidateHead]); });
-      return { integrationId, sourceHead, candidateHead, expectedTargetHead, cwd: reviewPath, checkIds: checks.map(check => check.id) };
+      // Review receives committed Host evidence, never the developer's claims.
+      // The full bounded logs remain in the durable Git operation; the prompt
+      // carries an explicitly truncated excerpt for each exact candidate check.
+      return { integrationId, sourceHead, candidateHead, expectedTargetHead, cwd: reviewPath, checkIds: checks.map(check => check.id), checks: checks.map(check => ({...check,stdout:check.stdout.slice(0,8000),stderr:check.stderr.slice(0,8000),truncated:check.truncated||check.stdout.length>8000||check.stderr.length>8000})) };
     } catch (error) {
       if (operation) await this.record(workspace, { ...operation, phase: 'blocked', reason: String(error) });
       integrationOwners.delete(ownerKey); throw error;

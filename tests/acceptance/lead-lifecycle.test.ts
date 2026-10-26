@@ -6,6 +6,8 @@ import type { Context } from '@deepseek-ai/cordis';
 import { RiftHostService } from '../../src/api/host-service.js';
 import { seedWorkspace } from './fixtures.js';
 
+vi.mock('../../src/agent/repository-shell.js',()=>({createRepositoryShell:vi.fn(async()=>({tool:{name:'exec_command',description:'Controlled repository shell',inputSchema:{},execute:vi.fn(async()=>({exitCode:0}))},dispose:vi.fn(async()=>{})}))}));
+
 describe('independent Lead lifecycle management', () => {
   async function fixture(cancel = vi.fn(async () => undefined), createGate: Promise<void> = Promise.resolve()) {
     const home = await mkdtemp(path.join(tmpdir(), 'rift-lead-lifecycle-'));

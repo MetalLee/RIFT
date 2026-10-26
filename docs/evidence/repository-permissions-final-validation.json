@@ -1,0 +1,34 @@
+{
+  "date": "2026-10-26T10:50:35.665Z",
+  "scope": "Current main working tree; no remote push or PR; GitHub sign-in deferred by user",
+  "typecheck": "passed",
+  "productionBuild": "passed",
+  "tests": {
+    "total": 331,
+    "passed": 330,
+    "failed": 0,
+    "skipped": 1,
+    "files": 55
+  },
+  "probes": {
+    "nativeRepository": "17/17",
+    "dshRepositoryShell": "6/6",
+    "independentPermissions": "15/15"
+  },
+  "host": {
+    "pid": 24588,
+    "url": "http://127.0.0.1:47831",
+    "httpStatus": 200,
+    "doctorResponsePresent": true,
+    "profile": "rift-ui + profiles/rift.codex.patch.yml",
+    "chatOrchestration": true,
+    "backup": "D:/RiftUI-backup-20261026-repository-permissions.db",
+    "activeLeases": 0,
+    "integrity": "ok",
+    "foreignKeyErrors": 0
+  },
+  "limitations": [
+    "GitHub CLI installed; authentication and remote PR creation deferred.",
+    "Earlier 6639bc3 workflow candidate remains on its integration branch, not merged into main."
+  ]
+}

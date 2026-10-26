@@ -1,0 +1,92 @@
+{
+  "date": "2026-10-26T08:09:20.161Z",
+  "mode": "real SQLite, loopback HTTP/SSE and built React UI in headless Edge; controlled runtime",
+  "home": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\collaboration-browser-BFqj2E",
+  "environment": {
+    "platform": "win32",
+    "node": "v24.16.0"
+  },
+  "checks": {
+    "healthySseP95": false,
+    "consultationDidNotCreateWorkflow": true,
+    "defaultMode": true,
+    "tagAttached": true,
+    "composerEnabled": true,
+    "firstReplyWhileMemberRunning": true,
+    "taskTagDeepLink": true,
+    "mobileNoOverflow": true,
+    "noDiagnosticNoise": true,
+    "backlogAndHistory": true,
+    "historyNoDuplicates": true,
+    "retentionSnapshot": true,
+    "refreshNoDuplicate": true,
+    "pollingFallback": true,
+    "noBrowserErrors": true
+  },
+  "performance": {
+    "receiptToVisible": {
+      "samples": 20,
+      "p95Ms": 886,
+      "minMs": 155,
+      "maxMs": 1334,
+      "values": [
+        806,
+        201,
+        216,
+        305,
+        228,
+        155,
+        280,
+        208,
+        283,
+        812,
+        299,
+        559,
+        661,
+        1334,
+        886,
+        414,
+        818,
+        578,
+        819,
+        441
+      ]
+    },
+    "settledToFinalVisible": {
+      "samples": 20,
+      "p95Ms": 1056,
+      "minMs": 129,
+      "maxMs": 1069,
+      "values": [
+        833,
+        129,
+        231,
+        231,
+        249,
+        277,
+        274,
+        192,
+        564,
+        975,
+        1024,
+        1056,
+        822,
+        368,
+        815,
+        857,
+        879,
+        1069,
+        585,
+        461
+      ]
+    },
+    "excludes": "External inference, task duration and runtime cleanup time",
+    "pollingFallback": {
+      "samples": 1,
+      "visibleMs": 391,
+      "healthySseTargetApplied": false
+    }
+  },
+  "browserErrors": [],
+  "status": "fail"
+}

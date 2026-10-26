@@ -46,6 +46,21 @@ export class RiftStore {
       if(!this.get('SELECT version FROM schema_migrations WHERE version=7'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0007_chat_context_cleanup.sql',import.meta.url)),'utf8')));
       if(!this.get('SELECT version FROM schema_migrations WHERE version=8'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0008_api_connections.sql',import.meta.url)),'utf8')));
       if(!this.get('SELECT version FROM schema_migrations WHERE version=9'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0009_native_sessions.sql',import.meta.url)),'utf8')));
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=10'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0010_execution_reasoning.sql',import.meta.url)),'utf8')));
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=11'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0011_conversation_titles.sql',import.meta.url)),'utf8')));
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=12')) {
+        this.db.exec('PRAGMA foreign_keys=OFF; PRAGMA legacy_alter_table=ON;');
+        try { this.transaction(()=>{this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0012_chat_orchestration.sql',import.meta.url)),'utf8'));if(this.db.prepare('PRAGMA foreign_key_check').all().length)throw new Error('Orchestration migration introduced invalid foreign keys.');}); }
+        finally { this.db.exec('PRAGMA legacy_alter_table=OFF; PRAGMA foreign_keys=ON;'); }
+      }
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=13'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0013_turn_activities.sql',import.meta.url)),'utf8')));
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=14')) {
+        this.db.exec('PRAGMA foreign_keys=OFF; PRAGMA legacy_alter_table=ON;');
+        try {this.transaction(()=>{this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0014_collaboration_messages.sql',import.meta.url)),'utf8'));if(this.db.prepare('PRAGMA foreign_key_check').all().length)throw new Error('Collaboration migration introduced invalid foreign keys.');});}
+        finally {this.db.exec('PRAGMA legacy_alter_table=OFF; PRAGMA foreign_keys=ON;');}
+      }
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=15'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0015_safe_chat_stream.sql',import.meta.url)),'utf8')));
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=16'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0016_coordination_causality.sql',import.meta.url)),'utf8')));
     } catch (error) { this.releaseLock(); throw error; }
   }
   private acquireLock(path: string): void {

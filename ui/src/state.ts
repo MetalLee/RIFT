@@ -1,11 +1,13 @@
 export const pages = ['chat', 'workspaces', 'agents', 'skills', 'repositories', 'tasks', 'settings', 'activity'] as const;
 export type Page = typeof pages[number];
-export interface Route { workspaceId: string; page: Page }
+export interface Route { workspaceId: string; page: Page; taskId?: string }
 export function parseRoute(hash: string): Route {
-  const [, segment, encodedId, page] = hash.replace(/^#/, '').split('/');
+  const [pathname, query = ''] = hash.replace(/^#/, '').split('?');
+  const [, segment, encodedId, page] = pathname.split('/');
   let workspaceId = '';
   try { workspaceId = segment === 'workspace' ? decodeURIComponent(encodedId ?? '') : ''; } catch { /* A malformed link returns to the directory. */ }
-  return { workspaceId, page: pages.includes(page as Page) ? page as Page : 'chat' };
+  const taskId = new URLSearchParams(query).get('task');
+  return { workspaceId, page: pages.includes(page as Page) ? page as Page : 'chat', ...(page === 'tasks' && taskId ? {taskId} : {}) };
 }
 export function routeHref(workspaceId: string, page: Page): string { return `#/workspace/${encodeURIComponent(workspaceId)}/${page}`; }
 export function draftKey(workspaceId: string, conversationId?: string): string { return `rift:draft:${encodeURIComponent(workspaceId)}${conversationId ? `:${encodeURIComponent(conversationId)}` : ''}`; }
@@ -28,3 +30,5 @@ export class LatestRequest {
   }
   cancel() { this.generation++; this.controller?.abort(); }
 }
+
+export function taskHref(workspaceId: string, taskId: string): string { return `${routeHref(workspaceId,'tasks')}?task=${encodeURIComponent(taskId)}`; }

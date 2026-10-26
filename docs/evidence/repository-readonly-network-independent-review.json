@@ -1,0 +1,15 @@
+{
+  "date": "2026-10-26T10:45:05.625Z",
+  "mode": "Independent real DSH native CLI readOnly sandbox; local GET and public HTTPS HEAD only; no remote writes",
+  "folder": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\readonly-network-review-Cg5axh",
+  "result": {
+    "exitCode": 0,
+    "stdout": "LOCAL_ALLOWED\r\nREMOTE_DENIED\r\n",
+    "stderr": "",
+    "truncated": false
+  },
+  "localRequests": 1,
+  "localDenied": false,
+  "remoteDenied": true,
+  "networkIsolationVerified": false
+}

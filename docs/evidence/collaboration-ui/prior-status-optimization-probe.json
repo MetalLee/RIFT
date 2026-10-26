@@ -1,0 +1,102 @@
+{
+  "date": "2026-10-26T08:39:41.788Z",
+  "mode": "real SQLite, loopback HTTP/SSE and built React UI in headless Edge; controlled runtime",
+  "home": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\collaboration-browser-CGTHB5",
+  "environment": {
+    "platform": "win32",
+    "node": "v24.16.0"
+  },
+  "checks": {
+    "headerLifecycleFresh": true,
+    "healthySseP95": true,
+    "consultationDidNotCreateWorkflow": true,
+    "defaultMode": true,
+    "tagAttached": true,
+    "composerEnabled": true,
+    "firstReplyWhileMemberRunning": true,
+    "taskTagDeepLink": true,
+    "mobileNoOverflow": true,
+    "noDiagnosticNoise": true,
+    "backlogAndHistory": true,
+    "historyNoDuplicates": true,
+    "retentionSnapshot": true,
+    "refreshNoDuplicate": true,
+    "pollingFallback": true,
+    "noBrowserErrors": true
+  },
+  "performance": {
+    "receiptToVisible": {
+      "samples": 20,
+      "p95Ms": 819,
+      "minMs": 200,
+      "maxMs": 985,
+      "values": [
+        303,
+        281,
+        200,
+        271,
+        266,
+        268,
+        269,
+        285,
+        324,
+        407,
+        350,
+        249,
+        257,
+        512,
+        312,
+        819,
+        598,
+        619,
+        387,
+        985
+      ]
+    },
+    "settledToFinalVisible": {
+      "samples": 20,
+      "p95Ms": 738,
+      "minMs": 136,
+      "maxMs": 863,
+      "values": [
+        290,
+        223,
+        225,
+        371,
+        136,
+        246,
+        412,
+        414,
+        333,
+        333,
+        403,
+        414,
+        247,
+        738,
+        539,
+        581,
+        863,
+        484,
+        379,
+        663
+      ]
+    },
+    "excludes": "External inference, task duration and runtime cleanup time",
+    "pollingFallback": {
+      "samples": 1,
+      "visibleMs": 1851,
+      "healthySseTargetApplied": false,
+      "configuredChatPollingMs": 1800,
+      "blockedSseAttempts": 4,
+      "failedSseRequests": 4,
+      "appendedAfterPollMs": 12,
+      "pollingResponseTimes": [
+        1793004011810,
+        1793004013627,
+        1793004015429
+      ]
+    }
+  },
+  "browserErrors": [],
+  "status": "pass"
+}

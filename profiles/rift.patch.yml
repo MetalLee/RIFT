@@ -52,6 +52,7 @@
         home: !!js process.env.RIFT_HOME || '.rift'
         port: !!js Number(process.env.RIFT_PORT || 47831)
         uiEnabled: !!js process.env.RIFT_UI_ENABLED !== 'false'
+        chatOrchestration: !!js process.env.RIFT_CHAT_ORCHESTRATION !== '0'
         leadTurnLimit: !!js Number(process.env.RIFT_LEAD_TURN_LIMIT || 4)
         leadProvider: deepseek-official
         leadModel: !!js process.env.RIFT_LEAD_MODEL || 'deepseek-flash'

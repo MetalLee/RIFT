@@ -2,12 +2,17 @@ import { PassThrough } from 'node:stream';
 import { afterEach, describe, expect, it } from 'vitest';
 import { JsonRpcLineTransport } from '@deepseek-ai/dsh-sdk-protocol';
 import type { SubprocessHandle, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess';
-import { NativeCodexRuntime } from '../../src/agent/native-codex.js';
+import { NativeCodexRuntime, nativeRepositoryRoots, type NativeCodexOptions } from '../../src/agent/native-codex.js';
 import type { RuntimeHandle, RuntimeTurnInput } from '../../src/agent/runtime-types.js';
+import { mkdtemp,mkdir,rm,writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 
 const disposers: (() => Promise<void>)[] = [];
 afterEach(async () => { await Promise.allSettled(disposers.splice(0).map(dispose => dispose())); });
-function harness(options: { sandbox?: string; cleanup?: boolean; resumeId?:string; resumeActive?:boolean; resumeMissing?:boolean } = {}) {
+function harness(options: { sandbox?: string; cleanup?: boolean; resumeId?:string; resumeActive?:boolean; resumeMissing?:boolean;mode?:NativeCodexOptions['mode'];env?:NodeJS.ProcessEnv;extraRoot?:string;networkMismatch?:boolean } = {}) {
   const stdin = new PassThrough(), stdout = new PassThrough();
   const peer = new JsonRpcLineTransport(stdin, stdout);
   const requests: { method: string; params: Record<string, unknown> }[] = [];
@@ -19,21 +24,22 @@ function harness(options: { sandbox?: string; cleanup?: boolean; resumeId?:strin
     terminate() { terminateCount++; exit({ exitCode: 0, signal: null }); },
     async waitForExit() { return options.cleanup !== false; },
   };
+  const sandbox=(params:Record<string,any>)=>({type:options.sandbox??(params.sandbox==='workspace-write'?'workspaceWrite':'readOnly'),...(params.sandbox==='workspace-write'?{writableRoots:[...(params.config?.['sandbox_workspace_write.writable_roots']??[]),...(options.extraRoot?[options.extraRoot]:[])],networkAccess:options.networkMismatch?false:params.config?.['sandbox_workspace_write.network_access'],excludeTmpdirEnvVar:true,excludeSlashTmp:true}:{networkAccess:options.networkMismatch??false})});
   peer.onRequest(async (method, params) => {
     requests.push({ method, params });
     if (method === 'initialize') return {};
     if (method === 'config/read') return { config: { mcp_servers: { legacy: { command: 'never-start' } } } };
-    if (method === 'thread/start') return { cwd:params.cwd,thread: { id: 'native-thread', ephemeral: params.ephemeral }, approvalPolicy: 'never', sandbox: { type: options.sandbox ?? 'readOnly' } };
+    if (method === 'thread/start') return { cwd:params.cwd,thread: { id: 'native-thread', ephemeral: params.ephemeral }, approvalPolicy: 'never', sandbox: sandbox(params) };
     if (method === 'thread/resume') {
       if (options.resumeMissing) throw new Error('Thread missing');
-      return { cwd:params.cwd,thread: { id:options.resumeId??'native-thread',ephemeral:false,status:{type:options.resumeActive?'active':'idle'} },approvalPolicy:'never',sandbox:{type:options.sandbox??'readOnly'} };
+      return { cwd:params.cwd,thread: { id:options.resumeId??'native-thread',ephemeral:false,status:{type:options.resumeActive?'active':'idle'} },approvalPolicy:'never',sandbox:sandbox(params) };
     }
     if (method === 'turn/start') return { turn: { id: 'native-turn', status: 'inProgress' } };
     if (method === 'turn/interrupt') return {};
     throw new Error(`Unexpected method ${method}`);
   });
   peer.start();
-  const runtime = new NativeCodexRuntime({ spawn(spec) { spawnSpec = spec; return child; } });
+  const runtime = new NativeCodexRuntime({mode:options.mode,env:options.env,spawn(spec) { spawnSpec = spec; return child; } });
   const controller = new AbortController();
   const calls: unknown[] = [];
   const input: RuntimeTurnInput = {
@@ -113,7 +119,7 @@ describe('native Codex Host-owned tool gateway', () => {
   });
 
   it('fails before spawning when a model has not passed native tool isolation', async () => {
-    const h = harness(); h.input.model = 'gpt-6-astra';
+    const h = harness(); h.input.model = 'unverified-model';
     await expect(h.start()).rejects.toMatchObject({ code: 'NATIVE_MODEL_UNVERIFIED' });
     expect(h.spawnSpec).toBeUndefined();
   });
@@ -127,5 +133,50 @@ describe('native Codex Host-owned tool gateway', () => {
     let released = false; const disposal = handle.dispose().then(() => { released = true; });
     await new Promise(resolve => setImmediate(resolve)); expect(released).toBe(false);
     finish(); await disposal; expect(released).toBe(true);
+  });
+});
+
+describe('native repository capabilities',()=>{
+  async function repositories(){
+    const folder=await mkdtemp(path.join(tmpdir(),'rift-native-roots-')),repo=path.join(folder,'repo'),other=path.join(folder,'other'),worktree=path.join(folder,'worktree');
+    disposers.push(async()=>{await rm(folder,{recursive:true,force:true});});
+    const exec=promisify(execFile);
+    for(const cwd of [repo,other]){await mkdir(cwd);await exec('git',['init','-q','-b','main',cwd]);await writeFile(path.join(cwd,'base.txt'),'base\n');await exec('git',['-C',cwd,'add','.']);await exec('git',['-C',cwd,'-c','user.name=Probe','-c','user.email=probe@example.invalid','commit','-qm','base']);}
+    await exec('git',['-C',repo,'worktree','add','-q','-b','probe',worktree]);return{folder,repo,other,worktree};
+  }
+  it('derives exact Git metadata roots for all associated repositories and refuses foreign cwd or broad roots',async()=>{
+    const f=await repositories(),signal=new AbortController().signal;
+    const roots=await nativeRepositoryRoots(f.worktree,[f.repo,f.other],signal);
+    expect(roots).toEqual(expect.arrayContaining([f.repo,f.other,f.worktree,path.join(f.repo,'.git'),path.join(f.repo,'.git','worktrees','worktree'),path.join(f.other,'.git')]));
+    expect(roots).not.toContain(f.folder);
+    await expect(nativeRepositoryRoots(f.other,[f.repo],signal)).rejects.toMatchObject({code:'NATIVE_REPOSITORY_SCOPE'});
+    await expect(nativeRepositoryRoots(f.repo,[path.parse(f.repo).root],signal)).rejects.toMatchObject({code:'NATIVE_REPOSITORY_SCOPE'});
+    await expect(nativeRepositoryRoots(f.repo,['relative'],signal)).rejects.toMatchObject({code:'NATIVE_REPOSITORY_SCOPE'});
+  });
+  it('enables exact workspace repositories on both start and resume without inheriting desktop authority',async()=>{
+    const f=await repositories();
+    for(const resume of [false,true]){
+      const h=harness({env:{CODEX_DESKTOP_TOOL_PIPE:'must-not-inherit',CODEX_THREAD_ID:'foreign'}});h.input.cwd=f.worktree;h.input.repositoryAccess={repositoryPaths:[f.repo,f.other]};
+      if(resume)h.input.session={threadId:'native-thread',runtimeHome:f.folder,onThread(){},onTurn(){},onSettled(){}};
+      const handle=await h.start(),request=h.requests.find(r=>r.method===(resume?'thread/resume':'thread/start'))!.params;
+      expect(request.sandbox).toBe('workspace-write');expect(request).not.toHaveProperty('environments');expect(h.requests.find(r=>r.method==='turn/start')!.params).not.toHaveProperty('environments');
+      expect(request.config).toMatchObject({'sandbox_workspace_write.network_access':true,'features.shell_tool':true,'features.unified_exec':true,'features.multi_agent':false,'mcp_servers.legacy.enabled':false});
+      expect(h.spawnSpec!.env).toMatchObject({CODEX_DESKTOP_TOOL_PIPE:undefined,CODEX_THREAD_ID:undefined});expect(h.spawnSpec!.argv.some(arg=>arg.includes('model_catalog_json'))).toBe(false);
+      h.complete();await handle.result;await handle.dispose();
+    }
+  });
+  it.each(['review','analysis'] as const)('does not promote formal %s even when repositoryAccess is supplied',async mode=>{
+    const h=harness({mode});h.input.repositoryAccess={repositoryPaths:['not-a-repository']};const handle=await h.start();
+    const request=h.requests.find(r=>r.method==='thread/start')!.params;expect(request.sandbox).toBe('read-only');expect(request.config).toMatchObject({'features.shell_tool':false,'features.unified_exec':false});expect(request.environments).toEqual([]);
+    expect((request.dynamicTools as {name:string}[]).map(tool=>tool.name)).toEqual(['rift_status','rift_read_file','rift_list_files']);
+    expect(h.requests.find(r=>r.method==='turn/start')!.params.sandboxPolicy).toEqual({type:'readOnly',networkAccess:false});
+    h.complete();await handle.result;await handle.dispose();
+  });
+  it.each(['root','network'] as const)('rejects a mismatched %s capability before turn publication',async mismatch=>{
+    const f=await repositories(),h=harness(mismatch==='root'?{extraRoot:f.folder}:{networkMismatch:true});h.input.cwd=f.worktree;h.input.repositoryAccess={repositoryPaths:[f.repo]};
+    await expect(h.start()).rejects.toMatchObject({code:'NATIVE_RESTRICTIONS_UNCONFIRMED'});expect(h.requests.some(r=>r.method==='turn/start')).toBe(false);expect(h.terminateCount).toBe(1);
+  });
+  it('rejects read-only permission responses that silently enable remote network writes',async()=>{
+    const h=harness({mode:'review',networkMismatch:true});await expect(h.start()).rejects.toMatchObject({code:'NATIVE_RESTRICTIONS_UNCONFIRMED'});expect(h.requests.some(r=>r.method==='turn/start')).toBe(false);
   });
 });

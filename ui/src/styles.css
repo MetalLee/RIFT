@@ -47,3 +47,13 @@
 @media(max-width:767px){.activity-group-title{font-size:14px}}
 
 }
+
+/* Conversation attachments stay beside their source message. */
+.message-task-tags { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.task-tag { text-decoration:none; max-width:100%; white-space:normal; }
+.chat-progress { margin-top:10px; font-size:13px; color:var(--muted-foreground); }
+.chat-progress summary { cursor:pointer; }
+.chat-progress ul { margin:8px 0; padding-left:18px; }
+.chat-progress li { margin:6px 0; overflow-wrap:anywhere; }
+.message-draft { margin-top:18px; padding-top:14px; border-top:1px solid var(--border); }
+.message-recipient { color:var(--muted-foreground); }

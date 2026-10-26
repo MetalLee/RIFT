@@ -49,6 +49,7 @@
       config:
         home: !!js process.env.RIFT_HOME || '.rift'
         port: !!js Number(process.env.RIFT_PORT || 47831)
+        chatOrchestration: !!js process.env.RIFT_CHAT_ORCHESTRATION !== '0'
         leadProvider: deepseek-official
         leadModel: !!js process.env.RIFT_LEAD_MODEL || 'deepseek-flash'
         developerProvider: codex-dev

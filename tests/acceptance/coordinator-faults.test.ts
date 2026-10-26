@@ -133,12 +133,12 @@ describe('A01/A07/A13-A18 independent fake activation fault acceptance', () => {
       expect(h.coordinator.status(h.workflow.id).tasks).toHaveLength(0);
       h.plan([{ id: 'first', kind: 'change' }, { id: 'second' }, { id: 'third' }, { id: 'dependent', dependsOn: ['first'] }]);
       h.dispatch('first'); h.dispatch('second'); h.dispatch('third'); h.dispatch('dependent');
-      await expect.poll(() => h.starts.length).toBe(2); h.complete(0);
+      await expect.poll(() => h.starts.length).toBe(2); h.complete(h.starts.findIndex(entry=>entry.input.task.id==='first'));
       await expect.poll(() => h.coordinator.status(h.workflow.id).slots).toEqual({ developers: 2, reviewers: 1, total: 3 });
       expect(h.starts.some(e => e.input.task.id === 'dependent')).toBe(false);
       const reviewIndex = h.starts.findIndex(e => e.input.run.purpose === 'review'); h.complete(reviewIndex);
       await expect.poll(() => h.store.task('first').status).toBe('succeeded');
-      h.complete(1);
+      h.complete(h.starts.findIndex(entry=>entry.input.task.id==='second'));
       await expect.poll(() => h.starts.some(e => e.input.task.id === 'dependent')).toBe(true);
     } finally { await h.close(); }
   });

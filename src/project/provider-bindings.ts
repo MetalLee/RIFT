@@ -1,5 +1,5 @@
 import { invariant, type ProviderBinding } from '../contracts/index.js';
-const allowed=new Set(['id','providerName','packageVersion','configRevision','capabilities','credentialRefs','runtime','model','spawn']);
+const allowed=new Set(['id','providerName','packageVersion','configRevision','capabilities','credentialRefs','runtime','model','reasoningEffort','spawn']);
 export function validateBinding(input:ProviderBinding,registeredProviderNames:ReadonlySet<string>):void {
   invariant(Object.keys(input).every(key=>allowed.has(key)),'INVALID_CONFIG','Provider bindings only accept references and declared metadata; credentials belong to the host.');
   invariant(registeredProviderNames.has(input.providerName),'PROVIDER_NOT_REGISTERED',`Provider ${input.providerName} is not registered in this host.`);
@@ -8,6 +8,7 @@ export function validateBinding(input:ProviderBinding,registeredProviderNames:Re
   invariant(Object.values(input.capabilities).every(value=>typeof value==='boolean'),'INVALID_CONFIG','Provider capabilities must be boolean values.');
   invariant(input.runtime == null || ['dsh','codex','claude'].includes(input.runtime),'INVALID_CONFIG','Unknown provider runtime.');
   invariant(input.model == null || (typeof input.model==='string' && input.model.trim().length>0),'INVALID_CONFIG','Model must be a nonempty identifier.');
+  invariant(input.reasoningEffort == null || (input.runtime === 'codex' && /^[a-z]+$/.test(input.reasoningEffort)), 'INVALID_CONFIG', 'Native reasoning effort requires a Codex binding.');
   if(input.spawn) {
     invariant(input.runtime==='dsh','UNSUPPORTED_PROVIDER_OPTION','Only DSH bindings accept per-child spawn options; external models belong to separate registered instances.');
     invariant(Object.keys(input.spawn).every(key=>['provider','model','reasoningEffort','agentPreset','maxTokens'].includes(key)),'INVALID_CONFIG','Unknown DSH spawn option.');

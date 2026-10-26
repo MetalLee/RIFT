@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-26T08:22:00.072Z",
+  "status": "fail",
+  "mode": "real gpt-6.1-sol probe; provider reported model capacity after Workflow creation",
+  "temporary": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\collaboration-real-6viZki",
+  "turns": [
+    {
+      "id": "turn-54db7529-65fb-4998-a58a-b0a19eb524ec",
+      "status": "failed",
+      "error": "Selected model is at capacity. Please try a different model.",
+      "cleanup_status": "confirmed"
+    }
+  ],
+  "runs": [],
+  "unreleasedLeases": [],
+  "coordination": [
+    {
+      "workflow_id": "workflow-df68aa33-192f-490a-a13d-3fe361539ac6",
+      "workspace_id": "workspace-c6df525a-6e7d-442e-a603-4730ae3b106f",
+      "conversation_id": "conversation-50973c4d-322d-43b2-b534-25dbb412d718",
+      "agent_id": "workspace-c6df525a-6e7d-442e-a603-4730ae3b106f:lead",
+      "mode": "chat",
+      "version": 0,
+      "automatic_turns": 0,
+      "blocked_reason": "COORDINATION_TURN_FAILED",
+      "created_at": "2026-10-26T08:13:06.468Z",
+      "correlation_id": "message-9cab3da8-52c5-476a-8883-d0ef2f48c198",
+      "parent_message_id": "message-9cab3da8-52c5-476a-8883-d0ef2f48c198"
+    }
+  ],
+  "note": "All runtime cleanup confirmed; idle probe supervisor stopped after preserving failure evidence."
+}

@@ -10,6 +10,10 @@ import { withMetadataLock } from '../../src/git/worktree-binding.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { ActivationBridge, ActivationResult, GitService, PlanTask, ProviderBinding } from '../../src/contracts/index.js';
 
+// This suite controls the model/Host lifecycle. Native command capabilities are
+// independently exercised by repository-permissions-review and the real probe.
+vi.mock('../../src/agent/repository-shell.js',()=>({createRepositoryShell:vi.fn(async()=>({tool:{name:'exec_command',description:'Controlled repository shell',inputSchema:{},execute:vi.fn(async()=>({exitCode:0}))},dispose:vi.fn(async()=>{})}))}));
+
 const sha = 'a'.repeat(40);
 const cleanup: (() => Promise<void>)[] = [];
 afterEach(async () => { for (const close of cleanup.splice(0).reverse()) await close(); });

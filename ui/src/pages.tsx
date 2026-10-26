@@ -76,7 +76,7 @@ export function Repositories({ data }: { data: UiWorkspaceDetail }) {
     {data.integrations.filter(i => (data.repositories.length === 1 || data.tasks.find(t => t.id === i.taskId)?.repositoryId === repo.id) && i.candidatePath && !data.worktrees.some(w => w.path === i.candidatePath)).map(i => <div className="worktree-row" key={i.id}><div className="worktree-top"><h3>候选集成现场</h3><Pill>{status(i.status)}</Pill></div><Copy value={i.candidatePath!} /><dl className="compact-fields"><Field name="关联任务">{data.tasks.find(t => t.id === i.taskId)?.title ?? i.taskId}</Field><Field name="候选提交"><code>{i.candidateHead ?? '尚未记录'}</code></Field><Field name="检查记录">{i.checkIds.length} 条</Field></dl>{i.error && <p className="form-error">{i.error}</p>}</div>)}</div></article></Card>)}</div></>;
 }
 
-export function Tasks({ data, csrf, onChanged }: { data: UiWorkspaceDetail; csrf: string; onChanged: () => void }) {
+export function Tasks({ data, csrf, onChanged, taskId }: { data: UiWorkspaceDetail; csrf: string; onChanged: () => void; taskId?: string }) {
   const [filter, setFilter] = useState('all');
   const [actionError, setActionError] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
@@ -101,14 +101,25 @@ export function Tasks({ data, csrf, onChanged }: { data: UiWorkspaceDetail; csrf
     request<{ tasks: UiTask[]; nextAfter: number | null; totalCount: number }>(`/workspaces/${encodeURIComponent(data.workspace.id)}/tasks?${query}`, { signal: token.signal }).then(value => { if (token.current()) { setRemotePage({ ...value, key: serverKey, after }); setPageError(''); } }, e => { if (token.current()) setPageError(errorText(e)); });
     return () => taskRequests.current.cancel();
   }, [data.workspace.id, data.snapshotCursor, useServerPages, serverKey, after]);
-  const [selection, setSelection] = useState<string | null>(null);
+  const [selection, setSelection] = useState<string | null>(taskId ?? null);
+  const [linkedTask, setLinkedTask] = useState<UiTask | null>(null);
+  useEffect(() => {
+    setSelection(taskId ?? null); setLinkedTask(null);
+    if (!taskId) return;
+    const local = data.tasks.find(task => task.id === taskId);
+    if (local) { setLinkedTask(local); return; }
+    const controller = new AbortController();
+    request<UiTask>(`/workspaces/${encodeURIComponent(data.workspace.id)}/tasks/${encodeURIComponent(taskId)}`,{signal:controller.signal}).then(value => { if (!controller.signal.aborted && value.id === taskId) setLinkedTask(value); }, error => { if (!controller.signal.aborted) setPageError(errorText(error)); });
+    return () => controller.abort();
+  },[taskId,data.workspace.id,data.snapshotCursor]);
   const subset = (order === 'dependency' ? dependencyOrder(data.tasks) : data.tasks).filter(t => (workflow === 'all' || t.workflowId === workflow) && (repository === 'all' || t.repositoryId === repository) && (member === 'all' || t.roleId === member));
   const filtered = subset.filter(t => filter === 'all' || (filter === 'active' ? ['running', 'ready', 'validating', 'integrating'].includes(t.status) : filter === 'attention' ? ['failed', 'blocked'].includes(t.status) : t.status === filter));
   const currentPage = useServerPages ? taskPage : Math.min(taskPage, Math.max(0, Math.ceil(filtered.length / 30) - 1));
   const matchingRemote = remotePage?.key === serverKey && remotePage.after === after ? remotePage : null;
-  const visible = useServerPages ? matchingRemote?.tasks ?? [] : filtered.slice(currentPage * 30, (currentPage + 1) * 30);
+  const listed = useServerPages ? matchingRemote?.tasks ?? [] : filtered.slice(currentPage * 30, (currentPage + 1) * 30);
+  const visible = linkedTask && !listed.some(task => task.id === linkedTask.id) ? [linkedTask,...listed] : listed;
   const totalMatching = useServerPages ? matchingRemote?.totalCount ?? 0 : filtered.length;
-  const remoteLoading = useServerPages && !matchingRemote && !pageError;
+  const remoteLoading = useServerPages && !matchingRemote && !pageError && !linkedTask;
   const task = visible.find(t => t.id === selection) ?? visible[0];
   const passed = subset.filter(t => t.status === 'succeeded').length;
   const selectedWorkflow = data.workflows.find(w => w.id === workflow);

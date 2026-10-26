@@ -25,10 +25,16 @@ describe('free role and official execution options',()=>{
     expect(()=>validateBinding({...external,spawn:binding.spawn},new Set(['codex']))).toThrow(/Only DSH/);
   });
   it('forwards only official spawn options and rejects live capability mismatch before publication',async()=>{
-    const parent={id:'lead'} as Agent,startActivation=vi.fn(async(_input:unknown)=>({childId:'child',result:Promise.resolve({stopReason:'completed',output:[]}),dispose:vi.fn(async()=>{})}));
-    const ctx={agents:{get:()=>parent},subagents:{getProvider:()=>({capabilities:{agentOptions:true,agentPreset:true}}),startActivation}} as unknown as Context;
+    const parent={id:'lead'} as Agent,restrict=vi.fn(),agents=new Map<string,Agent>([[parent.id,parent]]);
+    let listener:((payload:{agent:Agent})=>unknown)|undefined;
+    const startActivation=vi.fn(async(input:{childId?:string})=>{
+      const child={id:input.childId??'child',ctx:{tools:{restrict,register:vi.fn()}}} as unknown as Agent;
+      agents.set(child.id,child);listener?.({agent:child});
+      return{childId:child.id,result:Promise.resolve({stopReason:'completed',output:[]}),dispose:vi.fn(async()=>{agents.delete(child.id);})};
+    });
+    const ctx={agents:{get:(id:string)=>agents.get(id)},on:(_event:string,callback:typeof listener)=>{listener=callback;return()=>{listener=undefined;};},subagents:{getProvider:()=>({capabilities:{agentOptions:true,agentPreset:true},prepareContinuable:async()=>({})}),startActivation}} as unknown as Context;
     const input={signal:new AbortController().signal,task:{id:'task',title:'Task'},run:{id:'run',providerSnapshot:{binding}},cwd:'C:/task',prompt:'Work'} as Parameters<ActivationBridge['start']>[0];
-    const bridge=new DshActivationBridge(ctx,()=>parent);await bridge.start(input);
+    const bridge=new DshActivationBridge(ctx,()=>parent);const handle=await bridge.start(input);expect(restrict).toHaveBeenCalledWith({allow:[]});await handle.dispose();
     expect(startActivation.mock.calls[0]?.[0]).toMatchObject({provider:'spawn',request:{cwd:'C:/task',agentOptions:{provider:'deepseek',model:'model-a',reasoningEffort:'high',maxTokens:2048},agentPreset:'coding'}});
     ctx.subagents.getProvider=(()=>({capabilities:{agentOptions:false}})) as unknown as typeof ctx.subagents.getProvider;
     await expect(bridge.start(input)).rejects.toMatchObject({code:'START_NOT_PUBLISHED'});expect(startActivation).toHaveBeenCalledOnce();

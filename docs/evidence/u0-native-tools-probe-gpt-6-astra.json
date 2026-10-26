@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-26T06:17:23.597Z",
+  "model": "gpt-6-astra",
+  "mode": "real native Codex app-server with controlled local Responses server; zero external model calls",
+  "payload": "0.164.0",
+  "result": {
+    "text": "RIFT_NATIVE_TOOL_PROBE_OK",
+    "stopReason": "completed",
+    "nativeSessionId": "01a176db-4e14-7ba2-9cd2-692d782d7f5f"
+  },
+  "advertisedTools": [
+    [
+      "request_user_input",
+      "rift_probe"
+    ],
+    [
+      "request_user_input",
+      "rift_probe"
+    ]
+  ],
+  "codeTools": [
+    [],
+    []
+  ],
+  "invocationCount": 1,
+  "httpCount": 2,
+  "boundaryPassed": true,
+  "deniedNativeSurface": "request_user_input is native interaction only; its server request is rejected by the RIFT gateway. No shell, filesystem, MCP, plugins, or delegation tools are advertised.",
+  "status": "pass",
+  "cleanup": "confirmed"
+}

@@ -1,0 +1,44 @@
+{
+  "date": "2026-10-26T07:40:23.073Z",
+  "scope": "C1.1-C1.4; opt-in; C2-C4 pending",
+  "checks": {
+    "typecheck": "pass",
+    "build": "pass",
+    "diffCheck": "pass"
+  },
+  "tests": {
+    "files": 43,
+    "total": 243,
+    "passed": 242,
+    "failed": 0,
+    "skipped": 1
+  },
+  "independentReview": 12,
+  "implementationTests": 6,
+  "nativeProtocol": "pass",
+  "realCode": "pass",
+  "exactCommit": "pass",
+  "browser": "pass",
+  "limitations": [
+    "No UI P95 sample",
+    "C2-C4 not delivered",
+    "Final backlog/recovery boundary fixes verified with controlled runtime, not real model fault injection",
+    "Default remains opt-in",
+    "No project commit or deployment"
+  ],
+  "sourceSha256": {
+    "src/chat/orchestration.ts": "f414db4372f8e3f7ac9bc90c9547a313f2b31eac95489491ebcf41b6c2bff811",
+    "src/chat/service.ts": "aeb1425b9b6bac349e1a643aa2b59774563a982e631706237ac6ab09d04bfa6b",
+    "src/chat/contracts.ts": "7d1face7fea80367847ff430f440ab4947fb4f68786d8efbd355ecc9fd6ee9ab",
+    "src/api/host-service.ts": "f8e21fc60c779022e8d4e8fd4889828f0ce71159b9b35521d846ae29ac208179",
+    "src/events/workspace-events.ts": "fe448967c921921c4b42fe6f1e5e7d59d68ef428d8840dd897404c47635bcdba",
+    "src/task/coordinator.ts": "38646fe46533390658bf8ecb46a5ec088bc91375b6d2ac2f4563e9566f24cdb6",
+    "src/git/integration.ts": "57db5f56d5ee19ad352b0de0b67757a50f8e1436743b0d2dc6e0637017571f20",
+    "src/agent/native-codex.ts": "184cb086a002ccd8d1bb41ffe9bc5d496387c9dcf87b41174f435a6c94343778",
+    "ui/src/ChatScreen.tsx": "3109655f23b168d6df7fb91fbad6539f988e47930bcbd9a8349e56c6eabdd80e",
+    "ui/src/TurnDetails.tsx": "ba8f892153525942cb2dea438853e2a952d0d9190b651fd4202225bd43714403",
+    "ui/src/workspace-stream.ts": "601e09a3c450c7da4d28daf7d5ada0cd0a37a8526e0e3e2d05206797be0fb6f3",
+    "migrations/0012_chat_orchestration.sql": "733bdc5d401f6f3aad4df350e6a1d8fa81d913fe0b15408a3399f6eaaf3ed0ac",
+    "migrations/0013_turn_activities.sql": "5bf41fbab17c68e68c84e49768b3097111f8cfb94cb722ae8f12a2869116deba"
+  }
+}

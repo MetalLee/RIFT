@@ -1,0 +1,15 @@
+ALTER TABLE agent_turns ADD COLUMN phase TEXT NOT NULL DEFAULT 'queued';
+ALTER TABLE agent_turns ADD COLUMN phase_started_at TEXT;
+ALTER TABLE agent_turns ADD COLUMN last_model_event_at TEXT;
+ALTER TABLE agent_turns ADD COLUMN last_progress_at TEXT;
+ALTER TABLE agent_turns ADD COLUMN runtime_started_at TEXT;
+ALTER TABLE agent_turns ADD COLUMN model_ended_at TEXT;
+ALTER TABLE agent_turns ADD COLUMN cleanup_started_at TEXT;
+ALTER TABLE agent_turns ADD COLUMN cleanup_confirmed_at TEXT;
+ALTER TABLE agent_turns ADD COLUMN current_tool_name TEXT;
+ALTER TABLE agent_turns ADD COLUMN current_tool_call_id TEXT;
+UPDATE agent_turns SET phase=CASE WHEN cleanup_status='unknown' THEN 'cleanup_unknown' WHEN status IN ('completed','failed','cancelled','interrupted') THEN 'settled' WHEN status='running' THEN 'generating' WHEN status='stopping' THEN 'cleanup' ELSE 'queued' END,phase_started_at=COALESCE(ended_at,started_at,created_at),last_progress_at=COALESCE(ended_at,started_at,created_at);
+CREATE TABLE turn_activities (seq INTEGER PRIMARY KEY AUTOINCREMENT,turn_id TEXT NOT NULL REFERENCES agent_turns(id),type TEXT NOT NULL,phase TEXT NOT NULL,tool_name TEXT,tool_call_id TEXT,summary TEXT NOT NULL,payload TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL);
+CREATE INDEX turn_activity_cursor ON turn_activities(turn_id,seq);
+CREATE TRIGGER turn_activity_event AFTER INSERT ON turn_activities BEGIN INSERT INTO workspace_events(workspace_id,type,entity_id,payload,occurred_at) VALUES((SELECT workspace_id FROM agent_turns WHERE id=NEW.turn_id),'turn.activity',NEW.turn_id,json_object('activitySeq',NEW.seq),NEW.created_at); END;
+INSERT INTO schema_migrations(version,applied_at) VALUES(13,strftime('%Y-%m-%dT%H:%M:%fZ','now'));

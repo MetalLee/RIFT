@@ -16,6 +16,29 @@ const exec = promisify(execFile);
 const source = (origin: string) => ({ Origin: origin, 'Sec-Fetch-Site': 'same-origin', 'Content-Type': 'application/json' });
 
 describe('U0/U2 browser bootstrap and same-Host read model', () => {
+  it('connects directly on loopback, reuses valid sessions and reconnects after expiry with strict source checks', async () => {
+    const folder = await mkdtemp(path.join(tmpdir(), 'rift-local-connect-'));
+    let now = Date.now();
+    const api = await startLocalApi({ handle: vi.fn(), handleBrowser: vi.fn(async () => ({})) }, { home: folder, port: 0, browser: { now: () => now, sessionTtlMs: 1000 } });
+    const origin = `http://127.0.0.1:${api.port}`;
+    const connect = (headers: Record<string, string>, body = '{}') => fetch(`${origin}/ui-api/v1/session/connect`, { method: 'POST', headers, body });
+    try {
+      expect((await connect({ 'Content-Type': 'application/json' })).status).toBe(403);
+      expect((await connect({ ...source(origin), Origin: 'http://evil.invalid' })).status).toBe(403);
+      expect((await connect({ ...source(origin), 'Sec-Fetch-Site': 'same-site' })).status).toBe(403);
+      expect((await connect({ ...source(origin), 'Sec-Fetch-Dest': 'iframe' })).status).toBe(403);
+      expect((await connect(source(origin), '{"unexpected":true}')).status).toBe(400);
+      const first = await connect(source(origin)); expect(first.status).toBe(200);
+      const session = await first.json() as UiSession;
+      const headers = { ...source(origin), Cookie: first.headers.get('set-cookie')!.split(';')[0]! };
+      const reused = await connect(headers); expect(await reused.json()).toEqual(session); expect(reused.headers.get('set-cookie')).toBeNull();
+      expect((await fetch(`${origin}/ui-api/v1/workspaces`, { method: 'POST', headers, body: '{}' })).status).toBe(403);
+      now += 1001;
+      const renewed = await connect(headers); expect(renewed.status).toBe(200);
+      expect((await renewed.json() as UiSession).csrfToken).not.toBe(session.csrfToken);
+      expect(renewed.headers.get('set-cookie')).toContain('HttpOnly');
+    } finally { await api.close(); await rm(folder, { recursive: true, force: true }); }
+  });
   it('allows absent Fetch Metadata only for explicitly selected HTTP tailnet requests, never cross-origin writes', () => {
     const browser = new BrowserService({ uiDist: '.' });
     const origin = 'http://100.64.0.10:48080';
@@ -26,6 +49,14 @@ describe('U0/U2 browser bootstrap and same-Host read model', () => {
     expect(() => browser.checkSource(req({'content-type':'application/json'}), origin, true, true)).toThrow();
     expect(() => browser.checkSource(req({origin:'http://evil.invalid','content-type':'application/json'}), origin, true, true)).toThrow();
     expect(() => browser.checkSource(req({origin,'content-type':'application/json','sec-fetch-site':'cross-site'}), origin, true, true)).toThrow();
+    const remoteRequest = req({ origin, 'content-type': 'application/json' });
+    const setHeader = vi.fn();
+    browser.checkSource(remoteRequest, origin, true, true);
+    const session = browser.connect(remoteRequest, '100.64.0.10:48080', { setHeader } as unknown as http.ServerResponse);
+    expect(session.csrfToken).toMatch(/^[a-f0-9]{64}$/);
+    const cookie = String(setHeader.mock.calls[0]![1]).split(';')[0]!;
+    expect(browser.authenticate(req({ cookie }), '100.64.0.10:48080', false)).toEqual(session);
+    expect(() => browser.authenticate(req({ cookie }), '100.64.0.10:48080', true)).toThrow();
   });
   it('exchanges once, isolates management authentication, enforces CSRF/metadata/expiry/logout and serves bounded static assets', async () => {
     const folder = await mkdtemp(path.join(tmpdir(), 'rift-browser-security-'));

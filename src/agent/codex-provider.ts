@@ -8,6 +8,7 @@ import { invariant, type ActivationBridge, type ActivationHandle, type Developme
 import type { RiftStore } from '../storage/database.js';
 import { NativeCodexRuntime, type NativeCodexOptions } from './native-codex.js';
 import { codexHome, nativeSession, sessionCallbacks } from './native-sessions.js';
+import { REPOSITORY_PERMISSION_VERSION } from './repository-access.js';
 
 export const name = 'rift-codex-provider';
 export const inject = ['subagents','subprocess'];
@@ -39,12 +40,14 @@ export class PersistentCodexProvider implements SubagentProvider {
     invariant(run.providerSnapshot.binding?.providerName===this.name,'PROVIDER_UNAVAILABLE','Task must use its reserved provider instance.');
     invariant(!run.providerSnapshot.binding.model || run.providerSnapshot.binding.model===this.config.model,'PROVIDER_INSTANCE_MODEL_CONFLICT','Task model differs from its configured Codex provider.');
     invariant(store.get('SELECT id FROM execution_leases WHERE owner_type=? AND owner_id=? AND released_at IS NULL','run',run.id),'UNAUTHORIZED','Persistent task requires its active RIFT lease.');
-    const mode=run.purpose==='review'?'review':task.analysisItems?.length?'analysis':'develop';
+    const reasoningEffort=run.providerSnapshot.binding.reasoningEffort ?? undefined;
+    const mode=run.purpose==='review'?'review':task.kind==='analysis'?'analysis':'develop';
     const workspaceId=store.workflow(task.workflowId).workspaceId;
     const runtime=this.runtime(mode);
+    const repositoryAccess=mode==='develop'?input.repositoryAccess:undefined;
     const start=async(scopeId:string,executionId:string,prompt:string)=>{
-      const session=nativeSession(store,{workspaceId,scope:'task',scopeId,agentId:run.roleId,cwd:input.cwd,runtimeHome:codexHome({...process.env,...this.config.env}),configuration:{provider:this.name,model:this.config.model,mode,role:run.providerSnapshot.role.prompt,skills:run.providerSnapshot.skillInstructions??'',bindingRevision:run.providerSnapshot.binding?.configRevision}});
-      return runtime.start({workspaceId,agentId:run.roleId,turnId:executionId,cwd:input.cwd,model:this.config.model,session:sessionCallbacks(store,session,executionId,input.cwd),instructions:`You are executing a registered RIFT ${mode} task. Do not delegate. The new task envelope is authoritative: use its runId, cwd, source and candidate commits, acceptance criteria and result schema. Old paths and old acceptance claims in session history are not current evidence. Reinspect the current filesystem before acting. Never automatically repeat an interrupted command. ${mode==='review'?'Review this exact candidate read-only.':mode==='analysis'?'Analyze only the supplied text; do not access files.':''}\n${run.providerSnapshot.role.prompt}\n${run.providerSnapshot.skillInstructions??''}`,messages:[{role:'user',content:prompt}],tools:[],signal:input.signal});
+      const session=nativeSession(store,{workspaceId,scope:'task',scopeId,agentId:run.roleId,cwd:input.cwd,runtimeHome:codexHome({...process.env,...this.config.env}),configuration:{provider:this.name,model:this.config.model,reasoningEffort,mode,permissionVersion:REPOSITORY_PERMISSION_VERSION,repositoryAccess,role:run.providerSnapshot.role.prompt,skills:run.providerSnapshot.skillInstructions??'',bindingRevision:run.providerSnapshot.binding?.configRevision,tools:(input.tools??[]).map(({name,description,inputSchema})=>({name,description,inputSchema}))}});
+      return runtime.start({workspaceId,agentId:run.roleId,turnId:executionId,cwd:input.cwd,...repositoryAccess?{repositoryAccess}:{},model:this.config.model,reasoningEffort,session:sessionCallbacks(store,session,executionId,input.cwd,input.onAccepted),instructions:`You are executing a registered RIFT ${mode} task. Do not delegate. The new task envelope is authoritative: use its runId, cwd, source and candidate commits, acceptance criteria and result schema. Old paths and old acceptance claims in session history are not current evidence. Reinspect the current filesystem before acting. Never automatically repeat an interrupted command. ${mode==='review'?'Review this exact candidate read-only.':mode==='analysis'?(task.analysisItems?.length?'Analyze only the supplied text; do not access files.':'Analyze the assigned repository checkout read-only. Do not edit files or Git metadata, commit, push, or create a PR.'):'Follow developmentProtocol: edit files and use local git add/commit when needed. Push or create/update a PR only when explicitly requested by the user. Return the real implementation result and commit references; the Host still verifies source and runs checks/review after cleanup. A commit is not acceptance. Do not wait for those later gates inside this Run; report unavailable local tests honestly.'}\n${run.providerSnapshot.role.prompt}\n${run.providerSnapshot.skillInstructions??''}`,messages:[{role:'user',content:prompt}],tools:input.tools??[],signal:input.signal});
     };
     if (!task.analysisItems?.length) {
       const handle=await start(task.id,run.id,input.prompt);
@@ -59,7 +62,7 @@ export class PersistentCodexProvider implements SubagentProvider {
       for(const item of task.analysisItems!) {
         invariant(!stopped,'ABORTED_BEFORE_START','Analysis batch stopped.');
         input.signal.throwIfAborted();
-        active=await start(`${task.id}:item:${item.id}`,`${run.id}:item:${item.id}`,JSON.stringify({taskId:task.id,runId:run.id,instructions:task.instructions,item}));
+        active=await start(`${task.id}:item:${item.id}`,`${run.id}:item:${item.id}`,JSON.stringify({taskId:task.id,runId:run.id,taskEnvelope:input.prompt,instructions:task.instructions,item}));
         if (stopped) { await active.dispose(); throw new Error('Analysis batch stopped during startup.'); }
         try { const output=await active.result; invariant(output.stopReason==='completed','ANALYSIS_FAILED','Analysis item did not complete.'); items.push({id:item.id,text:output.text}); }
         finally { await active.dispose(); active=undefined; }

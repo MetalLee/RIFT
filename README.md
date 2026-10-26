@@ -10,7 +10,7 @@ RIFT 是运行在 DeepSeek Harness（DSH）中的多智能体开发协作插件�
 
 当前源码已完成 E1.1–E1.5 和后续 UI 计划 U0–U8：多工作区聊天、中文成员与 @、DSH/API 和受限原生主 Agent、Skill、多仓库工作目录、任务证据及恢复操作。SSE/Web UI 在本轮交付，原 E1.6 的暂缓记录保留为历史。启动与配置见 [UI 使用指南](docs/ui-guide.md)，当前验证结果见 [UI 验收报告](docs/ui-acceptance.md)；未发布新版本。
 
-构建并启动 Host 后，执行 `node dist/cli/main.js ui --home <同一 home>`，打开返回的一次性链接进入界面。UI 可先创建无仓库工作区开始对话，代码任务再明确选择仓库。旧 CLI 与 [E1 使用指南](docs/e1-guide.md)继续适用。
+构建并启动 Host 后，直接打开本机地址 `http://127.0.0.1:<端口>/` 即可自动连接（端口见同一 home 下的 `endpoint.json`）；会话过期或 Host 重启后重新打开页面也会自动建立会话。`node dist/cli/main.js ui --home <同一 home>` 的一次性链接仍可使用，Tailscale 远程地址也支持直接打开并自动连接，无需一次性链接验证。UI 可先创建无仓库工作区开始对话，代码任务再明确选择仓库。旧 CLI 与 [E1 使用指南](docs/e1-guide.md)继续适用。
 
 ## 工作方式
 
@@ -265,6 +265,9 @@ pnpm poc:tools       # Lead 工具作用域探针，不调用模型
 - [运行时兼容记录](docs/runtime-compatibility.md)与 [POC 结果](docs/poc-results.md)：锁定版本、模型范围及失败历史。
 - [P0–P3 实现与交付记录](docs/development-status.md)与[独立验收报告](docs/acceptance-report.md)。
 - [技术开发方案](docs/technical-plan.md)与[实施任务清单](docs/implementation-backlog.md)：架构和后续扩展。
+- [对话协作优化开发方案](docs/chat-orchestration-development-plan.md)：C1–C4 已实现且默认开启；短轮次、成员消息/delegate/inbox、事件续办、安全正文流及消息任务 tag。
+- [对话协作 C2–C4 验收](docs/collaboration-acceptance.md)：真实双成员拒审返工闭环、锁定协议、独立故障验收、浏览器 P95 和兼容边界。
+- [对话协作第一阶段验收](docs/chat-orchestration-acceptance.md)：受控测试、原生协议、真实代码闭环、失败历史及发布边界。
 - [Codex 开工提示词](docs/codex-kickoff.md)与[原方案对齐记录](docs/source-alignment.md)。
 
 当前计划修订仅追加任务。高级重规划、多工作区并发和更多 Developer 属于后续扩展范围。

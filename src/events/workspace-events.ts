@@ -1,14 +1,17 @@
 import type { RiftStore } from '../storage/database.js';
 import { invariant } from '../contracts/index.js';
 export interface WorkspaceEvent { seq: number; workspaceId: string; type: string; entityId: string; entityVersion: number; payload: Record<string,unknown>; occurredAt: string }
-export interface WorkspaceEventPage { events: WorkspaceEvent[]; cursor: number; resyncRequired: boolean }
+export interface WorkspaceEventPage { events: WorkspaceEvent[]; cursor: number; nextAfter: number; highWatermark: number; hasMore: boolean; resyncRequired: boolean }
 export function readWorkspaceEvents(store: RiftStore, workspaceId: string, after: number): WorkspaceEventPage {
   invariant(Number.isSafeInteger(after) && after >= 0, 'INVALID_CURSOR', 'Event cursor must be a nonnegative safe integer.');
   return store.transaction(() => {
     store.workspace(workspaceId);
     const cursor = store.require<{cursor:number}>('SELECT COALESCE(MAX(seq),0) AS cursor FROM workspace_events').cursor;
     const floor = Math.max(0, cursor - 10000);
-    if (after < floor || after > cursor) return { events: [], cursor, resyncRequired: true };
-    return { events: store.all('SELECT * FROM workspace_events WHERE workspace_id=? AND seq>? ORDER BY seq LIMIT 100', workspaceId, after), cursor, resyncRequired: false };
+    if (after < floor || after > cursor) return { events: [], cursor: after, nextAfter: after, highWatermark: cursor, hasMore: false, resyncRequired: true };
+    const events = store.all<WorkspaceEvent>('SELECT * FROM workspace_events WHERE workspace_id=? AND seq>? AND seq<=? ORDER BY seq LIMIT 101', workspaceId, after, cursor);
+    const hasMore = events.length > 100; events.splice(100);
+    const nextAfter = hasMore ? events.at(-1)!.seq : cursor;
+    return { events, cursor: nextAfter, nextAfter, highWatermark: cursor, hasMore, resyncRequired: false };
   });
 }

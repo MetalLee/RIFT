@@ -1,0 +1,648 @@
+{
+  "date": "2026-10-26T07:21:55.841Z",
+  "mode": "real models; isolated Git, SQLite and Host; no browser; no injected task events",
+  "payload": "0.164.0",
+  "leadModel": "gpt-6.1-sol",
+  "temporary": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\chat-orchestration-Xcuu5I",
+  "firstTurn": {
+    "id": "turn-cccf4032-3685-42d7-bf63-8a87277d22fc",
+    "status": "completed",
+    "cleanupStatus": "confirmed",
+    "firstEnd": {
+      "at": "2026-10-26T07:22:52.148Z",
+      "workflowStatus": "running",
+      "taskStatuses": [
+        "running"
+      ],
+      "cleanupStatus": "confirmed"
+    }
+  },
+  "workflows": [
+    {
+      "id": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "status": "running",
+      "summary": null
+    }
+  ],
+  "tasks": [
+    {
+      "id": "set-value",
+      "status": "blocked",
+      "acceptedCommit": null,
+      "blockingReason": "Review must approve the exact checked candidate commit."
+    }
+  ],
+  "turns": [
+    {
+      "id": "turn-cccf4032-3685-42d7-bf63-8a87277d22fc",
+      "messageId": "message-d171468d-91a8-432c-b81d-dea5fa4ef2d3",
+      "triggerId": null,
+      "status": "completed",
+      "cleanupStatus": "confirmed",
+      "createdAt": "2026-10-26T07:21:56.350Z",
+      "startedAt": "2026-10-26T07:21:56.352Z",
+      "endedAt": "2026-10-26T07:22:51.704Z",
+      "error": null
+    },
+    {
+      "id": "turn-1431a28a-f80d-49e5-814c-996778320151",
+      "messageId": null,
+      "triggerId": "trigger-outbox-68cfd08c-e6f3-4f54-b206-a72a6185418c",
+      "status": "completed",
+      "cleanupStatus": "confirmed",
+      "createdAt": "2026-10-26T07:23:11.089Z",
+      "startedAt": "2026-10-26T07:23:11.090Z",
+      "endedAt": "2026-10-26T07:23:36.951Z",
+      "error": null
+    },
+    {
+      "id": "turn-53438b8c-7b29-4411-8bfc-1a4244037004",
+      "messageId": null,
+      "triggerId": "trigger-outbox-dda09c61-d5d9-4102-a54b-2bc93298bf73",
+      "status": "completed",
+      "cleanupStatus": "confirmed",
+      "createdAt": "2026-10-26T07:23:36.955Z",
+      "startedAt": "2026-10-26T07:23:36.956Z",
+      "endedAt": "2026-10-26T07:24:00.807Z",
+      "error": null
+    },
+    {
+      "id": "turn-6028bff0-a706-42e2-9680-3788923b525f",
+      "messageId": null,
+      "triggerId": "trigger-outbox-44b173d9-53ff-481f-9f2c-b6c8857946c6",
+      "status": "completed",
+      "cleanupStatus": "confirmed",
+      "createdAt": "2026-10-26T07:24:35.439Z",
+      "startedAt": "2026-10-26T07:24:35.440Z",
+      "endedAt": "2026-10-26T07:26:30.236Z",
+      "error": null
+    },
+    {
+      "id": "turn-00469106-13a9-4553-aba9-5501f8d9b1de",
+      "messageId": null,
+      "triggerId": "trigger-outbox-9f5c8ede-e580-448d-91a6-b570ccd3e72a",
+      "status": "completed",
+      "cleanupStatus": "confirmed",
+      "createdAt": "2026-10-26T07:26:30.238Z",
+      "startedAt": "2026-10-26T07:26:30.239Z",
+      "endedAt": "2026-10-26T07:27:18.815Z",
+      "error": null
+    }
+  ],
+  "events": [
+    {
+      "eventSeq": 1,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": null,
+      "runId": null,
+      "requestId": null,
+      "type": "workflow.created",
+      "payload": {},
+      "occurredAt": "2026-10-26T07:22:27.817Z"
+    },
+    {
+      "eventSeq": 2,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": null,
+      "runId": null,
+      "requestId": null,
+      "type": "lead.attached",
+      "payload": {
+        "sessionId": "rift-lead-b3e7ccb5-72aa-4167-91fa-1516ab6fa202"
+      },
+      "occurredAt": "2026-10-26T07:22:27.823Z"
+    },
+    {
+      "eventSeq": 3,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": null,
+      "runId": null,
+      "requestId": null,
+      "type": "plan.accepted",
+      "payload": {
+        "revision": 1,
+        "taskIds": [
+          "set-value"
+        ],
+        "acceptanceCriteria": []
+      },
+      "occurredAt": "2026-10-26T07:22:35.585Z"
+    },
+    {
+      "eventSeq": 4,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": null,
+      "requestId": "request-f3a4ae69-11f3-432b-9bc9-b57cdde67683",
+      "type": "dispatch.queued",
+      "payload": {},
+      "occurredAt": "2026-10-26T07:22:39.500Z"
+    },
+    {
+      "eventSeq": 5,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": "run-8c736938-afd8-4be3-8a0d-f20568d6199e",
+      "requestId": "request-f3a4ae69-11f3-432b-9bc9-b57cdde67683",
+      "type": "dispatch.started",
+      "payload": {},
+      "occurredAt": "2026-10-26T07:22:39.503Z"
+    },
+    {
+      "eventSeq": 6,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": "run-8c736938-afd8-4be3-8a0d-f20568d6199e",
+      "requestId": "request-f3a4ae69-11f3-432b-9bc9-b57cdde67683",
+      "type": "dispatch_reserved",
+      "payload": {},
+      "occurredAt": "2026-10-26T07:22:39.503Z"
+    },
+    {
+      "eventSeq": 7,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": "run-8c736938-afd8-4be3-8a0d-f20568d6199e",
+      "requestId": null,
+      "type": "run.input_prepared",
+      "payload": {
+        "artifactId": "artifact-6e25d272-8fdc-4777-84b7-9b6e76e6762a",
+        "promptSha256": "e289d05baaa0f3abeb96ff1e2354e0b62d848e63c32dcec798d76ec4e99d4091",
+        "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\chat-orchestration-Xcuu5I\\host\\workspaces\\31d7cfd1866a9a92cb284801\\worktrees\\c625d135cf09cc49b87030a0",
+        "baseCommit": "f69ffcf2e7c06a21559b2c5721c177a25095dc07",
+        "sourceHead": null,
+        "candidateHead": null
+      },
+      "occurredAt": "2026-10-26T07:22:39.912Z"
+    },
+    {
+      "eventSeq": 8,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": "run-8c736938-afd8-4be3-8a0d-f20568d6199e",
+      "requestId": null,
+      "type": "activation_accepted",
+      "payload": {
+        "childId": "rift-native-run-8c736938-afd8-4be3-8a0d-f20568d6199e"
+      },
+      "occurredAt": "2026-10-26T07:22:41.990Z"
+    },
+    {
+      "eventSeq": 9,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": "run-8c736938-afd8-4be3-8a0d-f20568d6199e",
+      "requestId": null,
+      "type": "result_recorded",
+      "payload": {
+        "status": "succeeded",
+        "stopReason": "completed",
+        "result": {
+          "schemaVersion": 1,
+          "taskId": "set-value",
+          "runId": "run-8c736938-afd8-4be3-8a0d-f20568d6199e",
+          "outcome": "completed",
+          "summary": "Changed only feature.mjs to export const value = 42;. Host candidate validation, exact-commit acceptance, and cleanup remain pending.",
+          "changedPaths": [
+            "feature.mjs"
+          ],
+          "checksClaimed": [
+            "node test.mjs passed.",
+            "git diff --check passed.",
+            "test.mjs is unchanged from HEAD; only feature.mjs has changes."
+          ],
+          "blockingReasons": []
+        },
+        "artifactId": "artifact-3784a404-73ec-4607-8f1c-d868bd880a4d"
+      },
+      "occurredAt": "2026-10-26T07:23:11.017Z"
+    },
+    {
+      "eventSeq": 10,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": "run-8c736938-afd8-4be3-8a0d-f20568d6199e",
+      "requestId": null,
+      "type": "cleanup.confirmed",
+      "payload": {},
+      "occurredAt": "2026-10-26T07:23:11.042Z"
+    },
+    {
+      "eventSeq": 11,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": "run-8c736938-afd8-4be3-8a0d-f20568d6199e",
+      "requestId": "request-f3a4ae69-11f3-432b-9bc9-b57cdde67683",
+      "type": "dispatch.completed",
+      "payload": {},
+      "occurredAt": "2026-10-26T07:23:11.665Z"
+    },
+    {
+      "eventSeq": 12,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": "run-8c736938-afd8-4be3-8a0d-f20568d6199e",
+      "requestId": null,
+      "type": "source.collected",
+      "payload": {
+        "sourceHead": "9aa966dc499ec540bdcb81e8e0f10201a1535799",
+        "diff": "diff --git a/feature.mjs b/feature.mjs\nindex 231bf6f..46d3ca8 100644\n--- a/feature.mjs\n+++ b/feature.mjs\n@@ -1 +1 @@\n-export const value = 0;\n+export const value = 42;",
+        "changedPaths": [
+          "feature.mjs"
+        ],
+        "taskAttempt": 1,
+        "eligibleForIntegration": true
+      },
+      "occurredAt": "2026-10-26T07:23:11.665Z"
+    },
+    {
+      "eventSeq": 13,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": null,
+      "requestId": "request-103dbf46-9501-4844-bb42-43c12434ea6a",
+      "type": "integration.queued",
+      "payload": {},
+      "occurredAt": "2026-10-26T07:23:11.666Z"
+    },
+    {
+      "eventSeq": 14,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": null,
+      "requestId": "request-103dbf46-9501-4844-bb42-43c12434ea6a",
+      "type": "integration.started",
+      "payload": {},
+      "occurredAt": "2026-10-26T07:23:11.667Z"
+    },
+    {
+      "eventSeq": 15,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": null,
+      "requestId": "request-103dbf46-9501-4844-bb42-43c12434ea6a",
+      "type": "candidate.prepared",
+      "payload": {
+        "integrationId": "integration-256c9ddf-28ec-4a9b-a5d3-c8a4f3545efd",
+        "sourceHead": "9aa966dc499ec540bdcb81e8e0f10201a1535799",
+        "candidateHead": "31a9f15bca9a89a98fd4b29d106ffbf480c403c5",
+        "expectedTargetHead": "f69ffcf2e7c06a21559b2c5721c177a25095dc07",
+        "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\chat-orchestration-Xcuu5I\\host\\workspaces\\31d7cfd1866a9a92cb284801\\reviews\\6cdaf967548f0234a3716cf1",
+        "checkIds": [
+          "799096c8-097c-456a-bd36-3e7583c79554",
+          "26710990-3286-4ad9-b001-6ab55c551366"
+        ]
+      },
+      "occurredAt": "2026-10-26T07:23:12.359Z"
+    },
+    {
+      "eventSeq": 16,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": "run-475f5392-bab4-4ec1-bb0f-4f4ef0a8976b",
+      "requestId": "request-103dbf46-9501-4844-bb42-43c12434ea6a",
+      "type": "review.reserved",
+      "payload": {
+        "candidateHead": "31a9f15bca9a89a98fd4b29d106ffbf480c403c5"
+      },
+      "occurredAt": "2026-10-26T07:23:12.361Z"
+    },
+    {
+      "eventSeq": 17,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": "run-475f5392-bab4-4ec1-bb0f-4f4ef0a8976b",
+      "requestId": null,
+      "type": "run.input_prepared",
+      "payload": {
+        "artifactId": "artifact-1308fcff-8e48-4407-8929-8f2183773994",
+        "promptSha256": "7662afb846c5ea74d4a2c7a98cb9889646ac41267ace54b8fab7ff44e131a9f1",
+        "cwd": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\chat-orchestration-Xcuu5I\\host\\workspaces\\31d7cfd1866a9a92cb284801\\reviews\\6cdaf967548f0234a3716cf1",
+        "baseCommit": "31a9f15bca9a89a98fd4b29d106ffbf480c403c5",
+        "sourceHead": "9aa966dc499ec540bdcb81e8e0f10201a1535799",
+        "candidateHead": "31a9f15bca9a89a98fd4b29d106ffbf480c403c5"
+      },
+      "occurredAt": "2026-10-26T07:23:12.372Z"
+    },
+    {
+      "eventSeq": 18,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": "run-475f5392-bab4-4ec1-bb0f-4f4ef0a8976b",
+      "requestId": null,
+      "type": "activation_accepted",
+      "payload": {
+        "childId": "rift-native-run-475f5392-bab4-4ec1-bb0f-4f4ef0a8976b"
+      },
+      "occurredAt": "2026-10-26T07:23:12.656Z"
+    },
+    {
+      "eventSeq": 19,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": "run-475f5392-bab4-4ec1-bb0f-4f4ef0a8976b",
+      "requestId": null,
+      "type": "result_recorded",
+      "payload": {
+        "status": "succeeded",
+        "stopReason": "completed",
+        "result": {
+          "schemaVersion": 1,
+          "taskId": "set-value",
+          "runId": "run-475f5392-bab4-4ec1-bb0f-4f4ef0a8976b",
+          "verdict": "blocked",
+          "reviewedCommit": "31a9f15bca9a89a98fd4b29d106ffbf480c403c5",
+          "findings": [
+            {
+              "severity": "high",
+              "file": "test.mjs",
+              "line": 1,
+              "reason": "Local node test.mjs passes, but the supplied Host check IDs have no results confirming that node --test test.mjs passed for this exact candidate.",
+              "suggestion": "Provide successful Host validation evidence tied to the reviewed commit."
+            },
+            {
+              "severity": "high",
+              "file": "feature.mjs",
+              "line": 1,
+              "reason": "The candidate correctly exports const value = 42;, changes only feature.mjs, and preserves test.mjs. However, integration remains reviewing; exact-commit acceptance and cleanup are not confirmed.",
+              "suggestion": "Provide Host confirmation of exact-commit acceptance and completed cleanup before declaring completion."
+            }
+          ]
+        },
+        "artifactId": "artifact-a97d7e78-5054-4437-9eb4-8a96399edadf"
+      },
+      "occurredAt": "2026-10-26T07:24:35.406Z"
+    },
+    {
+      "eventSeq": 20,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": "run-475f5392-bab4-4ec1-bb0f-4f4ef0a8976b",
+      "requestId": null,
+      "type": "cleanup.confirmed",
+      "payload": {},
+      "occurredAt": "2026-10-26T07:24:35.431Z"
+    },
+    {
+      "eventSeq": 21,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": null,
+      "requestId": null,
+      "type": "task.blocked",
+      "payload": {
+        "reason": "Review must approve the exact checked candidate commit."
+      },
+      "occurredAt": "2026-10-26T07:24:35.581Z"
+    },
+    {
+      "eventSeq": 22,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": "set-value",
+      "runId": "run-475f5392-bab4-4ec1-bb0f-4f4ef0a8976b",
+      "requestId": "request-103dbf46-9501-4844-bb42-43c12434ea6a",
+      "type": "integration.blocked",
+      "payload": {
+        "error": "Review must approve the exact checked candidate commit."
+      },
+      "occurredAt": "2026-10-26T07:24:35.581Z"
+    },
+    {
+      "eventSeq": 23,
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "taskId": null,
+      "runId": null,
+      "requestId": null,
+      "type": "coordination.blocked",
+      "payload": {
+        "reason": "COORDINATION_ACTION_REQUIRED"
+      },
+      "occurredAt": "2026-10-26T07:27:18.816Z"
+    }
+  ],
+  "messages": [
+    {
+      "id": "message-d171468d-91a8-432c-b81d-dea5fa4ef2d3",
+      "workspaceId": "workspace-3601fa05-467a-4eac-8dc2-314b5326072c",
+      "conversationId": "conversation-feb1d10b-0e0b-4692-abb3-b942128c70b3",
+      "clientMessageId": "c1-code",
+      "recipientAgentId": "workspace-3601fa05-467a-4eac-8dc2-314b5326072c:lead",
+      "role": "user",
+      "content": "Please complete one bounded RIFT code task. Start a code workflow, submit exactly one change task assigned to developer-a that changes ONLY feature.mjs to export const value = 42;. expectedPaths must be [\"feature.mjs\"]. Acceptance: the Host candidate check node --test test.mjs passes; test.mjs is unchanged; only feature.mjs is committed by the Host. The developer should edit feature.mjs and return the required RIFT result JSON. RIFT collectSource will stage and commit the actual diff, and Host candidate validation runs node --test test.mjs outside the developer sandbox. Do not require the developer to write Git metadata or spawn node test-runner subprocesses; the developer can check behavior with node test.mjs. Dispatch the task and yield immediately, then finish your current reply. Do not wait for the developer in this reply. Continue later when Host events wake you. Use actual task/check/review evidence, request integration if needed, retry at most once on a known rejection, and finish the workflow only after acceptedCommit and confirmed cleanup. If blocked, state the actual blocker. After actual workflow completion say RIFT_CHAT_ORCHESTRATION_OK.",
+      "status": "completed",
+      "version": 2,
+      "createdAt": "2026-10-26T07:21:56.350Z",
+      "replyToMessageId": null,
+      "kind": "chat"
+    },
+    {
+      "id": "message-514cd0ca-b4e3-449d-9900-7ff30f7eece6",
+      "workspaceId": "workspace-3601fa05-467a-4eac-8dc2-314b5326072c",
+      "conversationId": "conversation-feb1d10b-0e0b-4692-abb3-b942128c70b3",
+      "clientMessageId": null,
+      "recipientAgentId": "workspace-3601fa05-467a-4eac-8dc2-314b5326072c:lead",
+      "role": "assistant",
+      "content": "Dispatched the single task to developer-a and yielded. Completion awaits Host validation, review, and confirmed cleanup.",
+      "status": "completed",
+      "version": 0,
+      "createdAt": "2026-10-26T07:22:51.704Z",
+      "replyToMessageId": "message-d171468d-91a8-432c-b81d-dea5fa4ef2d3",
+      "kind": "chat"
+    },
+    {
+      "id": "message-9b087c26-b27b-4d10-a749-eb771aba2974",
+      "workspaceId": "workspace-3601fa05-467a-4eac-8dc2-314b5326072c",
+      "conversationId": "conversation-feb1d10b-0e0b-4692-abb3-b942128c70b3",
+      "clientMessageId": null,
+      "recipientAgentId": "workspace-3601fa05-467a-4eac-8dc2-314b5326072c:lead",
+      "role": "assistant",
+      "content": "Exact-commit review is running. Yielded pending acceptance and cleanup confirmation.",
+      "status": "completed",
+      "version": 0,
+      "createdAt": "2026-10-26T07:23:36.951Z",
+      "replyToMessageId": null,
+      "kind": "chat"
+    },
+    {
+      "id": "message-048fa12f-c552-419c-bff7-f761ab7b2fce",
+      "workspaceId": "workspace-3601fa05-467a-4eac-8dc2-314b5326072c",
+      "conversationId": "conversation-feb1d10b-0e0b-4692-abb3-b942128c70b3",
+      "clientMessageId": null,
+      "recipientAgentId": "workspace-3601fa05-467a-4eac-8dc2-314b5326072c:lead",
+      "role": "assistant",
+      "content": "Review remains running; yielded pending acceptance and cleanup.",
+      "status": "completed",
+      "version": 0,
+      "createdAt": "2026-10-26T07:24:00.807Z",
+      "replyToMessageId": null,
+      "kind": "chat"
+    },
+    {
+      "id": "message-10e34fb5-a32a-4a6f-ae39-e06e94d57ade",
+      "workspaceId": "workspace-3601fa05-467a-4eac-8dc2-314b5326072c",
+      "conversationId": "conversation-feb1d10b-0e0b-4692-abb3-b942128c70b3",
+      "clientMessageId": null,
+      "recipientAgentId": "workspace-3601fa05-467a-4eac-8dc2-314b5326072c:lead",
+      "role": "assistant",
+      "content": "Blocked: the reviewer verified the correct single-file change but withheld approval because Host test-result evidence was unavailable and acceptance was still pending. No commit was accepted; both runs’ cleanup is confirmed. Workflow completion cannot be claimed.",
+      "status": "completed",
+      "version": 0,
+      "createdAt": "2026-10-26T07:26:30.236Z",
+      "replyToMessageId": null,
+      "kind": "chat"
+    },
+    {
+      "id": "message-0c31e3ec-b668-45c1-a3e5-ae10fac0c179",
+      "workspaceId": "workspace-3601fa05-467a-4eac-8dc2-314b5326072c",
+      "conversationId": "conversation-feb1d10b-0e0b-4692-abb3-b942128c70b3",
+      "clientMessageId": null,
+      "recipientAgentId": "workspace-3601fa05-467a-4eac-8dc2-314b5326072c:lead",
+      "role": "assistant",
+      "content": "Still blocked on exact-commit review approval: Host test results were unavailable to the reviewer. `acceptedCommit` remains null, so the workflow cannot finish. No code repair is indicated.",
+      "status": "completed",
+      "version": 0,
+      "createdAt": "2026-10-26T07:27:18.815Z",
+      "replyToMessageId": null,
+      "kind": "chat"
+    }
+  ],
+  "runs": [
+    {
+      "id": "run-8c736938-afd8-4be3-8a0d-f20568d6199e",
+      "status": "succeeded",
+      "cleanupStatus": "confirmed",
+      "purpose": "develop",
+      "taskAttempt": 1
+    },
+    {
+      "id": "run-475f5392-bab4-4ec1-bb0f-4f4ef0a8976b",
+      "status": "succeeded",
+      "cleanupStatus": "confirmed",
+      "purpose": "review",
+      "taskAttempt": 1
+    }
+  ],
+  "integrations": [
+    {
+      "id": "integration-256c9ddf-28ec-4a9b-a5d3-c8a4f3545efd",
+      "status": "blocked",
+      "candidateHead": "31a9f15bca9a89a98fd4b29d106ffbf480c403c5",
+      "reviewRunId": "run-475f5392-bab4-4ec1-bb0f-4f4ef0a8976b",
+      "error": "Review must approve the exact checked candidate commit."
+    }
+  ],
+  "nativeExecutions": [
+    {
+      "executionId": "turn-cccf4032-3685-42d7-bf63-8a87277d22fc",
+      "threadId": "01a17716-5c67-7931-b3b4-94f456a6561b",
+      "status": "completed"
+    },
+    {
+      "executionId": "turn-1431a28a-f80d-49e5-814c-996778320151",
+      "threadId": "01a17716-5c67-7931-b3b4-94f456a6561b",
+      "status": "completed"
+    },
+    {
+      "executionId": "turn-53438b8c-7b29-4411-8bfc-1a4244037004",
+      "threadId": "01a17716-5c67-7931-b3b4-94f456a6561b",
+      "status": "completed"
+    },
+    {
+      "executionId": "turn-6028bff0-a706-42e2-9680-3788923b525f",
+      "threadId": "01a17716-5c67-7931-b3b4-94f456a6561b",
+      "status": "completed"
+    },
+    {
+      "executionId": "turn-00469106-13a9-4553-aba9-5501f8d9b1de",
+      "threadId": "01a17716-5c67-7931-b3b4-94f456a6561b",
+      "status": "completed"
+    }
+  ],
+  "coordination": [
+    {
+      "workflowId": "workflow-87731156-7faa-42ef-bbef-30bb806e9ad9",
+      "conversationId": "conversation-feb1d10b-0e0b-4692-abb3-b942128c70b3",
+      "automaticTurns": 4,
+      "blockedReason": "COORDINATION_ACTION_REQUIRED"
+    }
+  ],
+  "checks": {
+    "firstReplyBeforeWorkflowComplete": true,
+    "automaticTurnWithoutFakeUser": true,
+    "resumedSameThread": true,
+    "noWaitTool": true,
+    "workflowCompleted": false,
+    "acceptedValue": false,
+    "testUnchanged": false,
+    "repositoryClean": true
+  },
+  "status": "fail",
+  "toolCalls": [
+    {
+      "turnId": "turn-cccf4032-3685-42d7-bf63-8a87277d22fc",
+      "name": "rift_status",
+      "at": "2026-10-26T07:22:03.494Z",
+      "outcome": "completed"
+    },
+    {
+      "turnId": "turn-cccf4032-3685-42d7-bf63-8a87277d22fc",
+      "name": "rift_workflow_start",
+      "at": "2026-10-26T07:22:27.826Z",
+      "outcome": "completed"
+    },
+    {
+      "turnId": "turn-cccf4032-3685-42d7-bf63-8a87277d22fc",
+      "name": "rift_plan_submit",
+      "at": "2026-10-26T07:22:35.588Z",
+      "outcome": "completed"
+    },
+    {
+      "turnId": "turn-cccf4032-3685-42d7-bf63-8a87277d22fc",
+      "name": "rift_task_dispatch",
+      "at": "2026-10-26T07:22:39.510Z",
+      "outcome": "completed"
+    },
+    {
+      "turnId": "turn-cccf4032-3685-42d7-bf63-8a87277d22fc",
+      "name": "rift_yield",
+      "at": "2026-10-26T07:22:48.091Z",
+      "outcome": "completed"
+    },
+    {
+      "turnId": "turn-1431a28a-f80d-49e5-814c-996778320151",
+      "name": "rift_status",
+      "at": "2026-10-26T07:23:30.047Z",
+      "outcome": "completed"
+    },
+    {
+      "turnId": "turn-1431a28a-f80d-49e5-814c-996778320151",
+      "name": "rift_yield",
+      "at": "2026-10-26T07:23:34.027Z",
+      "outcome": "completed"
+    },
+    {
+      "turnId": "turn-53438b8c-7b29-4411-8bfc-1a4244037004",
+      "name": "rift_status",
+      "at": "2026-10-26T07:23:51.307Z",
+      "outcome": "completed"
+    },
+    {
+      "turnId": "turn-53438b8c-7b29-4411-8bfc-1a4244037004",
+      "name": "rift_yield",
+      "at": "2026-10-26T07:23:58.090Z",
+      "outcome": "completed"
+    },
+    {
+      "turnId": "turn-6028bff0-a706-42e2-9680-3788923b525f",
+      "name": "rift_status",
+      "at": "2026-10-26T07:26:23.062Z",
+      "outcome": "completed"
+    },
+    {
+      "turnId": "turn-00469106-13a9-4553-aba9-5501f8d9b1de",
+      "name": "rift_status",
+      "at": "2026-10-26T07:26:50.578Z",
+      "outcome": "completed"
+    }
+  ]
+}

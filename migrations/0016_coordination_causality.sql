@@ -1,0 +1,16 @@
+ALTER TABLE workflow_conversations ADD COLUMN correlation_id TEXT;
+ALTER TABLE workflow_conversations ADD COLUMN parent_message_id TEXT REFERENCES messages(id);
+ALTER TABLE turn_triggers ADD COLUMN priority INTEGER NOT NULL DEFAULT 50;
+ALTER TABLE turn_triggers ADD COLUMN correlation_id TEXT;
+ALTER TABLE turn_triggers ADD COLUMN parent_message_id TEXT REFERENCES messages(id);
+ALTER TABLE turn_triggers ADD COLUMN automatic_hops INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE coordination_outbox ADD COLUMN priority INTEGER NOT NULL DEFAULT 50;
+ALTER TABLE coordination_outbox ADD COLUMN correlation_id TEXT;
+ALTER TABLE coordination_outbox ADD COLUMN parent_message_id TEXT REFERENCES messages(id);
+ALTER TABLE coordination_outbox ADD COLUMN automatic_hops INTEGER NOT NULL DEFAULT 0;
+CREATE INDEX coordination_trigger_priority ON turn_triggers(workflow_id,status,priority DESC,created_at);
+CREATE INDEX coordination_outbox_retry ON coordination_outbox(status,next_retry_at,priority DESC,event_seq);
+UPDATE workflow_conversations SET correlation_id='workflow:'||workflow_id;
+UPDATE turn_triggers SET correlation_id='workflow:'||workflow_id;
+UPDATE coordination_outbox SET correlation_id='workflow:'||workflow_id;
+INSERT INTO schema_migrations(version,applied_at) VALUES(16,strftime('%Y-%m-%dT%H:%M:%fZ','now'));

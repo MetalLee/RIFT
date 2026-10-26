@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-26T07:33:36.484Z",
+  "mode": "real Edge browser; deterministic API fixtures; no Host/model or latency proof",
+  "checks": [
+    {
+      "width": 1280,
+      "committedReceiptVisible": true,
+      "noFakeUserBubble": true,
+      "composerEnabledDuringExecution": true,
+      "noHorizontalOverflow": true,
+      "noInlineDiagnostics": true
+    },
+    {
+      "width": 390,
+      "committedReceiptVisible": true,
+      "noFakeUserBubble": true,
+      "composerEnabledDuringExecution": true,
+      "noHorizontalOverflow": true,
+      "noInlineDiagnostics": true
+    },
+    {
+      "unknownCleanupVisible": true
+    }
+  ],
+  "screenshots": [
+    "handoff-1280.png",
+    "handoff-390.png",
+    "cleanup-unknown-390.png"
+  ],
+  "errors": [],
+  "status": "pass"
+}

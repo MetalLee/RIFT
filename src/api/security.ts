@@ -10,7 +10,11 @@ export function registerCredentialRedaction(reference: string, resolved?: string
 }
 
 export function redact(value: string, maxBytes = 128 * 1024): string {
-  let safe = value.replace(/(Bearer\s+)[^\s"']+/gi, '$1[REDACTED]')
+  // Quoted structured credentials may contain whitespace and escaped quotes.
+  let safe = value
+    .replace(/((?:api[_-]?key|token|password|secret|authorization)["']?\s*[:=]\s*)"(?:\\[\s\S]|[^"\\])*(?:"|$)/gi, '$1"[REDACTED]"')
+    .replace(/((?:api[_-]?key|token|password|secret|authorization)["']?\s*[:=]\s*)'(?:\\[\s\S]|[^'\\])*(?:'|$)/gi, "$1'[REDACTED]'")
+    .replace(/(Bearer\s+)[^\s"']+/gi, '$1[REDACTED]')
     .replace(/((?:api[_-]?key|token|password|secret|authorization)["']?\s*[:=]\s*["']?)[^\s,}"']+/gi, '$1[REDACTED]')
     .replace(/\b(?:sk-|sk-ant-)[A-Za-z0-9_-]{10,}\b/g, '[REDACTED]');
   for (const [name, secret] of Object.entries(process.env)) {
@@ -32,4 +36,12 @@ export function publicError(error: unknown): { code: string; message: string } {
   return error instanceof RiftError
     ? { code: error.code, message: redact(error.message, 4096) }
     : { code: 'INVALID_REQUEST', message: redact(error instanceof Error ? error.message : 'Request failed', 4096) };
+}
+
+/** Bounds only registered literal credentials; unfinished lexical tokens are retained separately. */
+export function redactionTailLength(): number {
+  let length = 64;
+  for (const secret of configuredSecrets) length = Math.max(length,secret.length);
+  for (const [name,secret] of Object.entries(process.env)) if (secret && (credentialReferences.has(name) || /(?:KEY|TOKEN|SECRET|PASSWORD)/i.test(name))) length = Math.max(length,secret.length);
+  return length;
 }

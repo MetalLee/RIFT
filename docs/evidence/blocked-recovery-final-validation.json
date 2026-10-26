@@ -1,0 +1,51 @@
+{
+  "recordedAt": "2026-10-26T10:08:10.307Z",
+  "workflow": {
+    "id": "workflow-3b359d55-f771-41ce-b71a-7403ad2bd704",
+    "status": "completed",
+    "version": 8,
+    "integration_ref": "refs/heads/rift/workspace-b3db9af0-ec60-4258-b6d8-6c0d050a5574/workflow-3b359d55-f771-41ce-b71a-7403ad2bd704"
+  },
+  "tasks": [
+    {
+      "id": "workspace-default-members",
+      "status": "succeeded",
+      "attempt": 3,
+      "source_head": "a22f4bffbf967d2fcc024b49125ae9719c5b0c09",
+      "accepted_commit": "6639bc3123f524044ed49d14139ae86c4d54a7f6",
+      "blocking_reason": null
+    },
+    {
+      "id": "audit-workspace-member-defaults",
+      "status": "succeeded",
+      "attempt": 2,
+      "source_head": null,
+      "accepted_commit": null,
+      "blocking_reason": null
+    }
+  ],
+  "integrationRefHead": "6639bc3123f524044ed49d14139ae86c4d54a7f6",
+  "activeLeases": [],
+  "integrity": {
+    "integrity_check": "ok"
+  },
+  "foreignKeyErrors": [],
+  "host": {
+    "url": "http://127.0.0.1:47831",
+    "browserUrl": "http://100.68.129.117:47831",
+    "pid": 10084
+  },
+  "restoredProfile": "profiles/rift.codex.patch.yml",
+  "tests": {
+    "success": true,
+    "total": 305,
+    "passed": 304,
+    "failed": 0,
+    "skipped": 1
+  },
+  "evidence": {
+    "candidate": "blocked-recovery-exact-candidate.json",
+    "analysis": "blocked-recovery-analysis.json",
+    "sourceRecoveryReview": "source-recovery-independent-review.json"
+  }
+}

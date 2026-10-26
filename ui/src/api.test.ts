@@ -2,6 +2,21 @@ import { describe, expect, it, vi } from 'vitest';
 import { api, ApiError, consumeBootstrap, isDefinitiveRejection, request } from './api';
 
 describe('browser API boundary', () => {
+  it.each(['127.0.0.1', '100.64.0.10'])('automatically connects %s after an expired session', async hostname => {
+    const value = { csrfToken: 'csrf', expiresAt: 'later' };
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response('{}', { status: 401 })).mockResolvedValueOnce(new Response(JSON.stringify(value)));
+    vi.stubGlobal('location', { hostname }); vi.stubGlobal('fetch', fetchMock);
+    try {
+      expect(await api.session(null)).toEqual(value);
+      expect(fetchMock).toHaveBeenNthCalledWith(2, '/ui-api/v1/session/connect', expect.objectContaining({ method: 'POST', body: '{}', credentials: 'same-origin', cache: 'no-store' }));
+    } finally { vi.unstubAllGlobals(); }
+  });
+  it.each([403, 500])('does not retry source or server failure %s as a new session', async status => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status }));
+    vi.stubGlobal('fetch', fetchMock);
+    try { await expect(api.session(null)).rejects.toMatchObject({ status }); expect(fetchMock).toHaveBeenCalledTimes(1); }
+    finally { vi.unstubAllGlobals(); }
+  });
   it('removes bootstrap credentials before networking and leaves ordinary routes intact', () => {
     const replaceState = vi.fn();
     const code = consumeBootstrap({ hash: '#bootstrap=secret%2Bcode', pathname: '/', search: '' }, { replaceState });

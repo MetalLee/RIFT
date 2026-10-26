@@ -53,8 +53,19 @@ export class BrowserService {
     const code = body.code;
     const item = [...this.bootstraps.values()].find(value => same(value.code, code));
     if (!item || item.consumed) throw new RiftError('UNAUTHORIZED', 'Invalid or expired browser launch code.');
-    if (this.sessions.size >= 128) throw new RiftError('CAPACITY', 'Too many active browser sessions.');
+    const session = this.createSession(host, res);
     item.consumed = true;
+    return session;
+  }
+  /** Called only after a configured listener verifies a same-origin JSON POST. */
+  connect(req: IncomingMessage, host: string, res: ServerResponse): UiSession {
+    try { return this.authenticate(req, host, false); }
+    catch (error) { if (!(error instanceof RiftError) || error.code !== 'UNAUTHORIZED') throw error; }
+    return this.createSession(host, res);
+  }
+  private createSession(host: string, res: ServerResponse): UiSession {
+    this.prune();
+    if (this.sessions.size >= 128) throw new RiftError('CAPACITY', 'Too many active browser sessions.');
     const token = random(), ttl = this.options.sessionTtlMs ?? 8 * 60 * 60_000;
     const session = { csrfToken: random(), expires: this.now() + ttl };
     this.sessions.set(hash(token), session);

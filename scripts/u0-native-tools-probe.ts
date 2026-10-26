@@ -7,6 +7,8 @@ import '@deepseek-ai/dsh-subprocess';
 import { NativeCodexRuntime, nativeCodexPackage } from '../src/agent/native-codex.js';
 import { publicError } from '../src/api/security.js';
 
+const model = process.argv[2] ?? 'gpt-6.1-sol';
+if (!['gpt-6.1-sol', 'gpt-6-astra'].includes(model)) throw new Error('Unsupported probe model.');
 const evidenceRoot = path.resolve('.runtime-evidence');
 await mkdir(evidenceRoot, { recursive: true });
 const temporary = await mkdtemp(path.join(evidenceRoot, 'u0-native-'));
@@ -40,12 +42,12 @@ process.env.DSH_HOME = path.join(temporary, 'dsh');
 process.env.RIFT_HOME = path.join(temporary, 'rift');
 process.env.RIFT_PORT = '0';
 initializeProfileFromDefault('u0-native', 'sdk-minimal', process.env.DSH_HOME);
-const report: Record<string, unknown> = { date: new Date().toISOString(), mode: 'real native Codex app-server with controlled local Responses server; zero external model calls', payload: nativeCodexPackage().version };
+const report: Record<string, unknown> = { date: new Date().toISOString(), model, mode: 'real native Codex app-server with controlled local Responses server; zero external model calls', payload: nativeCodexPackage().version };
 const { ctx, shutdown } = await runProfile({ environment: loadLayeredEnv('u0-native'), profile: 'u0-native', patchFiles: [path.resolve('profiles/rift.patch.yml')], args: [] });
 let handle: Awaited<ReturnType<NativeCodexRuntime['start']>> | undefined;
 try {
   const runtime = new NativeCodexRuntime({ spawn: spec => ctx.subprocess.spawn(spec), modelProvider: { id: 'rift_probe', config: { name: 'RIFT local protocol probe', base_url: `http://127.0.0.1:${port}/v1`, wire_api: 'responses', requires_openai_auth: false, supports_websockets: false, request_max_retries: 0, stream_max_retries: 0, stream_idle_timeout_ms: 10000 } } });
-  handle = await runtime.start({ workspaceId: 'u0', agentId: 'lead', turnId: 'probe', cwd: temporary, model: 'gpt-6.1-sol', instructions: 'Call rift_probe and report its result.', messages: [{ role: 'user', content: 'Call rift_probe.' }], signal: AbortSignal.timeout(45000), tools: [{ name: 'rift_probe', description: 'A local no-effect boundary probe.', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, async execute() { invocationCount++; return { acknowledged: true }; } }] });
+  handle = await runtime.start({ workspaceId: 'u0', agentId: 'lead', turnId: 'probe', cwd: temporary, model, instructions: 'Call rift_probe and report its result.', messages: [{ role: 'user', content: 'Call rift_probe.' }], signal: AbortSignal.timeout(45000), tools: [{ name: 'rift_probe', description: 'A local no-effect boundary probe.', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, async execute() { invocationCount++; return { acknowledged: true }; } }] });
   report.result = await handle.result;
   await handle.dispose();
   handle = undefined;
@@ -64,7 +66,7 @@ finally {
   await shutdown.shutdown(0);
   server.closeAllConnections();
   await new Promise<void>(resolve => server.close(() => resolve()));
-  await writeFile(path.resolve('docs/evidence/u0-native-tools-probe.json'), JSON.stringify(report, null, 2));
+  await writeFile(path.resolve('docs/evidence/u0-native-tools-probe-' + model + '.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
   if (report.status !== 'pass') process.exitCode = 1;
 }

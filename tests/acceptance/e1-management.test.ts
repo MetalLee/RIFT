@@ -9,6 +9,8 @@ import type { Workflow, Workspace } from '../../src/contracts/index.js';
 import { RiftHostService } from '../../src/api/host-service.js';
 import { planSchema, rolesSchema } from '../../src/api/schemas.js';
 
+vi.mock('../../src/agent/repository-shell.js',()=>({createRepositoryShell:vi.fn(async()=>({tool:{name:'exec_command',description:'Controlled repository shell',inputSchema:{},execute:vi.fn(async()=>({exitCode:0}))},dispose:vi.fn(async()=>{})}))}));
+
 const exec = promisify(execFile);
 
 describe('E1 public management entry points', () => {

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { createRepositoryReadTools } from '../agent/repository-read.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { Agent, AgentHandle, AgentOptions } from '@deepseek-ai/dsh-agent';
 import { SessionId } from '@deepseek-ai/dsh-session';
@@ -6,6 +7,8 @@ import type { WorkflowRun } from '@deepseek-ai/dsh-workflow';
 import '@deepseek-ai/dsh-workflow';
 import { invariant, RiftError, type ActivationBridge, type ActivationHandle, type DevelopmentResult } from '../contracts/index.js';
 import type { RiftStore } from '../storage/database.js';
+import type { ToolDefinition } from '@deepseek-ai/dsh-tools';
+import { redact } from '../api/security.js';
 
 /** Trusted, fixed script: prompts remain data. Awaiting every agent also awaits
  * its official Workflow disposal, so one business slot has at most one child. */
@@ -32,16 +35,40 @@ export async function startAnalysisBatch(ctx:Context,store:RiftStore|undefined,l
   const engine=ctx.get('workflowEngine');
   invariant(engine,'START_NOT_PUBLISHED','The official DSH Workflow engine is not mounted in this profile.');
   const rootId=SessionId(`rift-analysis-${randomUUID()}`);
+  const ownedAgents=new WeakSet<Agent>();
   const belongs=(agent:Agent|undefined):boolean=>{
     const seen=new Set<string>();
-    while(agent&&!seen.has(agent.id)) { if(agent.id===rootId)return true;seen.add(agent.id);const parentId=agent.session.header.parentSession;agent=parentId?ctx.agents.get(parentId):undefined; }
+    while(agent&&!seen.has(agent.id)) { if(agent.id===rootId||ownedAgents.has(agent))return true;seen.add(agent.id);const parentId=agent.session.header.parentSession;agent=parentId?ctx.agents.get(parentId):undefined; }
     return false;
   };
   // Local DSH agents cannot use inherited tools to delegate or write. External
   // providers retain their own tool policies; their file changes still fail the
   // existing analysis collectSource gate in the isolated worktree.
-  const removeGuard=ctx.tools.guard(execution=>belongs(execution.agent)?'RIFT batch analysis uses supplied text only; tool execution is disabled.':undefined);
-  const removeListener=ctx.on('agent/created',({agent})=>{if(belongs(agent))agent.ctx.tools.restrict({allow:[]});return undefined;});
+  invariant((input.tools??[]).every(tool=>tool.name==='rift_send_message'),'START_NOT_PUBLISHED','Analysis batches accept only the Host scoped collaboration tool.');
+  const repositoryBacked=!!store.workspace(store.workflow(task.workflowId).workspaceId).repositoryPath;
+  const scopedTools=[...(input.tools??[]),...(repositoryBacked?createRepositoryReadTools(input.cwd):[])];
+  const allowed=scopedTools.map(tool=>tool.name);
+  const assertActive=()=>{
+    input.signal.throwIfAborted();const current=store.run(run.id),currentTask=store.task(task.id);
+    invariant(['preparing','running'].includes(current.status)&&current.slotReleasedAt===null&&currentTask.status==='running'&&current.taskAttempt===currentTask.attempt&&store.workflow(task.workflowId).status==='running'&&store.get("SELECT id FROM execution_leases WHERE owner_type='run' AND owner_id=? AND agent_id=? AND released_at IS NULL",run.id,run.roleId),'UNAUTHORIZED','This analysis Run no longer owns its active execution lease.');
+  };
+  const removeGuard=ctx.tools.guard(execution=>belongs(execution.agent)&&!allowed.includes(execution.name)?'RIFT batch analysis allows only scoped read-only and collaboration tools.':undefined);
+  const removeListener=ctx.on('agent/created',({agent})=>{
+    if(belongs(agent)){
+      // Parent disposal can succeed while a descendant's cleanup is unknown.
+      // Keep that descendant guarded even after the parent leaves the registry.
+      ownedAgents.add(agent);
+      // restrict masks inherited names only. The Run tools must be registered in
+      // each child's own scope, never named as supposedly global capabilities.
+      agent.ctx.tools.restrict({allow:[]});
+      for(const tool of scopedTools)agent.ctx.tools.register({name:tool.name,description:tool.description,parameters:tool.inputSchema as ToolDefinition['parameters'],output:{schema:{},render:(_args,value)=>[{type:'text',text:redact(JSON.stringify(value))}]},execute:async(args,execution)=>{
+        invariant(execution.agent===agent&&ctx.agents.get(agent.id)===agent,'UNAUTHORIZED','Only this live analysis child may use its scoped tools.');assertActive();execution.signal.throwIfAborted();
+        const result=await tool.execute(args,AbortSignal.any([input.signal,execution.signal]));
+        assertActive();execution.signal.throwIfAborted();return result;
+      }});
+    }
+    return undefined;
+  });
   let parent:AgentHandle|undefined, workflow:WorkflowRun|undefined;
   const dispose=async()=>{
     const errors:unknown[]=[];
@@ -54,7 +81,8 @@ export async function startAnalysisBatch(ctx:Context,store:RiftStore|undefined,l
     input.signal.throwIfAborted();
     parent=await ctx.agents.create({sessionId:rootId,parentAgent:lead,meta:{cwd:input.cwd,parentSession:lead.id,origin:'subagent'},...(agentOptions?{agentOptions}:{}),signal:input.signal,setup:scope=>{scope.tools.restrict({allow:[]});}});
     input.signal.throwIfAborted();
-    workflow=engine.start({parent:parent.agent,signal:input.signal,subagentProvider:binding.providerName,maxTotalAgents:task.analysisItems.length,meta:{name:'rift-analysis-batch',description:'Sequential analysis items in one durable RIFT Run.'},script:ANALYSIS_BATCH_SCRIPT,args:{context:`${run.providerSnapshot.role.prompt}\n${task.instructions}\nAnalyze only the supplied text. Do not edit files, invoke tools, or delegate. Return your analysis as text; the host records the task result.`,items:task.analysisItems}});
+    workflow=engine.start({parent:parent.agent,signal:input.signal,subagentProvider:binding.providerName,maxTotalAgents:task.analysisItems.length,meta:{name:'rift-analysis-batch',description:'Sequential analysis items in one durable RIFT Run.'},script:ANALYSIS_BATCH_SCRIPT,args:{context:`${input.prompt}\n${repositoryBacked?'Inspect the repository with rift_list_files and rift_read_file when evidence is needed; paths are relative to your isolated Run worktree.':'Analyze only the supplied text; this workspace has no repository.'} Do not edit files, run shell commands, or delegate. Use rift_send_message only for necessary questions or progress. Return your analysis as text; the host records the task result.`,items:task.analysisItems}});
+    input.onAccepted?.();
     store.event(task.workflowId,'analysis.workflow_started',{workflowRunId:workflow.id,parentSessionId:rootId,itemIds:task.analysisItems.map(item=>item.id),maxConcurrentChildren:1},{taskId:task.id,runId:run.id});
     const accepted=workflow;
     let cleanup:Promise<void>|undefined;
