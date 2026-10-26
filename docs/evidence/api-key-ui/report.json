@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-26T12:05:37.656Z",
+  "mode": "Headless Edge with every UI API request intercepted; synthetic key only; no Host mutation",
+  "checks": [
+    "password input; direct apiKey POST; CSRF; no credentialRef input or display; failure redacted; explicit retry reuses idempotency key; successful save clears password",
+    "new version requires fresh key and preserves parentId; new command key for new version; no horizontal overflow at 390px"
+  ],
+  "screenshots": [
+    "saved-1280.png",
+    "edit-390.png"
+  ],
+  "errors": [],
+  "status": "pass"
+}

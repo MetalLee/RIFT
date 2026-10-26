@@ -1,6 +1,7 @@
 import type { Context, Fiber } from '@deepseek-ai/cordis';
 import * as piAi from '@deepseek-ai/dsh-llm-pi-ai';
 import type { PiAiProviderProfile } from '@deepseek-ai/dsh-llm-pi-ai';
+import { credentialRef as asCredentialRef } from '@deepseek-ai/dsh-credentials';
 import { z } from 'zod';
 import path from 'node:path';
 import { mkdir } from 'node:fs/promises';
@@ -17,9 +18,20 @@ export const createConnectionSchema = z.object({
     return !url.username && !url.password && !url.search && !url.hash && (url.protocol === 'https:' || (url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)));
   }, 'Use HTTPS or a loopback HTTP model endpoint, without credentials, query or fragment.'),
   model: z.string().trim().min(1).max(160),
-  credentialRef: z.string().regex(/^[A-Z_][A-Z0-9_]{0,127}$/, 'Use a Host environment-variable credential reference, not a key value.'),
+  credentialRef: z.string().regex(/^[A-Z_][A-Z0-9_]{0,127}$/, 'Use a Host credential reference, not a key value.').optional(),
+  apiKey: z.string().trim().min(1).max(16384).optional(),
   parentId: z.string().min(1).max(160).optional(),
-}).strict();
+}).strict().refine(input => Number(input.apiKey !== undefined) + Number(input.credentialRef !== undefined) === 1, 'Supply either an API key or an existing credential reference.');
+
+/** Call at the HTTP boundary before validation/idempotency diagnostics as well
+ * as here: submitted secrets must never appear in downstream error messages. */
+export function registerConnectionCredential(raw: unknown): void {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw) && typeof (raw as Record<string,unknown>).apiKey === 'string') {
+    const value = (raw as {apiKey:string}).apiKey;
+    registerCredentialRedaction('RIFT_SUBMITTED_API_KEY', value);
+    registerCredentialRedaction('RIFT_SUBMITTED_API_KEY', value.trim());
+  }
+}
 export interface ApiConnection {
   id: string; name: string; protocol: z.infer<typeof createConnectionSchema>['protocol']; endpoint: string; model: string;
   credentialRef: string; provider: string; revision: number; parentId: string | null; createdAt: string;
@@ -81,23 +93,40 @@ export class ApiConnectionService {
   }
   configurationCapability(): { available: boolean; reason: string | null } { return { available: !this.closed && !this.unavailable && !this.cleanupUnknown && Boolean(this.ctx.llm) && typeof this.ctx.plugin === 'function', reason: this.cleanupUnknown ? 'Previous verification cleanup has not been confirmed.' : this.unavailable }; }
   create(raw: unknown): Promise<ApiConnection> {
+    registerConnectionCredential(raw);
     const input = createConnectionSchema.parse(raw);
     const operation = this.serial.then(async () => {
       invariant(this.configurationCapability().available, 'API_CONFIGURATION_UNAVAILABLE', this.unavailable ?? 'API configuration is not mounted.');
       invariant(!this.verifying, 'CONFIG_IN_USE', 'Wait for connection verification to finish.');
       const parent = input.parentId ? this.get(input.parentId) : undefined;
       const connectionId = id('connection');
-      const row: ApiConnection = { ...input, id: connectionId, parentId: parent?.id ?? null, provider: `rift-api-${connectionId}`, revision: parent ? parent.revision + 1 : 1, createdAt: now(), verifiedAt: null, verificationStatus: 'not-verified', verificationError: null, available: false };
+      const credentialRef = input.apiKey === undefined ? input.credentialRef! : `RIFT_API_${connectionId.replace(/^connection-/,'').replaceAll('-','').toUpperCase()}`;
+      // Explicit projection is intentional: plaintext apiKey never enters a
+      // connection DTO, profile, business database, or process environment.
+      const row: ApiConnection = { name: input.name, protocol: input.protocol, endpoint: input.endpoint, model: input.model, credentialRef, id: connectionId, parentId: parent?.id ?? null, provider: `rift-api-${connectionId}`, revision: parent ? parent.revision + 1 : 1, createdAt: now(), verifiedAt: null, verificationStatus: 'not-verified', verificationError: null, available: false };
       const previous = this.profiles();
-      await this.protectCredentials([row]);
+      const credentials = this.ctx.get?.('credentials') as Context['credentials'] | undefined;
+      let stored = false;
       try {
+        if (input.apiKey !== undefined) {
+          invariant(credentials && typeof credentials.set === 'function' && typeof credentials.unset === 'function', 'CREDENTIAL_STORE_UNAVAILABLE', 'This Host does not mount a writable credential store.');
+          await credentials.set(asCredentialRef(credentialRef), input.apiKey);
+          stored = true;
+        }
+        await this.protectCredentials([row]);
         if (this.fiber) this.replaceProfiles(this.profiles([...this.list(), row]));
         else await this.mount(this.profiles([...this.list(), row]));
         invariant(!this.closed, 'HOST_CLOSING', 'Host closed while preparing the connection.');
         invariant(this.ctx.llm.listProviders().some(item => item.id === row.provider), 'API_CONFIGURATION_UNAVAILABLE', 'The DSH adapter did not register this API route.');
         this.store.exec('INSERT INTO api_connections(id,name,protocol,endpoint,model,credential_ref,provider,revision,parent_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)', row.id, row.name, row.protocol, row.endpoint, row.model, row.credentialRef, row.provider, row.revision, row.parentId, row.createdAt);
       } catch (error) {
-        if (this.fiber) this.replaceProfiles(previous); throw error;
+        try { if (this.fiber) this.replaceProfiles(previous); }
+        finally {
+          // This generated reference belongs exclusively to this failed
+          // immutable connection. Never unset an existing user reference.
+          if (stored) await credentials!.unset(asCredentialRef(credentialRef));
+        }
+        throw error;
       }
       return this.get(row.id);
     });

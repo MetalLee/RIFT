@@ -32,7 +32,7 @@ import { readWorkspaceEvents } from '../events/workspace-events.js';
 import { NativeCodexRuntime, nativeCodexPackage, VERIFIED_NATIVE_CODEX_MODELS } from '../agent/native-codex.js';
 import { RepositoryService } from '../project/repositories.js';
 import { localBootIdentity } from '../agent/boot-identity.js';
-import { ApiConnectionService } from '../agent/connections.js';
+import { ApiConnectionService, registerConnectionCredential } from '../agent/connections.js';
 import type { ActivationBridge } from '../contracts/index.js';
 import { nativeSession, sessionCallbacks } from '../agent/native-sessions.js';
 import { bindingConnection } from '../agent/execution-connection.js';
@@ -277,6 +277,7 @@ export class RiftHostService implements ApiHandler {
     return attached;
   }
   async handle(method: string, pathname: string, body: unknown, key?: string): Promise<unknown> {
+    if(method==='POST'&&pathname==='/ui-api/v1/connections')registerConnectionCredential(body);
     if (this.closing) throw new RiftError('HOST_CLOSING','Host is closing.');
     if (method === 'GET') return this.route(method, pathname, body);
     if (!key) throw new RiftError('IDEMPOTENCY_KEY_REQUIRED','Write requests require a key.');

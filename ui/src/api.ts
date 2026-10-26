@@ -5,6 +5,11 @@ export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) { super(message); }
 }
 
+export interface ApiConnectionCreate {
+  name: string; protocol: 'openai-completions'|'openai-responses'|'anthropic-messages'; endpoint: string; model: string;
+  apiKey: string; parentId?: string;
+}
+
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`/ui-api/v1${path}`, { ...init, credentials: 'same-origin', cache: 'no-store' });
   const body = await response.json().catch(() => null);
@@ -21,6 +26,8 @@ export function consumeBootstrap(location: Pick<Location, 'hash' | 'pathname' | 
 }
 
 export const api = {
+  // Caller retains only the command key, never a serialized secret fingerprint.
+  createConnection: <T>(value: ApiConnectionCreate, csrf: string, key: string) => mutate<T>('/connections',csrf,value,'POST',key),
   session: async (code: string | null): Promise<UiSession> => {
     if (code !== null) return request<UiSession>('/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
     try { return await request<UiSession>('/session'); }

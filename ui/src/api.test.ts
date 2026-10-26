@@ -43,6 +43,31 @@ describe('browser API boundary', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('expired', { status: 401 })));
     try { await expect(request('/session')).rejects.toMatchObject({ status: 401 }); await expect(request('/session')).rejects.toBeInstanceOf(ApiError); } finally { vi.unstubAllGlobals(); }
   });
+  it('sends a directly entered API key only in the authenticated POST body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}'));
+    vi.stubGlobal('fetch', fetchMock);
+    const value = { name: 'Example', protocol: 'openai-responses' as const, endpoint: 'https://api.example.test/v1', model: 'example-model', apiKey: 'synthetic-test-only-key', parentId: 'previous-version' };
+    try {
+      await api.createConnection(value, 'csrf-value', 'connection-command');
+      const [url, options] = fetchMock.mock.calls[0]!;
+      expect(url).toBe('/ui-api/v1/connections');
+      expect(options).toMatchObject({ method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'csrf-value', 'Idempotency-Key': 'connection-command' } });
+      expect(JSON.parse(options.body)).toEqual(value);
+      expect(JSON.parse(options.body)).not.toHaveProperty('credentialRef');
+      expect(JSON.stringify([url, options.headers])).not.toContain(value.apiKey);
+    } finally { vi.unstubAllGlobals(); }
+  });
+  it('allows an uncertain connection save to retry with the same command key without automatic replay', async () => {
+    const fetchMock = vi.fn().mockRejectedValueOnce(new TypeError('Connection dropped')).mockResolvedValueOnce(new Response('{}'));
+    vi.stubGlobal('fetch', fetchMock);
+    const value = { name: 'Example', protocol: 'anthropic-messages' as const, endpoint: 'https://api.example.test/v1', model: 'example-model', apiKey: 'synthetic-test-only-key' };
+    try {
+      await expect(api.createConnection(value, 'csrf', 'same-command')).rejects.toThrow('Connection dropped');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await api.createConnection(value, 'csrf', 'same-command');
+      expect(fetchMock.mock.calls.map(([, options]) => options.headers['Idempotency-Key'])).toEqual(['same-command', 'same-command']);
+    } finally { vi.unstubAllGlobals(); }
+  });
   it('distinguishes acknowledged precondition refusal from uncertain side-effect outcomes', () => {
     expect(isDefinitiveRejection(new ApiError(409, 'Busy', 'CONFIG_IN_USE'))).toBe(true);
     expect(isDefinitiveRejection(new ApiError(409, 'Unknown', 'OUTCOME_UNKNOWN'))).toBe(false);

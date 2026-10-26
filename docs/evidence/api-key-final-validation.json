@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-26T12:08:58.498Z",
+  "feature": "Direct API key entry backed by official Host credential store; no environment setup required",
+  "regression": {
+    "passed": 344,
+    "skipped": 1,
+    "failed": 0,
+    "report": "api-key-configuration-tests.json"
+  },
+  "independent": {
+    "passed": 3,
+    "report": "api-credentials-independent-review.json"
+  },
+  "profileRestartChecks": 22,
+  "browser": "Headless Edge fixture passed: password field, clear after save, no credential display, safe retry, 390px layout.",
+  "typecheck": "passed",
+  "productionBuild": "passed",
+  "host": {
+    "pid": 41452,
+    "httpStatus": 200,
+    "newUiServed": true,
+    "backup": "D:/RiftUI-backup-20261026-api-key.db",
+    "integrity": "ok",
+    "foreignKeyErrors": 0,
+    "activeLeases": 0
+  },
+  "userCredentials": "No user key was requested, read, created or changed; probes used synthetic temporary keys only."
+}
