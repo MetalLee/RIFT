@@ -182,7 +182,7 @@ describe('U0/U2 browser bootstrap and same-Host read model', () => {
       expect(host.store.all('SELECT id FROM workspaces')).toHaveLength(1);
       expect((await create({ ...body, name: 'conflict' })).status).toBe(409);
       const detail = await fetch(`${origin}/ui-api/v1/workspaces/${(workspace as {id:string}).id}`, { headers });
-      expect((await detail.json() as UiWorkspaceDetail).roles).toHaveLength(4);
+      expect((await detail.json() as UiWorkspaceDetail).roles.map(role => role.purpose).sort()).toEqual(['developer', 'lead', 'reviewer']);
     } finally { await api.close(); await host.close(); await rm(folder, { recursive: true, force: true }); }
   });
 });

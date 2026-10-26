@@ -53,11 +53,11 @@ describe('E1 public management entry points', () => {
         return { workspace, workflow };
       };
       const a = await create('first'), b = await create('second');
-      expect(host.coordinator.status(a.workflow.id).roles.filter(role => role.purpose === 'developer')).toHaveLength(4);
+      expect(host.coordinator.status(a.workflow.id).roles.map(role => role.purpose).sort()).toEqual(['developer', 'lead', 'reviewer']);
       expect(host.doctor().limits).toMatchObject({ developers: 4, total: 5, reviewers: 1, workflowsPerWorkspace: 1 });
       expect(handles).toHaveLength(2);
       expect(host.store.workflow(a.workflow.id).leadSessionId).not.toBe(host.store.workflow(b.workflow.id).leadSessionId);
-      const task = (id: string) => ({ id, kind: 'analysis', title: id, instructions: 'Inspect', expectedPaths: [id], roleName: 'developer-c' });
+      const task = (id: string) => ({ id, kind: 'analysis', title: id, instructions: 'Inspect', expectedPaths: [id], roleName: 'developer-a' });
       await host.handle('POST', `/v1/workflows/${a.workflow.id}/plan`, { expectedRevision: 0, tasks: [task('first-task'), task('future-task')] }, 'plan');
       host.coordinator.pause(a.workflow.id);
       host.coordinator.dispatch({ taskId: 'future-task', expectedVersion: 0, idempotencyKey: 'queued' });
