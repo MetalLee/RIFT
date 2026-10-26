@@ -336,7 +336,7 @@ describe('Independent domain migration and Skill boundaries', () => {
     try {
       const workspace = await service.handleBrowser('POST', '/ui-api/v1/workspaces', { name: 'Discussion without repository', leadConnection: { runtime: 'codex', model: 'test-model' } }, 'no-repo') as { id: string; repositoryPath: string | null };
       expect(workspace.repositoryPath).toBeFalsy();
-      const roles = service.store.all<{id:string}>('SELECT id FROM roles WHERE workspace_id=?', workspace.id); expect(roles).toHaveLength(1);
+      const roles = service.store.all<{id:string}>('SELECT id FROM roles WHERE workspace_id=?', workspace.id); expect(roles).toHaveLength(3);
       const conversation = service.chat.createConversation(workspace.id, 'Skill snapshot verification');
       const directory = path.join(home, 'skill-source'); await mkdir(directory); await writeFile(path.join(directory, 'SKILL.md'), 'HOST_SKILL_VERSION_ONE');
       const preview = service.skills.previewImport({ workspaceId: workspace.id, directory });

@@ -103,11 +103,12 @@ describe('Agent execution connections without preconfigured instances', () => {
     const f = fixture(home, false);
     try {
       const workspace = await f.call('POST', '/workspaces', { name: 'Validation' }) as { id: string };
+      const initialBindings = f.host.store.all('SELECT * FROM provider_bindings ORDER BY id');
       const create = (extra: object) => f.call('POST', `/workspaces/${workspace.id}/agents`, { displayName: 'Developer', purpose: 'developer', prompt: '', chatConnection: null, ...extra });
       await expect(create({ executionConnection: { runtime: 'dsh', provider: 'missing', model: 'model' } })).rejects.toMatchObject({ code: 'PROVIDER_UNAVAILABLE' });
       await expect(create({ executionConnection: { runtime: 'codex', model: 'gpt-6-astra' } })).rejects.toMatchObject({ code: 'PROVIDER_UNAVAILABLE' });
       await expect(create({ executionProviderName: 'spawn', executionConnection: { runtime: 'dsh', provider: 'test-api', model: 'model' } })).rejects.toMatchObject({ code: 'INVALID_CONFIG' });
-      expect(f.host.store.all('SELECT id FROM provider_bindings')).toEqual([]);
+      expect(f.host.store.all('SELECT * FROM provider_bindings ORDER BY id')).toEqual(initialBindings);
     } finally { await f.host.close(); await rm(home, { recursive: true, force: true }); }
   });
 
