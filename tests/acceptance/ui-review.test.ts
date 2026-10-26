@@ -130,6 +130,12 @@ describe('Independent real-Git multi-repository boundaries', () => {
       expect((await git.inspectRepository(target, 'HEAD')).commonGitDir).toBe(inspected.commonGitDir);
       await expect(readFile(path.join(externalPath, 'README.md'))).rejects.toMatchObject({ code: 'ENOENT' });
       await expect(service.createWorktree(workspace.id, repo.id, { origin: 'managed', branch: 'main' })).rejects.toThrow();
+      // A failed creation is still unfinished until its owned Git completion
+      // receipt and absent destination have been reconciled. Deletion must not
+      // race or silently bypass that state.
+      await expect(service.archive(workspace.id, owned.id, owned.version)).rejects.toMatchObject({ code: 'WORKTREE_IN_USE' });
+      const failedCreation = service.worktrees(workspace.id, repo.id).find(tree => tree.status === 'creation_unknown')!;
+      await expect(service.reconcile(workspace.id, failedCreation.id, failedCreation.version)).resolves.toMatchObject({ status: 'creation_failed' });
       const archiveWorktree = git.archiveWorktree.bind(git); let archiving = false, resumeArchive!: () => void;
       const archiveGate = new Promise<void>(resolve => { resumeArchive = resolve; });
       git.archiveWorktree = async input => { archiving = true; await archiveGate; return archiveWorktree(input); };
