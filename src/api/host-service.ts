@@ -307,6 +307,13 @@ export class RiftHostService implements ApiHandler {
     const url = new URL(pathname, 'http://127.0.0.1'); pathname = url.pathname;
     if(method==='POST'&&pathname==='/ui-api/v1/connections')return this.connections.create(body);
     const connectionVerify=/^\/ui-api\/v1\/connections\/([^/]+)\/verify$/.exec(pathname);
+    const connectionDelete=/^\/ui-api\/v1\/connections\/([^/]+)$/.exec(pathname);
+    if(method==='DELETE'&&connectionDelete){
+      z.object({}).strict().parse(body);const connectionId=decodeURIComponent(connectionDelete[1]!);
+      const saved=this.store.get<{provider:string;deletedAt:string|null}>('SELECT provider,deleted_at FROM api_connections WHERE id=?',connectionId);
+      invariant(!saved||saved.deletedAt||saved.provider!==this.config.leadProvider,'CONNECTION_IN_USE','The Host default Lead still selects this API connection. Choose another default before deleting it.');
+      return this.connections.remove(connectionId);
+    }
     if(method==='POST'&&connectionVerify){z.object({}).strict().parse(body);return this.connections.verify(decodeURIComponent(connectionVerify[1]!));}
     if (method === 'GET' && pathname === '/ui-api/v1/connections') return { savedConnections: this.connections.list(), configuration: this.connections.configurationCapability(), executionProviders: this.ctx.subagents.list().map(name => ({ name, capabilities: this.ctx.subagents.getProvider(name)?.capabilities ?? {}, authentication: 'not-verified' })), connections: [...(this.ctx.llm?.listProviders() ?? []).map(provider => ({ id: `dsh:${provider.id}`, runtime: 'dsh', provider: provider.id, available: true, authentication: 'not-verified', modelSelection: 'explicit', models: [], executionAvailable: Boolean(this.ctx.subagents.getProvider('spawn')?.capabilities.agentOptions), tools: true, streaming: false, output: 'buffered-for-redaction' })), { id: 'codex', runtime: 'codex', available: this.chatRuntimes.has('codex'), authentication: 'not-verified', modelSelection: 'verified-only', models: this.runtimeModels.get('codex') ?? [], executionAvailable: VERIFIED_NATIVE_CODEX_MODELS.every(model => Boolean(this.ctx.subagents.getProvider(`rift-native-codex-${model}`))), disabledReason: this.chatRuntimes.has('codex') ? null : this.nativeRuntimeUnavailable, tools: true, streaming: false, output: 'buffered-for-redaction' }] };
     if (method === 'GET' && pathname === '/ui-api/v1/workspaces') return workspaceList(this.store);

@@ -14,6 +14,8 @@ const detail = {workspace,roles:[],bindings:[],repositories:[],tasks:[],workflow
 const legacy = {id:'legacy',name:'原有连接',protocol:'openai-responses',endpoint:'https://api.example.test/v1',model:'example-model',credentialRef:'INTERNAL_REFERENCE_MUST_NOT_RENDER',provider:'fixture',revision:1,parentId:null,createdAt:now(),verifiedAt:null,verificationStatus:'not-verified',verificationError:null,available:true};
 const connections = [legacy];
 const commands = [];
+const deletions = [];
+let pendingCleanup = false;
 let failNext = true;
 const browser = await chromium.launch({channel:'msedge',headless:true});
 const page = await browser.newPage({viewport:{width:1280,height:960}});
@@ -25,7 +27,16 @@ await page.route('**/ui-api/v1/**',async route=>{
   let body;
   if(pathname==='/session') body={csrfToken:'fixture-csrf',expiresAt:'2099-01-01T00:00:00Z'};
   else if(pathname==='/workspaces') body={workspaces:[workspace],capabilities,observedAt:now()};
-  else if(pathname==='/connections'&&request.method()==='POST') {
+  else if(pathname.startsWith('/connections/')&&request.method()==='DELETE') {
+    const id=decodeURIComponent(pathname.split('/').at(-1));
+    deletions.push({id,key:request.headers()['idempotency-key']});
+    assert.equal(request.headers()['x-csrf-token'],'fixture-csrf');
+    assert.deepEqual(request.postDataJSON(),{});
+    if(id==='legacy'){await route.fulfill({status:409,json:{error:{code:'CONNECTION_IN_USE',message:'Configured connection cannot be deleted'}}});return;}
+    const index=connections.findIndex(connection=>connection.id===id);if(index>=0)connections.splice(index,1);
+    if(!pendingCleanup){pendingCleanup=true;await route.fulfill({status:503,json:{error:{code:'CREDENTIAL_CLEANUP_PENDING',message:'Credential cleanup pending'}}});return;}
+    body={id,deleted:true};
+  } else if(pathname==='/connections'&&request.method()==='POST') {
     const input=request.postDataJSON();
     commands.push({input,key:request.headers()['idempotency-key']});
     assert.equal(request.headers()['x-csrf-token'],'fixture-csrf');
@@ -48,7 +59,7 @@ try {
   assert.equal(await password.inputValue(),'');
   assert.equal(await page.locator('input[name="credentialRef"]').count(),0);
   await page.getByLabel('连接名称',{exact:true}).fill('直接密钥连接');
-  await page.getByLabel('API 端点',{exact:true}).fill('https://api.example.test/v1');
+  await page.getByLabel('API Base URL',{exact:true}).fill('https://api.example.test/v1');
   await page.getByLabel('模型标识',{exact:true}).fill('example-model');
   await password.fill('synthetic-browser-test-only');
   await page.getByRole('button',{name:'保存新连接版本',exact:true}).click();
@@ -83,6 +94,31 @@ try {
   await page.screenshot({path:path.join(output,'edit-390.png'),fullPage:true});
   report.screenshots.push('edit-390.png');
   report.checks.push('new version requires fresh key and preserves parentId; new command key for new version; no horizontal overflow at 390px');
+  await page.getByRole('button',{name:'取消',exact:true}).click();
+  await page.getByRole('button',{name:'删除连接',exact:true}).first().click();
+  await page.getByRole('button',{name:'取消删除',exact:true}).click();
+  assert.equal(deletions.length,0,'Opening/cancelling confirmation must not call DELETE');
+  await page.getByRole('button',{name:'删除连接',exact:true}).first().click();
+  await page.getByRole('button',{name:'确认删除',exact:true}).click();
+  await page.getByText('此连接仍被工作区、Agent 或执行记录使用。请先更换对应连接，并等待正在执行的任务清理完成后再删除。',{exact:true}).waitFor();
+  assert.equal(await page.locator('.saved-connection').count(),3);
+  await page.getByRole('button',{name:'取消删除',exact:true}).click();
+  await page.getByRole('button',{name:'删除连接',exact:true}).last().click();
+  await page.getByRole('button',{name:'确认删除',exact:true}).click();
+  await page.getByText('连接已停用，但密钥清理尚未完成。请再次点击“确认删除”重试清理。',{exact:true}).waitFor();
+  await page.waitForFunction(()=>document.querySelectorAll('.saved-connection').length===2);
+  assert.equal(await page.getByRole('button',{name:'确认删除',exact:true}).count(),1,'Pending cleanup must stay retryable after tombstone disappears');
+  await page.getByRole('button',{name:'确认删除',exact:true}).click();
+  await page.getByRole('status').filter({hasText:'已删除连接'}).waitFor();
+  assert.equal(await page.locator('.connection-delete-confirm').count(),0);
+  assert.equal(deletions.length,3);
+  assert.equal(deletions[1].id,deletions[2].id);
+  assert.notEqual(deletions[1].key,deletions[2].key,'Cleanup retry needs a fresh key after acknowledged partial completion');
+  await page.evaluate(()=>window.scrollTo(0,0));
+  await page.screenshot({path:path.join(output,'delete-390.png'),fullPage:true});
+  report.screenshots.push('delete-390.png');
+  report.checks.push('cancelled confirmation makes no DELETE; referenced connection refusal retains all cards; cleanup partial completion remains retryable after list removal; fresh cleanup command; success refreshes and closes confirmation');
+
   assert.deepEqual(report.errors,[]);
   report.status='pass';
 } catch(error) { report.status='fail';report.error=error.message;process.exitCode=1; }

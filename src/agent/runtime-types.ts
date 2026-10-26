@@ -38,6 +38,8 @@ export interface RuntimeSession {
 export interface RuntimeTurnResult {
   text: string;
   stopReason: 'completed' | 'cancelled' | 'failed';
+  /** Bounded, credential-redacted provider diagnostic, when available. */
+  error?: string;
   nativeSessionId?: string;
 }
 

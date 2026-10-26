@@ -9,6 +9,8 @@ import { id, now, type RiftStore } from '../storage/database.js';
 import { invariant, RiftError } from '../contracts/index.js';
 import { publicError, registerCredentialRedaction } from '../api/security.js';
 import { DshChatRuntime } from '../chat/dsh-runtime.js';
+import { normalizeApiEndpoint } from './api-endpoint.js';
+import { assertConnectionUnused, cleanupConnectionCredential, type ConnectionDeletionRecord } from './connection-deletion.js';
 
 export const createConnectionSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -21,7 +23,7 @@ export const createConnectionSchema = z.object({
   credentialRef: z.string().regex(/^[A-Z_][A-Z0-9_]{0,127}$/, 'Use a Host credential reference, not a key value.').optional(),
   apiKey: z.string().trim().min(1).max(16384).optional(),
   parentId: z.string().min(1).max(160).optional(),
-}).strict().refine(input => Number(input.apiKey !== undefined) + Number(input.credentialRef !== undefined) === 1, 'Supply either an API key or an existing credential reference.');
+}).strict().refine(input => Number(input.apiKey !== undefined) + Number(input.credentialRef !== undefined) === 1, 'Supply either an API key or an existing credential reference.').transform(input=>({...input,endpoint:normalizeApiEndpoint(input.endpoint,input.protocol)}));
 
 /** Call at the HTTP boundary before validation/idempotency diagnostics as well
  * as here: submitted secrets must never appear in downstream error messages. */
@@ -54,7 +56,7 @@ export class ApiConnectionService {
   private unavailable: string | null = null;
   constructor(private readonly ctx: Context, private readonly store: RiftStore, private readonly home: string) {}
   list(): ApiConnection[] {
-    return this.store.all<ApiConnection>('SELECT * FROM api_connections ORDER BY created_at,id').map(row => ({ ...row, available: Boolean(this.ctx.llm?.listProviders().some(provider => provider.id === row.provider)) }));
+    return this.store.all<ApiConnection>('SELECT id,name,protocol,endpoint,model,credential_ref,provider,revision,parent_id,created_at,verified_at,verification_status,verification_error FROM api_connections WHERE deleted_at IS NULL ORDER BY created_at,id').map(row => ({ ...row, endpoint:normalizeApiEndpoint(row.endpoint,row.protocol), available: Boolean(this.ctx.llm?.listProviders().some(provider => provider.id === row.provider)) }));
   }
   get(connectionId: string): ApiConnection {
     const connection = this.list().find(item => item.id === connectionId);
@@ -62,7 +64,7 @@ export class ApiConnectionService {
   }
   private profiles(connections = this.list()): Record<string, PiAiProviderProfile> {
     return Object.fromEntries(connections.map(connection => [connection.provider, {
-      displayName: connection.name, api: connection.protocol, baseURL: connection.endpoint, apiKeyEnv: connection.credentialRef,
+      displayName: connection.name, api: connection.protocol, baseURL: normalizeApiEndpoint(connection.endpoint,connection.protocol), apiKeyEnv: connection.credentialRef,
       models: [{ id: connection.model, input: ['text'], contextWindow: 64000, maxTokens: 8192 }],
       retryPolicy: { mode: 'normal', maxRetries: 0 }, streamIdleTimeoutMs: 60000,
     }]));
@@ -85,6 +87,11 @@ export class ApiConnectionService {
     this.fiber!.ctx.emit('loader/volatile-update', [['providers']]);
   }
   async initialize(): Promise<void> {
+    for(const deleted of this.store.all<ConnectionDeletionRecord>('SELECT * FROM api_connections WHERE deleted_at IS NOT NULL AND credential_deleted_at IS NULL')) {
+      // A failed cleanup remains a durable pending fact. It never restores the
+      // route, and DELETE with a fresh idempotency key can retry it explicitly.
+      await cleanupConnectionCredential(this.ctx,this.store,deleted).catch(()=>undefined);
+    }
     if (!this.ctx.llm || typeof this.ctx.plugin !== 'function') { this.unavailable = 'This Host does not mount the DSH model service.'; return; }
     if (this.list().length === 0) return;
     await this.protectCredentials(this.list());
@@ -118,7 +125,7 @@ export class ApiConnectionService {
         else await this.mount(this.profiles([...this.list(), row]));
         invariant(!this.closed, 'HOST_CLOSING', 'Host closed while preparing the connection.');
         invariant(this.ctx.llm.listProviders().some(item => item.id === row.provider), 'API_CONFIGURATION_UNAVAILABLE', 'The DSH adapter did not register this API route.');
-        this.store.exec('INSERT INTO api_connections(id,name,protocol,endpoint,model,credential_ref,provider,revision,parent_id,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)', row.id, row.name, row.protocol, row.endpoint, row.model, row.credentialRef, row.provider, row.revision, row.parentId, row.createdAt);
+        this.store.exec('INSERT INTO api_connections(id,name,protocol,endpoint,model,credential_ref,provider,revision,parent_id,created_at,credential_owned) VALUES(?,?,?,?,?,?,?,?,?,?,?)', row.id, row.name, row.protocol, row.endpoint, row.model, row.credentialRef, row.provider, row.revision, row.parentId, row.createdAt,Number(input.apiKey!==undefined));
       } catch (error) {
         try { if (this.fiber) this.replaceProfiles(previous); }
         finally {
@@ -131,6 +138,29 @@ export class ApiConnectionService {
       return this.get(row.id);
     });
     this.serial = operation.catch(() => undefined); return operation;
+  }
+  remove(connectionId:string):Promise<{id:string;deleted:true}> {
+    const operation=this.serial.then(async()=>{
+      invariant(!this.closed,'HOST_CLOSING','Host is closing.');
+      invariant(!this.verifying&&!this.cleanupUnknown,'CONNECTION_IN_USE','Connection verification has not confirmed cleanup.');
+      let connection=this.store.get<ConnectionDeletionRecord>('SELECT * FROM api_connections WHERE id=?',connectionId);
+      invariant(connection,'NOT_FOUND','API connection does not exist.');
+      if(!connection.deletedAt){
+        const previous=this.profiles();
+        try{
+          this.store.transaction(()=>{
+            assertConnectionUnused(this.store,connection!);
+            this.store.exec('UPDATE api_connections SET deleted_at=? WHERE id=? AND deleted_at IS NULL',now(),connectionId);
+            if(this.fiber)this.replaceProfiles(this.profiles());
+            invariant(!this.ctx.llm?.listProviders().some(item=>item.id===connection!.provider),'CONNECTION_DELETE_FAILED','The API provider could not be withdrawn.');
+          });
+        }catch(error){if(this.fiber)this.replaceProfiles(previous);throw error;}
+        connection=this.store.get<ConnectionDeletionRecord>('SELECT * FROM api_connections WHERE id=?',connectionId)!;
+      }
+      await cleanupConnectionCredential(this.ctx,this.store,connection);
+      return{id:connectionId,deleted:true as const};
+    });
+    this.serial=operation.catch(()=>undefined);return operation;
   }
   verify(connectionId: string): Promise<{ connection: ApiConnection; passed: boolean; error?: string }> {
     const operation = this.serial.then(() => this.performVerification(connectionId));
@@ -154,7 +184,7 @@ export class ApiConnectionService {
       void starting.then(late => { if (controller.signal.aborted && !handle) { void late.result.catch(() => undefined); void late.dispose().then(() => { lateCleanupConfirmed = true; if (!this.closed) this.cleanupUnknown = false; }, () => undefined); } }, () => undefined);
       handle = await Promise.race([starting, aborted]);
       const result = await Promise.race([handle.result, aborted]);
-      if (result.stopReason !== 'completed' || !result.text.includes('RIFT_API_OK')) throw new RiftError('API_VERIFICATION_FAILED', 'The model did not complete the verification response.');
+      if (result.stopReason !== 'completed' || !result.text.includes('RIFT_API_OK')) throw new RiftError('API_VERIFICATION_FAILED', result.error ?? (result.stopReason==='cancelled'?'API connection verification was cancelled.':'The model did not return the expected verification response (RIFT_API_OK).'));
     } catch (failure) { error = publicError(failure).message; }
     finally {
       let cleanupTimer: ReturnType<typeof setTimeout> | undefined;

@@ -69,9 +69,20 @@ describe('browser API boundary', () => {
     } finally { vi.unstubAllGlobals(); }
   });
   it('distinguishes acknowledged precondition refusal from uncertain side-effect outcomes', () => {
+    expect(isDefinitiveRejection(new ApiError(409, 'Connection used', 'CONNECTION_IN_USE'))).toBe(true);
+    expect(isDefinitiveRejection(new ApiError(503, 'Cleanup pending', 'CREDENTIAL_CLEANUP_PENDING'))).toBe(false);
     expect(isDefinitiveRejection(new ApiError(409, 'Busy', 'CONFIG_IN_USE'))).toBe(true);
     expect(isDefinitiveRejection(new ApiError(409, 'Unknown', 'OUTCOME_UNKNOWN'))).toBe(false);
     expect(isDefinitiveRejection(new ApiError(400, 'Unexpected exception', 'INVALID_REQUEST'))).toBe(false);
     expect(isDefinitiveRejection(new TypeError('Connection dropped'))).toBe(false);
+  });
+  it('deletes only the chosen connection through a protected idempotent request', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"id":"one/two","deleted":true}'));
+    vi.stubGlobal('fetch',fetchMock);
+    try {
+      expect(await api.deleteConnection('one/two','csrf-value','delete-command')).toEqual({id:'one/two',deleted:true});
+      expect(fetchMock).toHaveBeenCalledWith('/ui-api/v1/connections/one%2Ftwo',expect.objectContaining({method:'DELETE',body:'{}',headers:expect.objectContaining({'X-CSRF-Token':'csrf-value','Idempotency-Key':'delete-command'})}));
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {vi.unstubAllGlobals();}
   });
 });

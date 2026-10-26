@@ -26,6 +26,7 @@ export function consumeBootstrap(location: Pick<Location, 'hash' | 'pathname' | 
 }
 
 export const api = {
+  deleteConnection: (id: string, csrf: string, key: string) => mutate<{id:string;deleted:true}>(`/connections/${encodeURIComponent(id)}`,csrf,{},'DELETE',key),
   // Caller retains only the command key, never a serialized secret fingerprint.
   createConnection: <T>(value: ApiConnectionCreate, csrf: string, key: string) => mutate<T>('/connections',csrf,value,'POST',key),
   session: async (code: string | null): Promise<UiSession> => {
@@ -56,5 +57,5 @@ export function errorText(error: unknown): string {
 
 /** These guards reject before changing state; unknown/transport failures retain their command identity. */
 export function isDefinitiveRejection(error: unknown): boolean {
-  return error instanceof ApiError && ['VERSION_CONFLICT','CONFIG_IN_USE','WORKSPACE_ACTIVE','WORKTREE_DIRTY','WORKTREE_IN_USE','WORKTREE_EXISTS','INVALID_STATE','CONNECTION_REQUIRED','AGENT_DISABLED','SKILL_INCOMPATIBLE','SKILL_NAME_CONFLICT','SKILL_ARCHIVED','PROVIDER_UNAVAILABLE','MODEL_UNAVAILABLE','OWNERSHIP_CONFIRMATION_REQUIRED'].includes(error.code ?? '');
+  return error instanceof ApiError && ['VERSION_CONFLICT','CONFIG_IN_USE','CONNECTION_IN_USE','WORKSPACE_ACTIVE','WORKTREE_DIRTY','WORKTREE_IN_USE','WORKTREE_EXISTS','INVALID_STATE','CONNECTION_REQUIRED','AGENT_DISABLED','SKILL_INCOMPATIBLE','SKILL_NAME_CONFLICT','SKILL_ARCHIVED','PROVIDER_UNAVAILABLE','MODEL_UNAVAILABLE','OWNERSHIP_CONFIRMATION_REQUIRED'].includes(error.code ?? '');
 }

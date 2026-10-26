@@ -390,6 +390,7 @@ export class ChatService {
       this.activity(turn.id,'model.ended','cleanup','模型回复已结束，等待清理确认');
       invariant(result.text.length<=256_000,'CHAT_TEXT_LIMIT','Discussion response exceeds 256,000 characters.');
       text = redact(result.text, 256_000); status = controller.signal.aborted || result.stopReason === 'cancelled' ? 'cancelled' : result.stopReason === 'completed' ? 'completed' : 'failed';
+      if(status==='failed'&&result.error)error=redact(result.error,4096);
       // The model's settled text is safe in full, including short replies. It
       // remains a draft until cleanup and the final message commit complete.
       if (!turn.configuration.conversationTitle && text.startsWith(draftText) && text.length > draftText.length) {

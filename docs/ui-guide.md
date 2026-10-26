@@ -39,7 +39,7 @@ node dist/cli/main.js ui --home D:\RiftUI
 
 原生对话使用固定工具隔离目录 [rift-native-models.json](../profiles/rift-native-models.json)，其摘要和 payload 版本在启动时校验。模型只获得本 Turn 的 `rift_*` 工具；原生执行、文件写入、插件、MCP 与再次委派均关闭。新增模型或改变目录必须重新运行边界探针。原生开发/审查任务仍经官方 DSH subagent Provider 执行，与对话适配器分开。
 
-API 连接表单支持 OpenAI Chat Completions、Responses 和 Anthropic Messages 协议。填写名称、endpoint、model 和 API 密钥，无需配置环境变量。密钥使用密码输入框，保存成功后清空，页面和连接目录不回显密钥或内部引用；编辑为新版本时必须重新输入。旧环境变量引用连接仍由 Host 兼容加载。endpoint 使用 HTTPS，或本机 loopback HTTP；禁止 URL 内嵌凭据。保存只登记配置，“验证连接”才发送一次真实短请求并记录结果。每次修改创建新的不可变 provider 身份，旧版本继续供历史执行引用。当前实际外网验证覆盖 DeepSeek Chat Completions；其他协议是否可用由目标服务与显式验证决定。
+API 连接表单支持 OpenAI Chat Completions、Responses 和 Anthropic Messages 协议。填写名称、API Base URL（例如 `https://example.com/v1`）、model 和 API 密钥，无需配置环境变量。密钥使用密码输入框，保存成功后清空，页面和连接目录不回显密钥或内部引用；编辑为新版本时必须重新输入。旧环境变量引用连接仍由 Host 兼容加载。endpoint 使用 HTTPS，或本机 loopback HTTP；禁止 URL 内嵌凭据。保存只登记配置，“验证连接”才发送一次真实短请求并记录结果。 基础地址无需附加 `/messages`、`/responses` 或 `/chat/completions`。删除连接需要在页面确认，可在确认前取消；仍被工作区、Agent 或执行引用的连接会拒绝删除，需先更换配置并等待执行清理完成。删除不会改写成员配置或历史执行记录。每次修改创建新的不可变 provider 身份，旧版本继续供历史执行引用。当前实际外网验证覆盖 DeepSeek Chat Completions；其他协议是否可用由目标服务与显式验证决定。
 
 成员的任务执行连接与对话连接使用相同的 API / 原生运行时选择方式，可独立指定模型和推理强度，无需预先登记执行实例。API 使用系统设置中保存的端点和密钥，原生 Codex 可直接选择 Sol 或 Astra。保存后由 Host 建立不可变执行绑定，重启后恢复原生执行能力；已保留执行占用时拒绝切换绑定。纯文本分析优先使用执行连接，旧成员未配置执行连接时兼容其对话连接。连接配置不等于认证通过。
 
