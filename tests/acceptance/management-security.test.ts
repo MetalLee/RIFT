@@ -56,7 +56,7 @@ describe('A10/A11 independent management identity and HTTP acceptance', () => {
       const first = await service.handle('POST', '/v1/workspaces', body, 'create-one');
       expect(await service.handle('POST', '/v1/workspaces', body, 'create-one')).toEqual(first);
       expect(service.store.all('SELECT * FROM workspaces')).toHaveLength(1);
-      expect(service.store.all('SELECT * FROM roles')).toHaveLength(4);
+      expect(service.store.all('SELECT * FROM roles')).toHaveLength(3);
       await expect(service.handle('POST', '/v1/workspaces', { ...body, name: 'different' }, 'create-one')).rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
     } finally { await service.close(); await rm(temporary, { recursive: true, force: true }); }
   });

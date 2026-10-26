@@ -1,27 +1,37 @@
 import { describe, expect, it, vi } from 'vitest';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Context } from '@deepseek-ai/cordis';
+import type { Agent } from '@deepseek-ai/dsh-agent';
 import type { Role, Run, Workflow, Workspace } from '../../src/contracts/index.js';
 import { RiftHostService, type HostConfig } from '../../src/api/host-service.js';
 import type { UiWorkspaceDetail } from '../../src/api/ui-contracts.js';
 import { seedWorkspace } from './fixtures.js';
+import { gitOk } from '../../src/git/process.js';
 
 const purposes = ['developer', 'lead', 'reviewer'];
 const head = 'a'.repeat(40);
 
 async function fixture(options: Partial<HostConfig> = {}) {
-  const home = await mkdtemp(path.join(tmpdir(), 'rift-default-members-'));
+  const home = await realpath(await mkdtemp(path.join(tmpdir(), 'rift-default-members-')));
+  await mkdir(path.join(home, 'repo'));
+  await gitOk(path.join(home, 'repo'), ['init', '-b', 'main']);
   const parent = { id: 'controlled-lead', followup: vi.fn(), cancel: vi.fn(async () => {}) };
-  const startActivation = vi.fn(async (input: { request: { prompt: { text: string }[] } }) => {
+  const children = new Map<string, Agent>();
+  let onCreated: ((payload: { agent: Agent }) => unknown) | undefined;
+  const startActivation = vi.fn(async (input: { childId?: string; request: { prompt: { text: string }[] } }) => {
     const envelope = JSON.parse(input.request.prompt[0]!.text) as { taskId: string; runId: string };
-    return { childId: `child-${envelope.runId}`, result: Promise.resolve({ stopReason: 'completed', output: [{ type: 'text', text: JSON.stringify({ schemaVersion: 1, taskId: envelope.taskId, runId: envelope.runId, outcome: 'completed', summary: 'Controlled analysis', changedPaths: [], checksClaimed: [], blockingReasons: [] }) }] }), dispose: vi.fn(async () => {}) };
+    const child = { id: input.childId ?? `child-${envelope.runId}`, ctx: { tools: { restrict: vi.fn(), register: vi.fn() } } } as unknown as Agent;
+    children.set(child.id, child); onCreated?.({ agent: child });
+    return { childId: child.id, result: Promise.resolve({ stopReason: 'completed', output: [{ type: 'text', text: JSON.stringify({ schemaVersion: 1, taskId: envelope.taskId, runId: envelope.runId, outcome: 'completed', summary: 'Controlled analysis', changedPaths: [], checksClaimed: [], blockingReasons: [] }) }] }), dispose: vi.fn(async () => { children.delete(child.id); }) };
   });
   const providers = ['claude-code-dev', 'codex-dev', 'codex-review', 'spawn'];
   const ctx = {
-    subagents: { list: () => providers, getProvider: (name: string) => providers.includes(name) ? { capabilities: name === 'spawn' ? { agentOptions: true } : {} } : undefined, startActivation },
-    agents: { create: vi.fn(async () => ({ agent: parent, dispose: vi.fn(async () => {}) })), get: () => parent },
+    subprocess: { resolveExecutable: vi.fn(async (name: string) => name), spawn: vi.fn(() => { throw new Error('Controlled Lead must not execute shell commands'); }) },
+    on: (_event: string, listener: typeof onCreated) => { onCreated = listener; return () => { onCreated = undefined; }; },
+    subagents: { list: () => providers, getProvider: (name: string) => providers.includes(name) ? { capabilities: name === 'spawn' ? { agentOptions: true } : {}, prepareContinuable: async () => ({}) } : undefined, startActivation },
+    agents: { create: vi.fn(async () => ({ agent: parent, dispose: vi.fn(async () => {}) })), get: (id: string) => children.get(id) ?? parent },
     llm: { listProviders: () => [{ id: 'test' }] },
   } as unknown as Context;
   const config: HostConfig = { home, port: 0, leadProvider: 'test', leadModel: 'test-model', checks: [], ...options };
@@ -113,7 +123,7 @@ describe('new workspace default members (controlled providers and Git)', () => {
       host.coordinator.submitPlan({ workflowId: workflow.id, expectedRevision: 0, tasks: ['first', 'second'].map(id => ({ id, kind: 'analysis' as const, title: id, instructions: 'Read only', expectedPaths: [] })) });
       for (const id of ['first', 'second']) {
         host.coordinator.dispatch({ taskId: id, expectedVersion: 0, idempotencyKey: `dispatch-${id}` });
-        await expect.poll(() => host.store.task(id).status).toBe('succeeded');
+        await expect.poll(() => host.store.task(id)).toMatchObject({ status: 'succeeded', blockingReason: null });
       }
       const runs = host.store.all<Run>('SELECT * FROM runs ORDER BY rowid');
       expect(runs).toHaveLength(2);
