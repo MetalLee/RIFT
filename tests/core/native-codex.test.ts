@@ -90,6 +90,8 @@ describe('native Codex Host-owned tool gateway', () => {
     expect(started.environments).toEqual([]);
     expect((started.config as Record<string, unknown>)['mcp_servers.legacy.enabled']).toBe(false);
     expect(h.spawnSpec!.argv).toContain('features.shell_tool=false');
+    expect(h.spawnSpec!.argv).toEqual(expect.arrayContaining(['features.code_mode=false','features.code_mode_host=false']));
+    expect(started.config).toMatchObject({'features.code_mode':false,'features.code_mode_host':false});
     h.complete(); await expect(handle.result).resolves.toMatchObject({ text: 'Verified', stopReason: 'completed' });
   });
 
@@ -153,14 +155,19 @@ describe('native repository capabilities',()=>{
     await expect(nativeRepositoryRoots(f.repo,[path.parse(f.repo).root],signal)).rejects.toMatchObject({code:'NATIVE_REPOSITORY_SCOPE'});
     await expect(nativeRepositoryRoots(f.repo,['relative'],signal)).rejects.toMatchObject({code:'NATIVE_REPOSITORY_SCOPE'});
   });
-  it('enables exact workspace repositories on both start and resume without inheriting desktop authority',async()=>{
+  it.each(['discussion','develop'] as const)('enables %s repository tool dispatch on start and resume without inheriting desktop authority',async mode=>{
     const f=await repositories();
     for(const resume of [false,true]){
-      const h=harness({env:{CODEX_DESKTOP_TOOL_PIPE:'must-not-inherit',CODEX_THREAD_ID:'foreign'}});h.input.cwd=f.worktree;h.input.repositoryAccess={repositoryPaths:[f.repo,f.other]};
+      const h=harness({mode,env:{CODEX_DESKTOP_TOOL_PIPE:'must-not-inherit',CODEX_THREAD_ID:'foreign'}});h.input.cwd=f.worktree;h.input.repositoryAccess={repositoryPaths:[f.repo,f.other]};
       if(resume)h.input.session={threadId:'native-thread',runtimeHome:f.folder,onThread(){},onTurn(){},onSettled(){}};
       const handle=await h.start(),request=h.requests.find(r=>r.method===(resume?'thread/resume':'thread/start'))!.params;
       expect(request.sandbox).toBe('workspace-write');expect(request).not.toHaveProperty('environments');expect(h.requests.find(r=>r.method==='turn/start')!.params).not.toHaveProperty('environments');
       expect(request.config).toMatchObject({'sandbox_workspace_write.network_access':true,'features.shell_tool':true,'features.unified_exec':true,'features.multi_agent':false,'mcp_servers.legacy.enabled':false});
+      expect(request.config).toMatchObject({'features.code_mode':true,'features.code_mode_host':true,'features.apps':false,'features.plugins':false,'features.computer_use':false});
+      expect(h.spawnSpec!.argv).toEqual(expect.arrayContaining(['features.code_mode=true','features.code_mode_host=true']));
+      expect((await h.toolCall()).success).toBe(true);expect(h.calls).toEqual([{}]);
+      expect((await h.toolCall({callId:'foreign',threadId:'foreign'})).success).toBe(false);
+      expect(h.calls).toHaveLength(1);
       expect(h.spawnSpec!.env).toMatchObject({CODEX_DESKTOP_TOOL_PIPE:undefined,CODEX_THREAD_ID:undefined});expect(h.spawnSpec!.argv.some(arg=>arg.includes('model_catalog_json'))).toBe(false);
       h.complete();await handle.result;await handle.dispose();
     }
@@ -168,6 +175,8 @@ describe('native repository capabilities',()=>{
   it.each(['review','analysis'] as const)('does not promote formal %s even when repositoryAccess is supplied',async mode=>{
     const h=harness({mode});h.input.repositoryAccess={repositoryPaths:['not-a-repository']};const handle=await h.start();
     const request=h.requests.find(r=>r.method==='thread/start')!.params;expect(request.sandbox).toBe('read-only');expect(request.config).toMatchObject({'features.shell_tool':false,'features.unified_exec':false});expect(request.environments).toEqual([]);
+    expect(request.config).toMatchObject({'features.code_mode':false,'features.code_mode_host':false});
+    expect(h.spawnSpec!.argv).toEqual(expect.arrayContaining(['features.code_mode=false','features.code_mode_host=false']));
     expect((request.dynamicTools as {name:string}[]).map(tool=>tool.name)).toEqual(['rift_status','rift_read_file','rift_list_files']);
     expect(h.requests.find(r=>r.method==='turn/start')!.params.sandboxPolicy).toEqual({type:'readOnly',networkAccess:false});
     h.complete();await handle.result;await handle.dispose();

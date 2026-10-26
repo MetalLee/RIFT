@@ -128,6 +128,11 @@ export class NativeCodexRuntime implements AgentRuntime {
     const restrictions = restrictedTools ? nativeCodexRestrictions() : {
       ...nativeCodexRestrictions(),
       'features.shell_tool': true, 'features.unified_exec': true, 'features.view_image': true,
+      // The native model catalog routes tools through functions.exec. Its
+      // sandboxed dispatcher must accompany that declaration; disabling it
+      // rejects both native shell and RIFT tools before the Host gateway.
+      // Restricted discussions and formal read-only runs keep both disabled.
+      'features.code_mode': true, 'features.code_mode_host': true,
       'sandbox_workspace_write.writable_roots': writableRoots,
       'sandbox_workspace_write.network_access': repositoryWrite,
       'sandbox_workspace_write.exclude_tmpdir_env_var': true,

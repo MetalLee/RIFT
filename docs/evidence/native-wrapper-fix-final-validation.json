@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-26T11:53:35.029Z",
+  "rootCause": "Writable native model tool catalog advertised exec while code_mode and code_mode_host were disabled.",
+  "fix": "Enable both only for native writable execution; rotate permission fingerprint v2 to v3.",
+  "tests": {
+    "passed": 337,
+    "skipped": 1,
+    "failed": 0
+  },
+  "typecheck": "passed",
+  "productionBuild": "passed",
+  "realAstra": "Two consecutive turns; exec -> RIFT callback and native git status verified in tool transcript.",
+  "host": {
+    "pid": 40288,
+    "httpStatus": 200,
+    "backup": "D:/RiftUI-backup-20261026-code-mode.db",
+    "activeLeases": 0,
+    "integrity": "ok",
+    "foreignKeyErrors": 0
+  },
+  "userConversation": "Original failed-tool reply preserved; no automatic merge/push request replay."
+}

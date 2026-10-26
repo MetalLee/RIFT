@@ -1,6 +1,10 @@
 # RIFT 开发交付记录
 
-## 工作区仓库权限（2026-10-26，当前）
+## Astra 原生工具包装修复（2026-10-26 19:53，当前）
+
+修复普通仓库模式声明 `exec` 包装工具却关闭 code-mode Host 的配置冲突。两项开关仅在原生可写执行开启，正式审查/分析保持受限；权限版本 v3 令下一轮建立新配置会话。真实 Astra high 两轮均成功执行 Host 回调与 Git，完整回归 337 通过、1 平台跳过，类型检查/构建通过。Host 已备份重启（PID 40288），历史失败回复未被改写，也未自动重放合并/推送请求。详见 [故障、修复与验证](workspace-repository-permissions.md)和[部署记录](evidence/native-wrapper-fix-final-validation.json)。
+
+## 工作区仓库权限（2026-10-26，前次交付）
 
 主代理和成员的普通讨论、正式开发现在接收 Host 账本中全部已关联仓库，以及经过身份核对的 Git 元数据和任务 worktree 权限。允许本地 `git add/commit` 与可用的原生 `gh`；发布需要用户明确请求，提交不代替候选检查和独立审查。正式 review/analysis 按执行模式保持只读，无仓库/标题生成仍受限。DSH 使用锁定 Codex 系统沙箱命令 scope，不开放裸 Host shell。
 
