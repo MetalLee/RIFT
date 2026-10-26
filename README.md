@@ -17,10 +17,10 @@ RIFT 是运行在 DeepSeek Harness（DSH）中的多智能体开发协作插件�
 | 角色 | 默认执行方式 | 职责 |
 | --- | --- | --- |
 | Lead | DSH，`deepseek-official/deepseek-flash` | 拆分计划、处理依赖、派发任务、协调返工和收尾 |
-| Developer A / B | Claude Code，`claude-opus-5-5` | 在各自的任务 worktree 中实现变更 |
+| Developer | Claude Code，`claude-opus-5-5` | 在任务 worktree 中实现变更 |
 | Reviewer | Codex，`gpt-6.1-sol` | 在独立 checkout 中审查精确的候选提交 |
 
-每个工作区最多一个活跃 Workflow，多个工作区共享 Host 的开发预算。原 profile 默认两个开发，Codex 专用 profile 默认四个开发；审查和集成仍全局串行。审查可以与其他任务开发重叠，有依赖或同仓库写入路径重叠的任务会等待调度。
+新建工作区默认包含一个 Lead、一个 Developer（内部名称 `developer-a`）和一个 Reviewer，可继续手动添加成员；已有工作区配置保持不变。每个工作区最多一个活跃 Workflow，多个工作区共享 Host 的开发预算。原 profile 的 Host 开发预算默认为 2，Codex 专用 profile 为 4，预算不决定默认成员数；审查和集成仍全局串行。审查可以与其他任务开发重叠，有依赖或同仓库写入路径重叠的任务会等待调度。
 
 开发结果通过检查和审查后，RIFT 更新目标仓库中的 `refs/heads/rift/...` 集成分支。你可以在流程完成后查看差异，再自行合并到业务分支。
 
@@ -85,7 +85,7 @@ $workspaceId = $workspace.id
 $workspaceId
 ```
 
-将 `main` 替换为目标仓库的实际基线。`workspace create` 返回的 `id` 是后续命令使用的 workspace ID，同时自动配置四个角色。可以用 `workspace list` 找回已登记的 workspace。
+将 `main` 替换为目标仓库的实际基线。`workspace create` 返回的 `id` 是后续命令使用的 workspace ID，同时自动配置上述三个角色。可以用 `workspace list` 找回已登记的 workspace。
 
 `doctor` 只检查配置、服务和遗留占用，不调用模型；`authentication` 中的 `not-verified` 是预期状态，不等于认证失败。需要真实验证运行时访问时，可在 RIFT 目录按需运行以下探针，**它们会调用模型并产生相应费用或额度消耗**：
 

@@ -36,7 +36,7 @@ Host 的 `limits` 配置如下；`doctor` 返回生效值，Workflow `status` �
 
 ## 自由角色
 
-`rift role configure --workspace ID --file roles.json` 仍提交完整配置。角色数量为 3–130，名称支持字母、数字、下划线、连字符和点，最长 64 字符。
+新建工作区默认只有 `lead/developer-a/reviewer` 三个成员，与 Host 并发预算独立；已有成员保持不变，也可继续手动添加成员。`rift role configure --workspace ID --file roles.json` 仍提交完整配置，不受新建默认人数限制。角色数量为 3–130，名称支持字母、数字、下划线、连字符和点，最长 64 字符。
 
 - 恰好一个 `purpose: "lead"`，`kind: "dsh-lead"`，不绑定子 Provider。
 - 至少一个 `purpose: "developer"` 和一个 `purpose: "reviewer"`，`kind: "subagent"`。

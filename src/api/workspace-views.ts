@@ -9,7 +9,7 @@ import { invariant } from '../contracts/index.js';
 const unavailable = (reason: string) => ({ available: false, reason });
 export function uiCapabilities(): UiCapabilities {
   return {
-    workspaceCreate: { available: true, reason: 'Start with a Lead only, or connect an existing Git repository. Code execution requires executable developer/reviewer roles.' },
+    workspaceCreate: { available: true, reason: 'Start with one Lead, one developer and one reviewer, with an optional Git repository. Code execution requires executable developer/reviewer connections.' },
     chat: { available: true, reason: 'Persistent conversations and explicit recipient routing; requires a registered connection. Output is buffered until settled for credential redaction.' },
     agentConfiguration: { available: true, reason: 'Stable Agent IDs, display names and versioned discussion connections. Existing execution snapshots remain immutable.' },
     skills: { available: true, reason: 'Versioned instructions and assignments. Resource/script Skills require verified runtime support.' },

@@ -205,19 +205,23 @@ export class RiftHostService implements ApiHandler {
     return tools;
   }
   private refreshProviders(): void { this.providerNames.clear(); for (const name of this.ctx.subagents.list()) this.providerNames.add(name); }
+  private defaultMembers() {
+    return [
+      { name: 'developer-a', purpose: 'developer' as const, providerName: this.config.developerProvider ?? 'claude-code-dev', prompt: 'Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.' },
+      { name: 'reviewer', purpose: 'reviewer' as const, providerName: this.config.reviewerProvider ?? 'codex-review', prompt: 'Review the exact candidate commit read-only. Never edit or commit. Return one JSON object matching resultSchema; approve only when all acceptance criteria pass.' },
+    ];
+  }
   private defaults(workspaceId: string): void {
     this.refreshProviders();
-    const developerProvider = this.config.developerProvider ?? 'claude-code-dev';
-    const reviewerProvider = this.config.reviewerProvider ?? 'codex-review';
-    const bindings: ProviderBinding[] = [...new Set([developerProvider, reviewerProvider])].map(providerName => {
+    const members = this.defaultMembers();
+    const bindings: ProviderBinding[] = [...new Set(members.map(member => member.providerName))].map(providerName => {
       const provider = this.ctx.subagents.getProvider(providerName);
       if (!provider) throw new RiftError('PROVIDER_UNAVAILABLE', `Profile is missing ${providerName}.`);
       return { id: `${workspaceId}:${providerName}`, providerName, packageVersion: '0.2.1-rc.3', configRevision: 1, capabilities: { ...provider.capabilities }, credentialRefs: providerName.startsWith('claude') ? ['native:claude', 'env:ANTHROPIC_API_KEY'] : providerName === 'spawn' ? ['env:DEEPSEEK_API_KEY'] : ['native:codex'], ...(providerName === 'spawn' ? { runtime: 'dsh' as const, spawn: { provider: this.config.leadProvider, model: this.config.leadModel } } : {}) };
     });
     this.project.configureRoles(workspaceId, bindings, [
       { name: 'lead', purpose: 'lead', kind: 'dsh-lead', prompt: 'Coordinate a durable plan, parallel independent developers and exact-commit acceptance. Do not claim success before workflow_finish succeeds.', revision: 1 },
-      ...Array.from({ length: this.coordinator.limits.developers }, (_, index) => index < 26 ? `developer-${String.fromCharCode(97 + index)}` : `developer-${index + 1}`).map(name => ({ name, purpose: 'developer' as const, kind: 'subagent' as const, providerBindingId: `${workspaceId}:${developerProvider}`, prompt: 'Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.', revision: 1 })),
-      { name: 'reviewer', purpose: 'reviewer', kind: 'subagent', providerBindingId: `${workspaceId}:${reviewerProvider}`, prompt: 'Review the exact candidate commit read-only. Never edit or commit. Return one JSON object matching resultSchema; approve only when all acceptance criteria pass.', revision: 1 },
+      ...members.map(({ providerName, ...member }) => ({ ...member, kind: 'subagent' as const, providerBindingId: `${workspaceId}:${providerName}`, revision: 1 })),
     ]);
   }
   /** Attach the workflow's one live parent without requesting a model turn. */
@@ -325,6 +329,12 @@ export class RiftHostService implements ApiHandler {
         workspace = this.store.transaction(() => {
           this.store.exec('INSERT INTO workspaces(id,name,root_path,status) VALUES(?,?,?,?)', id, input.name, path.join(this.config.home, 'workspaces', id), 'active');
           this.store.exec("INSERT INTO roles(id,workspace_id,name,purpose,kind,prompt,revision,display_name) VALUES(?,?,'lead','lead','dsh-lead',?,1,?)", `${id}:lead`, id, 'Help the user discuss and plan. Register all code work through RIFT tools; never bypass acceptance gates.', '主 Agent');
+          // A discussion-only Host may have no execution providers yet.
+          // Bind registered providers when available; otherwise retain inert discussion members.
+          for (const { providerName, ...member } of this.defaultMembers()) createBrowserAgent(this.store, id, {
+            ...member, displayName: member.name, chatConnection: null,
+            ...(this.ctx.subagents.list().includes(providerName) ? { providerBindingId: this.executionBinding(id, providerName) } : {}),
+          });
           return this.store.workspace(id);
         });
       }

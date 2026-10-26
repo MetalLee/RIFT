@@ -32,7 +32,7 @@ describe('U1–U5 browser domain routes', () => {
       expect(host.coordinator.finish({workflowId:workflow.id,summary:'Text analysis verified.'}).status).toBe('completed');
     }finally{await host.close();await rm(home,{recursive:true,force:true});}
   });
-  it('creates Lead-only workspaces, fixes versioned connection/Skill snapshots and routes explicit recipients without a model call', async () => {
+  it('creates three-member workspaces, fixes versioned connection/Skill snapshots and routes explicit recipients without a model call', async () => {
     const home = await mkdtemp(path.join(tmpdir(), 'rift-ui-domain-'));
     const host = new RiftHostService({ subagents: { list: () => [] }, llm: { listProviders: () => [] } } as unknown as Context, { home, port: 0, leadProvider: 'test', leadModel: 'test', checks: [] });
     const calls: { input: RuntimeTurnInput; finish: (value: RuntimeTurnResult) => void }[] = [];
@@ -43,7 +43,7 @@ describe('U1–U5 browser domain routes', () => {
       const a = await create('空工作区'), b = await create('另一个');
       expect(a.repositoryPath).toBe('');
       const detail = await host.handleBrowser('GET', `/ui-api/v1/workspaces/${a.id}`, {}) as UiWorkspaceDetail;
-      expect(detail.roles).toHaveLength(1); expect(detail.conversations).toHaveLength(1);
+      expect(detail.roles.map(role => role.purpose).sort()).toEqual(['developer', 'lead', 'reviewer']); expect(detail.conversations).toHaveLength(1);
       expect(detail.leadConfiguration).toMatchObject({ source: 'workspace', runtime: 'codex' });
       await expect(host.handleBrowser('PATCH', `/ui-api/v1/workspaces/${a.id}`, { expectedVersion: a.version - 1, name: 'stale' }, 'stale')).rejects.toMatchObject({ code: 'VERSION_CONFLICT' });
       await expect(host.handleBrowser('PATCH', `/ui-api/v1/workspaces/${a.id}`, { expectedVersion: a.version, leadConnection: { runtime: 'codex', model: 'unverified' } }, 'unverified')).rejects.toMatchObject({ code: 'MODEL_UNVERIFIED' });
