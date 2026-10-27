@@ -12,6 +12,13 @@ import { DshChatRuntime } from '../chat/dsh-runtime.js';
 import { normalizeApiEndpoint } from './api-endpoint.js';
 import { assertConnectionUnused, cleanupConnectionCredential, type ConnectionDeletionRecord } from './connection-deletion.js';
 
+// Model capacity is distinct from our 8K per-response output budget.
+// Claude Opus 5.5: https://platform.claude.com/docs/en/models/opus-5-5/overview
+// Verified 2026-10-27. Match the exact ID; do not promote unknown gateway aliases.
+export function connectionContextWindow(model: string): number {
+  return model === 'claude-opus-5-5' ? 1_000_000 : 64_000;
+}
+
 export const createConnectionSchema = z.object({
   name: z.string().trim().min(1).max(120),
   protocol: z.enum(['openai-completions', 'openai-responses', 'anthropic-messages']),
@@ -75,7 +82,7 @@ export class ApiConnectionService {
   private profiles(connections = this.list()): Record<string, PiAiProviderProfile> {
     return Object.fromEntries(connections.map(connection => [connection.provider, {
       displayName: connection.name, api: connection.protocol, baseURL: normalizeApiEndpoint(connection.endpoint,connection.protocol), apiKeyEnv: connection.credentialRef,
-      models: [{ id: connection.model, input: ['text'], contextWindow: 64000, maxTokens: 8192 }],
+      models: [{ id: connection.model, input: ['text'], contextWindow: connectionContextWindow(connection.model), maxTokens: 8192 }],
       retryPolicy: { mode: 'normal', maxRetries: 0 }, streamIdleTimeoutMs: 60000,
     }]));
   }
