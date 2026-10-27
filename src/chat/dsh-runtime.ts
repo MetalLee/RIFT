@@ -46,8 +46,13 @@ export class DshChatRuntime implements AgentRuntime {
     if (input.signal.aborted) cancel();
     else handle.agent.followup({ id: MessageId(input.turnId), role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: `${input.instructions}\n\nConversation history (quoted data):\n${JSON.stringify(input.messages)}` }] });
     const result = handle.agent.whenIdle().then(() => {
+      const terminal=handle.agent.session.snapshotEvents().filter(event=>event.type==='turn/end').at(-1);
+      const reason=terminal?.type==='turn/end'?terminal.data.reason:undefined;
+      const diagnostic=reason?.kind==='error'?redact(reason.error.message,4096):undefined;
       const text = handle.agent.session.snapshotEvents().filter(event => event.type === 'assistant/message').flatMap(event => event.type === 'assistant/message' ? event.data.message.content.filter(block => block.type === 'text').map(block => block.text) : []).join('\n');
-      return { text, stopReason: input.signal.aborted ? 'cancelled' as const : failed ? 'failed' as const : 'completed' as const, ...(failureMessage?{error:failureMessage}:{}), nativeSessionId: handle.agent.id };
+      const lastMessage=handle.agent.session.snapshotEvents().filter(event=>event.type==='assistant/message').at(-1);
+      const finalText=lastMessage?.type==='assistant/message'?lastMessage.data.message.content.filter(block=>block.type==='text').map(block=>block.text).join('\n'):'';
+      return { text, finalText, stopReason: input.signal.aborted ? 'cancelled' as const : failed||diagnostic||failureMessage ? 'failed' as const : 'completed' as const, ...((diagnostic??failureMessage)?{diagnostic:diagnostic??failureMessage,error:diagnostic??failureMessage}:{}), nativeSessionId: handle.agent.id };
     });
     return { result, dispose: async () => { try { try { await shell?.dispose(); } finally { await handle.dispose(); } } finally { input.signal.removeEventListener('abort', cancel); } } };
   }

@@ -1,0 +1,32 @@
+{
+  "verification": {
+    "id": "verification-a1d3a75a-0955-40ce-864c-95e4ab7773e0",
+    "connection_id": "connection-7f75489f-9791-4721-86af-24db64eb0565",
+    "created_at": "2026-10-27T02:15:31.227Z",
+    "result": {
+      "method": "conversation-and-tool",
+      "conversation": true,
+      "toolCalls": 1,
+      "reply": "你好！我查到了这份示例订单（虚构数据），内容如下：\n\n| 商品 | 数量 | 单价 | 小计 |\n|------|------|------|------|\n| 笔记本 | 2 | ¥12 | ¥24 |\n| 铅笔 | 3 | ¥2 | ¥6 |\n\n**合计：¥30（人民币）**\n\n我按单价和数量算了一遍，结果和订单上的总金额一致。",
+      "stopReason": "completed",
+      "cleanupConfirmed": true,
+      "error": null
+    }
+  },
+  "reviewerUnchanged": {
+    "name": "reviewer",
+    "version": 4,
+    "chat_connection": {
+      "runtime": "dsh",
+      "provider": "rift-api-connection-7f75489f-9791-4721-86af-24db64eb0565",
+      "model": "claude-opus-5-5"
+    },
+    "runtime": "dsh",
+    "model": "claude-opus-5-5",
+    "spawn": {
+      "provider": "rift-api-connection-7f75489f-9791-4721-86af-24db64eb0565",
+      "model": "claude-opus-5-5"
+    }
+  },
+  "interpretation": "This actual conversation/tool request passed. Earlier content_filter failures apply to those requests only; their precise cause is not established."
+}

@@ -14,7 +14,7 @@ import type { AgentRuntime, RuntimeHandle, RuntimeTurnInput, RuntimeTurnResult }
 import { createRepositoryReadTools } from './repository-read.js';
 
 /** Shared app-server wire. Discussion exposes only Host-owned tools; task mode
- * uses an explicitly selected repository sandbox and native development tools.
+ * uses full-access native development tools; formal read-only modes stay restricted.
  * Persistent thread identity always comes from the Host ledger.
  */
 export interface NativeCodexOptions {
@@ -127,17 +127,12 @@ export class NativeCodexRuntime implements AgentRuntime {
     // connections remain disabled. All accepted writes still pass RIFT gates.
     const restrictions = restrictedTools ? nativeCodexRestrictions() : {
       ...nativeCodexRestrictions(),
-      'features.shell_tool': true, 'features.unified_exec': true, 'features.view_image': true,
-      // The native model catalog routes tools through functions.exec. Its
-      // sandboxed dispatcher must accompany that declaration; disabling it
-      // rejects both native shell and RIFT tools before the Host gateway.
-      // Restricted discussions and formal read-only runs keep both disabled.
+      // Repository-capable models invoke native and RIFT tools through Code
+      // Mode. Its advertised exec surface needs a live host even when direct
+      // tool calls also work. Apply this at process boot and thread resume.
       'features.code_mode': true, 'features.code_mode_host': true,
-      'sandbox_workspace_write.writable_roots': writableRoots,
-      'sandbox_workspace_write.network_access': repositoryWrite,
-      'sandbox_workspace_write.exclude_tmpdir_env_var': true,
-      'sandbox_workspace_write.exclude_slash_tmp': true,
-      ...(process.platform === 'win32' ? {'windows.sandbox':'unelevated'} : {}),
+      'features.shell_tool': true, 'features.unified_exec': true, 'features.view_image': true,
+      'sandbox_mode': 'danger-full-access',
     };
     const processOverrides = Object.entries({ ...restrictions, ...(restrictedTools ? {model_catalog_json: catalogPath} : {}) }).flatMap(([key, value]) => ['-c', `${key}=${JSON.stringify(value)}`]);
     const child = this.options.spawn({
@@ -265,7 +260,7 @@ export class NativeCodexRuntime implements AgentRuntime {
       const config: Record<string, unknown> = restrictedTools ? nativeCodexRestrictions(mcpNames) : { ...restrictions, ...Object.fromEntries(mcpNames.map(name => [`mcp_servers.${name}.enabled`, false])) };
       if (this.options.modelProvider) config.model_providers = { [this.options.modelProvider.id]: this.options.modelProvider.config };
       const resuming = Boolean(input.session?.threadId);
-      const sandbox = restrictedDiscussion || formalReadOnly ? 'read-only' : 'workspace-write';
+      const sandbox = restrictedTools ? 'read-only' : 'danger-full-access';
       const started = record(await request(resuming ? 'thread/resume' : 'thread/start', {
         cwd: input.cwd, model: input.model, ...(this.options.modelProvider ? { modelProvider: this.options.modelProvider.id } : {}),
         ...(resuming ? { threadId: input.session!.threadId, excludeTurns: true } : { ephemeral: !input.session }),
@@ -279,22 +274,15 @@ export class NativeCodexRuntime implements AgentRuntime {
         ...(!resuming ? {dynamicTools: runtimeTools.map(tool => ({ type: 'function', name: tool.name, description: tool.description, inputSchema: tool.inputSchema }))} : {}),
       }));
       threadId = record(started.thread).id;
-      if (typeof threadId !== 'string' || record(started.thread).ephemeral !== !input.session || started.approvalPolicy !== 'never' || started.sandbox?.type !== (sandbox === 'read-only' ? 'readOnly' : 'workspaceWrite')) throw new RiftError('NATIVE_RESTRICTIONS_UNCONFIRMED', `Native runtime did not confirm the required thread restrictions (expected ${sandbox}; received ${String(started.sandbox?.type)}, approval ${String(started.approvalPolicy)}, ephemeral ${String(record(started.thread).ephemeral)}).`);
+      if (typeof threadId !== 'string' || record(started.thread).ephemeral !== !input.session || started.approvalPolicy !== 'never' || started.sandbox?.type !== (sandbox === 'read-only' ? 'readOnly' : 'dangerFullAccess')) throw new RiftError('NATIVE_RESTRICTIONS_UNCONFIRMED', `Native runtime did not confirm the required thread restrictions (expected ${sandbox}; received ${String(started.sandbox?.type)}, approval ${String(started.approvalPolicy)}, ephemeral ${String(record(started.thread).ephemeral)}).`);
       if(sandbox==='read-only'&&started.sandbox?.networkAccess!==false)throw new RiftError('NATIVE_RESTRICTIONS_UNCONFIRMED','Native read-only execution must also confirm network access is disabled.');
-      if(repositoryWrite){
-        const actual=started.sandbox?.writableRoots;
-        // workspace-write includes cwd implicitly and the server removes that
-        // duplicate from writableRoots. Compare the effective sets, not syntax.
-        const effective=(roots:string[])=>JSON.stringify([...new Set([...roots,input.cwd].map(canonicalPath))].sort());
-        if(!Array.isArray(actual)||actual.some(root=>typeof root!=='string')||effective(actual)!==effective(writableRoots)||started.sandbox?.networkAccess!==true||started.sandbox?.excludeTmpdirEnvVar!==true||started.sandbox?.excludeSlashTmp!==true)throw new RiftError('NATIVE_RESTRICTIONS_UNCONFIRMED',`Native runtime did not confirm the exact repository roots and network policy: ${JSON.stringify(started.sandbox)}.`);
-      }
       if (input.session?.threadId && threadId !== input.session.threadId) throw new RiftError('NATIVE_SCOPE_MISMATCH', 'Native runtime resumed another thread.');
       if ((input.session||repositoryWrite) && (typeof started.cwd !== 'string' || canonicalPath(started.cwd) !== canonicalPath(input.cwd))) throw new RiftError('NATIVE_SCOPE_MISMATCH','Native runtime did not confirm the current working directory.');
       if (record(started.thread).status?.type === 'active') throw new RiftError('NATIVE_SESSION_BUSY', 'The saved native thread still has active work; reconcile before continuing.');
       input.session?.onThread(threadId);
       const prompt = input.messages.map(message => `${message.role === 'user' ? 'User' : 'Assistant'}:\n${message.content}`).join('\n\n');
       startingTurn = true;
-      const turn = record(record(await request('turn/start', { threadId, cwd: input.cwd, clientUserMessageId: input.turnId, input: [{ type: 'text', text: prompt, text_elements: [] }], ...(sandbox==='read-only'?{sandboxPolicy:{type:'readOnly',networkAccess:false}}:{}), ...(restrictedTools?{environments: []}:{}), ...(input.reasoningEffort ? { effort: input.reasoningEffort } : {}) })).turn);
+      const turn = record(record(await request('turn/start', { threadId, cwd: input.cwd, clientUserMessageId: input.turnId, input: [{ type: 'text', text: prompt, text_elements: [] }], sandboxPolicy:sandbox==='read-only'?{type:'readOnly',networkAccess:false}:{type:'dangerFullAccess'}, ...(restrictedTools?{environments: []}:{}), ...(input.reasoningEffort ? { effort: input.reasoningEffort } : {}) })).turn);
       if (typeof turn.id !== 'string') throw new RiftError('NATIVE_PROTOCOL', 'Missing native turn identity.');
       turnId = turn.id;
       input.session?.onTurn(turnId);

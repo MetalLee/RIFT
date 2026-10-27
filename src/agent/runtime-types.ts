@@ -37,6 +37,9 @@ export interface RuntimeSession {
 
 export interface RuntimeTurnResult {
   text: string;
+  diagnostic?: string;
+  /** Last assistant message's text, excluding earlier text before tool calls. */
+  finalText?: string;
   stopReason: 'completed' | 'cancelled' | 'failed';
   /** Bounded, credential-redacted provider diagnostic, when available. */
   error?: string;

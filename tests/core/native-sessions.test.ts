@@ -8,6 +8,8 @@ import { ChatService } from '../../src/chat/service.js';
 import type { AgentRuntime, RuntimeTurnInput, RuntimeTurnResult } from '../../src/agent/runtime-types.js';
 import { PersistentCodexProvider } from '../../src/agent/codex-provider.js';
 import { NativeCodexRuntime } from '../../src/agent/native-codex.js';
+import { nativeSession, codexHome } from '../../src/agent/native-sessions.js';
+import { createHash } from 'node:crypto';
 import { DshActivationBridge } from '../../src/task/activation-bridge.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
@@ -31,6 +33,19 @@ function fakeRuntime() {
 const chatService=(store:RiftStore,home:string,runtime:AgentRuntime)=>new ChatService({store,home,defaultConnection:()=>({runtime:'codex',model:'gpt-6.1-sol'}),validateConnection(){},runtime:()=>runtime,tools:()=>[]});
 
 describe('persistent native session ownership and message synchronization',()=>{
+  it('keeps the previous sandbox session as history and uses a new session for full access',()=>{
+    const store=new RiftStore();
+    try {
+      const {workspace,roles}=seedWorkspace(store),agentId=roles[0]!.id,cwd=process.cwd(),runtimeHome=codexHome(),configuration={model:'gpt-6-astra'};
+      const oldKey=createHash('sha256').update(JSON.stringify([configuration,runtimeHome,path.resolve(cwd),'workspace-repositories-v4-code-mode','codex-0.164.0'])).digest('hex');
+      store.exec('INSERT INTO native_sessions(id,workspace_id,scope,scope_id,agent_id,configuration_key,thread_id,runtime_home,cwd,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)','old-policy',workspace.id,'chat','conversation',agentId,oldKey,'old-thread',runtimeHome,cwd,new Date().toISOString());
+      const input={workspaceId:workspace.id,scope:'chat' as const,scopeId:'conversation',agentId,configuration,cwd,runtimeHome};
+      const current=nativeSession(store,input);
+      expect(current.id).not.toBe('old-policy');expect(current.threadId).toBeNull();
+      expect(nativeSession(store,input).id).toBe(current.id);
+      expect(store.require<{threadId:string}>('SELECT thread_id FROM native_sessions WHERE id=?','old-policy').threadId).toBe('old-thread');
+    } finally {store.close();}
+  });
   it('reopens the ledger and reuses a member thread without repeating its messages',async()=>{
     const home=await mkdtemp(path.join(tmpdir(),'rift-native-history-'));const file=path.join(home,'rift.db');
     let store=new RiftStore(file);const {workspace}=seedWorkspace(store);let fake=fakeRuntime();let chat=chatService(store,home,fake.runtime);
