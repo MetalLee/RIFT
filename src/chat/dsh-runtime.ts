@@ -14,6 +14,8 @@ export class DshChatRuntime implements AgentRuntime {
     input.signal.throwIfAborted();
     if (!this.ctx.llm.listProviders().some(item => item.id === this.provider)) throw new RiftError('START_NOT_PUBLISHED', 'The selected DSH provider is not registered.');
     let failed = false;
+    const attempts = new Map<string, { text: string; kind: 'assistant'|'commentary'|'final'; thinking: boolean; blocks: Map<number,string> }>();
+    let toolSequence = 0;
     let failureMessage:string|undefined;
     const recordFailure=(failure:unknown)=>{failed=true;failureMessage=redact(failure&&typeof failure==='object'&&'message' in failure&&typeof failure.message==='string'?failure.message:publicError(failure).message,4096);};
     const shell=input.repositoryAccess?await createRepositoryShell(this.ctx.subprocess,input):undefined;
@@ -26,9 +28,43 @@ export class DshChatRuntime implements AgentRuntime {
         scope.tools.restrict({ allow: [] });
         scope.on('agent/error', ({error}) => recordFailure(error));
         scope.on('agent/assistant-stream', ({ frame }) => {
-          if(frame.type!=='chunk')return;
-          if(frame.chunk.type==='text-delta')input.onText?.(frame.chunk.text);
-          if(frame.chunk.type==='finish'&&frame.chunk.reason.kind==='error')recordFailure(frame.chunk.reason.failure);
+          const messageId = String(frame.attemptId);
+          if (frame.type === 'start') {
+            attempts.set(messageId, {text:'',kind:'assistant',thinking:false,blocks:new Map()});
+            input.onEvent?.({type:'message.started',messageId,kind:'assistant'});
+            return;
+          }
+          const attempt = attempts.get(messageId);
+          if (frame.type === 'end') {
+            if (attempt) {
+              input.onEvent?.({type:'message.completed',messageId,kind:attempt.kind,text:attempt.text,interrupted:frame.outcome.kind!=='committed'||frame.outcome.eventType!=='assistant/message'});
+              attempts.delete(messageId);
+            }
+            return;
+          }
+          if (frame.chunk.type === 'text-delta') {
+            if (attempt) { attempt.text += frame.chunk.text; attempt.blocks.set(frame.chunk.index,(attempt.blocks.get(frame.chunk.index)??'')+frame.chunk.text); }
+            if (input.onEvent) input.onEvent({type:'message.delta',messageId,text:frame.chunk.text});
+            else input.onText?.(frame.chunk.text);
+          }
+          if (frame.chunk.type === 'block-end' && frame.chunk.block.type === 'text' && attempt) {
+            const previous = attempt.blocks.get(frame.chunk.index) ?? '';
+            const text = frame.chunk.block.text;
+            if (text.startsWith(previous) && text.length > previous.length) {
+              const delta = text.slice(previous.length);
+              attempt.text += delta; attempt.blocks.set(frame.chunk.index,text);
+              if (input.onEvent) input.onEvent({type:'message.delta',messageId,text:delta});
+              else input.onText?.(delta);
+            }
+          }
+          if (frame.chunk.type === 'reasoning-delta' && attempt && !attempt.thinking) {
+            attempt.thinking = true;
+            input.onEvent?.({type:'status.changed',status:'thinking'});
+          }
+          if (frame.chunk.type === 'finish') {
+            if (attempt) attempt.kind = frame.chunk.reason.kind === 'tool-calls' ? 'commentary' : 'final';
+            if (frame.chunk.reason.kind === 'error') recordFailure(frame.chunk.reason.failure);
+          }
         });
         for (const tool of scopedTools) scope.tools.register({
           name: tool.name, description: tool.description, parameters: tool.inputSchema as ToolDefinition['parameters'],
@@ -36,7 +72,16 @@ export class DshChatRuntime implements AgentRuntime {
           async execute(args, execution) {
             if (execution.agent !== agent || scope.agents.get(agent.id) !== agent) throw new RiftError('UNAUTHORIZED', 'Only this live Turn may invoke its scoped tools.');
             execution.signal.throwIfAborted();
-            return tool.execute(args, execution.signal);
+            const toolCallId = `dsh-tool-${++toolSequence}`;
+            input.onEvent?.({type:'tool.started',toolCallId,toolName:tool.name});
+            try {
+              const result = await tool.execute(args, execution.signal, {callId:toolCallId});
+              input.onEvent?.({type:'tool.completed',toolCallId,toolName:tool.name});
+              return result;
+            } catch (error) {
+              input.onEvent?.({type:'tool.failed',toolCallId,toolName:tool.name});
+              throw error;
+            }
           },
         });
       },

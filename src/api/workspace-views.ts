@@ -11,7 +11,7 @@ const unavailable = (reason: string) => ({ available: false, reason });
 export function uiCapabilities(): UiCapabilities {
   return {
     workspaceCreate: { available: true, reason: 'Start with one Lead, one developer and one reviewer, with an optional Git repository. Code execution requires executable developer/reviewer connections.' },
-    chat: { available: true, reason: 'Persistent conversations and explicit recipient routing; requires a registered connection. Output is buffered until settled for credential redaction.' },
+    chat: { available: true, reason: 'Persistent conversations and explicit recipient routing; requires a registered connection. Redacted message deltas, interim commentary and tool progress stream in real time.' },
     agentConfiguration: { available: true, reason: 'Stable Agent IDs, display names and versioned discussion connections. Existing execution snapshots remain immutable.' },
     skills: { available: true, reason: 'Versioned instructions and assignments. Resource/script Skills require verified runtime support.' },
     multipleRepositories: { available: true, reason: 'Each workflow freezes its selected repository commits; every task selects exactly one repository.' },

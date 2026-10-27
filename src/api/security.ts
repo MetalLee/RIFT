@@ -3,6 +3,11 @@ import { RiftError } from '../contracts/index.js';
 
 const credentialReferences = new Set<string>();
 const configuredSecrets = new Set<string>();
+/** Host-only literals; never serialize these. */
+export function credentialRedactionLiterals(): string[] {
+  return [...configuredSecrets, ...Object.entries(process.env).flatMap(([name, value]) =>
+    value && (credentialReferences.has(name) || /(?:KEY|TOKEN|SECRET|PASSWORD)/i.test(name)) ? [value] : [])];
+}
 /** Host-only registration; never expose resolved credentials in wire DTOs. */
 export function registerCredentialRedaction(reference: string, resolved?: string): void {
   credentialReferences.add(reference);
@@ -22,7 +27,11 @@ export function redact(value: string, maxBytes = 128 * 1024): string {
   }
   for (const secret of configuredSecrets) safe = safe.split(secret).join('[REDACTED]');
   const bytes = Buffer.from(safe);
-  return bytes.length > maxBytes ? bytes.subarray(0, maxBytes).toString('utf8') + '\n[TRUNCATED]' : safe;
+  if (bytes.length <= maxBytes) return safe;
+  let end = maxBytes;
+  // Never truncate inside a UTF-8 code point (Chinese/emoji need multiple bytes).
+  while (end > 0 && (bytes[end]! & 0xc0) === 0x80) end--;
+  return bytes.subarray(0, end).toString('utf8') + '\n[TRUNCATED]';
 }
 
 export function tokenMatches(received: string | undefined, expected: string): boolean {

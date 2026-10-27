@@ -1,0 +1,63 @@
+{
+  "at": "2026-10-27T15:53:30.378Z",
+  "mode": "live authenticated model; actual native app-server, scoped tool and runtime events",
+  "model": "gpt-6.1-sol",
+  "runs": [
+    {
+      "language": "zh",
+      "passed": true,
+      "stopReason": "completed",
+      "firstTextMs": 6582.94,
+      "commentaryCompletedMs": 6583.11,
+      "toolStartedMs": 6616.45,
+      "totalMs": 9433.82,
+      "eventTypes": [
+        "message.started",
+        "message.delta",
+        "message.delta",
+        "message.delta",
+        "message.delta",
+        "message.delta",
+        "message.delta",
+        "message.delta",
+        "message.completed",
+        "tool.started",
+        "tool.completed",
+        "message.started",
+        "message.delta",
+        "message.delta",
+        "message.delta",
+        "message.completed"
+      ],
+      "finalText": "中文验证完成"
+    },
+    {
+      "language": "en",
+      "passed": true,
+      "stopReason": "completed",
+      "firstTextMs": 7964.22,
+      "commentaryCompletedMs": 8093.59,
+      "toolStartedMs": 8288.32,
+      "totalMs": 11922.57,
+      "eventTypes": [
+        "message.started",
+        "message.delta",
+        "message.delta",
+        "message.delta",
+        "message.delta",
+        "message.delta",
+        "message.delta",
+        "message.completed",
+        "tool.started",
+        "tool.completed",
+        "message.started",
+        "message.delta",
+        "message.delta",
+        "message.delta",
+        "message.completed"
+      ],
+      "finalText": "English validation complete"
+    }
+  ],
+  "passed": true
+}

@@ -1,3 +1,5 @@
+import { applyMessageEvent } from './stream-state';
+import type { WorkspaceEvent } from '../../src/events/workspace-events';
 import { ChatTimeline } from './ChatTimeline';
 import { subscribeWorkspaceEvents } from './workspace-stream';
 import { randomId } from './browser-platform';
@@ -80,7 +82,15 @@ function ConversationView({ conversationId, data, csrf, onAuthError, onConversat
     if (!data.capabilities.events.available) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const close = subscribeWorkspaceEvents(data.workspace.id, data.snapshotCursor, {
-      changed: () => { if (!timer) timer = setTimeout(() => { timer = undefined; void sync(); }, 60); },
+      changed: event => {
+        try {
+          const update = JSON.parse(event.data) as WorkspaceEvent;
+          if (update.type === 'turn.message' || update.type === 'turn.activity') {
+            setPage(previous => previous ? applyMessageEvent(previous, update) ?? previous : previous);
+          }
+        } catch { /* A snapshot below repairs malformed or missing-base events. */ }
+        if (!timer) timer = setTimeout(() => { timer = undefined; void sync(); }, 120);
+      },
       snapshot: async signal => {
         const generation = ++historyGeneration.current;
         latest.current.cancel();
@@ -104,7 +114,7 @@ function ConversationView({ conversationId, data, csrf, onAuthError, onConversat
     return () => { close(); if (timer) clearTimeout(timer); };
   }, [base, data.capabilities.events.available]);
   useEffect(() => { alive.current = true; void sync(); const interval = setInterval(() => { if (!document.hidden) void sync(); }, 1800); const visibility = () => { if (!document.hidden) void sync(); }; const scroll = () => { nearBottom.current = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 160; }; addEventListener('scroll', scroll, { passive: true }); document.addEventListener('visibilitychange', visibility); return () => { alive.current = false; latest.current.cancel(); clearInterval(interval); removeEventListener('scroll', scroll); document.removeEventListener('visibilitychange', visibility); }; }, [base]);
-  const contentRevision = `${page?.messages.at(-1)?.id}:${page?.chunks.at(-1)?.seq}:${page?.turns.at(-1)?.version}`;
+  const contentRevision = `${page?.messages.at(-1)?.id}:${page?.chunks.at(-1)?.seq}:${page?.turns.map(turn=>`${turn.id}:${turn.version}`).join(',')}`;
   useEffect(() => { if (!page) return; if (nearBottom.current) bottom.current?.scrollIntoView({ block: 'end' }); else setNewContent(true); }, [contentRevision]);
   function chooseRecipient(id: string) { setRecipient(id); setMentions(false); setDraft(current => { const next = current.endsWith('@') ? current.slice(0,-1) : current; saveDraft(data.workspace.id, next, conversationId); return next; }); try { sessionStorage.setItem(`rift:recipient:${data.workspace.id}:${conversationId}`, id); } catch { /* Session storage is optional. */ } composer.current?.focus(); }
   const chosen = data.roles.find(r => r.id === recipient);

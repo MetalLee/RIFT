@@ -1,0 +1,169 @@
+{
+  "at": "2026-10-27T16:09:39.944Z",
+  "mode": "controlled runtime; actual SQLite and HTTP SSE delivery; excludes model inference and browser rendering",
+  "samples": [
+    {
+      "language": "zh",
+      "latencyMs": 54.29
+    },
+    {
+      "language": "zh",
+      "latencyMs": 59.6
+    },
+    {
+      "language": "zh",
+      "latencyMs": 62.16
+    },
+    {
+      "language": "zh",
+      "latencyMs": 62.21
+    },
+    {
+      "language": "zh",
+      "latencyMs": 60.79
+    },
+    {
+      "language": "zh",
+      "latencyMs": 60.88
+    },
+    {
+      "language": "zh",
+      "latencyMs": 61.42
+    },
+    {
+      "language": "zh",
+      "latencyMs": 60.71
+    },
+    {
+      "language": "zh",
+      "latencyMs": 60.99
+    },
+    {
+      "language": "zh",
+      "latencyMs": 62.46
+    },
+    {
+      "language": "zh",
+      "latencyMs": 61.56
+    },
+    {
+      "language": "zh",
+      "latencyMs": 62.17
+    },
+    {
+      "language": "zh",
+      "latencyMs": 61.71
+    },
+    {
+      "language": "zh",
+      "latencyMs": 60.61
+    },
+    {
+      "language": "zh",
+      "latencyMs": 62.38
+    },
+    {
+      "language": "zh",
+      "latencyMs": 62.06
+    },
+    {
+      "language": "zh",
+      "latencyMs": 63.06
+    },
+    {
+      "language": "zh",
+      "latencyMs": 61.16
+    },
+    {
+      "language": "zh",
+      "latencyMs": 60.79
+    },
+    {
+      "language": "zh",
+      "latencyMs": 61.8
+    },
+    {
+      "language": "en",
+      "latencyMs": 60.8
+    },
+    {
+      "language": "en",
+      "latencyMs": 60.94
+    },
+    {
+      "language": "en",
+      "latencyMs": 62.4
+    },
+    {
+      "language": "en",
+      "latencyMs": 62.21
+    },
+    {
+      "language": "en",
+      "latencyMs": 61.43
+    },
+    {
+      "language": "en",
+      "latencyMs": 60.37
+    },
+    {
+      "language": "en",
+      "latencyMs": 59.82
+    },
+    {
+      "language": "en",
+      "latencyMs": 62.37
+    },
+    {
+      "language": "en",
+      "latencyMs": 61.51
+    },
+    {
+      "language": "en",
+      "latencyMs": 62.73
+    },
+    {
+      "language": "en",
+      "latencyMs": 62.03
+    },
+    {
+      "language": "en",
+      "latencyMs": 62
+    },
+    {
+      "language": "en",
+      "latencyMs": 61.21
+    },
+    {
+      "language": "en",
+      "latencyMs": 61.06
+    },
+    {
+      "language": "en",
+      "latencyMs": 61.49
+    },
+    {
+      "language": "en",
+      "latencyMs": 60.96
+    },
+    {
+      "language": "en",
+      "latencyMs": 61.58
+    },
+    {
+      "language": "en",
+      "latencyMs": 50.52
+    },
+    {
+      "language": "en",
+      "latencyMs": 58.98
+    },
+    {
+      "language": "en",
+      "latencyMs": 61.74
+    }
+  ],
+  "targetMs": 200,
+  "p95Ms": 62.46,
+  "passed": true
+}

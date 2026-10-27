@@ -5,6 +5,7 @@ const statuses: Record<AgentTurn['status'], string> = { queued: '排队中', run
 export function turnPhaseLabel(turn: AgentTurn): string {
   if (turn.phase === 'cleanup' && turn.modelEndedAt) return '回复已结束，正在清理';
   if (turn.phase === 'cleanup_unknown' && turn.modelEndedAt) return '回复已结束，清理待确认';
+  if (turn.phase === 'generating' && turn.activities?.at(-1)?.type === 'model.status') return turn.activities.at(-1)!.summary;
   return (turn.phase ? phases[turn.phase] : undefined) ?? statuses[turn.status] ?? '状态待同步';
 }
 export function TurnDetails({ turn, view = 'diagnostics' }: { turn: AgentTurn; view?: 'chat' | 'diagnostics' }) {

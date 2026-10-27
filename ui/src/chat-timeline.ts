@@ -1,6 +1,6 @@
 import type { AgentTurn, ChatMessage, CoordinationReceipt, MessageChunk } from '../../src/chat/contracts.js';
 export interface TimelineUpdate { id:string; content:string; taskId?:string|null; senderAgentId?:string|null; type?:string }
-export interface TimelineItem { message:ChatMessage; turns:AgentTurn[]; taskIds:string[]; updates:TimelineUpdate[]; drafts:{turn:AgentTurn;text:string}[] }
+export interface TimelineItem { message:ChatMessage; turns:AgentTurn[]; taskIds:string[]; updates:TimelineUpdate[]; drafts:{turn:AgentTurn;text:string;messageId?:string;kind?:import('../../src/chat/contracts.js').StreamMessage['kind'];status?:string}[] }
 export function messageSender(message:ChatMessage): 'user'|'agent'|'system' { return message.senderType ?? (message.role==='user'?'user':message.role==='system'?'system':'agent'); }
 export function messageAuthor(message:ChatMessage):string|null { return messageSender(message)==='agent' ? message.senderAgentId ?? message.recipientAgentId : null; }
 export function buildChatTimeline(messages:ChatMessage[],turns:AgentTurn[],chunks:MessageChunk[],receipts:CoordinationReceipt[] = []) {
@@ -20,7 +20,13 @@ export function buildChatTimeline(messages:ChatMessage[],turns:AgentTurn[],chunk
       anchor.turns.push(turn);
       for(const activity of turn.activities??[]) if(activity.payload.taskId && !anchor.taskIds.includes(activity.payload.taskId)) anchor.taskIds.push(activity.payload.taskId);
       const text=[...new Map(chunks.filter(chunk=>chunk.turnId===turn.id).map(chunk=>[chunk.seq,chunk])).values()].sort((a,b)=>a.seq-b.seq).map(chunk=>chunk.text).join('');
-      if(!final && text)anchor.drafts.push({turn,text});
+      if (turn.streamMessages?.length) {
+        for (const message of turn.streamMessages) {
+          if (!message.text) continue;
+          if (final && message.kind !== 'commentary' && message.kind !== 'reasoning_summary' && (message.kind === 'final' || message.text === final.content)) continue;
+          anchor.drafts.push({turn,text:message.text,messageId:message.messageId,kind:message.kind,status:message.status});
+        }
+      } else if(!final && text)anchor.drafts.push({turn,text});
     } else looseTurns.push(turn);
   }
   for(const message of messages.filter(message=>!main.includes(message))) {
