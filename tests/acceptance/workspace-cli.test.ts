@@ -1,0 +1,133 @@
+import { describe,it,expect } from 'vitest';
+import { mkdtemp,mkdir,writeFile,readFile,rm,symlink,link } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import type { Context } from '@deepseek-ai/cordis';
+import { RiftHostService } from '../../src/api/host-service.js';
+import { startLocalApi } from '../../src/api/local-api.js';
+import { sandboxCommand } from '../../src/agent/filesystem-sandbox.js';
+import { createRepositoryReadTools } from '../../src/agent/repository-read.js';
+import { gitOk } from '../../src/git/process.js';
+import type { RuntimeTurnInput,RuntimeTurnResult } from '../../src/agent/runtime-types.js';
+const exec=promisify(execFile);
+const until=async(check:()=>boolean)=>{for(let i=0;i<200;i++){if(check())return;await new Promise(resolve=>setTimeout(resolve,10));}throw new Error('Timeout');};
+async function fixture(){
+ const root=await mkdtemp(path.join(tmpdir(),'rift-cli-')),home=path.join(root,'host');
+ const host=new RiftHostService({subagents:{list:()=>[]},llm:{listProviders:()=>[]}} as unknown as Context,{home,port:0,leadProvider:'test',leadModel:'test',checks:[],chatOrchestration:false});
+ const executions:{input:RuntimeTurnInput;finish:(result:RuntimeTurnResult)=>void}[]=[];
+ host.registerChatRuntime('codex',{async start(input){let finish!:(result:RuntimeTurnResult)=>void;const result=new Promise<RuntimeTurnResult>(resolve=>finish=resolve);executions.push({input,finish});return{result,async dispose(){finish({text:'',stopReason:'cancelled'});}};}},['test']);
+ await host.initialize();
+ const create=async(name:string)=>host.handle('POST','/ui-api/v1/workspaces',{name,leadConnection:{runtime:'codex',model:'test'}},randomUUID()) as Promise<any>;
+ const a=await create('own'),b=await create('foreign');
+ const call=(argv:string[],input:Record<string,unknown>={},w=a.id)=>host.handle('POST',`/v1/workspaces/${w}/cli`,{argv,input},randomUUID()) as Promise<any>;
+ return {root,home,host,a,b,call,executions,close:async()=>{await host.close();await rm(root,{recursive:true,force:true});}};
+}
+describe('workspace CLI and ordinary default Skill',()=>{
+ it('defaults to Lead, remains transferable, preserves exclusions/archival across initialization',async()=>{
+  const f=await fixture();try{
+   const list=await f.call(['skill','list']);expect(list.skills).toHaveLength(1);const skill=list.skills[0];expect(skill.shared).toBeNull();expect(skill.assignments).toHaveLength(1);
+   const members=(await f.call(['agent','list'])).agents;const dev=members.find((x:any)=>x.purpose==='developer');
+   expect(skill.assignments[0].agentId).toBe(members.find((x:any)=>x.purpose==='lead').id);
+   const assignment=await f.call(['skill','assign',skill.id],{agentId:dev.id,mode:'include',versionId:skill.versions[0].id,expectedRevision:0});expect(assignment.mode).toBe('include');
+   expect((await f.call(['skill','effective',dev.id])).instructions).toContain('rift_cli');
+   await expect(f.call(['skill','assign',skill.id],{agentId:`${f.b.id}:lead`,mode:'include',versionId:skill.versions[0].id,expectedRevision:0})).rejects.toMatchObject({code:'NOT_FOUND'});
+   await f.call(['skill','archive',skill.id],{expectedRevision:skill.revision});
+   expect((await f.call(['skill','show',skill.id])).archived).toBe(1);
+   const {installWorkspaceSkill}=await import('../../src/skill/default.js');installWorkspaceSkill(f.host.store,f.a.id);expect((await f.call(['skill','show',skill.id])).archived).toBe(1);
+   await f.call(['skill','restore',skill.id],{expectedRevision:skill.revision+1});expect((await f.call(['skill','show',skill.id])).archived).toBe(0);
+  }finally{await f.close();}
+ });
+ it('runs the real executable CLI through the management API and retains optimistic concurrency',async()=>{
+  const f=await fixture(),api=await startLocalApi(f.host,{home:f.home,port:0,uiEnabled:false});try{
+   const cli=(...args:string[])=>exec(process.execPath,['--import','tsx','src/cli/main.ts','ws',...args,'--home',f.home,'--workspace',f.a.id],{cwd:process.cwd()});
+   const shown=JSON.parse((await cli('workspace','show')).stdout);expect(shown.workspace.id).toBe(f.a.id);expect(shown).not.toHaveProperty('hostCapacity');
+   const body=JSON.stringify({expectedVersion:shown.workspace.version,name:'renamed'});
+   const first=await cli('workspace','update','--data',body,'--key','rename');expect(JSON.parse(first.stdout).name).toBe('renamed');
+   expect((await cli('workspace','update','--data',body,'--key','rename')).stdout).toBe(first.stdout);
+   await expect(cli('workspace','update','--data',body,'--key','stale')).rejects.toMatchObject({code:1,stderr:expect.stringContaining('VERSION_CONFLICT')});
+   expect(JSON.parse((await cli('--help')).stdout).commands.skill).toContain('assign');
+  }finally{await api.close();await f.close();}
+ });
+ it('provides member, conversation, skill and diagnostic operations without frontend changes',async()=>{
+  const f=await fixture();try{
+   const member=await f.call(['agent','create'],{displayName:'analyst',name:'analyst',purpose:'developer',prompt:'Analyze',chatConnection:null});
+   const updated=await f.call(['agent','update',member.id],{expectedVersion:member.version,displayName:'Analyst'});expect(updated.displayName).toBe('Analyst');
+   expect((await f.call(['agent','disable',member.id],{expectedVersion:updated.version})).enabled).toBe(0);
+   const conv=await f.call(['conversation','create'],{title:'Test'});const renamed=await f.call(['conversation','rename',conv.id],{expectedVersion:conv.version,title:'Renamed'});expect(renamed.title).toBe('Renamed');
+   expect((await f.call(['conversation','archive',conv.id],{expectedVersion:renamed.version})).archived).toBe(1);
+   expect((await f.call(['message','list',conv.id])).messages).toEqual([]);
+   await expect(f.call(['message','send',conv.id],{clientMessageId:'archived',content:'hello'})).rejects.toMatchObject({code:'CONVERSATION_ARCHIVED'});
+   const directory=path.join(f.root,'skill');await mkdir(directory);await writeFile(path.join(directory,'SKILL.md'),'# Sample\nUse receipts.');
+   await expect(f.call(['skill','preview'],{directory})).rejects.toMatchObject({code:'PATH_SCOPE'});
+   await f.call(['workspace','grant-path'],{path:directory});
+   const preview=await f.call(['skill','preview'],{directory});const imported=await f.call(['skill','import'],{previewId:preview.previewId});expect(imported.version.instructions).toContain('Use receipts');
+   expect((await f.call(['queue','list'])).leases).toEqual([]);expect((await f.call(['diagnostic','show'])).workspace.workspace.id).toBe(f.a.id);
+   expect((await f.call(['event','list'])).events.length).toBeGreaterThan(0);
+  }finally{await f.close();}
+ });
+ it('scopes historical workflow/task/run operations, rejects foreign IDs and edits only unstarted tasks',async()=>{
+  const f=await fixture();try{
+   const wf=await f.call(['workflow','start'],{mode:'analysis',goal:'Compare supplied text',startLead:false});
+   await expect(f.call(['workflow','yield',wf.id],{summary:'handoff'})).rejects.toMatchObject({code:'EXECUTION_REQUIRED'});
+   const tasks=await f.call(['plan','submit',wf.id],{expectedRevision:0,tasks:[{id:'cli-analysis',kind:'analysis',title:'Compare',instructions:'Compare a/b',expectedPaths:[]}]});expect(tasks).toHaveLength(1);
+   const updated=await f.call(['task','update','cli-analysis'],{expectedVersion:0,title:'Compare text'});expect(updated.title).toBe('Compare text');
+   await expect(f.call(['task','update','cli-analysis'],{expectedVersion:updated.version,expectedPaths:['outside']})).rejects.toMatchObject({code:'INVALID_PATH'});
+   await expect(f.call(['workflow','show',wf.id],{},f.b.id)).rejects.toMatchObject({code:'NOT_FOUND'});
+   await expect(f.call(['task','show','cli-analysis'],{},f.b.id)).rejects.toMatchObject({code:'NOT_FOUND'});
+   await expect(f.call(['task','list'],{workflowId:wf.id},f.b.id)).rejects.toMatchObject({code:'NOT_FOUND'});
+   expect((await f.call(['task','list'],{kind:'analysis'})).tasks).toHaveLength(1);
+   await f.call(['task','cancel','cli-analysis']);expect((await f.call(['task','show','cli-analysis'])).status).toBe('cancelled');
+   await expect(f.call(['task','update','cli-analysis'],{expectedVersion:updated.version+1,title:'Rewrite'})).rejects.toMatchObject({code:'TASK_STARTED'});
+  }finally{await f.close();}
+ });
+ it('binds the agent CLI to a live turn without a management token or a caller-selected workspace',async()=>{
+  const f=await fixture();try{
+   const conversation=await f.call(['conversation','create'],{title:'Admin'});
+   const sent=await f.call(['message','send',conversation.id],{clientMessageId:'agent-cli',content:'Inspect workspace'});await until(()=>f.executions.length===1);
+   const tool=f.executions[0]!.input.tools.find(tool=>tool.name==='rift_cli')!;expect(tool).toBeDefined();const signal=new AbortController().signal;
+   const own=await tool.execute({argv:['workspace','show'],input:{}},signal) as any;expect(own.workspace.id).toBe(f.a.id);
+   await expect(tool.execute({argv:['workspace','show'],input:{},workspaceId:f.b.id},signal)).rejects.toBeDefined();
+   await expect(tool.execute({argv:['agent','show',`${f.b.id}:lead`],input:{}},signal)).rejects.toMatchObject({code:'NOT_FOUND'});
+   await expect(tool.execute({argv:['workspace','grant-path'],input:{path:f.root},idempotencyKey:'grant'},signal)).rejects.toMatchObject({code:'OPERATOR_REQUIRED'});
+   const command={argv:['conversation','create'],input:{title:'Created by member'},idempotencyKey:'create'};
+   const receipt=await tool.execute(command,signal);expect(await tool.execute(command,signal)).toEqual(receipt);
+   await expect(tool.execute({...command,input:{title:'Different'}},signal)).rejects.toMatchObject({code:'IDEMPOTENCY_CONFLICT'});
+   f.executions[0]!.finish({text:'Done',stopReason:'completed'});await until(()=>f.host.chat.turn(f.a.id,sent.turn.id).status==='completed');
+   await expect(tool.execute({argv:['workspace','show'],input:{}},signal)).rejects.toMatchObject({code:'UNAUTHORIZED'});
+  }finally{await f.close();}
+ });
+ it('provides repository registration/base ref/disconnect with explicit path grants',async()=>{
+  const f=await fixture();try{
+   const repo=path.join(f.root,'repo');await mkdir(repo);await gitOk(repo,['init','-q','-b','main']);await writeFile(path.join(repo,'file'),'baseline');await gitOk(repo,['add','.']);await gitOk(repo,['-c','user.name=Test','-c','user.email=test@test','commit','-qm','baseline']);
+   const sub=path.join(repo,'sub');await mkdir(sub);
+   await f.call(['workspace','grant-path'],{path:sub});
+   await expect(f.call(['repository','connect'],{repositoryPath:sub,baseRef:'main',expectedVersion:(await f.call(['workspace','show'])).workspace.version})).rejects.toMatchObject({code:'PATH_SCOPE'});
+   await f.call(['workspace','grant-path'],{path:repo});
+   let ws=(await f.call(['workspace','show'])).workspace;
+   const connected=await f.call(['repository','connect'],{repositoryPath:repo,baseRef:'main',expectedVersion:ws.version});
+   ws=(await f.call(['workspace','show'])).workspace;
+   expect((await f.call(['repository','update',connected.id],{baseRef:'HEAD',expectedVersion:ws.version})).baseRef).toBe('HEAD');
+   ws=(await f.call(['workspace','show'])).workspace;
+   expect(await f.call(['repository','disconnect',connected.id],{expectedVersion:ws.version})).toEqual({disconnected:connected.id});
+  }finally{await f.close();}
+ });
+});
+describe('real filesystem and network boundary',()=>{
+ it.runIf(process.platform==='linux')('permits own edits and tests but denies sibling/Host secrets, symlinks, environment and network',async()=>{
+  const root=await mkdtemp(path.join(tmpdir(),'rift-sandbox-')),own=path.join(root,'own'),foreign=path.join(root,'foreign');await mkdir(own);await mkdir(foreign);await writeFile(path.join(foreign,'secret'),'FOREIGN');await mkdir(path.join(own,'.rift'));await writeFile(path.join(own,'.rift','management.token'),'HOST_TOKEN');await writeFile(path.join(own,'.env'),'SECRET');await symlink(foreign,path.join(own,'escape'));await writeFile(path.join(own,'file'),'OWN');
+  try{
+   const cmd=`set -eu; test "$(cat file)" = OWN; printf CHANGED > file; test ! -s .env; test ! -e .rift/management.token; test ! -e '${foreign}/secret'; test ! -e escape/secret; test -z "\${TEST_SECRET:-}"; test ! -e /root/.codex/auth.json; node -e 'const n=require("net"); const s=n.connect(1,"127.0.0.1");s.on("connect",()=>process.exit(1));s.on("error",()=>process.exit(0))'; echo ISOLATED`;
+   const args=await sandboxCommand([own],own,cmd);const result=await exec(args[0]!,args.slice(1),{env:{...process.env,TEST_SECRET:'LEAK'}});expect(result.stdout.trim()).toBe('ISOLATED');expect(await readFile(path.join(own,'file'),'utf8')).toBe('CHANGED');expect(await readFile(path.join(own,'.rift','management.token'),'utf8')).toBe('HOST_TOKEN');
+   const nested=path.join(own,'.rift','workspaces','own','tasks','current');await mkdir(nested,{recursive:true});await writeFile(path.join(nested,'nested.txt'),'TASK');
+   const nestedArgs=await sandboxCommand([own,nested],nested,`test ! -e '${own}/.rift/management.token'; cat nested.txt`,[path.join(own,'.rift')]);
+   expect((await exec(nestedArgs[0]!,nestedArgs.slice(1))).stdout).toBe('TASK');
+   await link(path.join(foreign,'secret'),path.join(own,'hardlink'));
+   await expect(sandboxCommand([own],own,'true')).rejects.toMatchObject({code:'FILESYSTEM_HARDLINK'});
+   await expect(createRepositoryReadTools(own)[0]!.execute({path:'hardlink'},new AbortController().signal)).rejects.toMatchObject({code:'UNAUTHORIZED'});
+   await expect(createRepositoryReadTools(own)[0]!.execute({path:'escape/secret'},new AbortController().signal)).rejects.toMatchObject({code:'UNAUTHORIZED'});
+  }finally{await rm(root,{recursive:true,force:true});}
+ });
+});

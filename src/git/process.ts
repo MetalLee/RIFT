@@ -53,7 +53,11 @@ export function execute(executable: string, args: readonly string[], cwd: string
 }
 
 export async function git(cwd: string, args: readonly string[]): Promise<CommandResult> {
-  const result = await execute('git', ['-c', `core.hooksPath=${devNull}`, '-c', 'commit.gpgSign=false', '-c', 'tag.gpgSign=false', ...args], cwd, { env: { GIT_TERMINAL_PROMPT: '0', GIT_MERGE_AUTOEDIT: 'no' }, maxOutputBytes: 8_388_608 });
+  // Repository-controlled helpers must never execute in the credential-bearing Host.
+  const env:NodeJS.ProcessEnv={...Object.fromEntries(Object.keys(process.env).filter(name=>/^(?:GIT_|NODE_OPTIONS$|LD_|DYLD_)/.test(name)).map(name=>[name,undefined])),GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:devNull,GIT_TERMINAL_PROMPT:'0',GIT_MERGE_AUTOEDIT:'no'};
+  const configuration=await execute('git',['config','--no-includes','--list'],cwd,{env});
+  if(configuration.exitCode===0&&configuration.stdout.split('\n').some(line=>/^(?:include(?:if\.[^=]*)?\.|filter\.|credential\.|core\.(?:fsmonitor|sshcommand)|diff\..*\.(?:command|textconv)|merge\..*\.driver|core\.worktree)=?/i.test(line)))throw new Error('UNSAFE_GIT_CONFIG: repository helper/include configuration requires operator removal before Host Git operations.');
+  const result = await execute('git', ['-c', `core.hooksPath=${devNull}`, '-c', 'commit.gpgSign=false', '-c', 'tag.gpgSign=false', ...args], cwd, { env, maxOutputBytes: 8_388_608 });
   if (result.truncated) throw new Error('Git output exceeds evidence limit');
   return result;
 }
@@ -61,4 +65,25 @@ export async function gitOk(cwd: string, args: readonly string[]): Promise<strin
   const result = await git(cwd, args);
   if (result.exitCode !== 0) throw new Error(`Git ${args[0] ?? 'command'} failed (${result.exitCode}): ${result.stderr}`);
   return result.stdout.trim();
+}
+
+/** Git < 2.35 lacks worktree list -z. Preserve quoted/newline paths on that
+ * version instead of treating a failed discovery as proof of deletion. */
+export async function worktreePorcelain(cwd:string):Promise<string> {
+  const nul=await git(cwd,['worktree','list','--porcelain','-z']);
+  if(nul.exitCode===0)return nul.stdout;
+  if(!/unknown (?:switch|option).*z/i.test(nul.stderr))throw new Error(`Git worktree list failed (${nul.exitCode}): ${nul.stderr}`);
+  const plain=await gitOk(cwd,['-c','core.quotePath=false','worktree','list','--porcelain']);
+  const unquote=(value:string)=>{
+    if(!value.startsWith('"'))return value;
+    const chunks:Buffer[]=[];const text=value.slice(1,-1);
+    for(let i=0;i<text.length;){
+      if(text[i]!=='\\'){let end=text.indexOf('\\',i);if(end<0)end=text.length;chunks.push(Buffer.from(text.slice(i,end)));i=end;continue;}
+      i++;const octal=/^[0-7]{1,3}/.exec(text.slice(i));
+      if(octal){chunks.push(Buffer.from([parseInt(octal[0],8)]));i+=octal[0].length;}
+      else{const escapes:Record<string,string>={a:'\x07',b:'\b',t:'\t',n:'\n',v:'\v',f:'\f',r:'\r','"':'"','\\':'\\'};chunks.push(Buffer.from(escapes[text[i]!]??text[i]!));i++;}
+    }
+    return Buffer.concat(chunks).toString('utf8');
+  };
+  return plain.split('\n').map(line=>line.startsWith('worktree ')?'worktree '+unquote(line.slice(9)):line).join('\0')+'\0\0';
 }

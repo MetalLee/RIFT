@@ -82,6 +82,7 @@ export class ChatService {
       const workspace = this.store.workspace(workspaceId) as ReturnType<RiftStore['workspace']> & { leadConnection: ChatConnection | null };
       invariant(workspace.status === 'active', 'WORKSPACE_ARCHIVED', 'Archived workspace cannot receive messages.');
       const conversation = this.conversation(workspaceId, conversationId);
+      invariant(!this.store.get('SELECT id FROM conversations WHERE id=? AND archived=1',conversationId),'CONVERSATION_ARCHIVED','Conversation is archived.');
       const prior = this.store.get<ChatMessage>('SELECT * FROM messages WHERE workspace_id=? AND client_message_id=?', workspaceId, input.clientMessageId);
       if (prior) {
         invariant(prior.conversationId === conversationId && prior.content === input.content && (!input.recipientAgentId || input.recipientAgentId === prior.recipientAgentId), 'IDEMPOTENCY_CONFLICT', 'clientMessageId belongs to different message input.');

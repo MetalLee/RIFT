@@ -62,7 +62,7 @@ async function fixture(){
 async function legacyFixture(chatOwned=false){
   const f=await fixture(),definitions:any[]=[],agents=new Map<string,any>();let created=0,disposed=0,spawns=0,confirmed=true,restricted=false;
   f.ctx.subprocess={async resolveExecutable(){return'pwsh';},spawn(){spawns++;return{stdin:undefined,stdout:undefined,stderr:undefined,control:undefined,collected:{},done:Promise.resolve({exitCode:0,signal:null}),terminate(){},async waitForExit(){return confirmed;}};}};
-  f.ctx.agents={get:(id:string)=>agents.get(id),async create(options:any){created++;const agent={id:options.sessionId};agents.set(agent.id,agent);options.setup({agents:f.ctx.agents,tools:{restrict(value:any){restricted=value.allow.length===0;},register(definition:any){definitions.push(definition);}}},agent);return{agent,async dispose(){disposed++;agents.delete(agent.id);}};}};
+  f.ctx.agents={get:(id:string)=>agents.get(id),async create(options:any){created++;const agent={id:options.sessionId,followups:[] as any[],followup(message:any){this.followups.push(message);}};agents.set(agent.id,agent);options.setup({agents:f.ctx.agents,tools:{restrict(value:any){restricted=value.allow.length===0;},register(definition:any){definitions.push(definition);}}},agent);return{agent,async dispose(){disposed++;agents.delete(agent.id);}};}};
   f.host.store.exec("INSERT INTO workflows(id,workspace_id,goal,status,integration_ref,base_commit) VALUES('legacy-permission',?,'Legacy capability review','running','refs/heads/rift/legacy-permission',?)",f.own.workspace.id,await gitOk(f.repositories[0]!,['rev-parse','HEAD']));
   const attach=()=>{const conversation=f.host.chat.createConversation(f.own.workspace.id,'Owned lead');f.host.store.exec("INSERT INTO workflow_conversations(workflow_id,workspace_id,conversation_id,agent_id,mode,created_at) VALUES('legacy-permission',?,?,?,'chat','now')",f.own.workspace.id,conversation.id,f.own.roles.find(role=>role.purpose==='lead')!.id);};
   if(chatOwned)attach();
@@ -174,10 +174,7 @@ describe('Independent workspace repository permissions',()=>{
     const shell=await createRepositoryShell(subprocess,{cwd:f.repositories[0]!,repositoryAccess:{repositoryPaths:f.repositories.slice(0,2)},signal:new AbortController().signal});
     try{
       await shell.tool.execute({cmd:'git status --porcelain'},new AbortController().signal);
-      expect(spec!.argv).toContain('rift_repositories');const permission=spec!.argv.find(arg=>arg.startsWith('permissions='))!;
-      expect(permission).toContain('":root"="read"');expect(permission).not.toContain(`${JSON.stringify(f.home)}="write"`);
-      for(const repo of f.repositories.slice(0,2))expect(permission).toContain(`${JSON.stringify(repo)}="write"`);expect(permission).toContain('enabled=true');
-      expect(spec!.env!.GIT_TERMINAL_PROMPT).toBe('0');
+      expect(spec!.argv[0]).toBe('/usr/bin/bwrap');expect(spec!.argv).toContain('--unshare-all');expect(spec!.argv).toContain('--clearenv');expect(spec!.argv).toContain('--bind');expect(spec!.argv).not.toContain('--share-net');
       await expect(shell.tool.execute({cmd:'git status',cwd:f.repositories[2]},new AbortController().signal)).rejects.toMatchObject({code:'REPOSITORY_SCOPE'});
       expect(spawns).toBe(1);await shell.dispose();
       await expect(shell.tool.execute({cmd:'git status'},new AbortController().signal)).rejects.toMatchObject({code:'TURN_STOPPED'});expect(spawns).toBe(1);
@@ -206,6 +203,19 @@ describe('Independent workspace repository permissions',()=>{
       f.host.store.exec("DELETE FROM workflow_conversations WHERE workflow_id='legacy-permission'");f.host.store.exec("UPDATE workflows SET status='cancelled' WHERE id='legacy-permission'");
       await expect(tool.execute({cmd:'git commit'},{agent,signal})).rejects.toMatchObject({code:'INVALID_STATE'});expect(f.spawns).toBe(1);
     }finally{await f.close();expect(f.disposed).toBe(1);}
+  });
+
+  it('loads the ordinary default Skill and exposes the scoped CLI to an autonomous legacy Lead',async()=>{
+    const f=await legacyFixture();try{
+      f.ctx.llm.listProviders=()=>[{id:'unused'}];
+      const attached=await f.host.startLead('legacy-permission'),agent=f.agents.get(attached.leadSessionId);
+      const cli=f.definitions.find(item=>item.name==='rift_cli');expect(cli).toBeDefined();
+      const result=await cli.execute({argv:['workspace','show'],input:{}},{agent,signal:new AbortController().signal});
+      expect(result.workspace.id).toBe(f.own.workspace.id);
+      expect(agent.followups[0].content[0].text).toContain('# RIFT workspace operations');
+      await expect(cli.execute({argv:['workspace','grant-path'],input:{path:f.home},idempotencyKey:'legacy-grant'},{agent,signal:new AbortController().signal})).rejects.toMatchObject({code:'OPERATOR_REQUIRED'});
+      await expect(cli.execute({argv:['workspace','show'],input:{}},{agent:{id:'foreign'},signal:new AbortController().signal})).rejects.toMatchObject({code:'UNAUTHORIZED'});
+    }finally{await f.close();}
   });
 
   it('never gives an activation-only parent a second shell alongside the chat-owned Lead',async()=>{

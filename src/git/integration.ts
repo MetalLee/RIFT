@@ -1,8 +1,9 @@
+import { sandboxCommand } from '../agent/filesystem-sandbox.js';
 import { mkdir, readFile, open, rename, realpath, lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Candidate, GitContext, GitService, ReviewResult, Run, Worktree, Workflow, Workspace } from '../contracts/index.js';
-import { execute, git, gitOk } from './process.js';
+import { execute, git, gitOk, worktreePorcelain } from './process.js';
 import { assertSafeFiles, checkoutClean, inspectRepository, key, managedPath, withMetadataLock } from './worktree-binding.js';
 import { parseReviewReport } from './quality-gate.js';
 import { redact } from '../api/security.js';
@@ -164,7 +165,9 @@ export class LocalGitService implements GitService {
       for (const id of this.checkIds) {
         const command = this.commands.get(id)!;
         const startedAt = new Date().toISOString();
-        const result = await execute(command.executable, command.args, candidatePath, { timeoutMs: command.timeoutMs ?? 120_000 });
+        const quote=(value:string)=>"'"+value.replaceAll("'","'\"'\"'")+"'";
+        const sandbox=await sandboxCommand([await realpath(candidatePath)],candidatePath,[command.executable,...command.args].map(quote).join(' '));
+        const result = await execute(sandbox[0]!, sandbox.slice(1), candidatePath, { timeoutMs: command.timeoutMs ?? 120_000, env:Object.fromEntries(Object.keys(process.env).map(name=>[name,undefined])) });
         checks.push({ id: randomUUID(), commandId: id, candidateHead, ...result, stdout: redact(result.stdout, 1_048_576), stderr: redact(result.stderr, 1_048_576), startedAt, finishedAt: new Date().toISOString() });
         operation = { ...operation, checks, phase: 'checks_recorded' }; await this.record(workspace, operation);
         if (result.exitCode === 124) await this.quarantine(candidatePath, 'CHECK_TIMEOUT_CLEANUP_UNKNOWN: inspect descendant processes before archive');
@@ -256,7 +259,7 @@ export class LocalGitService implements GitService {
     // is not proof that it is a disposable linked worktree.
     const gitDir = await realpath(await gitOk(cwd, ['rev-parse', '--absolute-git-dir']));
     if (actual.rootPath === repository.rootPath || gitDir === actual.commonGitDir) throw new Error('ARCHIVE_BLOCKED: primary repository checkout');
-    const registered = await gitOk(repository.rootPath, ['worktree', 'list', '--porcelain', '-z']);
+    const registered = await worktreePorcelain(repository.rootPath);
     const normalize = (value: string) => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
     const entry = registered.split('\0\0').find(block => block.split('\0').some(field => field.startsWith('worktree ') && normalize(field.slice(9)) === normalize(cwd)));
     if (!entry) throw new Error('ARCHIVE_BLOCKED: unregistered worktree');

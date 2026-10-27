@@ -3,7 +3,7 @@ import { lstat, mkdir, realpath } from 'node:fs/promises';
 import { invariant } from '../contracts/index.js';
 import { id, now, type RiftStore } from '../storage/database.js';
 import type { LocalGitService } from '../git/integration.js';
-import { gitOk } from '../git/process.js';
+import { gitOk, worktreePorcelain } from '../git/process.js';
 import { checkoutClean, key, managedPath, withMetadataLock } from '../git/worktree-binding.js';
 import { provesPreviousBootExited } from '../agent/boot-identity.js';
 import { WorktreeRemovalService } from './worktree-removals.js';
@@ -19,8 +19,9 @@ export class RepositoryService {
   private tree(worktreeId:string):WorkspaceWorktree{return this.store.require('SELECT id,workspace_id,repository_id,origin,path,pending_path,base_commit,branch,status,version,created_at FROM workspace_worktrees WHERE id=?',worktreeId);}
   list(workspaceId: string): Repository[] { this.store.workspace(workspaceId); return this.store.all('SELECT * FROM repositories WHERE workspace_id=? ORDER BY id', workspaceId); }
   get(workspaceId: string, repositoryId: string): Repository { return this.store.require('SELECT * FROM repositories WHERE workspace_id=? AND id=?', workspaceId, repositoryId); }
-  async connect(workspaceId: string, input: { repositoryPath: string; baseRef: string; expectedVersion: number }): Promise<Repository> {
+  async connect(workspaceId: string, input: { repositoryPath: string; baseRef: string; expectedVersion: number }, authorize?: (inspected: Awaited<ReturnType<LocalGitService['inspectRepository']>>) => void): Promise<Repository> {
     const inspected = await this.git.inspectRepository(input.repositoryPath, input.baseRef);
+    authorize?.(inspected);
     return this.store.transaction(() => {
       const workspace = this.store.workspace(workspaceId) as ReturnType<RiftStore['workspace']> & { version: number };
       invariant(workspace.status === 'active', 'WORKSPACE_ARCHIVED', 'Archived workspace cannot connect repositories.');
@@ -36,7 +37,7 @@ export class RepositoryService {
   }
   async discover(workspaceId: string, repositoryId: string): Promise<{ path: string; head: string; branch: string | null }[]> {
     const repo = this.get(workspaceId, repositoryId);
-    const output = await gitOk(repo.canonicalPath, ['worktree', 'list', '--porcelain', '-z']);
+    const output = await worktreePorcelain(repo.canonicalPath);
     return output.split('\0\0').filter(Boolean).map(entry => {
       const fields = entry.split('\0');
       return { path: fields.find(field => field.startsWith('worktree '))?.slice(9) ?? '', head: fields.find(field => field.startsWith('HEAD '))?.slice(5) ?? '', branch: fields.find(field => field.startsWith('branch '))?.slice(7) ?? null };

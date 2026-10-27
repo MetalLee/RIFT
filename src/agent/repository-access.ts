@@ -5,8 +5,8 @@ import type { RiftStore } from '../storage/database.js';
 import { gitOk } from '../git/process.js';
 
 /** Bump when runtime permission semantics change: old native threads must not resume. */
-export const REPOSITORY_PERMISSION_VERSION = 'workspace-repositories-v5-full-access';
-export interface RepositoryAccess { repositoryPaths: string[] }
+export const REPOSITORY_PERMISSION_VERSION = 'workspace-repositories-v6-isolated-cli';
+export interface RepositoryAccess { repositoryPaths: string[]; protectedPaths?: string[] }
 
 /** Resolve only registered roots; model content and context references never grant access. */
 export async function workspaceRepositoryAccess(store: RiftStore, workspaceId: string): Promise<RepositoryAccess | undefined> {
@@ -23,5 +23,5 @@ export async function workspaceRepositoryAccess(store: RiftStore, workspaceId: s
     invariant(canonical(actualRoot)===canonical(resolved)&&canonical(actualCommon)===canonical(row.commonGitDir),'REPOSITORY_IDENTITY_CHANGED','The repository Git identity differs from its registered workspace association.');
     if(!repositoryPaths.some(value=>canonical(value)===canonical(resolved)))repositoryPaths.push(resolved);
   }
-  return repositoryPaths.length?{repositoryPaths}:undefined;
+  return repositoryPaths.length?{repositoryPaths,...store.filePath===':memory:'?{}:{protectedPaths:[path.dirname(path.resolve(store.filePath)),...store.all<{canonicalPath:string;commonGitDir:string}>('SELECT canonical_path,common_git_dir FROM repositories WHERE workspace_id<>?',workspaceId).flatMap(row=>[row.canonicalPath,row.commonGitDir])]} }:undefined;
 }

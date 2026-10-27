@@ -1,3 +1,5 @@
+import { WorkspaceCli, cliEnvelope } from './workspace-cli.js';
+import { installWorkspaceSkill } from '../skill/default.js';
 import { workspaceRepositoryAccess } from '../agent/repository-access.js';
 import { createRepositoryShell } from '../agent/repository-shell.js';
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools';
@@ -52,6 +54,7 @@ export class RiftHostService implements ApiHandler {
   readonly orchestration: ChatOrchestration;
   readonly collaboration: CollaborationService;
   readonly skills: SkillService;
+  readonly workspaceCli: WorkspaceCli;
   readonly repositories: RepositoryService;
   readonly connections: ApiConnectionService;
   private readonly chatRuntimes = new Map<string, AgentRuntime>();
@@ -77,6 +80,11 @@ export class RiftHostService implements ApiHandler {
     this.connections = new ApiConnectionService(ctx, this.store, config.home);
     const bridge = new DshActivationBridge(ctx, taskId => this.leads.get(this.store.task(taskId).workflowId)?.agent, this.store);
     this.skills = new SkillService(this.store);
+    this.workspaceCli = new WorkspaceCli(this, (method, pathname, body) => this.route(method, pathname, body), async (turn, name, input) => {
+      const tool = this.chatTools(turn).find(tool=>tool.name===name);
+      invariant(tool,'TOOL_UNAVAILABLE','This execution has no such coordination capability.');
+      return tool.execute(input, new AbortController().signal);
+    });
     this.coordinator = new TaskCoordinator({ store: this.store, repositoryAccess:workspaceId=>workspaceRepositoryAccess(this.store,workspaceId), bridge, runTools:run=>this.collaboration.runTools(run),captureRunInbox:run=>this.collaboration.captureRunInbox(run),acceptRunInbox:runId=>this.collaboration.acceptRunInbox(runId), git: this.git, runTimeoutMs: config.runTimeoutMs, limits: config.limits, textAnalysisRoot: path.join(config.home,'text-analysis'), textAnalysisBridge: { start: input => this.startTextAnalysis(input) }, skillSnapshot: (workspaceId, agentId, runtime, runId) => this.skills.snapshotExecution(workspaceId, agentId, 'run', runId, this.skills.resolveEffective(workspaceId, agentId, runtime)) });
     this.chat = new ChatService({ store: this.store, repositoryAccess:workspaceId=>workspaceRepositoryAccess(this.store,workspaceId), home: config.home, turnTimeoutMs:turn=>turn.configuration.agent.purpose==='lead'&&!turn.configuration.conversationTitle&&(this.orchestration.forTurn(turn)||config.chatOrchestration!==false&&!this.store.get("SELECT id FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','failed','cancelled')",turn.workspaceId))?config.coordinationTimeoutMs:undefined, defaultConnection: () => ({ runtime: 'dsh', provider: config.leadProvider, model: config.leadModel }), validateConnection: connection => this.validateChatConnection(connection), runtime: connection => connection.runtime === 'dsh' ? new DshChatRuntime(ctx, connection.provider!) : this.chatRuntimes.get(connection.runtime)!, tools: turn => this.chatTools(turn), resolveContext: (workspaceId, refs) => this.contextSnapshots(workspaceId, refs), onLeaseReleased: () => this.coordinator.wake(), canStart:turn=>this.orchestration.canStart(turn), beforeStart:turn=>this.orchestration.beforeStart(turn), onTurnSettled:turn=>{this.orchestration.settled(turn);this.collaboration.settleTurn(turn);}, skillSnapshot: (workspaceId, agentId, runtime, turnId) => this.skills.snapshotExecution(workspaceId, agentId, 'turn', turnId, this.skills.resolveEffective(workspaceId, agentId, runtime)) });
     this.collaboration=new CollaborationService(this.store,this.coordinator,{enqueueMessage:(workspaceId,conversationId,messageId)=>this.chat.enqueueMessage(workspaceId,conversationId,messageId),validateDiscussion:(workspaceId,agentId)=>{this.chat.validateAgentConnection(workspaceId,agentId);},validateRecipient:(role,workflowId)=>{if(this.store.workflow(workflowId).baseCommit){this.refreshProviders();invariant(role.providerBindingId&&this.providerNames.has(this.store.binding(role.providerBindingId).providerName),'PROVIDER_UNAVAILABLE','Recipient has no registered executable binding.');}}});
@@ -95,7 +103,7 @@ export class RiftHostService implements ApiHandler {
     }
     } catch (error) { this.store.close(); throw error; }
   }
-  async initialize(): Promise<void> { await this.connections.initialize(); const boot=await localBootIdentity();this.repositories.setBootIdentity(boot);this.coordinator.setBootIdentity(boot);await this.coordinator.recover();this.store.exec("UPDATE native_executions SET status='interrupted',updated_at=? WHERE status IN ('starting','running')",new Date().toISOString());this.chat.setBootIdentity(boot);this.chat.initialize();this.orchestration.initialize();this.collaboration.initialize(); }
+  async initialize(): Promise<void> { for(const row of this.store.all<{id:string}>('SELECT id FROM workspaces'))installWorkspaceSkill(this.store,row.id); await this.connections.initialize(); const boot=await localBootIdentity();this.repositories.setBootIdentity(boot);this.coordinator.setBootIdentity(boot);await this.coordinator.recover();this.store.exec("UPDATE native_executions SET status='interrupted',updated_at=? WHERE status IN ('starting','running')",new Date().toISOString());this.chat.setBootIdentity(boot);this.chat.initialize();this.orchestration.initialize();this.collaboration.initialize(); }
   registerChatRuntime(name: 'codex', runtime: AgentRuntime, models: readonly string[]): void { this.chatRuntimes.set(name, runtime); this.runtimeModels.set(name, models); }
   browserEvents(workspaceId: string, after: number) { return readWorkspaceEvents(this.store, workspaceId, after); }
   private validateChatConnection(connection: ChatConnection): void {
@@ -161,7 +169,7 @@ export class RiftHostService implements ApiHandler {
         signal.throwIfAborted();
         assertLive();
         if(shortMode){calls++;reads=name==='rift_status'?reads+1:0;if(calls>(this.config.coordinationToolLimit??48)||reads>(this.config.coordinationStagnantLimit??12)){this.store.exec("UPDATE coordination_decisions SET error='COORDINATION_TOOL_BUDGET' WHERE turn_id=?",turn.id);this.store.exec("INSERT INTO turn_activities(turn_id,type,phase,summary,payload,created_at) VALUES(?,'coordination.limit','tool','Coordination tool budget exceeded.',?,?)",turn.id,JSON.stringify({reason:'COORDINATION_TOOL_BUDGET'}),new Date().toISOString());this.chat.stop(turn.workspaceId,turn.id);throw new RiftError('COORDINATION_TOOL_BUDGET','Coordination tool budget exceeded.');}}
-        if(name!=='rift_send_message')this.orchestration.authorize(turn,name!=='rift_status');
+        if(name!=='rift_send_message'&&name!=='rift_cli')this.orchestration.authorize(turn,name!=='rift_status');
         return JSON.parse(JSON.stringify(await execute(schema.parse(args)) ?? null, (_key, item) => typeof item === 'string' ? redact(item) : item));
       } });
     };
@@ -175,6 +183,7 @@ export class RiftHostService implements ApiHandler {
       const workflow = await this.createChatWorkflow(turn,{workspaceId:turn.workspaceId,goal,mode,startLead:false,...(repositoryIds?{repositoryIds}:{})},assertLive);
       if(mode==='code')await this.ensureLead(workflow.id); assertLive();return workflow;
     };
+    register('rift_cli','Execute a RIFT workspace CLI command. argv is [resource, action, optional id], input is the JSON command body. Identity and workspace are fixed by this live execution; use a stable idempotencyKey for writes. No shell or management credential is needed.',cliEnvelope.extend({idempotencyKey:z.string().min(1).max(160).optional()}),({idempotencyKey,...command})=>this.workspaceCli.execute(turn.workspaceId,command,turn,idempotencyKey));
     register('rift_status', 'Read this workspace and its current workflow. All scopes are fixed by the Host.', z.object({}).strict(), () => {
       const workflow = this.store.get<Workflow>("SELECT * FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','failed','cancelled')", turn.workspaceId);
       return workflow ? {...this.coordinator.status(workflow.id),coordination:this.orchestration.owner(workflow.id)??null} : { workspace: this.store.workspace(turn.workspaceId), repositories: this.repositories.list(turn.workspaceId), roles: this.store.all('SELECT * FROM roles WHERE workspace_id=?', turn.workspaceId), workflow: null };
@@ -243,6 +252,16 @@ export class RiftHostService implements ApiHandler {
           let underlying:AgentHandle;
           try { underlying=await this.ctx.agents.create({ sessionId: SessionId(`rift-lead-${randomUUID()}`), meta: { cwd }, agentOptions: { provider: this.config.leadProvider, model: this.config.leadModel }, setup: (scope, agent) => {
             installLeadTools(scope, agent, workflowId, this.coordinator);
+            if(!chatOwned)scope.tools.register({name:'rift_cli',description:'Run workspace CLI argv [resource,action,id?] with JSON input. Workspace and identity are fixed by this live Lead.',parameters:JSON.parse(JSON.stringify(z.toJSONSchema(cliEnvelope.extend({idempotencyKey:z.string().min(1).max(160).optional()}),{io:'input'}))) as ToolDefinition['parameters'],output:{schema:{},render:(_args,value)=>[{type:'text',text:redact(JSON.stringify(value))}]},execute:async(args,execution)=>{
+              const assertLive=()=>{
+                invariant(execution.agent===agent&&scope.agents.get(agent.id)===agent,'UNAUTHORIZED','Only this live Lead may invoke its CLI.');
+                invariant(!this.closing&&!this.orchestration.owner(workflowId)&&!['completed','cancelled','failed'].includes(this.store.workflow(workflowId).status),'INVALID_STATE','This Lead no longer owns the workflow.');
+                execution.signal.throwIfAborted();
+              };
+              assertLive();const {idempotencyKey,...command}=cliEnvelope.extend({idempotencyKey:z.string().min(1).max(160).optional()}).parse(args);
+              const role=this.store.require<{id:string}>("SELECT id FROM roles WHERE workspace_id=? AND purpose='lead' AND enabled=1",workflow.workspaceId);
+              return this.workspaceCli.execute(workflow.workspaceId,command,{legacy:true,workspaceId:workflow.workspaceId,agentId:role.id,assertLive},idempotencyKey);
+            }});
             if(shell)scope.tools.register({name:shell.tool.name,description:shell.tool.description,parameters:shell.tool.inputSchema as ToolDefinition['parameters'],output:{schema:{},render:(_args,value)=>[{type:'text',text:redact(JSON.stringify(value))}]},execute:async(args,execution)=>{
               invariant(execution.agent===agent&&scope.agents.get(agent.id)===agent,'UNAUTHORIZED','Only this live Lead may execute repository commands.');
               invariant(!this.closing&&!this.orchestration.owner(workflowId)&&!['completed','cancelled','failed'].includes(this.store.workflow(workflowId).status),'INVALID_STATE','This Lead no longer owns an active workflow.');
@@ -276,9 +295,9 @@ export class RiftHostService implements ApiHandler {
     const handle = this.leads.get(workflowId)!;
     const workflow = this.store.workflow(workflowId);
     if (this.closing || ['completed','cancelled','failed'].includes(workflow.status)) throw new RiftError('INVALID_STATE', 'Workflow no longer accepts Lead input.');
-    const leadRole = this.store.require<{prompt:string}>("SELECT prompt FROM roles WHERE workspace_id=? AND purpose='lead' AND enabled=1", workflow.workspaceId);
+    const leadRole = this.store.require<{id:string;prompt:string}>("SELECT id,prompt FROM roles WHERE workspace_id=? AND purpose='lead' AND enabled=1", workflow.workspaceId);
     const prompt = `You are the RIFT Lead for workflow ${workflowId}. Goal: ${workflow.goal}\nUse RIFT tools for durable coordination and the repository shell for user-requested Git commits and authenticated PR commands. First inspect status. Submit a small explicit DAG and expected write paths. Read configured roles and global limits from status; dispatch independent tasks up to the available developer budget BEFORE waiting and queue additional requested tasks. Use plan_replan with current versions to update unstarted task dependencies or priority. Batch analysis may use analysisItems; write tasks must remain registered change tasks. Use returned versions and request IDs. Wait for any results using the cursor, then handle blocked tasks or retry with context (maximum two repairs). Development automatically queues integration. All candidate checks and reviews are enforced by RIFT. Never finish until workflow_finish accepts. Do not invent execution evidence. Connection verification failure is request-specific and does not authorize changing any member runtime, provider or model; preserve configured selections unless the user explicitly requests a change. If blocked by credentials or unknown cleanup, explain the blocker and stop.\n${instruction ?? ''}`;
-    handle.agent.followup({ id: MessageId(randomUUID()), role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: `${leadRole.prompt}\n${prompt}` }] });
+    handle.agent.followup({ id: MessageId(randomUUID()), role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: `${leadRole.prompt}\n${this.skills.resolveEffective(workflow.workspaceId,leadRole.id,'dsh').instructions}\n${prompt}` }] });
     return attached;
   }
   async handle(method: string, pathname: string, body: unknown, key?: string): Promise<unknown> {
@@ -348,6 +367,7 @@ export class RiftHostService implements ApiHandler {
         });
       }
       if (input.leadConnection) this.store.exec('UPDATE workspaces SET lead_connection=?,version=version+1 WHERE id=?', JSON.stringify(input.leadConnection), workspace.id);
+      installWorkspaceSkill(this.store,workspace.id);
       this.chat.createConversation(workspace.id);
       return this.store.workspace(workspace.id);
     }
@@ -481,8 +501,11 @@ export class RiftHostService implements ApiHandler {
     if (method === 'POST' && pathname === '/v1/workspaces') {
       const input = schemas.workspaceSchema.parse(body), repo = await this.git.inspectRepository(input.repositoryPath,input.baseRef), id = `workspace-${randomUUID()}`;
       const workspace = this.store.transaction(() => { const workspace = this.project.createWorkspace({ id,name:input.name,rootPath:path.join(this.config.home,'workspaces',id),repositoryPath:repo.rootPath,commonGitDir:repo.commonGitDir,baseRef:input.baseRef }); this.defaults(id); return workspace; });
+      installWorkspaceSkill(this.store,workspace.id);
       return workspace;
     }
+    const cliRoute=/^\/v1\/workspaces\/([^/]+)\/cli$/.exec(pathname);
+    if(method==='POST'&&cliRoute)return this.workspaceCli.execute(decodeURIComponent(cliRoute[1]!),body);
     if (method === 'POST' && pathname === '/v1/workflows') return this.createChatWorkflow(undefined,body);
     const match = /^\/v1\/(workspaces|workflows|tasks|runs)\/([^/]+)(?:\/(roles|plan|replan|dispatch|integration|retry|recover-source|cancel|pause|resume|lead|finish|wait|logs|archive|report))?$/.exec(pathname);
     if (!match) throw new RiftError('NOT_FOUND','Unknown management route.');

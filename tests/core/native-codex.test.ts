@@ -139,10 +139,10 @@ describe('native Codex Host-owned tool gateway', () => {
 });
 
 describe('native repository capabilities',()=>{
-  it('defaults one-shot development to full access without requiring a repository session',async()=>{
+  it('keeps one-shot development without repository grants restricted without requiring a repository session',async()=>{
     const h=harness({mode:'develop'}),handle=await h.start();
-    expect(h.requests.find(r=>r.method==='thread/start')!.params).toMatchObject({sandbox:'danger-full-access',approvalPolicy:'never',ephemeral:true});
-    expect(h.requests.find(r=>r.method==='turn/start')!.params.sandboxPolicy).toEqual({type:'dangerFullAccess'});
+    expect(h.requests.find(r=>r.method==='thread/start')!.params).toMatchObject({sandbox:'read-only',approvalPolicy:'never',ephemeral:true});
+    expect(h.requests.find(r=>r.method==='turn/start')!.params.sandboxPolicy).toEqual({type:'readOnly',networkAccess:false});
     h.complete();await handle.result;await handle.dispose();
   });
   async function repositories(){
@@ -161,25 +161,25 @@ describe('native repository capabilities',()=>{
     await expect(nativeRepositoryRoots(f.repo,[path.parse(f.repo).root],signal)).rejects.toMatchObject({code:'NATIVE_REPOSITORY_SCOPE'});
     await expect(nativeRepositoryRoots(f.repo,['relative'],signal)).rejects.toMatchObject({code:'NATIVE_REPOSITORY_SCOPE'});
   });
-  it.each(['discussion','develop'] as const)('enables repository tools and Code Mode for %s on both start and resume without inheriting desktop authority',async mode=>{
+  it.each(['discussion','develop'] as const)('exposes only the scoped repository command tool for %s on both start and resume without inheriting desktop authority',async mode=>{
     const f=await repositories();
     for(const resume of [false,true]){
       const h=harness({mode,env:{CODEX_DESKTOP_TOOL_PIPE:'must-not-inherit',CODEX_THREAD_ID:'foreign'}});h.input.cwd=f.worktree;h.input.repositoryAccess={repositoryPaths:[f.repo,f.other]};
       if(resume)h.input.session={threadId:'native-thread',runtimeHome:f.folder,onThread(){},onTurn(){},onSettled(){}};
       const handle=await h.start(),request=h.requests.find(r=>r.method===(resume?'thread/resume':'thread/start'))!.params;
-      expect(request.sandbox).toBe('danger-full-access');expect(request).not.toHaveProperty('environments');expect(h.requests.find(r=>r.method==='turn/start')!.params).not.toHaveProperty('environments');
-      expect(request.config).toMatchObject({'sandbox_mode':'danger-full-access','features.shell_tool':true,'features.unified_exec':true,'features.multi_agent':false,'mcp_servers.legacy.enabled':false});
-      expect(request.config).toMatchObject({'features.code_mode':true,'features.code_mode_host':true});
-      expect(h.spawnSpec!.argv).toContain('features.code_mode=true');
-      expect(h.spawnSpec!.argv).toContain('sandbox_mode="danger-full-access"');
+      expect(request.sandbox).toBe('read-only');expect(request.environments).toEqual([]);expect(h.requests.find(r=>r.method==='turn/start')!.params.environments).toEqual([]);if(!resume)expect((request.dynamicTools as any[]).map((tool:any)=>tool.name)).toContain('rift_exec_command');
+      expect(request.config).toMatchObject({'features.shell_tool':false,'features.unified_exec':false,'features.multi_agent':false,'mcp_servers.legacy.enabled':false});
+      expect(request.config).toMatchObject({'features.code_mode':false,'features.code_mode_host':false});
+      expect(h.spawnSpec!.argv).toContain('features.code_mode=false');
+      expect(h.spawnSpec!.argv).not.toContain('sandbox_mode="danger-full-access"');
       expect(h.spawnSpec!.argv.some(arg=>arg.includes('windows.sandbox')||arg.includes('sandbox_workspace_write'))).toBe(false);
-      expect(h.requests.find(r=>r.method==='turn/start')!.params.sandboxPolicy).toEqual({type:'dangerFullAccess'});
-      expect(h.spawnSpec!.argv).toContain('features.code_mode_host=true');
-      expect(h.spawnSpec!.argv).not.toContain('features.code_mode_host=false');
+      expect(h.requests.find(r=>r.method==='turn/start')!.params.sandboxPolicy).toEqual({type:'readOnly',networkAccess:false});
+      expect(h.spawnSpec!.argv).toContain('features.code_mode_host=false');
+      expect(h.spawnSpec!.argv).not.toContain('features.code_mode_host=true');
       expect((await h.toolCall()).success).toBe(true);expect(h.calls).toEqual([{}]);
       expect((await h.toolCall({callId:'foreign',threadId:'foreign'})).success).toBe(false);
       expect(h.calls).toHaveLength(1);
-      expect(h.spawnSpec!.env).toMatchObject({CODEX_DESKTOP_TOOL_PIPE:undefined,CODEX_THREAD_ID:undefined});expect(h.spawnSpec!.argv.some(arg=>arg.includes('model_catalog_json'))).toBe(false);
+      expect(h.spawnSpec!.env).toMatchObject({CODEX_DESKTOP_TOOL_PIPE:undefined,CODEX_THREAD_ID:undefined});expect(h.spawnSpec!.argv.some(arg=>arg.includes('model_catalog_json'))).toBe(true);
       h.complete();await handle.result;await handle.dispose();
     }
   });
@@ -192,7 +192,7 @@ describe('native repository capabilities',()=>{
     expect(h.requests.find(r=>r.method==='turn/start')!.params.sandboxPolicy).toEqual({type:'readOnly',networkAccess:false});
     h.complete();await handle.result;await handle.dispose();
   });
-  it.each(['workspaceWrite','readOnly'] as const)('rejects a substituted %s policy before turn publication',async sandbox=>{
+  it.each(['workspaceWrite','dangerFullAccess'] as const)('rejects a substituted %s policy before turn publication',async sandbox=>{
     const f=await repositories(),h=harness({sandbox});h.input.cwd=f.worktree;h.input.repositoryAccess={repositoryPaths:[f.repo]};
     await expect(h.start()).rejects.toMatchObject({code:'NATIVE_RESTRICTIONS_UNCONFIRMED'});expect(h.requests.some(r=>r.method==='turn/start')).toBe(false);expect(h.terminateCount).toBe(1);
   });

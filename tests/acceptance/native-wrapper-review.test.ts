@@ -21,7 +21,7 @@ function boundary(mode:NativeCodexOptions['mode'],repository:boolean,resume=fals
     if(method==='initialize')return{};
     if(method==='config/read')return{config:{mcp_servers:{desktop_tools:{command:'never-inherit'}}}};
     if(method==='thread/start'||method==='thread/resume'){
-      return{cwd:params.cwd,thread:{id:'owned-thread',ephemeral:params.ephemeral??false,status:{type:'idle'}},approvalPolicy:'never',sandbox:params.sandbox==='read-only'?{type:'readOnly',networkAccess:false}:{type:'dangerFullAccess'}};
+      return{cwd:params.cwd,thread:{id:'owned-thread',ephemeral:params.ephemeral??false,status:{type:'idle'}},approvalPolicy:'never',sandbox:params.sandbox==='read-only'?{type:'readOnly',networkAccess:false}:{type:'readOnly',networkAccess:false}};
     }
     if(method==='turn/start')return{turn:{id:'owned-turn',status:'inProgress'}};
     if(method==='turn/interrupt')return{};
@@ -33,13 +33,13 @@ function boundary(mode:NativeCodexOptions['mode'],repository:boolean,resume=fals
 }
 
 describe('Independent native wrapper permission boundary',()=>{
-  it.each(['discussion','develop'] as const)('enables the native wrapper for repository %s on start and resume while preserving the scoped Host gateway',async mode=>{
+  it.each(['discussion','develop'] as const)('uses a restricted native wrapper for repository %s on start and resume while preserving the scoped Host gateway',async mode=>{
     for(const resume of [false,true]){
       const p=boundary(mode,true,resume);let handle:RuntimeHandle|undefined;
       try{
         handle=await p.runtime.start(p.input);const request=p.requests.find(row=>row.method===(resume?'thread/resume':'thread/start'))!.params;
-        expect(request.sandbox).toBe('danger-full-access');expect(request.config).toMatchObject({'features.code_mode':true,'features.code_mode_host':true,'features.shell_tool':true,'features.unified_exec':true,'features.apps':false,'features.plugins':false,'features.multi_agent':false,'mcp_servers.desktop_tools.enabled':false});
-        expect(p.spec.argv).toContain('features.code_mode=true');expect(p.spec.argv).toContain('features.code_mode_host=true');expect(p.spec.env!.CODEX_DESKTOP_PIPE).toBeUndefined();
+        expect(request.sandbox).toBe('read-only');expect(request.config).toMatchObject({'features.code_mode':false,'features.code_mode_host':false,'features.shell_tool':false,'features.unified_exec':false,'features.apps':false,'features.plugins':false,'features.multi_agent':false,'mcp_servers.desktop_tools.enabled':false});
+        expect(p.spec.argv).toContain('features.code_mode=false');expect(p.spec.argv).toContain('features.code_mode_host=false');expect(p.spec.env!.CODEX_DESKTOP_PIPE).toBeUndefined();
         expect((await p.call('rift_status')).success).toBe(true);expect(p.called).toBe(1);
         expect((await p.call('rift_status',null,{threadId:'foreign-thread',turnId:'owned-turn'})).success).toBe(false);
         expect((await p.call('rift_status','desktop_tools')).success).toBe(false);expect(p.called).toBe(1);

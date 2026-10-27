@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { workspaceCommandHelp } from './workspace-commands.js';
 import { parseArgs } from 'node:util';
 import { readFile, mkdir, access } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -26,10 +27,12 @@ const help = `RIFT 0.1.0 — local DSH plugin management
   rift pause|resume --workflow ID [--version N]
   rift lead --workflow ID
   rift report --workflow ID
+  rift ws <resource> <action> [id] --workspace ID [--data JSON | --file FILE]
+  rift ws --help
 All commands accept --home PATH and --json. Writes accept --key KEY for repeatable requests.
 serve owns its DSH Host; other commands only connect to that Host.
 See docs/e1-acceptance.md for current E1 verification and provider coverage.`;
-function readArgs() { try { return parseArgs({allowPositionals:true,options:{home:{type:'string'},profile:{type:'string'},port:{type:'string'},patch:{type:'string'},'ui-dist':{type:'string'},'tailscale-ip':{type:'string'},remote:{type:'boolean'},name:{type:'string'},repo:{type:'string'},base:{type:'string'},workspace:{type:'string'},workflow:{type:'string'},run:{type:'string'},task:{type:'string'},goal:{type:'string'},file:{type:'string'},reason:{type:'string'},version:{type:'string'},key:{type:'string'},json:{type:'boolean'},help:{type:'boolean'},'no-lead':{type:'boolean'}}}); } catch(error) { console.error(JSON.stringify({error:publicError(error)})); process.exit(1); } }
+function readArgs() { try { return parseArgs({allowPositionals:true,options:{home:{type:'string'},profile:{type:'string'},port:{type:'string'},patch:{type:'string'},'ui-dist':{type:'string'},'tailscale-ip':{type:'string'},remote:{type:'boolean'},name:{type:'string'},repo:{type:'string'},base:{type:'string'},workspace:{type:'string'},workflow:{type:'string'},run:{type:'string'},task:{type:'string'},goal:{type:'string'},file:{type:'string'},reason:{type:'string'},version:{type:'string'},key:{type:'string'},data:{type:'string'},json:{type:'boolean'},help:{type:'boolean'},'no-lead':{type:'boolean'}}}); } catch(error) { console.error(JSON.stringify({error:publicError(error)})); process.exit(1); } }
 const args=readArgs();
 const home=path.resolve(args.values.home??process.env.RIFT_HOME??'.rift');
 const required=(name:keyof typeof args.values):string=>{const value=args.values[name];if(typeof value!=='string'||!value)throw new RiftError('MISSING_ARGUMENT',`--${name} is required.`);return value;};
@@ -43,6 +46,13 @@ async function request(method:string,route:string,body?:unknown):Promise<any>{
 }
 async function main():Promise<unknown>{
   const [command,subcommand,operand]=args.positionals;
+  if(command==='ws'){
+    if(args.values.help||!subcommand)return workspaceCommandHelp();
+    if(args.positionals.length>4)throw new RiftError('INVALID_INPUT','Use resource action and at most one object id.');
+    if(args.values.data&&args.values.file)throw new RiftError('INVALID_INPUT','Choose --data or --file.');
+    const input=JSON.parse(args.values.data??(args.values.file?await readFile(args.values.file,'utf8'):'{}'));
+    return request('POST',`/v1/workspaces/${encodeURIComponent(required('workspace'))}/cli`,{argv:args.positionals.slice(1),input});
+  }
   if(args.values.help||!command){console.log(help);return;}
   if(command==='ui')return request('POST','/v1/ui/bootstrap',args.values.remote?{remote:true}:{});
   if(command==='serve'){

@@ -56,10 +56,11 @@ describe('Run collaboration runtime boundaries',()=>{
     const f=fixture();const definitions:{name:string;execute:(args:unknown,execution:{agent:unknown;signal:AbortSignal})=>Promise<unknown>}[]=[];
     let listener:((payload:{agent:Agent})=>unknown)|undefined;const remove=vi.fn();
     const parent={id:'parent'} as Agent;
-    const child={id:'rift-run-local',ctx:{tools:{register:(definition:typeof definitions[number])=>definitions.push(definition)}}} as unknown as Agent;
+    const child={id:'rift-run-local',ctx:{tools:{restrict:vi.fn(),register:(definition:typeof definitions[number])=>definitions.push(definition)}}} as unknown as Agent;
     const ctx={agents:{get:(agentId:string)=>agentId==='parent'?parent:agentId===child.id?child:undefined},on:(_event:string,handler:typeof listener)=>{listener=handler;return remove;},subagents:{getProvider:()=>({name:'codex-review',capabilities:{},prepareContinuable:async()=>({})}),startActivation:async(spec:{childId:string})=>{expect(spec.childId).toBe(child.id);listener?.({agent:{id:'unrelated'} as Agent});expect(definitions).toHaveLength(0);listener?.({agent:child});return{childId:child.id,result:Promise.resolve({stopReason:'completed',output:[]}),async dispose(){}};}}} as unknown as Context;
     try{
-      const handle=await new DshActivationBridge(ctx,()=>parent,f.store).start(f.run('local'));
+      const input=f.run('local');input.run.providerSnapshot.binding!.runtime='dsh';
+      const handle=await new DshActivationBridge(ctx,()=>parent,f.store).start(input);
       expect(remove).toHaveBeenCalledOnce();expect(definitions.map(tool=>tool.name)).toEqual(['rift_send_message']);
       const args={recipientAgentId:f.lead.id,kind:'progress',content:'DSH local progress',idempotencyKey:'local-progress'};
       await expect(definitions[0]!.execute(args,{agent:parent,signal:new AbortController().signal})).rejects.toMatchObject({code:'UNAUTHORIZED'});

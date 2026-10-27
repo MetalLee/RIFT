@@ -17,7 +17,7 @@ export interface RuntimeTurnInput {
   /** Host-selected repository roots from this workspace's ledger. Never model
    * arguments. Native execution verifies Git roots and derives exact metadata
    * directories; formal review/analysis modes cannot elevate through this field. */
-  repositoryAccess?: { repositoryPaths: string[] };
+  repositoryAccess?: { repositoryPaths: string[]; protectedPaths?: string[] };
   model: string;
   reasoningEffort?: string;
   instructions: string;

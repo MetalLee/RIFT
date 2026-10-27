@@ -108,12 +108,13 @@ export class NativeCodexRuntime implements AgentRuntime {
     const formalReadOnly=this.options.mode==='review'||this.options.mode==='analysis';
     const repositoryWrite=!formalReadOnly&&!!input.repositoryAccess?.repositoryPaths.length;
     const restrictedDiscussion=discussion&&!repositoryWrite;
-    const restrictedTools=restrictedDiscussion||formalReadOnly;
+    const restrictedTools=true; // Native file/shell tools are never an authority boundary.
     input.signal.throwIfAborted();
     if (!path.isAbsolute(input.cwd) || !input.model.trim()) throw new RiftError('NATIVE_CONFIGURATION', 'An absolute staging directory and a model are required.');
     if (discussion && !(VERIFIED_NATIVE_CODEX_MODELS as readonly string[]).includes(input.model)) throw new RiftError('NATIVE_MODEL_UNVERIFIED', 'This native model has not passed RIFT tool-isolation verification. Select a verified model.');
     const writableRoots=repositoryWrite?await nativeRepositoryRoots(input.cwd,input.repositoryAccess!.repositoryPaths,input.signal):[];
-    const runtimeTools=[...input.tools,...formalReadOnly?createRepositoryReadTools(input.cwd):[]];
+    const shell=repositoryWrite?await (await import('./repository-shell.js')).createRepositoryShell({spawn:this.options.spawn} as import('@deepseek-ai/cordis').Context['subprocess'],input):undefined;
+    const runtimeTools=[...input.tools,...formalReadOnly?createRepositoryReadTools(input.cwd):[],...shell?[{...shell.tool,name:'rift_exec_command'}]:[]];
     const tools = new Map(runtimeTools.map(tool => [tool.name, tool]));
     if (tools.size !== runtimeTools.length || runtimeTools.some(tool => !/^rift_[a-z0-9_]+$/.test(tool.name))) throw new RiftError('NATIVE_TOOL_SCOPE', 'Native turns accept only unique RIFT tool names.');
     const controller = new AbortController();
@@ -125,15 +126,7 @@ export class NativeCodexRuntime implements AgentRuntime {
     const catalogPath = verifiedCatalogPath();
     // Native task tools are retained, but nested delegation and inherited app
     // connections remain disabled. All accepted writes still pass RIFT gates.
-    const restrictions = restrictedTools ? nativeCodexRestrictions() : {
-      ...nativeCodexRestrictions(),
-      // Repository-capable models invoke native and RIFT tools through Code
-      // Mode. Its advertised exec surface needs a live host even when direct
-      // tool calls also work. Apply this at process boot and thread resume.
-      'features.code_mode': true, 'features.code_mode_host': true,
-      'features.shell_tool': true, 'features.unified_exec': true, 'features.view_image': true,
-      'sandbox_mode': 'danger-full-access',
-    };
+    const restrictions = nativeCodexRestrictions();
     const processOverrides = Object.entries({ ...restrictions, ...(restrictedTools ? {model_catalog_json: catalogPath} : {}) }).flatMap(([key, value]) => ['-c', `${key}=${JSON.stringify(value)}`]);
     const child = this.options.spawn({
       argv: [...nativeCodexPackage().argv, ...processOverrides], cwd: input.cwd, env,
@@ -245,6 +238,7 @@ export class NativeCodexRuntime implements AgentRuntime {
       await child.done.catch(() => {});
       // Tool closures also belong to this lease; stopping the process alone
       // cannot release a turn while a Host operation is still in flight.
+      await shell?.dispose();
       await Promise.allSettled([...calls.values()].map(call => call.result));
     })();
     const request = async (method: string, params: object) => {
@@ -260,13 +254,13 @@ export class NativeCodexRuntime implements AgentRuntime {
       const config: Record<string, unknown> = restrictedTools ? nativeCodexRestrictions(mcpNames) : { ...restrictions, ...Object.fromEntries(mcpNames.map(name => [`mcp_servers.${name}.enabled`, false])) };
       if (this.options.modelProvider) config.model_providers = { [this.options.modelProvider.id]: this.options.modelProvider.config };
       const resuming = Boolean(input.session?.threadId);
-      const sandbox = restrictedTools ? 'read-only' : 'danger-full-access';
+      const sandbox = 'read-only';
       const started = record(await request(resuming ? 'thread/resume' : 'thread/start', {
         cwd: input.cwd, model: input.model, ...(this.options.modelProvider ? { modelProvider: this.options.modelProvider.id } : {}),
         ...(resuming ? { threadId: input.session!.threadId, excludeTurns: true } : { ephemeral: !input.session }),
         ...(restrictedTools?{environments: [],runtimeWorkspaceRoots: []}:repositoryWrite?{runtimeWorkspaceRoots:writableRoots}:{}),
         approvalPolicy: 'never', sandbox, config,
-        ...(restrictedTools ? {baseInstructions: 'You are a RIFT workspace agent. Use only the provided RIFT tools. Never execute shell commands, access network services, delegate outside RIFT, or claim acceptance from prose.'} : repositoryWrite?{baseInstructions:'You are a RIFT workspace agent. Native shell and file tools may operate on the Host-associated workspace repositories, including Git commits and authorized remote Git/PR operations. Stay within these repository capabilities. Use RIFT for task ownership and coordination; commits and PRs do not replace required checks, independent review, or workflow acceptance. Do not delegate outside RIFT.'}:{}),
+        ...(restrictedTools ? {baseInstructions: 'You are a RIFT workspace agent. Use only the provided RIFT tools. For repository commands use rift_exec_command when available; its Host-enforced sandbox fixes the filesystem and network boundary. Never delegate outside RIFT or claim acceptance from prose.'} : repositoryWrite?{baseInstructions:'You are a RIFT workspace agent. Native shell and file tools may operate on the Host-associated workspace repositories, including Git commits and authorized remote Git/PR operations. Stay within these repository capabilities. Use RIFT for task ownership and coordination; commits and PRs do not replace required checks, independent review, or workflow acceptance. Do not delegate outside RIFT.'}:{}),
         developerInstructions: `${input.instructions}${formalReadOnly?'\nFormal read-only execution: use rift_list_files and rift_read_file for this assigned checkout. They cannot execute commands, write files or Git metadata, or reach network services. Host check evidence supplies executed test results; do not invent tests you could not run.':''}`,
         // 0.164.0 restores dynamic tool declarations from its rollout on resume.
         // The Host binds fresh closures to this turn below; schemas are part of
@@ -274,7 +268,7 @@ export class NativeCodexRuntime implements AgentRuntime {
         ...(!resuming ? {dynamicTools: runtimeTools.map(tool => ({ type: 'function', name: tool.name, description: tool.description, inputSchema: tool.inputSchema }))} : {}),
       }));
       threadId = record(started.thread).id;
-      if (typeof threadId !== 'string' || record(started.thread).ephemeral !== !input.session || started.approvalPolicy !== 'never' || started.sandbox?.type !== (sandbox === 'read-only' ? 'readOnly' : 'dangerFullAccess')) throw new RiftError('NATIVE_RESTRICTIONS_UNCONFIRMED', `Native runtime did not confirm the required thread restrictions (expected ${sandbox}; received ${String(started.sandbox?.type)}, approval ${String(started.approvalPolicy)}, ephemeral ${String(record(started.thread).ephemeral)}).`);
+      if (typeof threadId !== 'string' || record(started.thread).ephemeral !== !input.session || started.approvalPolicy !== 'never' || started.sandbox?.type !== 'readOnly') throw new RiftError('NATIVE_RESTRICTIONS_UNCONFIRMED', `Native runtime did not confirm the required thread restrictions (expected ${sandbox}; received ${String(started.sandbox?.type)}, approval ${String(started.approvalPolicy)}, ephemeral ${String(record(started.thread).ephemeral)}).`);
       if(sandbox==='read-only'&&started.sandbox?.networkAccess!==false)throw new RiftError('NATIVE_RESTRICTIONS_UNCONFIRMED','Native read-only execution must also confirm network access is disabled.');
       if (input.session?.threadId && threadId !== input.session.threadId) throw new RiftError('NATIVE_SCOPE_MISMATCH', 'Native runtime resumed another thread.');
       if ((input.session||repositoryWrite) && (typeof started.cwd !== 'string' || canonicalPath(started.cwd) !== canonicalPath(input.cwd))) throw new RiftError('NATIVE_SCOPE_MISMATCH','Native runtime did not confirm the current working directory.');
@@ -282,7 +276,7 @@ export class NativeCodexRuntime implements AgentRuntime {
       input.session?.onThread(threadId);
       const prompt = input.messages.map(message => `${message.role === 'user' ? 'User' : 'Assistant'}:\n${message.content}`).join('\n\n');
       startingTurn = true;
-      const turn = record(record(await request('turn/start', { threadId, cwd: input.cwd, clientUserMessageId: input.turnId, input: [{ type: 'text', text: prompt, text_elements: [] }], sandboxPolicy:sandbox==='read-only'?{type:'readOnly',networkAccess:false}:{type:'dangerFullAccess'}, ...(restrictedTools?{environments: []}:{}), ...(input.reasoningEffort ? { effort: input.reasoningEffort } : {}) })).turn);
+      const turn = record(record(await request('turn/start', { threadId, cwd: input.cwd, clientUserMessageId: input.turnId, input: [{ type: 'text', text: prompt, text_elements: [] }], sandboxPolicy:{type:'readOnly',networkAccess:false}, ...(restrictedTools?{environments: []}:{}), ...(input.reasoningEffort ? { effort: input.reasoningEffort } : {}) })).turn);
       if (typeof turn.id !== 'string') throw new RiftError('NATIVE_PROTOCOL', 'Missing native turn identity.');
       turnId = turn.id;
       input.session?.onTurn(turnId);

@@ -34,6 +34,7 @@ export class DshActivationBridge implements ActivationBridge {
       if (!this.store) throw new RiftError('START_NOT_PUBLISHED','Persistent Codex requires the RIFT ledger.');
       return provider.startTask(this.store,input);
     }
+    if(binding.runtime!=='dsh')throw new RiftError('FILESYSTEM_ISOLATION_UNAVAILABLE','Select a scoped DSH execution binding or the persistent RIFT Codex backend; this external provider has no verified workspace isolation.');
     const spawn=binding.spawn;
     if(spawn && (binding.runtime!=='dsh' || !provider.capabilities.agentOptions || (spawn.agentPreset&&!provider.capabilities.agentPreset)))throw new RiftError('START_NOT_PUBLISHED','Configured DSH spawn options are not supported by the exact registered provider.');
     const agentOptions:AgentOptions|undefined=spawn?{provider:spawn.provider,model:spawn.model,...spawn.reasoningEffort?{reasoningEffort:ReasoningEffortId(spawn.reasoningEffort)}:{},...spawn.maxTokens?{maxTokens:spawn.maxTokens}:{}}:undefined;

@@ -66,11 +66,11 @@ export class SkillService {
         invariant(within !== '..' && !within.startsWith(`..${sep}`) && !isAbsolute(within), 'SKILL_PATH_ESCAPE', 'Skill resource escapes the selected directory.');
         invariant(!['.git', 'node_modules'].includes(entry.name) && !/^\.env(?:\.|$)/i.test(entry.name), 'SKILL_UNSAFE_RESOURCE', 'Do not import repository internals, dependencies or environment credential files.');
         if (info.isDirectory()) { walk(absolute, depth + 1); continue; }
-        invariant(info.isFile(), 'SKILL_UNSAFE_RESOURCE', 'Only regular files can be imported.');
+        invariant(info.isFile() && info.nlink === 1, 'SKILL_UNSAFE_RESOURCE', 'Only regular files can be imported.');
         invariant(++count <= MAX_FILES && info.size <= MAX_FILE && total + info.size <= MAX_TOTAL, 'SKILL_SIZE_LIMIT', 'Skill package exceeds 128 files, 256 KiB per file, or 2 MiB total.');
         const descriptor = openSync(absolute, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
         let bytes: Buffer;
-        try { const opened = fstatSync(descriptor); invariant(opened.isFile() && opened.dev === info.dev && opened.ino === info.ino && opened.size <= MAX_FILE, 'SKILL_PATH_CHANGED', 'Skill source changed while importing.'); bytes = readFileSync(descriptor); } finally { closeSync(descriptor); }
+        try { const opened = fstatSync(descriptor); invariant(opened.isFile() && opened.nlink === 1 && opened.dev === info.dev && opened.ino === info.ino && opened.size <= MAX_FILE, 'SKILL_PATH_CHANGED', 'Skill source changed while importing.'); bytes = readFileSync(descriptor); } finally { closeSync(descriptor); }
         invariant(bytes.byteLength <= MAX_FILE && total + bytes.byteLength <= MAX_TOTAL, 'SKILL_SIZE_LIMIT', 'Skill resource changed or exceeds the size limit.');
         // Recheck canonical identity after opening; snapshots use these bytes, never the source on execution.
         invariant(!lstatSync(absolute).isSymbolicLink() && realpathSync(absolute) === canonical, 'SKILL_PATH_CHANGED', 'Skill source changed while importing.');
