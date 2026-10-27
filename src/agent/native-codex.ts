@@ -216,7 +216,6 @@ export class NativeCodexRuntime implements AgentRuntime {
         const fingerprint = JSON.stringify([params.tool, params.arguments]);
         const prior = calls.get(params.callId);
         if (prior && prior.fingerprint !== fingerprint) throw new RiftError('IDEMPOTENCY_CONFLICT', 'Native call identity was reused for another operation.');
-        if (!prior && calls.size >= 128) throw new RiftError('NATIVE_TOOL_LIMIT', 'Native turn reached its tool-call limit.');
         const result = prior?.result ?? Promise.resolve().then(() => tool.execute(params.arguments, controller.signal, { callId: String(params.callId) }));
         if (!prior) calls.set(params.callId, { fingerprint, result });
         const value = await result;

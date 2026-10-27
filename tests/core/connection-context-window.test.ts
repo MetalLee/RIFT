@@ -6,6 +6,13 @@ import {ApiConnectionService} from '../../src/agent/connections.js';
 import {RiftStore} from '../../src/storage/database.js';
 
 describe('saved Claude route context capacity',()=>{
+  it('does not impose a RIFT-specific 60-second idle watchdog or automatic replay',()=>{
+    const store=new RiftStore();try{
+      const service=new ApiConnectionService({} as Context,store,process.cwd());
+      const profiles=(service as unknown as {profiles(connections:unknown[]):Record<string,Record<string,unknown>>}).profiles([{provider:'test',name:'test',protocol:'openai-completions',endpoint:'https://example.com/v1',credentialRef:'KEY',model:'test'}]);
+      expect(profiles.test).not.toHaveProperty('streamIdleTimeoutMs');expect(profiles.test!.retryPolicy).toEqual({mode:'normal',maxRetries:0});
+    }finally{store.close();}
+  });
   it.each([82776,1000001,'upstream-error'] as const)('classifies %s using the registered capacity and real adapter',async input=>{
     const server=createServer(async(req,res)=>{
       for await(const _ of req){};

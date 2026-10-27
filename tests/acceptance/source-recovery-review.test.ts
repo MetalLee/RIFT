@@ -34,7 +34,16 @@ describe('Independent prior-source Git recovery gates',()=>{
     }finally{await f.close();}
   });
 
-  it.each(['new-task','missing-provenance','wrong-source','wrong-task-source','empty-original-diff','non-ancestor-base','head-moved','outside-scope','unknown-cleanup','wrong-writer'] as const)('rejects %s without committing or accepting anything',async mode=>{
+  it('recovers original source even when legacy path metadata names another file',async()=>{
+    const f=await sourceFixture();try{
+      f.input.task.expectedPaths=['other.txt'];
+      const source=await f.git.collectSource(f.input);
+      expect(source.sourceHead).toBe(f.source);expect(source.changedPaths).toContain('allowed.txt');
+      expect(f.store.task('task').acceptedCommit).toBeNull();
+    }finally{await f.close();}
+  });
+
+  it.each(['new-task','missing-provenance','wrong-source','wrong-task-source','empty-original-diff','non-ancestor-base','head-moved','unknown-cleanup','wrong-writer'] as const)('rejects %s without committing or accepting anything',async mode=>{
     const f=await sourceFixture();try{
       const input={...f.input,task:{...f.input.task},run:{...f.input.run},worktree:{...f.input.worktree},priorSource:{...f.input.priorSource}} as Parameters<LocalGitService['collectSource']>[0];
       if(mode==='new-task'){input.task.attempt=1;input.run.taskAttempt=1;input.worktree.attempt=1;}
@@ -44,7 +53,6 @@ describe('Independent prior-source Git recovery gates',()=>{
       if(mode==='empty-original-diff')input.priorSource!.baseCommit=f.source;
       if(mode==='non-ancestor-base')input.priorSource!.baseCommit=await gitOk(f.repo,['commit-tree',`${f.source}^{tree}`,'-m','unrelated root']);
       if(mode==='head-moved')await gitOk(input.worktree.path,['commit','--allow-empty','-qm','unrelated extra commit']);
-      if(mode==='outside-scope')input.task.expectedPaths=['other.txt'];
       if(mode==='unknown-cleanup')input.run.cleanupStatus='unknown';
       if(mode==='wrong-writer')input.worktree.writerRunId='another-run';
       const head=await gitOk(input.worktree.path,['rev-parse','HEAD']);

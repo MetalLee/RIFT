@@ -1,4 +1,3 @@
-import { posix } from 'node:path';
 import { invariant, type Task, type PlanTask } from '../contracts/index.js';
 export interface SchedulerLimits { developers:number; total:number; maxTasks:number; maxReplans:number; agingMs:number }
 export function schedulerLimits(input:Partial<SchedulerLimits>={}):SchedulerLimits {
@@ -12,13 +11,6 @@ export function validatePriority(value:number):number {invariant(Number.isIntege
 export function schedulingOrder<T extends {createdAt:string;priority:number;lastScheduled:number;sequence:number}>(entries:T[],agingMs:number,clock=Date.now()):T[] {
   const score=(entry:T)=>entry.priority+Math.floor(Math.max(0,clock-Date.parse(entry.createdAt))/agingMs);
   return entries.sort((a,b)=>a.lastScheduled-b.lastScheduled||score(b)-score(a)||a.sequence-b.sequence);
-}
-export function normalizeExpectedPaths(paths:string[]):string[] {
-  return paths.map(path=>{ const normalized=path.replaceAll('\\','/').replace(/^\.\//,'').replace(/\/$/,''); invariant(normalized && !normalized.startsWith('/') && !/^[A-Za-z]:/.test(normalized) && !normalized.split('/').includes('..') && !normalized.includes('\0'),'INVALID_PATH','Expected paths must stay inside the task checkout.'); return posix.normalize(normalized); });
-}
-export function pathsOverlap(left:readonly string[],right:readonly string[]):boolean {
-  if(!left.length||!right.length) return true;
-  return left.some(a=>right.some(b=> { const x=a.toLowerCase(),y=b.toLowerCase(); return x===y || x.startsWith(`${y}/`) || y.startsWith(`${x}/`) || x.includes('*') || y.includes('*'); }));
 }
 export function validateDag(tasks:{id:string;dependsOn:string[]}[]):void {
   const byId=new Map(tasks.map(task=>[task.id,task.dependsOn]));

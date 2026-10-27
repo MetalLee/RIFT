@@ -76,15 +76,16 @@ describe('real Git with persistent coordinator and controlled fake activations',
     expect(await gitOk(f.repo,['show',`${f.workflow.integrationRef}:seed.txt`])).toBe('previous accepted task');
     expect(await gitOk(f.repo,['show',`${f.workflow.integrationRef}:a.txt`])).toBe('complete implementation');
   });
-  it('collects declared glob paths through Host Git while still rejecting files outside a narrow glob',async()=>{
+  it('collects required helper files beyond legacy path metadata and still requires exact independent review',async()=>{
     const f=await fixture();f.plan([{id:'wide',expectedPaths:['**/*']},{id:'narrow',expectedPaths:['src/**/*.ts']}]);f.dispatch('wide');
     const wide=await f.started('wide','develop');
     expect(JSON.parse(wide.prompt).developmentProtocol.instructions).toContain('Local git add/commit is permitted');
     expect(JSON.parse(wide.prompt).developmentProtocol.instructions).toContain('only when explicitly requested by the user');
     expect(JSON.parse(wide.prompt).developmentProtocol.instructions).toContain('not that the Task is accepted');
     await f.develop(wide,{'root.txt':'Root file'});const review=await f.started('wide','review');f.review(review);await f.settled('wide','succeeded');
-    f.dispatch('narrow');const narrow=await f.started('narrow','develop');await f.develop(narrow,{'outside.txt':'Keep for inspection'});await f.settled('narrow','blocked');
-    expect(f.store.task('narrow').blockingReason).toContain('PATH_SCOPE_VIOLATION');expect(f.store.task('narrow').acceptedCommit).toBeNull();expect(await readFile(path.join(narrow.cwd,'outside.txt'),'utf8')).toBe('Keep for inspection');
+    f.dispatch('narrow');const narrow=await f.started('narrow','develop');await f.develop(narrow,{'outside.txt':'Required helper'});const narrowReview=await f.started('narrow','review');
+    expect(f.store.task('narrow').acceptedCommit).toBeNull();expect(JSON.parse(narrowReview.prompt).reviewProtocol.instructions).toContain('not an allowlist');
+    f.review(narrowReview);await f.settled('narrow','succeeded');expect(await gitOk(f.repo,['show',`${f.store.task('narrow').acceptedCommit}:outside.txt`])).toBe('Required helper');
   });
   it('starts both developers, accepts the second result first and retains both through serial reviews', async () => {
     const f = await fixture(); f.plan([{ id: 'a', expectedPaths: ['a.txt'] }, { id: 'b', expectedPaths: ['b.txt'] }]);
@@ -133,9 +134,9 @@ describe('real Git with persistent coordinator and controlled fake activations',
   it('a conflicting later source preserves accepted changes and lets independent work integrate', async () => {
     const f = await fixture(); f.plan([{ id: 'a', expectedPaths: ['base.txt'] }, { id: 'b', expectedPaths: ['base.txt'] }, { id: 'c', expectedPaths: ['c.txt'] }]);
     f.dispatch('a'); f.dispatch('b'); f.dispatch('c');
-    const [a, c] = await Promise.all([f.started('a', 'develop'), f.started('c', 'develop')]);
+    const [a, b] = await Promise.all([f.started('a', 'develop'), f.started('b', 'develop')]);
     await f.develop(a, { 'base.txt': 'A\n' }); const ra = await f.started('a', 'review');
-    const b = await f.started('b', 'develop'); expect(await gitOk(b.cwd, ['rev-parse', 'HEAD'])).toBe(f.baseCommit);
+    const c = await f.started('c', 'develop'); expect(await gitOk(b.cwd, ['rev-parse', 'HEAD'])).toBe(f.baseCommit);
     await f.develop(b, { 'base.txt': 'B\n' }); f.review(ra); await f.settled('a', 'succeeded'); await f.settled('b', 'blocked');
     expect(f.store.task('b').blockingReason).toContain('CONFLICT');
     await f.develop(c, { 'c.txt': 'C' }); f.review(await f.started('c', 'review')); await f.settled('c', 'succeeded');

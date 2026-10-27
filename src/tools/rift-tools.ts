@@ -34,7 +34,7 @@ export function installLeadTools(ctx: Context, lead: Agent, workflowId: string, 
     };
     ctx.tools.register(definition);
   };
-  register('rift_plan_submit', 'Submit tasks within the configured plan budget with dependencies, priority and expected paths. Use developer role names from status; dispatch independent tasks before waiting.', planSchema, input => coordinator.submitPlan({ workflowId, ...planForCoordinator(input) }));
+  register('rift_plan_submit', 'Submit tasks within the configured plan budget with dependencies and priority. Legacy expectedPaths metadata is optional and is not a file allowlist. Use developer role names from status; dispatch independent tasks before waiting.', planSchema, input => coordinator.submitPlan({ workflowId, ...planForCoordinator(input) }));
   register('rift_plan_replan', 'Atomically update dependencies or priority of unstarted tasks and optionally add tasks. Supply current plan revision and task versions. Running or accepted work cannot be rewritten.', replanSchema, input => { for (const update of input.updates) taskOwned(update.taskId); return coordinator.replan({ workflowId, ...input }); });
   register('rift_task_dispatch', 'Accept or persistently queue a development request. Returns immediately; use the returned request id with rift_wait.', dispatchSchema, input => { taskOwned(input.taskId); return coordinator.dispatch(input); });
   register('rift_wait', 'Wait for any matching durable result or request event. Track eventSeq and accept out-of-order completion. Does not stop background work.', waitSchema, input => coordinator.wait({ workflowId, ...input }));

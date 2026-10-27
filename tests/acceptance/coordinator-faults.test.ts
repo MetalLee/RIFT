@@ -112,17 +112,17 @@ describe('A01/A07/A13-A18 independent fake activation fault acceptance', () => {
     } finally { cleanup.resolve(); await h.close(); }
   });
 
-  it('does not consume paused queues and conservatively serializes overlapping paths', async () => {
+  it('does not consume paused queues and allows overlapping metadata in isolated task worktrees', async () => {
     const h = harness();
     try {
       h.plan([{ id: 'one', paths: ['src/shared'] }, { id: 'two', paths: ['src/shared/input.ts'] }, { id: 'three', paths: ['unrelated'] }]);
       h.dispatch('one'); h.dispatch('two'); h.dispatch('three');
       await expect.poll(() => h.starts.length).toBe(2);
-      expect(h.starts.map(e => e.input.task.id)).toEqual(['one', 'three']);
+      expect(h.starts.map(e => e.input.task.id)).toEqual(['one', 'two']);
       h.coordinator.pause(h.workflow.id); h.complete(0); h.complete(1);
       await expect.poll(() => h.coordinator.status(h.workflow.id).slots.total).toBe(0);
       expect(h.starts.length).toBe(2); h.coordinator.resume(h.workflow.id);
-      await expect.poll(() => h.starts.length).toBe(3); expect(h.starts[2]!.input.task.id).toBe('two'); h.complete(2);
+      await expect.poll(() => h.starts.length).toBe(3); expect(h.starts[2]!.input.task.id).toBe('three'); h.complete(2);
     } finally { await h.close(); }
   });
 

@@ -1,6 +1,5 @@
 import { readGithubSource } from './upstream-source.js';
 import { key as workspaceKey, managedPath } from '../git/worktree-binding.js';
-import { normalizeExpectedPaths } from '../task/scheduler.js';
 import path from 'node:path';
 import { realpathSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -152,7 +151,6 @@ export class WorkspaceCli {
       if(a==='update'){
         const input=z.object({expectedVersion:version,title:z.string().min(1).max(240).optional(),instructions:z.string().min(1).max(32000).optional(),expectedPaths:z.array(z.string()).max(100).optional(),acceptanceCriteria:z.array(z.string()).max(100).optional()}).strict().parse(b);
         return s.transaction(()=>{const latest=task();versionCheck(latest.version,input.expectedVersion);invariant(['pending','ready'].includes(latest.status)&&!s.get('SELECT id FROM runs WHERE task_id=?',latest.id)&&!s.get('SELECT id FROM operations WHERE entity_id=?',latest.id),'TASK_STARTED','Only undispatched tasks can be edited.');
-          if(input.expectedPaths){input.expectedPaths=normalizeExpectedPaths(input.expectedPaths);invariant(latest.repositoryId||input.expectedPaths.length===0,'INVALID_PATH','Text analysis has no filesystem write paths.');}
           s.exec('UPDATE tasks SET title=?,instructions=?,expected_paths=?,acceptance_criteria=?,version=version+1 WHERE id=?',input.title??latest.title,input.instructions??latest.instructions,JSON.stringify(input.expectedPaths??latest.expectedPaths),JSON.stringify(input.acceptanceCriteria??latest.acceptanceCriteria),latest.id);s.event(latest.workflowId,'task.updated',{}, {taskId:latest.id});return task();});
       }
       if(chatActor(actor)&&a==='dispatch'){invariant(current().id===item.workflowId,'INVALID_STATE','Select the active workflow.');return this.agentCommand(actor,'rift_task_dispatch',{...b,taskId:item.id});}

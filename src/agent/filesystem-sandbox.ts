@@ -37,11 +37,9 @@ export async function sandboxCommand(roots:readonly string[],cwd:string,cmd:stri
   let effectiveProtected:readonly string[]=[];
   let masks:{path:string;directory:boolean}[]=[];
   const mounts:{root:string;masks:typeof masks}[]=[];
-  let count=0;
   const inspect=async(directory:string,root:string):Promise<void>=>{
     for(const entry of await readdir(directory,{withFileTypes:true})){
       options.signal?.throwIfAborted();
-      invariant(++count<=500000,'FILESYSTEM_SCAN_LIMIT','Workspace tree is too large to validate its filesystem boundary.');
       const file=path.join(directory,entry.name),info=await lstat(file);
       if(options.resources&&containsPath(options.resources,file)||effectiveProtected.some(root=>containsPath(root,file))||privateEntry(entry.name)){masks.push({path:file,directory:info.isDirectory()});continue;}
       // Symlinks can reach only mounted data; the sandbox masks sensitive paths.

@@ -79,12 +79,14 @@ describe('A06/A09/A12/A17 independent real Git acceptance', () => {
     } finally { await f.dispose(); }
   });
 
-  it('preserves unsaved files and scope violations rather than deleting them', async () => {
+  it('collects unlisted files and preserves subsequent unsaved files instead of deleting them', async () => {
     const f = await fixture();
     try {
       const ctx = f.context('scoped'); const run = f.run(ctx.task); const worktree = await f.service.prepareTask({ ...ctx, run });
       await writeFile(path.join(worktree.path, 'outside.txt'), 'preserve me');
-      await expect(f.service.collectSource({ ...ctx, run, worktree })).rejects.toThrow(/PATH_SCOPE/);
+      const source = await f.service.collectSource({ ...ctx, run, worktree });
+      expect(source.changedPaths).toContain('outside.txt');
+      await writeFile(path.join(worktree.path, 'unsaved.txt'), 'unsaved');
       await expect(f.service.archiveWorktree({ workspace: f.workspace, worktree, active: false, cleanupConfirmed: true, artifactsSaved: true })).rejects.toThrow(/ARCHIVE_BLOCKED/);
       expect(await readFile(path.join(worktree.path, 'outside.txt'), 'utf8')).toBe('preserve me');
     } finally { await f.dispose(); }
