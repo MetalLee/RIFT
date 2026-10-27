@@ -2,7 +2,7 @@
 
 ## 原生持久会话增量（2026-10-26）
 
-Codex 聊天和正式任务现已使用 app-server 持久 thread，后续通过 `thread/resume` 续接。内置 profile 改用 RIFT 自有 `agent/codex-provider.js`；官方一次性 Provider 仍作为锁定 Codex payload 的依赖来源，源码未修改。聊天按 conversation＋成员隔离并同步未消费公共消息；任务按 task＋角色续接，返工重新绑定 cwd，Reviewer 独立。Windows 任务子进程显式启用 unelevated sandbox，开发 workspace-write、审查 read-only。完整契约、升级和备份要求见 [原生会话说明](native-sessions.md)。
+Codex 聊天和正式任务现已使用 app-server 持久 thread，后续通过 `thread/resume` 续接。内置 profile 改用 RIFT 自有 `agent/codex-provider.js`；官方一次性 Provider 仍作为锁定 Codex payload 的依赖来源，源码未修改。聊天按 conversation＋成员隔离并同步未消费公共消息；任务按 task＋角色续接，返工重新绑定 cwd，Reviewer 独立。Codex 开发与关联仓库聊天默认 danger-full-access，正式审查和分析仍为 read-only。完整契约、升级和备份要求见 [原生会话说明](native-sessions.md)。
 
 [真实二进制协议探针](evidence/native-session-probe.json)通过跨进程历史恢复、新工具闭包、任务返工和审查隔离；使用本地受控 Responses 接口，未重新认证外部模型质量或代码写入。下文“官方 Provider”“一次性 Session”等表述是 2026-10-25 当时的实现和验收记录。
 
@@ -159,3 +159,15 @@ Provider 的 model/permission 是实例级配置。未设置 `RIFT_CODEX_MODEL` 
 历史运行继续保留：[最初 Lead Provider 配置失败](evidence/workflow-lead-provider-failure.json)在修复官方 Provider 名称后消除；[首次 Sol Lead 辅助运行](evidence/workflow-acceptance-assisted-history.json)虽完成业务，但中途人工修正了探针的新 attempt gate，因此不作为最终无人干预验收。它们不覆盖或取代最终 Astra 报告。
 
 最初 `gpt-6-sol` 失败、Codex `0.153.4` 的 Sol 失败，以及旧 Claude SDK `0.3.263` 的 Opus 5.5 失败均继续保留，描述的是当时组合。当前单任务兼容性已修复；正式 gate 状态以[POC 结果](poc-results.md)和[独立验收](acceptance-report.md)为准。
+
+## API 凭据与审查失败恢复
+
+RIFT 的 `sdk-minimal` 组合需要显式挂载官方 `dsh-credentials-local`，插件声明也依赖 `credentials` 服务。只保存 API 路由并不意味着重启后能够解析凭据；凭据仍由 `$DSH_HOME/.credentials.yaml` 和官方环境解析规则管理，不复制到任务或子进程环境中。
+
+DSH 的终止错误与模型正文分别保存，任务失败和连接验证保留脱敏后的具体原因，例如 `MISSING_CREDENTIAL` 或 `Provider finish_reason: content_filter`。原始错误历史不改写，后续重试创建新的 Run。
+
+连接验证使用真实对话：模型调用无副作用的 `rift_sample_order` 读取虚构订单，再返回自然语言答复，不要求固定口令。Host 记录实际工具执行次数、最终回复、停止原因及清理结果；只有工具执行、非空最终回复、正常结束和清理确认全部满足才通过。历史验证保存于 `api_connection_verifications`，页面分别显示对话和工具结果。一次失败只代表这次请求，不能推断所有对话不可用；不得因此切换 reviewer 或其他成员的运行时、连接或模型，配置变更必须来自用户明确要求。
+
+2026-10-27 的 [Claude 真实验证记录](evidence/claude-connection-verification.json)确认原连接完成一次工具调用，并根据返回数据给出订单明细及 ¥30 总额。此前固定口令请求的 `content_filter` 仍是历史事实，其具体触发原因未确定，不作为整个 Claude API 不可用的结论。
+
+当前 attempt 的独立审查因执行失败或中断而阻塞时，页面重试和 `rift_integration_request` 可以针对同一已收集 source 重新检查和审查，不增加开发 attempt。必须确认先前执行已清理、没有未完成请求或发布操作，并校验任务版本和 source SHA。审查明确要求修改时仍须走开发修复；重试不会绕过候选检查、精确提交审查或发布 CAS。

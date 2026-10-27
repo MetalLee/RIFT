@@ -21,6 +21,7 @@ import * as schemas from './schemas.js';
 import { publicError, redact } from './security.js';
 import type { ApiHandler } from './local-api.js';
 import { workspaceDetail, workspaceList, workspaceTasks } from './workspace-views.js';
+import { taskView } from './task-diagnostics.js';
 import { ChatService, sendMessageSchema } from '../chat/service.js';
 import { DshChatRuntime } from '../chat/dsh-runtime.js';
 import type { AgentRuntime, RuntimeTool } from '../agent/runtime-types.js';
@@ -276,7 +277,7 @@ export class RiftHostService implements ApiHandler {
     const workflow = this.store.workflow(workflowId);
     if (this.closing || ['completed','cancelled','failed'].includes(workflow.status)) throw new RiftError('INVALID_STATE', 'Workflow no longer accepts Lead input.');
     const leadRole = this.store.require<{prompt:string}>("SELECT prompt FROM roles WHERE workspace_id=? AND purpose='lead' AND enabled=1", workflow.workspaceId);
-    const prompt = `You are the RIFT Lead for workflow ${workflowId}. Goal: ${workflow.goal}\nUse RIFT tools for durable coordination and the repository shell for user-requested Git commits and authenticated PR commands. First inspect status. Submit a small explicit DAG and expected write paths. Read configured roles and global limits from status; dispatch independent tasks up to the available developer budget BEFORE waiting and queue additional requested tasks. Use plan_replan with current versions to update unstarted task dependencies or priority. Batch analysis may use analysisItems; write tasks must remain registered change tasks. Use returned versions and request IDs. Wait for any results using the cursor, then handle blocked tasks or retry with context (maximum two repairs). Development automatically queues integration. All candidate checks and reviews are enforced by RIFT. Never finish until workflow_finish accepts. Do not invent execution evidence. If blocked by credentials or unknown cleanup, explain the blocker and stop.\n${instruction ?? ''}`;
+    const prompt = `You are the RIFT Lead for workflow ${workflowId}. Goal: ${workflow.goal}\nUse RIFT tools for durable coordination and the repository shell for user-requested Git commits and authenticated PR commands. First inspect status. Submit a small explicit DAG and expected write paths. Read configured roles and global limits from status; dispatch independent tasks up to the available developer budget BEFORE waiting and queue additional requested tasks. Use plan_replan with current versions to update unstarted task dependencies or priority. Batch analysis may use analysisItems; write tasks must remain registered change tasks. Use returned versions and request IDs. Wait for any results using the cursor, then handle blocked tasks or retry with context (maximum two repairs). Development automatically queues integration. All candidate checks and reviews are enforced by RIFT. Never finish until workflow_finish accepts. Do not invent execution evidence. Connection verification failure is request-specific and does not authorize changing any member runtime, provider or model; preserve configured selections unless the user explicitly requests a change. If blocked by credentials or unknown cleanup, explain the blocker and stop.\n${instruction ?? ''}`;
     handle.agent.followup({ id: MessageId(randomUUID()), role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: `${leadRole.prompt}\n${prompt}` }] });
     return attached;
   }
@@ -378,9 +379,15 @@ export class RiftHostService implements ApiHandler {
     if(taskRoute){
       const workspaceId=decodeURIComponent(taskRoute[1]!),taskId=decodeURIComponent(taskRoute[2]!),task=this.store.task(taskId);
       invariant(this.store.workflow(task.workflowId).workspaceId===workspaceId,'NOT_FOUND','Task does not belong to this workspace.');
-      if(method==='GET'&&!taskRoute[3])return{...task,dependsOn:this.store.all<{dependsOnTaskId:string}>('SELECT depends_on_task_id FROM task_dependencies WHERE task_id=? ORDER BY depends_on_task_id',task.id).map(row=>row.dependsOnTaskId)};
+      if(method==='GET'&&!taskRoute[3])return taskView(this.store,task);
       if(method==='POST'&&taskRoute[3]==='retry'){
         const workflow=this.store.workflow(task.workflowId);if(workflow.baseCommit)await this.ensureLead(workflow.id);
+        const latest=this.store.get<import('../contracts/index.js').Run>('SELECT * FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1',taskId);
+        if(task.status==='blocked'&&task.sourceHead&&latest?.purpose==='review'&&['failed','interrupted'].includes(latest.status)){
+          const input=z.object({expectedVersion:z.number().int().nonnegative(),reason:z.string().min(1)}).strict().parse(body);
+          const request=this.coordinator.requestIntegration({taskId,sourceHead:task.sourceHead,expectedVersion:input.expectedVersion,idempotencyKey:`browser-review-retry:${taskId}:${input.expectedVersion}`});
+          return{task:this.store.task(taskId),request};
+        }
         const retried=await this.route('POST',`/v1/tasks/${encodeURIComponent(taskId)}/retry`,body) as import('../contracts/index.js').Task;
         const request=this.coordinator.dispatch({taskId,expectedVersion:retried.version,idempotencyKey:`browser-retry:${taskId}:${retried.attempt}`});
         return{task:this.store.task(taskId),request};

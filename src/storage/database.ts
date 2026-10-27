@@ -62,6 +62,7 @@ export class RiftStore {
       if(!this.get('SELECT version FROM schema_migrations WHERE version=15'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0015_safe_chat_stream.sql',import.meta.url)),'utf8')));
       if(!this.get('SELECT version FROM schema_migrations WHERE version=16'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0016_coordination_causality.sql',import.meta.url)),'utf8')));
       if(!this.get('SELECT version FROM schema_migrations WHERE version=17'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0017_api_connection_deletion.sql',import.meta.url)),'utf8')));
+      if(!this.get('SELECT version FROM schema_migrations WHERE version=18'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0018_connection_verifications.sql',import.meta.url)),'utf8')));
     } catch (error) { this.releaseLock(); throw error; }
   }
   private acquireLock(path: string): void {

@@ -56,7 +56,9 @@ export async function assertSafeFiles(root: string, files: string[]): Promise<vo
     }
   }
 }
-export async function checkoutClean(cwd: string): Promise<boolean> { return (await gitOk(cwd, ['status', '--porcelain=v1', '--untracked-files=all', '--ignored'])).length === 0; }
+// This is an existence check, not a file inventory. Group ignored/untracked
+// directories so dependency trees cannot overflow the bounded Git evidence log.
+export async function checkoutClean(cwd: string): Promise<boolean> { return (await gitOk(cwd, ['status', '--porcelain=v1', '--untracked-files=normal', '--ignored=matching'])).length === 0; }
 const metadataTails = new Map<string, Promise<unknown>>();
 export async function withMetadataLock<T>(commonGitDir: string, operation: () => Promise<T>): Promise<T> {
   const directory=await realpath(commonGitDir);

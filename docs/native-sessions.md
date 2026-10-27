@@ -2,6 +2,8 @@
 
 本页按 [工作区仓库权限更新](workspace-repository-permissions.md) 修订：同 cwd/仓库集合/权限版本才续原生 thread；跨 worktree 的返工改用新 thread 和 Host 证据恢复上下文。普通成员讨论和开发可执行已关联仓库中的本地提交，正式 review/analysis 仍按执行模式只读。
 
+有仓库执行权限的原生对话（包括 Lead）和开发任务默认开启 `features.code_mode` 与 `features.code_mode_host`，启动进程及恢复 thread 时均传入，支持通过 `functions.exec` 调用 RIFT 工具和仓库命令。无需手工修改工作区开关。权限版本已更新，升级后的下一轮会以公共消息或任务证据建立新 thread，避免沿用关闭 Host 的旧配置。无仓库对话和正式 review/analysis 继续使用受限工具模式。真实二进制的 Code Mode 调用、跨进程恢复及仓库边界验证见 [仓库执行探针](evidence/native-repository-probe.json)。
+
 对话协作 C1–C4 已交付，见 [开发方案](chat-orchestration-development-plan.md)与 [最新验收](collaboration-acceptance.md)。短轮次与持久事件续办默认开启，成员消息和任务 inbox 在固定输入边界同步。原生 thread 持久化与业务续办仍是两个独立机制。
 
 当前用户消息以原文传给 runtime，历史/成员消息加短来源说明后引用；Host 事件使用明确 Trigger 和最多 8 个关联任务的有限检查/审查快照。公共消息按 ID/version receipts 同步，失败/取消草稿不进入完成回复收据。任务补充和自然答复只在下一次 Run 输入边界消费，已开始的 Run 不变；不复制成员私有原生历史。
@@ -52,14 +54,16 @@
 
 | 运行模式 | 权限 |
 | --- | --- |
-| 关联仓库的普通聊天 | `workspace-write`，所有已关联仓库和精确 Git metadata，可用原生 git/gh；模型限 Host 已验证的模型 |
+| 关联仓库的普通聊天 | 默认 `danger-full-access`，可用原生 shell/git/gh；Host 仍核验关联仓库与 cwd，模型限 Host 已验证的模型 |
 | 无仓库聊天 / 标题 / 无仓库文本分析 | staging、受限业务工具，不授予仓库执行 |
-| 开发 | `workspace-write`，任务 worktree、关联仓库与精确 Git metadata；允许本地提交，仍禁止绕过 RIFT 的多 Agent 委派 |
+| 开发 / 返工 | 默认 `danger-full-access`，允许原生命令及其子进程；任务仍在分配的 worktree 执行，并通过 RIFT 验收 |
 | 正式审查 / 分析 | `read-only`，关闭原生 shell，只提供 Host read/list 与协作工具；结构化批次保持既有受限读取边界 |
 
-任务运行固定 `approvalPolicy: never`；Windows 子进程显式配置 `windows.sandbox = "unelevated"`，以免未配置沙箱时请求的 workspace-write 被降为只读。该配置不修改用户全局文件，不启用 danger-full-access。MCP、Apps、插件、hooks 和原生跨会话 memories 不从任务配置继承；**memories 功能与原生 thread 会话历史不同**。开发的项目指令和原生工具保留。原有候选检查、精确提交审查、Git 只读检查和清理门禁继续生效。Windows 实测只读 shell 的 network=false 仍能访问 loopback，因此正式模式改为无 shell 的 Host read/list 边界；新边界效果以[仓库权限探针](workspace-repository-permissions.md)的最终结果为准，不用配置声明代替验证。
+任务运行固定 `approvalPolicy: never`。按用户配置，Codex 可执行模式默认采用 `danger-full-access`：进程配置、thread start/resume 和 turn/start 均明确设置，不再强制 Windows `unelevated`。这取消了原生执行的文件系统与网络沙箱隔离；关联仓库与 cwd 校验用于任务归属，不能再描述成操作系统级访问限制。正式 review/analysis 与无仓库讨论仍采用显式只读设置。该调整不修改用户全局配置；权限版本更新为 `workspace-repositories-v5-full-access`，旧会话历史保留，新执行使用新指纹会话。MCP、Apps、插件、hooks 和原生跨会话 memories 不从任务配置继承。开发的项目指令和原生工具保留，候选检查、精确提交审查、Git 只读检查和清理门禁继续生效。
 
 Codex 0.164.0 在 resume 时恢复持久化动态工具声明；聊天每次启动进程都绑定新的 Host 工具闭包，并核对 thread/turn 身份与当前业务租约。工具声明变化会改变会话指纹。旧 Turn 不能借恢复的声明继续调用已失效的授权。
+
+全访问配置已通过[真实运行时探针](evidence/native-full-access-probe.json)：使用锁定的 0.164.0 app-server 与本地受控 Responses，验证启动、续接、Node/esbuild/Windows 子进程、Git 提交，以及正式审查和分析的只读工具边界。探针不调用外部模型。
 
 ## 持久化、恢复与备份
 

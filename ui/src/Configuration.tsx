@@ -49,7 +49,7 @@ export function ConnectionFields({ initial, optional = false, runtimeFilter, pur
       <label>推理强度（可选）<Input key={selected} name={field('reasoningEffort')} maxLength={40} defaultValue={selected === initialId ? initial?.reasoningEffort ?? '' : ''} placeholder="留空使用运行时默认值" /></label>
     </>}
     <p>{execution ? '选择 API 或原生运行时，再配置模型。更改将在下一次任务执行时生效；运行中的任务保留原有参数。' : '登记信息不等于认证通过；配置会在下一次执行时固定到快照。正在运行的回复不会切换模型。'}</p>
-    {selectedChoice && <p className="muted">工具通道：{selectedChoice.tools ? '支持' : '未验证'} · 认证：{saved?.verificationStatus === 'passed' ? '最近验证已通过' : saved?.verificationStatus === 'failed' ? '最近验证失败' : '尚未验证'}</p>}
+    {selectedChoice && <p className="muted">工具通道：{selectedChoice.tools ? '支持' : '未验证'} · 认证：{saved?.verificationStatus === 'passed' ? '最近一次验证已通过' : saved?.verificationStatus === 'failed' ? '最近一次验证未通过' : '尚未验证'}</p>}
   </fieldset>;
 }
 export function connectionFromForm(form: FormData, purpose: 'chat' | 'execution' = 'chat'): ChatConnection | null {

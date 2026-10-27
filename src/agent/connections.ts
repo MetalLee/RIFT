@@ -7,7 +7,7 @@ import path from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { id, now, type RiftStore } from '../storage/database.js';
 import { invariant, RiftError } from '../contracts/index.js';
-import { publicError, registerCredentialRedaction } from '../api/security.js';
+import { publicError, redact, registerCredentialRedaction } from '../api/security.js';
 import { DshChatRuntime } from '../chat/dsh-runtime.js';
 import { normalizeApiEndpoint } from './api-endpoint.js';
 import { assertConnectionUnused, cleanupConnectionCredential, type ConnectionDeletionRecord } from './connection-deletion.js';
@@ -39,6 +39,16 @@ export interface ApiConnection {
   credentialRef: string; provider: string; revision: number; parentId: string | null; createdAt: string;
   verifiedAt: string | null; verificationStatus: 'not-verified' | 'passed' | 'failed'; verificationError: string | null;
   available: boolean;
+  verification?: ConnectionVerification | null;
+}
+export interface ConnectionVerification {
+  method: 'conversation-and-tool';
+  conversation: boolean;
+  toolCalls: number;
+  reply: string;
+  stopReason: string | null;
+  cleanupConfirmed: boolean;
+  error: string | null;
 }
 
 /** Saved API routes are immutable. Editing creates another provider identity so
@@ -56,7 +66,7 @@ export class ApiConnectionService {
   private unavailable: string | null = null;
   constructor(private readonly ctx: Context, private readonly store: RiftStore, private readonly home: string) {}
   list(): ApiConnection[] {
-    return this.store.all<ApiConnection>('SELECT id,name,protocol,endpoint,model,credential_ref,provider,revision,parent_id,created_at,verified_at,verification_status,verification_error FROM api_connections WHERE deleted_at IS NULL ORDER BY created_at,id').map(row => ({ ...row, endpoint:normalizeApiEndpoint(row.endpoint,row.protocol), available: Boolean(this.ctx.llm?.listProviders().some(provider => provider.id === row.provider)) }));
+    return this.store.all<ApiConnection>('SELECT id,name,protocol,endpoint,model,credential_ref,provider,revision,parent_id,created_at,verified_at,verification_status,verification_error FROM api_connections WHERE deleted_at IS NULL ORDER BY created_at,id').map(row => ({ ...row, verification:this.store.get<{result:ConnectionVerification}>('SELECT result FROM api_connection_verifications WHERE connection_id=? ORDER BY rowid DESC LIMIT 1',row.id)?.result??null, endpoint:normalizeApiEndpoint(row.endpoint,row.protocol), available: Boolean(this.ctx.llm?.listProviders().some(provider => provider.id === row.provider)) }));
   }
   get(connectionId: string): ApiConnection {
     const connection = this.list().find(item => item.id === connectionId);
@@ -172,7 +182,8 @@ export class ApiConnectionService {
     const connection = this.get(connectionId); invariant(connection.available, 'PROVIDER_UNAVAILABLE', 'The saved API route is not available.');
     this.verifying = true;
     const controller = this.verifyController = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30000);
+    const timer = setTimeout(() => controller.abort(), 60000);
+    const evidence:ConnectionVerification={method:'conversation-and-tool',conversation:false,toolCalls:0,reply:'',stopReason:null,cleanupConfirmed:false,error:null};
     let onAbort!: () => void;
     const aborted = new Promise<never>((_, reject) => { onAbort = () => reject(new RiftError('API_VERIFICATION_CANCELLED', 'Connection verification was stopped or timed out.')); controller.signal.addEventListener('abort', onAbort, { once: true }); });
     void aborted.catch(() => undefined);
@@ -180,22 +191,39 @@ export class ApiConnectionService {
     try {
       const cwd = path.resolve(this.home, 'connection-verification', connection.id); await mkdir(cwd, { recursive: true });
       startAttempted = true;
-      const starting = new DshChatRuntime(this.ctx, connection.provider).start({ workspaceId: 'connection-verification', agentId: 'connection-verification', turnId: id('verify'), cwd, model: connection.model, instructions: 'Connection verification only. Reply exactly RIFT_API_OK. No tools are available.', messages: [{ role: 'user', content: 'Reply RIFT_API_OK.' }], tools: [], signal: controller.signal });
+      const starting = new DshChatRuntime(this.ctx, connection.provider).start({ workspaceId: 'connection-verification', agentId: 'connection-verification', turnId: id('verify'), cwd, model: connection.model,
+        instructions:'你是一位助手。请使用提供的只读工具获取示例订单，再自然地回答用户。工具只返回虚构数据，不访问文件、网络或真实订单。',
+        messages:[{role:'user',content:'你好，请查询示例订单，告诉我有哪些商品，以及合计多少钱。'}],
+        tools:[{name:'rift_sample_order',description:'读取一份虚构的示例订单，仅用于确认对话和工具调用是否正常，无外部访问或副作用。',inputSchema:{type:'object',properties:{},additionalProperties:false},execute:async(args,signal)=>{
+          signal.throwIfAborted();controller.signal.throwIfAborted();z.object({}).strict().parse(args);
+          evidence.toolCalls++;return{currency:'CNY',items:[{name:'笔记本',quantity:2,unitPrice:12},{name:'铅笔',quantity:3,unitPrice:2}],total:30};
+        }}],signal:controller.signal });
       void starting.then(late => { if (controller.signal.aborted && !handle) { void late.result.catch(() => undefined); void late.dispose().then(() => { lateCleanupConfirmed = true; if (!this.closed) this.cleanupUnknown = false; }, () => undefined); } }, () => undefined);
       handle = await Promise.race([starting, aborted]);
       const result = await Promise.race([handle.result, aborted]);
-      if (result.stopReason !== 'completed' || !result.text.includes('RIFT_API_OK')) throw new RiftError('API_VERIFICATION_FAILED', result.error ?? (result.stopReason==='cancelled'?'API connection verification was cancelled.':'The model did not return the expected verification response (RIFT_API_OK).'));
+      evidence.stopReason=result.stopReason;evidence.reply=redact(result.finalText??'',4096);
+      evidence.conversation=result.stopReason==='completed'&&Boolean(evidence.reply.trim());
+      if(result.stopReason!=='completed')throw new RiftError('API_VERIFICATION_FAILED',result.diagnostic??result.error??`本次对话未正常结束：${result.stopReason}。`);
+      if(!evidence.toolCalls)throw new RiftError('API_TOOL_NOT_OBSERVED','本次请求未观察到工具执行；不能据此判断普通对话不可用。');
+      if(!evidence.conversation)throw new RiftError('API_REPLY_NOT_OBSERVED','工具已执行，但本次请求没有返回最终文字回复。');
     } catch (failure) { error = publicError(failure).message; }
     finally {
       let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
-      try { await Promise.race([handle?.dispose(), new Promise<never>((_, reject) => { cleanupTimer = setTimeout(() => reject(new Error('cleanup timeout')), 5000); })]); }
+      try { await Promise.race([handle?.dispose(), new Promise<never>((_, reject) => { cleanupTimer = setTimeout(() => reject(new Error('cleanup timeout')), 5000); })]); evidence.cleanupConfirmed=Boolean(handle)||!startAttempted||lateCleanupConfirmed; }
       catch { error = 'Verification runtime cleanup could not be confirmed.'; this.unavailable = error; }
       finally { if (cleanupTimer) clearTimeout(cleanupTimer); clearTimeout(timer); controller.signal.removeEventListener('abort', onAbort); this.verifyController = undefined; }
       if (startAttempted && !handle && controller.signal.aborted && !lateCleanupConfirmed) { this.cleanupUnknown = true; error = 'Verification startup outcome and cleanup are unknown; wait for owned runtime cleanup.'; }
       this.verifying = false;
     }
     invariant(!this.closed, 'HOST_CLOSING', 'Host closed while verifying the connection.');
-    this.store.exec('UPDATE api_connections SET verified_at=?,verification_status=?,verification_error=? WHERE id=?', now(), error ? 'failed' : 'passed', error ?? null, connectionId);
+    evidence.error=error??null;
+    // Verification records observations only. It never edits roles, bindings,
+    // queued executions, or a user's model selection, including on failure.
+    this.store.transaction(()=>{
+      const timestamp=now();
+      this.store.exec('INSERT INTO api_connection_verifications(id,connection_id,created_at,result) VALUES(?,?,?,?)',id('verification'),connectionId,timestamp,JSON.stringify(evidence));
+      this.store.exec('UPDATE api_connections SET verified_at=?,verification_status=?,verification_error=? WHERE id=?', timestamp, error ? 'failed' : 'passed', error ?? null, connectionId);
+    });
     return { connection: this.get(connectionId), passed: !error, ...(error ? { error } : {}) };
   }
   async close(): Promise<void> { this.closed = true; this.verifyController?.abort(); await this.serial; await this.fiber?.dispose(); }

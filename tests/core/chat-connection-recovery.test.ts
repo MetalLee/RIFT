@@ -9,6 +9,16 @@ import { RiftError } from '../../src/contracts/index.js';
 import type { ChatConnection } from '../../src/chat/contracts.js';
 const until=async(check:()=>boolean)=>{for(let i=0;i<100;i++){if(check())return;await new Promise(resolve=>setTimeout(resolve,10));}throw new Error('Timed out');};
 describe('validated member discussion fallback',()=>{
+  it('persists a failed runtime diagnostic separately from assistant text and redacts secrets',async()=>{
+    const store=new RiftStore(),{workspace}=seedWorkspace(store),home=await mkdtemp(path.join(tmpdir(),'rift-turn-diagnostic-'));
+    const chat=new ChatService({store,home,defaultConnection:()=>({runtime:'codex',model:'test'}),validateConnection(){},tools:()=>[],runtime:()=>({async start(){return{result:Promise.resolve({text:'',stopReason:'failed',diagnostic:'MISSING_CREDENTIAL token=private-value'}),async dispose(){}};}})});
+    try{
+      const conversation=chat.createConversation(workspace.id,'Diagnostic test');
+      const {turn}=chat.send(workspace.id,conversation.id,{clientMessageId:'failure',content:'Hello'});
+      await until(()=>chat.turn(workspace.id,turn.id).status==='failed');
+      const settled=chat.turn(workspace.id,turn.id);expect(settled.error).toContain('MISSING_CREDENTIAL');expect(settled.error).not.toContain('private-value');expect(settled.cleanupStatus).toBe('confirmed');
+    }finally{await chat.close();store.close();if(path.dirname(home)!==path.resolve(tmpdir())||!path.basename(home).startsWith('rift-turn-diagnostic-'))throw new Error('Unsafe cleanup');await rm(home,{recursive:true,force:true});}
+  });
   it('uses the execution binding only when discussion is unset, validates it and keeps explicit configuration authoritative',async()=>{
     const store=new RiftStore(),{workspace,roles}=seedWorkspace(store),home=await mkdtemp(path.join(tmpdir(),'rift-member-fallback-'));
     const member=roles.find(role=>role.purpose==='developer')!,validated:ChatConnection[]=[];
