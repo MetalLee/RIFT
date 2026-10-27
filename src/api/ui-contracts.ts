@@ -25,7 +25,13 @@ export interface UiBinding {
   registered: boolean; authentication: 'not-verified'; executionConnection?: ChatConnection | null;
 }
 export interface UiRepository { id: string; workspaceId: string; canonicalPath: string; commonGitDir: string; baseRef: string }
-export interface UiTask extends Task { dependsOn: string[] }
+export interface UiTaskDiagnostics {
+  runId: string; attempt: number; status: string; stopReason: string | null;
+  error: string | null;
+  report: { id: string; content: string; createdAt: string; kind: string } | null;
+  coordination: { turnId: string; error: string; createdAt: string } | null;
+}
+export interface UiTask extends Task { dependsOn: string[]; diagnostics?: UiTaskDiagnostics | null }
 export interface UiRun {
   id: string; taskId: string; roleId: string; purpose: string; status: string; version: number;
   cleanupStatus: string; slotReleasedAt: string | null; createdAt: string;

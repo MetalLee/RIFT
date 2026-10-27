@@ -1,0 +1,10 @@
+{
+  "date": "2026-10-26T12:23:01.766Z",
+  "model": "claude-opus-5-5",
+  "configuredEndpoint": "https://newapi.deepwisdom.ai/v1/chat/completions",
+  "effectiveEndpoint": "https://newapi.deepwisdom.ai/v1",
+  "scope": "Existing configured endpoint and credential; one short model request; no credential values or customer content persisted.",
+  "finish": "stop",
+  "markerReceived": true,
+  "passed": true
+}

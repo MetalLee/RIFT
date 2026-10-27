@@ -5,6 +5,20 @@ import { DshActivationBridge } from '../../src/task/activation-bridge.js';
 import type { ActivationBridge } from '../../src/contracts/index.js';
 
 describe('A03/A07/A10 fake official-service boundary (not a native runtime pass)', () => {
+  it('retains the owned local child terminal diagnostic without treating it as assistant output',async()=>{
+    const parent={id:'parent'} as Agent;
+    const child={id:'rift-run-run',ctx:{tools:{restrict:vi.fn(),register:vi.fn()}},session:{snapshotEvents:()=>[
+      {type:'user/message',data:{content:'private prompt'}},
+      {type:'turn/end',data:{reason:{kind:'error',error:{message:'MISSING_CREDENTIAL: unavailable token=secret-value'}}}},
+    ]}} as unknown as Agent;
+    let listener:((event:{agent:Agent})=>void)|undefined;
+    const ctx={agents:{get:()=>parent},on:(_name:string,callback:typeof listener)=>{listener=callback;return()=>{};},subagents:{getProvider:()=>({prepareContinuable:async()=>{},capabilities:{}}),startActivation:async()=>{
+      listener?.({agent:child});return{childId:child.id,result:Promise.resolve({stopReason:'error',output:[]}),dispose:async()=>{}};
+    }}} as unknown as Context;
+    const handle=await new DshActivationBridge(ctx,()=>parent).start({signal:new AbortController().signal,task:{id:'task',kind:'change'},run:{id:'run',purpose:'review',providerSnapshot:{binding:{providerName:'spawn',runtime:'dsh'}}},cwd:'C:/candidate',prompt:'review'} as Parameters<ActivationBridge['start']>[0]);
+    const result=await handle.result;expect(result).toMatchObject({stopReason:'error',text:'',diagnostic:expect.stringContaining('MISSING_CREDENTIAL')});
+    expect(JSON.stringify(result)).not.toContain('secret-value');expect(JSON.stringify(result)).not.toContain('private prompt');await handle.dispose();
+  });
   it('requires the exact current live parent and exact registered provider', async () => {
     const parent = { id: 'parent' } as Agent;
     const startActivation = vi.fn();

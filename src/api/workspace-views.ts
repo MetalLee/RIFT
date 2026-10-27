@@ -5,6 +5,7 @@ import type { UiBinding, UiCapabilities, UiIntegration, UiPresence, UiRun, UiTas
 import type { AgentTurn, ChatConnection } from '../chat/contracts.js';
 import type { BrowserAgent } from '../project/browser-agents.js';
 import { invariant } from '../contracts/index.js';
+import { taskView } from './task-diagnostics.js';
 
 const unavailable = (reason: string) => ({ available: false, reason });
 export function uiCapabilities(): UiCapabilities {
@@ -43,7 +44,7 @@ export function workspaceTasks(store: RiftStore, workspaceId: string, query: URL
     const rows=store.all<UiTask & {rowNumber:number}>(`SELECT t.*,t.rowid AS row_number FROM tasks t JOIN workflows f ON f.id=t.workflow_id WHERE ${where} AND t.rowid>? ORDER BY t.rowid LIMIT ?`,...values,after,limit+1);
     const more=rows.length>limit;rows.splice(limit);
     const nextAfter=more?String(rows.at(-1)!.rowNumber):null;
-    const tasks=rows.map(({rowNumber:_position,...task})=>({...task,dependsOn:store.all<{dependsOnTaskId:string}>('SELECT depends_on_task_id FROM task_dependencies WHERE task_id=? ORDER BY depends_on_task_id',task.id).map(row=>row.dependsOnTaskId)}));
+    const tasks=rows.map(({rowNumber:_position,...task})=>taskView(store,task));
     return {tasks,nextAfter,totalCount,snapshotCursor:store.require<{cursor:number}>('SELECT COALESCE(MAX(seq),0) AS cursor FROM workspace_events').cursor,observedAt:new Date().toISOString()};
   });
 }
@@ -76,9 +77,7 @@ export function workspaceDetail(store: RiftStore, id: string, providers: Readonl
       model: binding.spawn?.model ?? binding.model ?? null, registered: providers.has(binding.providerName), authentication: 'not-verified',
     }));
     const workflows = store.all<Workflow>('SELECT * FROM workflows WHERE workspace_id=? ORDER BY rowid DESC', id);
-    const tasks = store.all<UiTask>('SELECT t.* FROM tasks t JOIN workflows f ON f.id=t.workflow_id WHERE f.workspace_id=? ORDER BY t.rowid', id).map(task => ({
-      ...task, dependsOn: store.all<{dependsOnTaskId:string}>('SELECT depends_on_task_id FROM task_dependencies WHERE task_id=? ORDER BY depends_on_task_id', task.id).map(row => row.dependsOnTaskId),
-    }));
+    const tasks = store.all<UiTask>('SELECT t.* FROM tasks t JOIN workflows f ON f.id=t.workflow_id WHERE f.workspace_id=? ORDER BY t.rowid', id).map(task => taskView(store,task));
     // Deliberately exclude providerSnapshot/result: these may contain runtime credentials or arbitrary provider output.
     const runs = store.all<UiRun>('SELECT r.id,r.task_id,r.role_id,r.purpose,r.status,r.version,r.cleanup_status,r.slot_released_at,r.created_at,r.started_at,r.ended_at,r.stop_reason FROM runs r JOIN tasks t ON t.id=r.task_id JOIN workflows f ON f.id=t.workflow_id WHERE f.workspace_id=? ORDER BY r.created_at,r.id', id);
     const integrations = store.all<UiIntegration & {candidate: {cwd?:string} | null;runtimeBootId:string|null}>('SELECT i.* FROM integrations i JOIN tasks t ON t.id=i.task_id JOIN workflows f ON f.id=t.workflow_id WHERE f.workspace_id=? ORDER BY i.rowid', id).map(({candidate,runtimeBootId:_boot, ...integration}) => ({ ...integration, candidatePath: candidate?.cwd ?? null }));

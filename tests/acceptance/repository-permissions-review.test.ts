@@ -27,7 +27,7 @@ function protocol(mode:NativeCodexOptions['mode'],alter?:(reply:Record<string,an
     if(method==='config/read')return{config:{mcp_servers:{desktop_authority:{command:'must-not-run'}}}};
     if(method==='thread/start'||method==='thread/resume'){
       const config=params.config as Record<string,unknown>;
-      const reply={cwd:params.cwd,thread:{id:'independent-thread',ephemeral:params.ephemeral??false,status:{type:'idle'}},approvalPolicy:'never',sandbox:{type:params.sandbox==='workspace-write'?'workspaceWrite':'readOnly',writableRoots:config['sandbox_workspace_write.writable_roots']??[],networkAccess:config['sandbox_workspace_write.network_access']??false,excludeTmpdirEnvVar:true,excludeSlashTmp:true}};
+      const reply={cwd:params.cwd,thread:{id:'independent-thread',ephemeral:params.ephemeral??false,status:{type:'idle'}},approvalPolicy:'never',sandbox:{type:params.sandbox==='danger-full-access'?'dangerFullAccess':'readOnly',writableRoots:config['sandbox_workspace_write.writable_roots']??[],networkAccess:config['sandbox_workspace_write.network_access']??false,excludeTmpdirEnvVar:true,excludeSlashTmp:true}};
       alter?.(reply);return reply;
     }
     if(method==='turn/start')return{turn:{id:'independent-turn',status:'inProgress'}};
@@ -160,8 +160,8 @@ describe('Independent workspace repository permissions',()=>{
     }finally{p.close();await f.close();}
   });
 
-  it('refuses a resumed thread with broader permissions before any model turn can start',async()=>{
-    const f=await fixture(),p=protocol('develop',reply=>{reply.sandbox.writableRoots.push(f.repositories[2]);});try{
+  it('refuses a resumed thread that does not confirm the requested full-access policy',async()=>{
+    const f=await fixture(),p=protocol('develop',reply=>{reply.sandbox.type='workspaceWrite';});try{
       const input=nativeInput(f.repositories[0]!,[f.repositories[0]!]);input.session={threadId:'independent-thread',runtimeHome:f.home,onThread(){},onTurn(){},onSettled(){}};
       await expect(p.runtime.start(input)).rejects.toMatchObject({code:'NATIVE_RESTRICTIONS_UNCONFIRMED'});
       expect(p.requests.some(row=>row.method==='thread/resume')).toBe(true);expect(p.requests.some(row=>row.method==='turn/start')).toBe(false);expect(p.terminated).toBe(1);

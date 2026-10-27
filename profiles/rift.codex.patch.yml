@@ -3,6 +3,8 @@
 - id: sdk-jsonrpc-server
   disabled: true
 - insert:
+    - id: rift-credentials
+      name: '@deepseek-ai/dsh-credentials-local'
     - id: rift-spawn
       name: '@deepseek-ai/dsh-subagent-spawn-in-process'
     - id: rift-ptc-runtime

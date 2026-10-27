@@ -12,7 +12,7 @@ import path from 'node:path';
 
 const disposers: (() => Promise<void>)[] = [];
 afterEach(async () => { await Promise.allSettled(disposers.splice(0).map(dispose => dispose())); });
-function harness(options: { sandbox?: string; cleanup?: boolean; resumeId?:string; resumeActive?:boolean; resumeMissing?:boolean;mode?:NativeCodexOptions['mode'];env?:NodeJS.ProcessEnv;extraRoot?:string;networkMismatch?:boolean } = {}) {
+function harness(options: { sandbox?: string; cleanup?: boolean; resumeId?:string; resumeActive?:boolean; resumeMissing?:boolean;mode?:NativeCodexOptions['mode'];env?:NodeJS.ProcessEnv;networkMismatch?:boolean } = {}) {
   const stdin = new PassThrough(), stdout = new PassThrough();
   const peer = new JsonRpcLineTransport(stdin, stdout);
   const requests: { method: string; params: Record<string, unknown> }[] = [];
@@ -24,7 +24,7 @@ function harness(options: { sandbox?: string; cleanup?: boolean; resumeId?:strin
     terminate() { terminateCount++; exit({ exitCode: 0, signal: null }); },
     async waitForExit() { return options.cleanup !== false; },
   };
-  const sandbox=(params:Record<string,any>)=>({type:options.sandbox??(params.sandbox==='workspace-write'?'workspaceWrite':'readOnly'),...(params.sandbox==='workspace-write'?{writableRoots:[...(params.config?.['sandbox_workspace_write.writable_roots']??[]),...(options.extraRoot?[options.extraRoot]:[])],networkAccess:options.networkMismatch?false:params.config?.['sandbox_workspace_write.network_access'],excludeTmpdirEnvVar:true,excludeSlashTmp:true}:{networkAccess:options.networkMismatch??false})});
+  const sandbox=(params:Record<string,any>)=>({type:options.sandbox??(params.sandbox==='danger-full-access'?'dangerFullAccess':'readOnly'),...(params.sandbox==='read-only'?{networkAccess:options.networkMismatch??false}:{})});
   peer.onRequest(async (method, params) => {
     requests.push({ method, params });
     if (method === 'initialize') return {};
@@ -90,6 +90,8 @@ describe('native Codex Host-owned tool gateway', () => {
     expect(started.environments).toEqual([]);
     expect((started.config as Record<string, unknown>)['mcp_servers.legacy.enabled']).toBe(false);
     expect(h.spawnSpec!.argv).toContain('features.shell_tool=false');
+    expect(h.spawnSpec!.argv).toEqual(expect.arrayContaining(['features.code_mode=false','features.code_mode_host=false']));
+    expect(started.config).toMatchObject({'features.code_mode':false,'features.code_mode_host':false});
     h.complete(); await expect(handle.result).resolves.toMatchObject({ text: 'Verified', stopReason: 'completed' });
   });
 
@@ -137,6 +139,12 @@ describe('native Codex Host-owned tool gateway', () => {
 });
 
 describe('native repository capabilities',()=>{
+  it('defaults one-shot development to full access without requiring a repository session',async()=>{
+    const h=harness({mode:'develop'}),handle=await h.start();
+    expect(h.requests.find(r=>r.method==='thread/start')!.params).toMatchObject({sandbox:'danger-full-access',approvalPolicy:'never',ephemeral:true});
+    expect(h.requests.find(r=>r.method==='turn/start')!.params.sandboxPolicy).toEqual({type:'dangerFullAccess'});
+    h.complete();await handle.result;await handle.dispose();
+  });
   async function repositories(){
     const folder=await mkdtemp(path.join(tmpdir(),'rift-native-roots-')),repo=path.join(folder,'repo'),other=path.join(folder,'other'),worktree=path.join(folder,'worktree');
     disposers.push(async()=>{await rm(folder,{recursive:true,force:true});});
@@ -153,14 +161,24 @@ describe('native repository capabilities',()=>{
     await expect(nativeRepositoryRoots(f.repo,[path.parse(f.repo).root],signal)).rejects.toMatchObject({code:'NATIVE_REPOSITORY_SCOPE'});
     await expect(nativeRepositoryRoots(f.repo,['relative'],signal)).rejects.toMatchObject({code:'NATIVE_REPOSITORY_SCOPE'});
   });
-  it('enables exact workspace repositories on both start and resume without inheriting desktop authority',async()=>{
+  it.each(['discussion','develop'] as const)('enables repository tools and Code Mode for %s on both start and resume without inheriting desktop authority',async mode=>{
     const f=await repositories();
     for(const resume of [false,true]){
-      const h=harness({env:{CODEX_DESKTOP_TOOL_PIPE:'must-not-inherit',CODEX_THREAD_ID:'foreign'}});h.input.cwd=f.worktree;h.input.repositoryAccess={repositoryPaths:[f.repo,f.other]};
+      const h=harness({mode,env:{CODEX_DESKTOP_TOOL_PIPE:'must-not-inherit',CODEX_THREAD_ID:'foreign'}});h.input.cwd=f.worktree;h.input.repositoryAccess={repositoryPaths:[f.repo,f.other]};
       if(resume)h.input.session={threadId:'native-thread',runtimeHome:f.folder,onThread(){},onTurn(){},onSettled(){}};
       const handle=await h.start(),request=h.requests.find(r=>r.method===(resume?'thread/resume':'thread/start'))!.params;
-      expect(request.sandbox).toBe('workspace-write');expect(request).not.toHaveProperty('environments');expect(h.requests.find(r=>r.method==='turn/start')!.params).not.toHaveProperty('environments');
-      expect(request.config).toMatchObject({'sandbox_workspace_write.network_access':true,'features.shell_tool':true,'features.unified_exec':true,'features.multi_agent':false,'mcp_servers.legacy.enabled':false});
+      expect(request.sandbox).toBe('danger-full-access');expect(request).not.toHaveProperty('environments');expect(h.requests.find(r=>r.method==='turn/start')!.params).not.toHaveProperty('environments');
+      expect(request.config).toMatchObject({'sandbox_mode':'danger-full-access','features.shell_tool':true,'features.unified_exec':true,'features.multi_agent':false,'mcp_servers.legacy.enabled':false});
+      expect(request.config).toMatchObject({'features.code_mode':true,'features.code_mode_host':true});
+      expect(h.spawnSpec!.argv).toContain('features.code_mode=true');
+      expect(h.spawnSpec!.argv).toContain('sandbox_mode="danger-full-access"');
+      expect(h.spawnSpec!.argv.some(arg=>arg.includes('windows.sandbox')||arg.includes('sandbox_workspace_write'))).toBe(false);
+      expect(h.requests.find(r=>r.method==='turn/start')!.params.sandboxPolicy).toEqual({type:'dangerFullAccess'});
+      expect(h.spawnSpec!.argv).toContain('features.code_mode_host=true');
+      expect(h.spawnSpec!.argv).not.toContain('features.code_mode_host=false');
+      expect((await h.toolCall()).success).toBe(true);expect(h.calls).toEqual([{}]);
+      expect((await h.toolCall({callId:'foreign',threadId:'foreign'})).success).toBe(false);
+      expect(h.calls).toHaveLength(1);
       expect(h.spawnSpec!.env).toMatchObject({CODEX_DESKTOP_TOOL_PIPE:undefined,CODEX_THREAD_ID:undefined});expect(h.spawnSpec!.argv.some(arg=>arg.includes('model_catalog_json'))).toBe(false);
       h.complete();await handle.result;await handle.dispose();
     }
@@ -168,12 +186,14 @@ describe('native repository capabilities',()=>{
   it.each(['review','analysis'] as const)('does not promote formal %s even when repositoryAccess is supplied',async mode=>{
     const h=harness({mode});h.input.repositoryAccess={repositoryPaths:['not-a-repository']};const handle=await h.start();
     const request=h.requests.find(r=>r.method==='thread/start')!.params;expect(request.sandbox).toBe('read-only');expect(request.config).toMatchObject({'features.shell_tool':false,'features.unified_exec':false});expect(request.environments).toEqual([]);
+    expect(request.config).toMatchObject({'features.code_mode':false,'features.code_mode_host':false});
+    expect(h.spawnSpec!.argv).toEqual(expect.arrayContaining(['features.code_mode=false','features.code_mode_host=false']));
     expect((request.dynamicTools as {name:string}[]).map(tool=>tool.name)).toEqual(['rift_status','rift_read_file','rift_list_files']);
     expect(h.requests.find(r=>r.method==='turn/start')!.params.sandboxPolicy).toEqual({type:'readOnly',networkAccess:false});
     h.complete();await handle.result;await handle.dispose();
   });
-  it.each(['root','network'] as const)('rejects a mismatched %s capability before turn publication',async mismatch=>{
-    const f=await repositories(),h=harness(mismatch==='root'?{extraRoot:f.folder}:{networkMismatch:true});h.input.cwd=f.worktree;h.input.repositoryAccess={repositoryPaths:[f.repo]};
+  it.each(['workspaceWrite','readOnly'] as const)('rejects a substituted %s policy before turn publication',async sandbox=>{
+    const f=await repositories(),h=harness({sandbox});h.input.cwd=f.worktree;h.input.repositoryAccess={repositoryPaths:[f.repo]};
     await expect(h.start()).rejects.toMatchObject({code:'NATIVE_RESTRICTIONS_UNCONFIRMED'});expect(h.requests.some(r=>r.method==='turn/start')).toBe(false);expect(h.terminateCount).toBe(1);
   });
   it('rejects read-only permission responses that silently enable remote network writes',async()=>{

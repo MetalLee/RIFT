@@ -1,0 +1,125 @@
+import { createRequire } from 'node:module';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+const require = createRequire(import.meta.url);
+const { chromium } = require(process.env.RIFT_PLAYWRIGHT_MODULE || 'playwright');
+const origin = process.env.RIFT_UI_URL || 'http://127.0.0.1:47831';
+const output = path.resolve('docs/evidence/api-key-ui');
+await mkdir(output, { recursive: true });
+const now = () => new Date().toISOString();
+const capabilities = Object.fromEntries(['workspaceCreate','chat','agentConfiguration','skills','multipleRepositories','worktreeManagement','workflowActions','events','pagination'].map(key => [key,{available:false,reason:'Browser fixture'}]));
+const workspace = { id:'api-fixture',name:'API 配置验收',status:'active',version:1,repositoryPath:'',rootPath:'/fixture',baseRef:'main',workflowCount:0,taskCount:0,createdAt:now() };
+const detail = {workspace,roles:[],bindings:[],repositories:[],tasks:[],workflows:[],runs:[],worktrees:[],integrations:[],managedWorktrees:[],workflowRepositories:[],presence:[],capabilities,observedAt:now(),conversations:[],snapshotCursor:0,leadConfiguration:{runtime:'codex',model:'gpt-6-astra',source:'host'}};
+const legacy = {id:'legacy',name:'原有连接',protocol:'openai-responses',endpoint:'https://api.example.test/v1',model:'example-model',credentialRef:'INTERNAL_REFERENCE_MUST_NOT_RENDER',provider:'fixture',revision:1,parentId:null,createdAt:now(),verifiedAt:null,verificationStatus:'not-verified',verificationError:null,available:true};
+const connections = [legacy];
+const commands = [];
+const deletions = [];
+let pendingCleanup = false;
+let failNext = true;
+const browser = await chromium.launch({channel:'msedge',headless:true});
+const page = await browser.newPage({viewport:{width:1280,height:960}});
+const report = {date:now(),mode:'Headless Edge with every UI API request intercepted; synthetic key only; no Host mutation',checks:[],screenshots:[],errors:[]};
+page.on('pageerror',error=>report.errors.push(error.message));
+await page.route('**/ui-api/v1/**',async route=>{
+  const request = route.request();
+  const pathname = new URL(request.url()).pathname.replace('/ui-api/v1','');
+  let body;
+  if(pathname==='/session') body={csrfToken:'fixture-csrf',expiresAt:'2099-01-01T00:00:00Z'};
+  else if(pathname==='/workspaces') body={workspaces:[workspace],capabilities,observedAt:now()};
+  else if(pathname.startsWith('/connections/')&&request.method()==='DELETE') {
+    const id=decodeURIComponent(pathname.split('/').at(-1));
+    deletions.push({id,key:request.headers()['idempotency-key']});
+    assert.equal(request.headers()['x-csrf-token'],'fixture-csrf');
+    assert.deepEqual(request.postDataJSON(),{});
+    if(id==='legacy'){await route.fulfill({status:409,json:{error:{code:'CONNECTION_IN_USE',message:'Configured connection cannot be deleted'}}});return;}
+    const index=connections.findIndex(connection=>connection.id===id);if(index>=0)connections.splice(index,1);
+    if(!pendingCleanup){pendingCleanup=true;await route.fulfill({status:503,json:{error:{code:'CREDENTIAL_CLEANUP_PENDING',message:'Credential cleanup pending'}}});return;}
+    body={id,deleted:true};
+  } else if(pathname==='/connections'&&request.method()==='POST') {
+    const input=request.postDataJSON();
+    commands.push({input,key:request.headers()['idempotency-key']});
+    assert.equal(request.headers()['x-csrf-token'],'fixture-csrf');
+    assert.equal('credentialRef' in input,false);
+    if(failNext){failNext=false;await route.fulfill({status:503,json:{error:{message:`Synthetic save failure ${input.apiKey}`}}});return;}
+    const {apiKey,...safe}=input;
+    connections.push({...legacy,...safe,id:`saved-${connections.length}`,credentialRef:'PRIVATE_STORED_REFERENCE',revision:connections.length+1});
+    body={connection:connections.at(-1)};
+  } else if(pathname==='/connections') body={savedConnections:connections,configuration:{available:true,reason:null},providers:[],nativeRuntimes:[]};
+  else if(pathname===`/workspaces/${workspace.id}`) body=detail;
+  else {report.errors.push(`Unexpected mocked request: ${request.method()} ${pathname}`);body={};}
+  await route.fulfill({json:body});
+});
+try {
+  await page.goto(`${origin}/#/workspace/${workspace.id}/settings`);
+  await page.getByRole('tab',{name:'API 连接',exact:true}).click();
+  await page.getByRole('button',{name:'添加连接',exact:true}).click();
+  const password=page.locator('input[name="apiKey"]');
+  assert.equal(await password.getAttribute('type'),'password');
+  assert.equal(await password.inputValue(),'');
+  assert.equal(await page.locator('input[name="credentialRef"]').count(),0);
+  await page.getByLabel('连接名称',{exact:true}).fill('直接密钥连接');
+  await page.getByLabel('API Base URL',{exact:true}).fill('https://api.example.test/v1');
+  await page.getByLabel('模型标识',{exact:true}).fill('example-model');
+  await password.fill('synthetic-browser-test-only');
+  await page.getByRole('button',{name:'保存新连接版本',exact:true}).click();
+  await page.locator('.form-error[role="alert"]').waitFor();
+  assert.equal((await page.locator('.form-error[role="alert"]').innerText()).includes('synthetic-browser-test-only'),false);
+  assert.equal((await page.locator('.form-error[role="alert"]').innerText()).includes('[已隐藏密钥]'),true);
+  assert.equal(await password.inputValue(),'synthetic-browser-test-only');
+  await page.getByRole('button',{name:'保存新连接版本',exact:true}).click();
+  await page.getByRole('status').filter({hasText:'连接已保存'}).waitFor();
+  assert.equal(await password.count(),0);
+  assert.equal(commands.length,2);
+  assert.equal(commands[0].key,commands[1].key);
+  assert.equal(commands[1].input.apiKey,'synthetic-browser-test-only');
+  assert.equal((await page.locator('body').innerText()).includes('INTERNAL_REFERENCE_MUST_NOT_RENDER'),false);
+  assert.equal((await page.locator('body').innerText()).includes('PRIVATE_STORED_REFERENCE'),false);
+  report.checks.push('password input; direct apiKey POST; CSRF; no credentialRef input or display; failure redacted; explicit retry reuses idempotency key; successful save clears password');
+  await page.screenshot({path:path.join(output,'saved-1280.png'),fullPage:true});
+  report.screenshots.push('saved-1280.png');
+  await page.getByRole('button',{name:'编辑为新版本',exact:true}).last().click();
+  assert.equal(await password.inputValue(),'');
+  assert.equal(await password.getAttribute('required'),'');
+  await password.fill('synthetic-new-version-only');
+  await page.getByRole('button',{name:'保存新连接版本',exact:true}).click();
+  await page.getByRole('status').filter({hasText:'连接已保存'}).waitFor();
+  assert.equal(commands[2].input.parentId,'saved-1');
+  assert.notEqual(commands[2].key,commands[1].key);
+  await page.getByRole('button',{name:'编辑为新版本',exact:true}).last().click();
+  assert.equal(await password.inputValue(),'');
+  await page.setViewportSize({width:390,height:960});
+  await page.evaluate(()=>window.scrollTo(0,0));
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+  await page.screenshot({path:path.join(output,'edit-390.png'),fullPage:true});
+  report.screenshots.push('edit-390.png');
+  report.checks.push('new version requires fresh key and preserves parentId; new command key for new version; no horizontal overflow at 390px');
+  await page.getByRole('button',{name:'取消',exact:true}).click();
+  await page.getByRole('button',{name:'删除连接',exact:true}).first().click();
+  await page.getByRole('button',{name:'取消删除',exact:true}).click();
+  assert.equal(deletions.length,0,'Opening/cancelling confirmation must not call DELETE');
+  await page.getByRole('button',{name:'删除连接',exact:true}).first().click();
+  await page.getByRole('button',{name:'确认删除',exact:true}).click();
+  await page.getByText('此连接仍被工作区、Agent 或执行记录使用。请先更换对应连接，并等待正在执行的任务清理完成后再删除。',{exact:true}).waitFor();
+  assert.equal(await page.locator('.saved-connection').count(),3);
+  await page.getByRole('button',{name:'取消删除',exact:true}).click();
+  await page.getByRole('button',{name:'删除连接',exact:true}).last().click();
+  await page.getByRole('button',{name:'确认删除',exact:true}).click();
+  await page.getByText('连接已停用，但密钥清理尚未完成。请再次点击“确认删除”重试清理。',{exact:true}).waitFor();
+  await page.waitForFunction(()=>document.querySelectorAll('.saved-connection').length===2);
+  assert.equal(await page.getByRole('button',{name:'确认删除',exact:true}).count(),1,'Pending cleanup must stay retryable after tombstone disappears');
+  await page.getByRole('button',{name:'确认删除',exact:true}).click();
+  await page.getByRole('status').filter({hasText:'已删除连接'}).waitFor();
+  assert.equal(await page.locator('.connection-delete-confirm').count(),0);
+  assert.equal(deletions.length,3);
+  assert.equal(deletions[1].id,deletions[2].id);
+  assert.notEqual(deletions[1].key,deletions[2].key,'Cleanup retry needs a fresh key after acknowledged partial completion');
+  await page.evaluate(()=>window.scrollTo(0,0));
+  await page.screenshot({path:path.join(output,'delete-390.png'),fullPage:true});
+  report.screenshots.push('delete-390.png');
+  report.checks.push('cancelled confirmation makes no DELETE; referenced connection refusal retains all cards; cleanup partial completion remains retryable after list removal; fresh cleanup command; success refreshes and closes confirmation');
+
+  assert.deepEqual(report.errors,[]);
+  report.status='pass';
+} catch(error) { report.status='fail';report.error=error.message;process.exitCode=1; }
+finally {await browser.close();await writeFile(path.join(output,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));}

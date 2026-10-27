@@ -90,4 +90,4 @@ CREATE TRIGGER removal_update_event AFTER UPDATE ON worktree_removals BEGIN
  INSERT INTO workspace_events(workspace_id,type,entity_id,entity_version,occurred_at)
  VALUES(NEW.workspace_id,'worktree.removal',NEW.record_id,NEW.version,NEW.updated_at);
 END;
-INSERT INTO schema_migrations(version,applied_at) VALUES(17,strftime('%Y-%m-%dT%H:%M:%fZ','now'));
+INSERT INTO schema_migrations(version,applied_at) VALUES(19,strftime('%Y-%m-%dT%H:%M:%fZ','now'));

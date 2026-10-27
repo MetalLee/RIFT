@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-26T11:54:13.471Z",
+  "mode": "Real pinned app-server, controlled Responses custom_tool_call exec, no external inference",
+  "payload": "0.164.0",
+  "temporary": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\native-code-mode-rEL1fo",
+  "checks": {
+    "directJsFilesystemDenied": true,
+    "directJsGlobalsUnavailable": true,
+    "customExecSeen": true,
+    "dynamicToolExecuted": true,
+    "nativeShellExecuted": true,
+    "noDisabledHostError": true,
+    "completed": true,
+    "sameBoundaryResumed": true,
+    "nativeCommandRouteUsed": true
+  },
+  "status": "pass",
+  "results": [
+    {
+      "model": "gpt-6.1-sol",
+      "threadId": "01a1780f-a5a5-7b03-9503-84ed7732b84b",
+      "stopReason": "completed",
+      "text": "CODE_MODE_PROBE_DONE",
+      "statusCalls": 1,
+      "outputs": [
+        "[{\"type\":\"input_text\",\"text\":\"Script completed\\nWall time 0.4 seconds\\nOutput:\\n\"},{\"type\":\"input_text\",\"text\":\"{\\\"status\\\":\\\"LOCAL_CODE_MODE_STATUS_OK\\\"}\"},{\"type\":\"input_text\",\"text\":\"{\\\"chunk_id\\\":\\\"848029\\\",\\\"wall_time_seconds\\\":0.1463037,\\\"exit_code\\\":0,\\\"original_token_count\\\":10,\\\"output\\\":\\\"NATIVE_CODE_MODE_SHELL_OK\\\\r\\\\n?? probe.txt\\\\n\\\"}\"}]",
+        "[{\"type\":\"input_text\",\"text\":\"Script completed\\nWall time 0.0 seconds\\nOutput:\\n\"},{\"type\":\"input_text\",\"text\":\"{\\\"probe\\\":\\\"CODE_MODE_GLOBALS\\\",\\\"process\\\":\\\"undefined\\\",\\\"require\\\":\\\"undefined\\\",\\\"fetch\\\":\\\"undefined\\\"}\"},{\"type\":\"input_text\",\"text\":\"DIRECT_FS_DENIED\"}]"
+      ],
+      "execCalls": 2,
+      "nativeCommandRouteUsed": true
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "threadId": "01a1780f-a5a5-7b03-9503-84ed7732b84b",
+      "stopReason": "completed",
+      "text": "CODE_MODE_PROBE_DONE",
+      "statusCalls": 1,
+      "outputs": [
+        "[{\"type\":\"input_text\",\"text\":\"Script completed\\nWall time 0.4 seconds\\nOutput:\\n\"},{\"type\":\"input_text\",\"text\":\"{\\\"status\\\":\\\"LOCAL_CODE_MODE_STATUS_OK\\\"}\"},{\"type\":\"input_text\",\"text\":\"{\\\"chunk_id\\\":\\\"ca294a\\\",\\\"wall_time_seconds\\\":0.1295131,\\\"exit_code\\\":0,\\\"original_token_count\\\":10,\\\"output\\\":\\\"NATIVE_CODE_MODE_SHELL_OK\\\\r\\\\n?? probe.txt\\\\n\\\"}\"}]",
+        "[{\"type\":\"input_text\",\"text\":\"Script completed\\nWall time 0.0 seconds\\nOutput:\\n\"},{\"type\":\"input_text\",\"text\":\"{\\\"probe\\\":\\\"CODE_MODE_GLOBALS\\\",\\\"process\\\":\\\"undefined\\\",\\\"require\\\":\\\"undefined\\\",\\\"fetch\\\":\\\"undefined\\\"}\"},{\"type\":\"input_text\",\"text\":\"DIRECT_FS_DENIED\"}]"
+      ],
+      "execCalls": 2,
+      "nativeCommandRouteUsed": true
+    },
+    {
+      "model": "gpt-6-astra",
+      "threadId": "01a1780f-b02c-7d70-9df7-34de192471fd",
+      "stopReason": "completed",
+      "text": "CODE_MODE_PROBE_DONE",
+      "statusCalls": 1,
+      "outputs": [
+        "[{\"type\":\"input_text\",\"text\":\"Script completed\\nWall time 0.4 seconds\\nOutput:\\n\"},{\"type\":\"input_text\",\"text\":\"{\\\"status\\\":\\\"LOCAL_CODE_MODE_STATUS_OK\\\"}\"},{\"type\":\"input_text\",\"text\":\"{\\\"chunk_id\\\":\\\"7e708a\\\",\\\"wall_time_seconds\\\":0.1466641,\\\"exit_code\\\":0,\\\"original_token_count\\\":10,\\\"output\\\":\\\"NATIVE_CODE_MODE_SHELL_OK\\\\r\\\\n?? probe.txt\\\\n\\\"}\"}]",
+        "[{\"type\":\"input_text\",\"text\":\"Script completed\\nWall time 0.0 seconds\\nOutput:\\n\"},{\"type\":\"input_text\",\"text\":\"{\\\"probe\\\":\\\"CODE_MODE_GLOBALS\\\",\\\"process\\\":\\\"undefined\\\",\\\"require\\\":\\\"undefined\\\",\\\"fetch\\\":\\\"undefined\\\"}\"},{\"type\":\"input_text\",\"text\":\"DIRECT_FS_DENIED\"}]"
+      ],
+      "execCalls": 2,
+      "nativeCommandRouteUsed": true
+    },
+    {
+      "model": "gpt-6-astra",
+      "threadId": "01a1780f-b02c-7d70-9df7-34de192471fd",
+      "stopReason": "completed",
+      "text": "CODE_MODE_PROBE_DONE",
+      "statusCalls": 1,
+      "outputs": [
+        "[{\"type\":\"input_text\",\"text\":\"Script completed\\nWall time 0.4 seconds\\nOutput:\\n\"},{\"type\":\"input_text\",\"text\":\"{\\\"status\\\":\\\"LOCAL_CODE_MODE_STATUS_OK\\\"}\"},{\"type\":\"input_text\",\"text\":\"{\\\"chunk_id\\\":\\\"7a0138\\\",\\\"wall_time_seconds\\\":0.1312925,\\\"exit_code\\\":0,\\\"original_token_count\\\":10,\\\"output\\\":\\\"NATIVE_CODE_MODE_SHELL_OK\\\\r\\\\n?? probe.txt\\\\n\\\"}\"}]",
+        "[{\"type\":\"input_text\",\"text\":\"Script completed\\nWall time 0.0 seconds\\nOutput:\\n\"},{\"type\":\"input_text\",\"text\":\"{\\\"probe\\\":\\\"CODE_MODE_GLOBALS\\\",\\\"process\\\":\\\"undefined\\\",\\\"require\\\":\\\"undefined\\\",\\\"fetch\\\":\\\"undefined\\\"}\"},{\"type\":\"input_text\",\"text\":\"DIRECT_FS_DENIED\"}]"
+      ],
+      "execCalls": 2,
+      "nativeCommandRouteUsed": true
+    }
+  ],
+  "httpCalls": 12
+}

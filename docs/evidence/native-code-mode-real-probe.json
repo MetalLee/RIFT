@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-26T11:52:05.333Z",
+  "mode": "Actual Astra high, temporary repository, prescribed read-only functions.exec commands; no user chat or remote writes",
+  "payload": "0.164.0",
+  "temporary": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\native-code-mode-ZrLlsp",
+  "checks": {
+    "directJsFilesystemDenied": true,
+    "directJsGlobalsUnavailable": true,
+    "customExecSeen": true,
+    "dynamicToolExecuted": true,
+    "nativeShellExecuted": true,
+    "noDisabledHostError": true,
+    "completed": true,
+    "sameBoundaryResumed": true,
+    "nativeCommandRouteUsed": true
+  },
+  "status": "pass",
+  "results": [
+    {
+      "model": "gpt-6-astra",
+      "threadId": "01a1780d-b144-7cb3-830d-aa09e774406f",
+      "stopReason": "completed",
+      "text": "- Markers: `LOCAL_CODE_MODE_STATUS_OK`, `NATIVE_CODE_MODE_SHELL_OK`\n- Git status: `?? probe.txt` (untracked)\n- Isolation: `process`, `require`, and `fetch` are `undefined`; `DIRECT_FS_DENIED`.",
+      "statusCalls": 1,
+      "outputs": [
+        "[{\"type\":\"input_text\",\"text\":\"Script completed\\nWall time 0.6 seconds\\nOutput:\\n\"},{\"type\":\"input_text\",\"text\":\"{\\\"status\\\":\\\"LOCAL_CODE_MODE_STATUS_OK\\\"}\"},{\"type\":\"input_text\",\"text\":\"{\\\"chunk_id\\\":\\\"48afc4\\\",\\\"wall_time_seconds\\\":0.1968348,\\\"exit_code\\\":0,\\\"original_token_count\\\":10,\\\"output\\\":\\\"NATIVE_CODE_MODE_SHELL_OK\\\\r\\\\n?? probe.txt\\\\n\\\"}\"}]",
+        "[{\"type\":\"input_text\",\"text\":\"Script completed\\nWall time 0.0 seconds\\nOutput:\\n\"},{\"type\":\"input_text\",\"text\":\"{\\\"probe\\\":\\\"CODE_MODE_GLOBALS\\\",\\\"process\\\":\\\"undefined\\\",\\\"require\\\":\\\"undefined\\\",\\\"fetch\\\":\\\"undefined\\\"}\"},{\"type\":\"input_text\",\"text\":\"DIRECT_FS_DENIED\"}]"
+      ],
+      "execCalls": 2,
+      "nativeCommandRouteUsed": true,
+      "callInputs": [
+        "text(await tools.rift_probe({})); text(await tools.exec_command({\"cmd\":\"Write-Output 'NATIVE_CODE_MODE_SHELL_OK'; git status --porcelain\",\"max_output_tokens\":1000}));\n",
+        "text({probe:'CODE_MODE_GLOBALS',process:typeof process,require:typeof require,fetch:typeof globalThis.fetch}); try { await import('node:fs'); text('DIRECT_FS_AVAILABLE'); } catch (error) { text('DIRECT_FS_DENIED'); }\n"
+      ]
+    },
+    {
+      "model": "gpt-6-astra",
+      "threadId": "01a1780d-b144-7cb3-830d-aa09e774406f",
+      "stopReason": "completed",
+      "text": "- Markers: `LOCAL_CODE_MODE_STATUS_OK`, `NATIVE_CODE_MODE_SHELL_OK`\n- Git status: `?? probe.txt` (untracked)\n- Isolation: `process`, `require`, and `fetch` are `undefined`; `DIRECT_FS_DENIED`.",
+      "statusCalls": 1,
+      "outputs": [
+        "[{\"type\":\"input_text\",\"text\":\"Script completed\\nWall time 0.5 seconds\\nOutput:\\n\"},{\"type\":\"input_text\",\"text\":\"{\\\"status\\\":\\\"LOCAL_CODE_MODE_STATUS_OK\\\"}\"},{\"type\":\"input_text\",\"text\":\"{\\\"chunk_id\\\":\\\"7b4779\\\",\\\"wall_time_seconds\\\":0.1807832,\\\"exit_code\\\":0,\\\"original_token_count\\\":10,\\\"output\\\":\\\"NATIVE_CODE_MODE_SHELL_OK\\\\r\\\\n?? probe.txt\\\\n\\\"}\"}]",
+        "[{\"type\":\"input_text\",\"text\":\"Script completed\\nWall time 0.0 seconds\\nOutput:\\n\"},{\"type\":\"input_text\",\"text\":\"{\\\"probe\\\":\\\"CODE_MODE_GLOBALS\\\",\\\"process\\\":\\\"undefined\\\",\\\"require\\\":\\\"undefined\\\",\\\"fetch\\\":\\\"undefined\\\"}\"},{\"type\":\"input_text\",\"text\":\"DIRECT_FS_DENIED\"}]"
+      ],
+      "execCalls": 2,
+      "nativeCommandRouteUsed": true,
+      "callInputs": [
+        "text(await tools.rift_probe({})); text(await tools.exec_command({\"cmd\":\"Write-Output 'NATIVE_CODE_MODE_SHELL_OK'; git status --porcelain\",\"max_output_tokens\":1000}));\n",
+        "text({probe:'CODE_MODE_GLOBALS',process:typeof process,require:typeof require,fetch:typeof globalThis.fetch}); try { await import('node:fs'); text('DIRECT_FS_AVAILABLE'); } catch (error) { text('DIRECT_FS_DENIED'); }\n"
+      ]
+    }
+  ],
+  "httpCalls": 0,
+  "transcriptEvidence": {
+    "source": "Own newly created probe thread; response_item custom_tool_call/custom_tool_call_output",
+    "threadId": "01a1780d-b144-7cb3-830d-aa09e774406f",
+    "customExecCalls": 4
+  }
+}

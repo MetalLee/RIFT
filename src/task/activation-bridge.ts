@@ -49,8 +49,10 @@ export class DshActivationBridge implements ActivationBridge {
     // The manager supports a reserved identity for local DSH children. Install
     // only into that exact child's scope before its first prompt is released.
     const childId=provider.prepareContinuable&&(restrictInherited||scopedTools.length)?SessionId(`rift-run-${input.run.id}`):undefined;
+    let child:Agent|undefined;
     const removeTools=childId?this.ctx.on('agent/created',({agent})=>{
       if(agent.id!==childId)return;
+      child=agent;
       if(restrictInherited)agent.ctx.tools.restrict({allow:[]});
       for(const tool of scopedTools)agent.ctx.tools.register({name:tool.name,description:tool.description,parameters:tool.inputSchema as ToolDefinition['parameters'],output:{schema:{},render:(_args,value)=>[{type:'text',text:redact(JSON.stringify(value))}]},execute:async(args,execution)=>{if(execution.agent!==agent||this.ctx.agents.get(agent.id)!==agent)throw new RiftError('UNAUTHORIZED','Only this live Run may use its scoped tools.');input.signal.throwIfAborted();execution.signal.throwIfAborted();return tool.execute(args,execution.signal);}});
       return undefined;
@@ -66,10 +68,14 @@ export class DshActivationBridge implements ActivationBridge {
     });}catch(error){await shell?.dispose();throw error;}finally{removeTools?.();}
     return {
       childId: activation.childId,
-      result: activation.result.then(result => ({
-        stopReason: result.stopReason,
-        text: result.output.filter(block => block.type === 'text').map(block => block.text).join('\n'),
-      })),
+      result: activation.result.then(result => {
+        // Local DSH activations omit the committed turn failure from their
+        // result. Read only the owned child's terminal event, never its prompt.
+        const terminal=child?.session?.snapshotEvents().filter(event=>event.type==='turn/end').at(-1);
+        const reason=terminal?.type==='turn/end'?terminal.data.reason:undefined;
+        const diagnostic=result.diagnostic??(reason?.kind==='error'?reason.error.message:undefined);
+        return {stopReason:result.stopReason,text:result.output.filter(block=>block.type==='text').map(block=>block.text).join('\n'),...(diagnostic?{diagnostic:redact(diagnostic,4096)}:{})};
+      }),
       dispose: async () => { try { await shell?.dispose(); } finally { await activation.dispose(); } },
     };
   }

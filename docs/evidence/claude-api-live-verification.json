@@ -1,0 +1,25 @@
+{
+  "attempts": [
+    {
+      "date": "2026-10-26T12:33:21.543Z",
+      "httpStatus": 200,
+      "passed": false,
+      "connectionId": "connection-90daa459-84c4-4a7a-b2db-ca58f767192f",
+      "endpoint": "https://newapi.deepwisdom.ai/v1",
+      "model": "claude-opus-5-5",
+      "verificationStatus": "failed",
+      "error": "Provider finish_reason: content_filter"
+    },
+    {
+      "date": "2026-10-26T12:40:58.555Z",
+      "httpStatus": 200,
+      "passed": false,
+      "connectionId": "connection-90daa459-84c4-4a7a-b2db-ca58f767192f",
+      "endpoint": "https://newapi.deepwisdom.ai/v1",
+      "model": "claude-opus-5-5",
+      "verificationStatus": "failed",
+      "error": "Provider finish_reason: content_filter"
+    }
+  ],
+  "passed": false
+}
