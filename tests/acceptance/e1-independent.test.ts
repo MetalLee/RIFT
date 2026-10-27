@@ -161,7 +161,7 @@ describe('E1.2 independent real filesystem lock and host identity acceptance', (
     const workflows = ['a', 'b'].map(workspaceId => host.coordinator.createWorkflow({ workspaceId, goal: 'independent', integrationRef: `refs/heads/rift/${workspaceId}`, baseCommit: sha }));
     const leads = await Promise.all(workflows.map(workflow => host.ensureLead(workflow.id))); expect(new Set(leads.map(lead => lead.leadSessionId)).size).toBe(2);
     await host.handle('POST', `/v1/workflows/${workflows[0]!.id}/cancel`, {}, 'cancel-a');
-    expect(handles[0]!.agent.cancel).toHaveBeenCalledTimes(1); expect(handles[1]!.agent.cancel).not.toHaveBeenCalled(); expect(host.store.workflow(workflows[1]!.id).status).toBe('planning');
+    expect(handles.find(handle=>handle.agent.id===leads[0]!.leadSessionId)!.agent.cancel).toHaveBeenCalledTimes(1); expect(handles.find(handle=>handle.agent.id===leads[1]!.leadSessionId)!.agent.cancel).not.toHaveBeenCalled(); expect(host.store.workflow(workflows[1]!.id).status).toBe('planning');
     expect(host.store.workflow(workflows[1]!.id).leadSessionId).toBe(leads[1]!.leadSessionId);
   });
 });

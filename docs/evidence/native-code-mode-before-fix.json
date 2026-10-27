@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-26T11:50:42.657Z",
+  "mode": "Real pinned app-server, controlled Responses custom_tool_call exec, no external inference",
+  "payload": "0.164.0",
+  "temporary": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\native-code-mode-cQNmiF",
+  "checks": {
+    "customExecSeen": true,
+    "dynamicToolExecuted": false,
+    "nativeShellExecuted": false,
+    "noDisabledHostError": false,
+    "completed": true,
+    "sameBoundaryResumed": true,
+    "nativeCommandDeclared": true
+  },
+  "status": "fail",
+  "results": [
+    {
+      "model": "gpt-6.1-sol",
+      "threadId": "01a1780c-6e34-77e2-b9bb-fd19bcaca17b",
+      "stopReason": "completed",
+      "text": "CODE_MODE_PROBE_DONE",
+      "statusCalls": 0,
+      "outputs": [
+        "code-mode host is disabled"
+      ],
+      "execCalls": 1,
+      "requestDeclaration": true
+    },
+    {
+      "model": "gpt-6.1-sol",
+      "threadId": "01a1780c-6e34-77e2-b9bb-fd19bcaca17b",
+      "stopReason": "completed",
+      "text": "CODE_MODE_PROBE_DONE",
+      "statusCalls": 0,
+      "outputs": [
+        "code-mode host is disabled"
+      ],
+      "execCalls": 3,
+      "requestDeclaration": true
+    },
+    {
+      "model": "gpt-6-astra",
+      "threadId": "01a1780c-7433-7cd2-a8e7-bf42cacfc667",
+      "stopReason": "completed",
+      "text": "CODE_MODE_PROBE_DONE",
+      "statusCalls": 0,
+      "outputs": [
+        "code-mode host is disabled"
+      ],
+      "execCalls": 1,
+      "requestDeclaration": true
+    },
+    {
+      "model": "gpt-6-astra",
+      "threadId": "01a1780c-7433-7cd2-a8e7-bf42cacfc667",
+      "stopReason": "completed",
+      "text": "CODE_MODE_PROBE_DONE",
+      "statusCalls": 0,
+      "outputs": [
+        "code-mode host is disabled"
+      ],
+      "execCalls": 3,
+      "requestDeclaration": true
+    }
+  ],
+  "httpCalls": 8
+}

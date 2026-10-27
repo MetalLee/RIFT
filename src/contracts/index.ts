@@ -17,7 +17,7 @@ export interface TaskEvent { eventSeq: number; workflowId: string; taskId: strin
 export interface PlanTask { id?: string; repositoryId?: string; kind: 'change' | 'analysis'; title: string; instructions: string; expectedPaths: string[]; acceptanceCriteria?: string[]; roleName?:string; dependsOn?: string[]; priority?:number; analysisItems?:{id:string;prompt:string}[] }
 export interface DevelopmentResult { schemaVersion: 1; taskId: string; runId: string; outcome: 'completed' | 'blocked'; summary: string; changedPaths: string[]; checksClaimed: string[]; blockingReasons: string[] }
 export interface ReviewResult { schemaVersion: 1; taskId: string; runId: string; verdict: 'approve' | 'changes_requested' | 'blocked'; reviewedCommit: string; findings: { severity: string; file: string; line: number; reason: string; suggestion: string }[] }
-export interface ActivationResult { stopReason: string; text: string; dshRunId?: string }
+export interface ActivationResult { stopReason: string; text: string; diagnostic?: string; dshRunId?: string }
 export interface ActivationHandle { childId: string; result: Promise<ActivationResult>; dispose(): Promise<void> }
 /** Owns only DSH activation handles. A live parent is supplied by the host bridge. */
 export interface ActivationBridge { start(input: { run: Run; task: Task; role: Role; cwd: string; repositoryAccess?: import('../agent/repository-access.js').RepositoryAccess; prompt: string; signal: AbortSignal; tools?: import('../agent/runtime-types.js').RuntimeTool[]; onAccepted?():void }): Promise<ActivationHandle> }

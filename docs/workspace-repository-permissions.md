@@ -1,5 +1,7 @@
 # 工作区仓库执行权限
 
+当前 Codex 配置已按用户要求调整：开发、返工和关联仓库聊天默认 `danger-full-access`，不再用仓库集合限制操作系统访问；Host 的仓库/cwd 归属校验及验收门禁保留。正式审查、分析和无仓库聊天维持显式只读。权限版本为 `workspace-repositories-v5-full-access`。下文的 workspace-write 系统隔离与旧探针结果属于此前配置，不能作为当前 Codex 开发隔离保证；DSH 命令工厂的权限策略未随本次修改改变。
+
 更新：2026-10-26。本次实现把工作区已经关联的全部仓库交给主代理和成员的普通讨论执行，也交给正式开发 Run。权限由 Host 生成，不依赖模型在消息或工具参数里声明路径。本次用户选择先完成本地提交，稍后再登录 GitHub；不推送、不创建远程 PR。
 
 ## 授权边界
@@ -28,7 +30,7 @@ Codex 使用锁定的 0.164.0 app-server 和系统沙箱。本地 DSH 普通讨�
 
 ## 原生会话变化
 
-配置指纹包含权限版本 `workspace-repositories-v2`、仓库集合、当前 cwd、执行模式以及既有模型、提示词、工具和 runtime home 配置。同一归属与相同边界继续复用 thread；仓库增删、cwd/worktree 或权限版本变化时使用不同 thread。切回已有的完全相同指纹可恢复对应的旧 thread。
+配置指纹包含权限版本 `workspace-repositories-v3`、仓库集合、当前 cwd、执行模式以及既有模型、提示词、工具和 runtime home 配置。同一归属与相同边界继续复用 thread；仓库增删、cwd/worktree 或权限版本变化时使用不同 thread。切回已有的完全相同指纹可恢复对应的旧 thread。
 
 这明确调整了旧 C-A15 中“同 Task 跨 attempt worktree 仍续原 thread”的行为：新 worktree 不再携带旧原生目录权限和完整私有历史。Host 通过 `previousResults`、`sourceEvidence`、当前 task envelope、公共消息和 inbox 恢复必要上下文，不能声称旧私有推理历史无损迁移。角色归属、未知执行不自动重播、消息 receipts 和清理门禁保持有效。
 
@@ -44,4 +46,14 @@ Host 的 legacy Lead 入口也使用相同的关联仓库命令 scope。部署�
 
 ## 最终集成与部署
 
-完整回归为 330 项通过、1 项平台跳过、0 失败；类型检查与生产构建通过。Host 已在无活动执行时备份并重启（PID 24588），HTTP/doctor 返回 200，数据库完整性 ok、外键错误为 0，默认新模式继续开启。见 [最终集成证据](evidence/repository-permissions-final-validation.json) 与 [完整测试](evidence/repository-permissions-tests.json)。GitHub 登录按用户选择延后，本次只提交本地 main 全部变更。
+### Astra 工具包装入口修复
+
+2026-10-26 19:45（香港时间）的真实主对话虽然已获得仓库权限，但两次 `exec` 包装调用均返回 `code-mode host is disabled`，未进入 Git 或 RIFT 工具。此错误来自原生运行时的工具开关，不是 workspace Host 未运行。之前直接发送 `exec_command` 的受控探针未覆盖 Astra 实际选择的包装入口。
+
+普通仓库对话和开发执行现在同时启用 `code_mode` 与 `code_mode_host`，仍沿用原有仓库沙箱及工具隔离；正式审查、分析和无仓库讨论保持禁用。权限版本从 v2 更新为 v3，下一轮使用新配置的原生会话，公共消息仍由 Host 恢复。该修复不自动重放已经结束的合并或推送请求。
+
+修复后真实 Astra high 连续两轮通过 `exec` 调用 Host 工具和原生 `git status`，回调计数及原生 tool output 均可核验；直接 JS 的 `process`、`require`、`fetch` 不可用，`node:fs` 导入被拒。见 [真实模型证据](evidence/native-code-mode-real-probe.json)、[受控包装协议探针](evidence/native-code-mode-controlled-probe.json)及[独立检视](evidence/native-wrapper-independent-review.json)。完整回归 337 通过、1 平台跳过、0 失败，类型检查与构建通过；Host 已备份并重启至 PID 40288，HTTP/doctor 200、数据库检查通过。见 [本次部署记录](evidence/native-wrapper-fix-final-validation.json)。
+
+另用真实二进制对正式 review/analysis 发送恶意 `exec` 包装调用，8 项独立负例检查通过：调用均被拒、Host 回调与本机 HTTP 触达为 0、无文件副作用，正常 `rift_read_file` 仍可用。见 [正式只读包装隔离证据](evidence/native-code-mode-readonly-independent-probe.json)。
+
+修复前仓库权限版本的完整回归为 330 项通过、1 项平台跳过、0 失败；类型检查与生产构建通过。Host 已在无活动执行时备份并重启（PID 24588），HTTP/doctor 返回 200，数据库完整性 ok、外键错误为 0，默认新模式继续开启。见 [最终集成证据](evidence/repository-permissions-final-validation.json) 与 [完整测试](evidence/repository-permissions-tests.json)。GitHub 登录按用户选择延后，本次只提交本地 main 全部变更。

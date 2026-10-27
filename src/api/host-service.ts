@@ -21,6 +21,7 @@ import * as schemas from './schemas.js';
 import { publicError, redact } from './security.js';
 import type { ApiHandler } from './local-api.js';
 import { workspaceDetail, workspaceList, workspaceTasks } from './workspace-views.js';
+import { taskView } from './task-diagnostics.js';
 import { ChatService, sendMessageSchema } from '../chat/service.js';
 import { DshChatRuntime } from '../chat/dsh-runtime.js';
 import type { AgentRuntime, RuntimeTool } from '../agent/runtime-types.js';
@@ -32,7 +33,7 @@ import { readWorkspaceEvents } from '../events/workspace-events.js';
 import { NativeCodexRuntime, nativeCodexPackage, VERIFIED_NATIVE_CODEX_MODELS } from '../agent/native-codex.js';
 import { RepositoryService } from '../project/repositories.js';
 import { localBootIdentity } from '../agent/boot-identity.js';
-import { ApiConnectionService } from '../agent/connections.js';
+import { ApiConnectionService, registerConnectionCredential } from '../agent/connections.js';
 import type { ActivationBridge } from '../contracts/index.js';
 import { nativeSession, sessionCallbacks } from '../agent/native-sessions.js';
 import { bindingConnection } from '../agent/execution-connection.js';
@@ -276,11 +277,12 @@ export class RiftHostService implements ApiHandler {
     const workflow = this.store.workflow(workflowId);
     if (this.closing || ['completed','cancelled','failed'].includes(workflow.status)) throw new RiftError('INVALID_STATE', 'Workflow no longer accepts Lead input.');
     const leadRole = this.store.require<{prompt:string}>("SELECT prompt FROM roles WHERE workspace_id=? AND purpose='lead' AND enabled=1", workflow.workspaceId);
-    const prompt = `You are the RIFT Lead for workflow ${workflowId}. Goal: ${workflow.goal}\nUse RIFT tools for durable coordination and the repository shell for user-requested Git commits and authenticated PR commands. First inspect status. Submit a small explicit DAG and expected write paths. Read configured roles and global limits from status; dispatch independent tasks up to the available developer budget BEFORE waiting and queue additional requested tasks. Use plan_replan with current versions to update unstarted task dependencies or priority. Batch analysis may use analysisItems; write tasks must remain registered change tasks. Use returned versions and request IDs. Wait for any results using the cursor, then handle blocked tasks or retry with context (maximum two repairs). Development automatically queues integration. All candidate checks and reviews are enforced by RIFT. Never finish until workflow_finish accepts. Do not invent execution evidence. If blocked by credentials or unknown cleanup, explain the blocker and stop.\n${instruction ?? ''}`;
+    const prompt = `You are the RIFT Lead for workflow ${workflowId}. Goal: ${workflow.goal}\nUse RIFT tools for durable coordination and the repository shell for user-requested Git commits and authenticated PR commands. First inspect status. Submit a small explicit DAG and expected write paths. Read configured roles and global limits from status; dispatch independent tasks up to the available developer budget BEFORE waiting and queue additional requested tasks. Use plan_replan with current versions to update unstarted task dependencies or priority. Batch analysis may use analysisItems; write tasks must remain registered change tasks. Use returned versions and request IDs. Wait for any results using the cursor, then handle blocked tasks or retry with context (maximum two repairs). Development automatically queues integration. All candidate checks and reviews are enforced by RIFT. Never finish until workflow_finish accepts. Do not invent execution evidence. Connection verification failure is request-specific and does not authorize changing any member runtime, provider or model; preserve configured selections unless the user explicitly requests a change. If blocked by credentials or unknown cleanup, explain the blocker and stop.\n${instruction ?? ''}`;
     handle.agent.followup({ id: MessageId(randomUUID()), role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: `${leadRole.prompt}\n${prompt}` }] });
     return attached;
   }
   async handle(method: string, pathname: string, body: unknown, key?: string): Promise<unknown> {
+    if(method==='POST'&&pathname==='/ui-api/v1/connections')registerConnectionCredential(body);
     if (this.closing) throw new RiftError('HOST_CLOSING','Host is closing.');
     if (method === 'GET') return this.route(method, pathname, body);
     if (!key) throw new RiftError('IDEMPOTENCY_KEY_REQUIRED','Write requests require a key.');
@@ -310,6 +312,13 @@ export class RiftHostService implements ApiHandler {
     const url = new URL(pathname, 'http://127.0.0.1'); pathname = url.pathname;
     if(method==='POST'&&pathname==='/ui-api/v1/connections')return this.connections.create(body);
     const connectionVerify=/^\/ui-api\/v1\/connections\/([^/]+)\/verify$/.exec(pathname);
+    const connectionDelete=/^\/ui-api\/v1\/connections\/([^/]+)$/.exec(pathname);
+    if(method==='DELETE'&&connectionDelete){
+      z.object({}).strict().parse(body);const connectionId=decodeURIComponent(connectionDelete[1]!);
+      const saved=this.store.get<{provider:string;deletedAt:string|null}>('SELECT provider,deleted_at FROM api_connections WHERE id=?',connectionId);
+      invariant(!saved||saved.deletedAt||saved.provider!==this.config.leadProvider,'CONNECTION_IN_USE','The Host default Lead still selects this API connection. Choose another default before deleting it.');
+      return this.connections.remove(connectionId);
+    }
     if(method==='POST'&&connectionVerify){z.object({}).strict().parse(body);return this.connections.verify(decodeURIComponent(connectionVerify[1]!));}
     if (method === 'GET' && pathname === '/ui-api/v1/connections') return { savedConnections: this.connections.list(), configuration: this.connections.configurationCapability(), executionProviders: this.ctx.subagents.list().map(name => ({ name, capabilities: this.ctx.subagents.getProvider(name)?.capabilities ?? {}, authentication: 'not-verified' })), connections: [...(this.ctx.llm?.listProviders() ?? []).map(provider => ({ id: `dsh:${provider.id}`, runtime: 'dsh', provider: provider.id, available: true, authentication: 'not-verified', modelSelection: 'explicit', models: [], executionAvailable: Boolean(this.ctx.subagents.getProvider('spawn')?.capabilities.agentOptions), tools: true, streaming: false, output: 'buffered-for-redaction' })), { id: 'codex', runtime: 'codex', available: this.chatRuntimes.has('codex'), authentication: 'not-verified', modelSelection: 'verified-only', models: this.runtimeModels.get('codex') ?? [], executionAvailable: VERIFIED_NATIVE_CODEX_MODELS.every(model => Boolean(this.ctx.subagents.getProvider(`rift-native-codex-${model}`))), disabledReason: this.chatRuntimes.has('codex') ? null : this.nativeRuntimeUnavailable, tools: true, streaming: false, output: 'buffered-for-redaction' }] };
     if (method === 'GET' && pathname === '/ui-api/v1/workspaces') return workspaceList(this.store);
@@ -353,8 +362,14 @@ export class RiftHostService implements ApiHandler {
       const workspaceId = decodeURIComponent(repositoryRoute[1]!), repositoryId = repositoryRoute[2] ? decodeURIComponent(repositoryRoute[2]) : undefined;
       if (!repositoryId && method === 'GET') return { repositories: this.repositories.list(workspaceId) };
       if (!repositoryId && method === 'POST') return this.repositories.connect(workspaceId, z.object({ repositoryPath: z.string().min(1), baseRef: z.string().min(1).default('HEAD'), expectedVersion: z.number().int().nonnegative() }).strict().parse(body));
-      if (repositoryId && repositoryRoute[3] === 'worktrees' && method === 'GET') return { worktrees: this.repositories.worktrees(workspaceId, repositoryId), discovered: await this.repositories.discover(workspaceId, repositoryId) };
+      if (repositoryId && repositoryRoute[3] === 'worktrees' && method === 'GET') return { worktrees: this.repositories.worktrees(workspaceId, repositoryId), discovered: await this.repositories.discover(workspaceId, repositoryId), removals: await this.repositories.removals.list(workspaceId, repositoryId) };
       if (repositoryId && repositoryRoute[3] === 'worktrees' && method === 'POST') return this.repositories.createWorktree(workspaceId, repositoryId, z.object({ origin: z.enum(['managed','external']), path: z.string().min(1).optional(), baseRef: z.string().min(1).optional(), branch: z.string().min(1).max(200).optional() }).strict().parse(body));
+    }
+    const removalRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/worktree-removals\/(user|task|candidate|review)\/([^/]+)\/(delete|reconcile)$/.exec(pathname);
+    if (removalRoute && method === 'POST') {
+      const workspaceId = decodeURIComponent(removalRoute[1]!), kind = removalRoute[2] as import('../project/worktree-removals.js').RemovalKind, recordId = decodeURIComponent(removalRoute[3]!);
+      if (removalRoute[4] === 'reconcile') return this.repositories.removals.reconcile(workspaceId, kind, recordId, z.object({ expectedVersion: z.string().min(1) }).strict().parse(body).expectedVersion);
+      return this.repositories.removals.remove(workspaceId, kind, recordId, z.object({ expectedVersion: z.string().min(1), confirmDelete: z.literal(true) }).strict().parse(body));
     }
     const worktreeRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/worktrees\/([^/]+)\/(archive|detach|takeover|reconcile)$/.exec(pathname);
     if (worktreeRoute && method === 'POST') {
@@ -370,9 +385,15 @@ export class RiftHostService implements ApiHandler {
     if(taskRoute){
       const workspaceId=decodeURIComponent(taskRoute[1]!),taskId=decodeURIComponent(taskRoute[2]!),task=this.store.task(taskId);
       invariant(this.store.workflow(task.workflowId).workspaceId===workspaceId,'NOT_FOUND','Task does not belong to this workspace.');
-      if(method==='GET'&&!taskRoute[3])return{...task,dependsOn:this.store.all<{dependsOnTaskId:string}>('SELECT depends_on_task_id FROM task_dependencies WHERE task_id=? ORDER BY depends_on_task_id',task.id).map(row=>row.dependsOnTaskId)};
+      if(method==='GET'&&!taskRoute[3])return taskView(this.store,task);
       if(method==='POST'&&taskRoute[3]==='retry'){
         const workflow=this.store.workflow(task.workflowId);if(workflow.baseCommit)await this.ensureLead(workflow.id);
+        const latest=this.store.get<import('../contracts/index.js').Run>('SELECT * FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1',taskId);
+        if(task.status==='blocked'&&task.sourceHead&&latest?.purpose==='review'&&['failed','interrupted'].includes(latest.status)){
+          const input=z.object({expectedVersion:z.number().int().nonnegative(),reason:z.string().min(1)}).strict().parse(body);
+          const request=this.coordinator.requestIntegration({taskId,sourceHead:task.sourceHead,expectedVersion:input.expectedVersion,idempotencyKey:`browser-review-retry:${taskId}:${input.expectedVersion}`});
+          return{task:this.store.task(taskId),request};
+        }
         const retried=await this.route('POST',`/v1/tasks/${encodeURIComponent(taskId)}/retry`,body) as import('../contracts/index.js').Task;
         const request=this.coordinator.dispatch({taskId,expectedVersion:retried.version,idempotencyKey:`browser-retry:${taskId}:${retried.attempt}`});
         return{task:this.store.task(taskId),request};
@@ -475,7 +496,11 @@ export class RiftHostService implements ApiHandler {
         invariant(!this.store.get("SELECT id FROM agent_turns WHERE workspace_id=? AND status IN ('queued','running','stopping')", id) && !this.store.get('SELECT id FROM execution_leases WHERE workspace_id=? AND released_at IS NULL', id), 'WORKSPACE_ACTIVE', 'Finish or stop queued discussions and confirm all execution cleanup before archiving.');
         if (this.store.get("SELECT id FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','cancelled','failed')",id)) throw new RiftError('WORKSPACE_ACTIVE','Finish or cancel the active workflow first.');
         const trees=this.store.all<Worktree>('SELECT w.* FROM worktrees w JOIN tasks t ON t.id=w.task_id JOIN workflows f ON f.id=t.workflow_id WHERE f.workspace_id=?',id);
-        for(const worktree of trees) {const unknown=Boolean(this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',worktree.taskId));const task=this.store.task(worktree.taskId),repository=task.repositoryId?this.repositories.get(id,task.repositoryId):undefined;await this.git.archiveWorktree({workspace:repository?{...workspace,repositoryPath:repository.canonicalPath,commonGitDir:repository.commonGitDir,baseRef:repository.baseRef}:workspace,worktree,active:unknown,cleanupConfirmed:!unknown,artifactsSaved:true});}
+        for(const worktree of trees) {
+          if (worktree.status === 'archived') continue;
+          const expectedVersion = await this.repositories.removals.versionFor(id, 'task', worktree.id);
+          await this.repositories.removals.remove(id, 'task', worktree.id, { expectedVersion, confirmDelete: true });
+        }
         this.store.exec('UPDATE workspaces SET status=? WHERE id=?','archived',id); return this.store.workspace(id);
       }
     }

@@ -271,3 +271,13 @@ pnpm poc:tools       # Lead 工具作用域探针，不调用模型
 - [Codex 开工提示词](docs/codex-kickoff.md)与[原方案对齐记录](docs/source-alignment.md)。
 
 当前计划修订仅追加任务。高级重规划、多工作区并发和更多 Developer 属于后续扩展范围。
+
+## 安全删除 Worktree
+
+在「仓库与工作树」选择 **删除 Worktree…**，核对确认框中的完整路径后再删除。此操作移除受管磁盘目录，但保留分支、提交、任务、运行、集成、检查与审查记录；无分支的候选提交也由 `refs/rift/deleted-worktrees/` 保持可达。外部目录只解除关联，主仓库不可删除。
+
+任务、候选构建目录和审查目录仅在任务及流程终结、不再用于执行或恢复时开放删除。Host 在 Git 元数据锁内重新核对归属、管理路径和内容，拒绝 dirty、untracked、ignored、隐藏的索引变更、未结束的 Git 操作、执行租约、排队操作及未确认清理。不使用 `--force` 或递归删除兜底。
+
+失败时保留目录、错误及可重试记录，刷新后须重新确认。超时或 Host 中断不会自动重试；「核对删除结果与清理证据」要求已确认的进程退出凭据，或同一机器真实的系统重启证明（仅重启 Host 不算）。目录与 Git 注册不一致时仍保留现场。
+
+浏览器 Host API 以记录 ID 定位：`POST /ui-api/v1/workspaces/:workspaceId/worktree-removals/:kind/:recordId/delete`（`kind=user|task|candidate|review`），请求包含列表返回的不透明 `expectedVersion` 和 `confirmDelete: true`，不接受目标路径。对应 `/reconcile` 只接受 `expectedVersion`；历史 `/worktrees/:id/archive` 入口共用相同安全检查。

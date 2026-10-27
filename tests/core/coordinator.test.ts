@@ -28,6 +28,26 @@ function fixture(options:{failCleanup?:boolean;neverCleanup?:boolean;cleanupTime
   return{store,projects,workspace,workflow,coordinator,calls,git,plan,dispatch,complete};
 }
 describe('persistent task coordinator',()=>{
+  it('retries an infrastructure-failed review with the same source and attempt, without dispatching development',async()=>{
+    const f=fixture();f.plan([{id:'a',kind:'change'}]);f.dispatch('a');await tick();f.complete(0);await tick();
+    f.calls[1]!.result.resolve({stopReason:'error',text:'',diagnostic:'MISSING_CREDENTIAL: saved reviewer credential unavailable'});await tick();
+    const task=f.store.task('a');expect(task.status).toBe('blocked');expect(task.blockingReason).toContain('MISSING_CREDENTIAL');
+    expect(()=>f.coordinator.requestIntegration({taskId:'a',sourceHead:'c'.repeat(40),expectedVersion:task.version,idempotencyKey:'wrong-source'})).toThrow();
+    f.store.exec("UPDATE runs SET cleanup_status='unknown' WHERE id=?",f.calls[1]!.run.id);
+    expect(()=>f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:task.version,idempotencyKey:'unknown-cleanup'})).toThrow(/cleanup/i);
+    f.store.exec("UPDATE runs SET cleanup_status='confirmed' WHERE id=?",f.calls[1]!.run.id);
+    const request=f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:task.version,idempotencyKey:'review-retry'});
+    expect(f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:task.version,idempotencyKey:'review-retry'}).id).toBe(request.id);
+    await tick();expect(f.calls).toHaveLength(3);expect(f.calls[2]!.run.purpose).toBe('review');expect(f.store.task('a').attempt).toBe(task.attempt);
+    expect(f.store.task('a').acceptedCommit).toBeNull();f.complete(2);await tick();expect(f.store.task('a').status).toBe('succeeded');
+    await f.coordinator.shutdown();
+  });
+  it('does not treat a substantive review rejection as an infrastructure retry',async()=>{
+    const f=fixture();f.plan([{id:'a',kind:'change'}]);f.dispatch('a');await tick();f.complete(0);await tick();
+    const run=f.calls[1]!.run;f.calls[1]!.result.resolve({stopReason:'completed',text:JSON.stringify({schemaVersion:1,taskId:'a',runId:run.id,verdict:'changes_requested',reviewedCommit:'b'.repeat(40),findings:[]})});await tick();
+    expect(()=>f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:f.store.task('a').version,idempotencyKey:'retry-rejection'})).toThrow(/infrastructure/);
+    await f.coordinator.shutdown();
+  });
   it('waits for the previous native developer on repair instead of losing its thread',async()=>{
     const f=fixture();f.plan([{id:'a'},{id:'b'}]);f.dispatch('a');await tick();
     const original=f.calls[0]!.run;

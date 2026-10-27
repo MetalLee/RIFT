@@ -1,4 +1,4 @@
-import { mkdir, readFile, open, rename, realpath } from 'node:fs/promises';
+import { mkdir, readFile, open, rename, realpath, lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Candidate, GitContext, GitService, ReviewResult, Run, Worktree, Workflow, Workspace } from '../contracts/index.js';
@@ -245,15 +245,48 @@ export class LocalGitService implements GitService {
       return 'unknown';
     } catch { return 'unknown'; }
   }
-  async archiveWorktree(input: { workspace: Workspace; worktree: Worktree; active: boolean; cleanupConfirmed: boolean; artifactsSaved: boolean }): Promise<void> {
-    if (input.active || !input.cleanupConfirmed || !input.artifactsSaved) throw new Error('ARCHIVE_BLOCKED: execution cleanup and saved artifacts required');
-    const cwd = await managedPath(this.managedRoot, input.worktree.path);
+  /** Validation is also used to explain disabled deletion actions in the UI. */
+  async inspectWorktreeRemoval(workspace: Workspace, worktree: Worktree): Promise<{ cwd: string; commonGitDir: string; rootPath: string; headCommit: string }> {
+    const cwd = await managedPath(this.managedRoot, worktree.path);
+    const repository = await inspectRepository(workspace.repositoryPath, worktree.baseCommit);
+    if (workspace.commonGitDir && repository.commonGitDir !== await realpath(workspace.commonGitDir)) throw new Error('ARCHIVE_BLOCKED: repository ownership changed');
+    const actual = await inspectRepository(cwd, worktree.baseCommit);
+    if (actual.commonGitDir !== repository.commonGitDir || actual.rootPath !== await realpath(cwd)) throw new Error('ARCHIVE_BLOCKED: worktree repository mismatch');
+    // A primary checkout may itself be below managedRoot. Path containment alone
+    // is not proof that it is a disposable linked worktree.
+    const gitDir = await realpath(await gitOk(cwd, ['rev-parse', '--absolute-git-dir']));
+    if (actual.rootPath === repository.rootPath || gitDir === actual.commonGitDir) throw new Error('ARCHIVE_BLOCKED: primary repository checkout');
+    const registered = await gitOk(repository.rootPath, ['worktree', 'list', '--porcelain', '-z']);
+    const normalize = (value: string) => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
+    const entry = registered.split('\0\0').find(block => block.split('\0').some(field => field.startsWith('worktree ') && normalize(field.slice(9)) === normalize(cwd)));
+    if (!entry) throw new Error('ARCHIVE_BLOCKED: unregistered worktree');
+    if (entry.split('\0').some(field => field === 'locked' || field.startsWith('locked '))) throw new Error('ARCHIVE_BLOCKED: locked worktree');
+    // status alone can hide modified tracked files with index trust flags.
+    const index = await gitOk(cwd, ['ls-files', '-v', '-z']);
+    if (index.split('\0').some(field => field && (field[0] === 'S' || /^[a-z]/.test(field)))) throw new Error('ARCHIVE_BLOCKED: assume-unchanged or skip-worktree index entries');
+    for (const marker of ['MERGE_HEAD','CHERRY_PICK_HEAD','REVERT_HEAD','rebase-merge','rebase-apply','sequencer','BISECT_LOG']) {
+      const file = path.join(gitDir, marker);
+      try { await lstat(file); throw new Error('ARCHIVE_BLOCKED: unfinished Git operation'); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    }
     try { await readFile(await this.quarantinePath(cwd)); throw new Error('ARCHIVE_BLOCKED: prior check timed out; descendant cleanup is unconfirmed'); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
     if (!(await checkoutClean(cwd))) throw new Error('ARCHIVE_BLOCKED: dirty, untracked or ignored content');
+    return { cwd, commonGitDir: repository.commonGitDir, rootPath: repository.rootPath, headCommit: await gitOk(cwd, ['rev-parse', 'HEAD']) };
+  }
+  async archiveWorktree(input: { workspace: Workspace; worktree: Worktree; active: boolean; cleanupConfirmed: boolean; artifactsSaved: boolean; beforeRemove?: (evidence: { headCommit: string; preservationRef: string }) => Promise<void> | void }): Promise<void> {
+    if (input.active || !input.cleanupConfirmed || !input.artifactsSaved) throw new Error('ARCHIVE_BLOCKED: execution cleanup and saved artifacts required');
     const repository = await inspectRepository(input.workspace.repositoryPath, input.worktree.baseCommit);
-    const actual = await inspectRepository(cwd, input.worktree.baseCommit);
-    if (actual.commonGitDir !== repository.commonGitDir || actual.rootPath !== await realpath(cwd)) throw new Error('ARCHIVE_BLOCKED: worktree repository mismatch');
-    await withMetadataLock(repository.commonGitDir, async () => { await gitOk(repository.rootPath, ['worktree', 'remove', '--', cwd]); });
+    await withMetadataLock(repository.commonGitDir, async () => {
+      const target = await this.inspectWorktreeRemoval(input.workspace, input.worktree);
+      // Detached candidate/review HEADs also need a durable reachability root.
+      // Never delete a branch, integration ref or operation/check/review evidence.
+      const preservationRef = `refs/rift/deleted-worktrees/${key(target.cwd)}/${target.headCommit}`;
+      await gitOk(target.rootPath, ['update-ref', preservationRef, target.headCommit]);
+      await input.beforeRemove?.({ headCommit: target.headCommit, preservationRef });
+      const final = await this.inspectWorktreeRemoval(input.workspace, input.worktree);
+      if (final.cwd !== target.cwd || final.headCommit !== target.headCommit || final.commonGitDir !== target.commonGitDir) throw new Error('ARCHIVE_BLOCKED: worktree changed during deletion verification');
+      await gitOk(target.rootPath, ['worktree', 'remove', '--', target.cwd]);
+    });
   }
 }

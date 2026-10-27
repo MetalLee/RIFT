@@ -17,7 +17,11 @@ export interface ApiHandler {
 async function readBody(req: IncomingMessage): Promise<unknown> {
   const parts: Buffer[] = []; let size = 0;
   for await (const part of req) { const chunk = Buffer.from(part); size += chunk.length; if (size > 256 * 1024) throw new RiftError('BODY_TOO_LARGE', 'Request exceeds 256 KiB.'); parts.push(chunk); }
-  return size ? JSON.parse(Buffer.concat(parts).toString('utf8')) : {};
+  if (!size) return {};
+  // JSON.parse can include raw request fragments in its SyntaxError. This
+  // boundary runs before credential registration, so never forward that text.
+  try { return JSON.parse(Buffer.concat(parts).toString('utf8')); }
+  catch { throw new RiftError('INVALID_JSON', 'Request body must be valid JSON.'); }
 }
 export async function startLocalApi(handler: ApiHandler, options: { home: string; port: number; uiDist?: string; uiEnabled?: boolean; tailnetAddress?: string; browser?: Omit<BrowserOptions, 'uiDist'> }) {
   const tailnetAddress = options.tailnetAddress ?? process.env.RIFT_TAILSCALE_IP;

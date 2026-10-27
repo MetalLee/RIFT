@@ -278,9 +278,19 @@ export class TaskCoordinator {
       invariant(task.version===expectedVersion,'VERSION_CONFLICT','Task version changed.');
       const duplicate=this.store.get<Operation>('SELECT * FROM operations WHERE kind=? AND entity_id=? AND phase IN (\'queued\',\'started\')',kind,taskId);
       invariant(!duplicate,'DUPLICATE_REQUEST','Task already has an unfinished request.');
-      invariant(kind==='dispatch'?['pending','ready'].includes(task.status):task.kind==='change'&&task.status==='validating'&&task.sourceHead===sourceHead,'INVALID_STATE','Task is not eligible for this request.');
+      let requestVersion=expectedVersion;
+      if(kind==='integration'&&task.status==='blocked'&&task.kind==='change'&&task.sourceHead===sourceHead){
+        const latest=this.store.get<Run>('SELECT * FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1',task.id);
+        invariant(latest?.purpose==='review'&&latest.taskAttempt===task.attempt&&['failed','interrupted'].includes(latest.status),'INVALID_STATE','Only an infrastructure-failed review can retry integration without development.');
+        invariant(!this.store.get("SELECT id FROM runs WHERE task_id=? AND (slot_released_at IS NULL OR cleanup_status<>'confirmed')",task.id),'CLEANUP_UNKNOWN','All previous execution cleanup must be confirmed before review retry.');
+        invariant(!this.store.get("SELECT id FROM integrations WHERE task_id=? AND status IN ('preparing','reviewing','publishing','cleanup_unknown')",task.id),'INTEGRATION_ACTIVE','Previous integration must settle before review retry.');
+        invariant(!this.store.get("SELECT id FROM operations WHERE entity_id=? AND phase IN ('queued','started')",task.id),'FINALIZATION_PENDING','Previous task requests must settle before review retry.');
+        this.store.exec("UPDATE tasks SET status='validating',blocking_reason=NULL,version=version+1 WHERE id=?",task.id);
+        requestVersion++;
+        this.store.event(workflow.id,'review.retry_requested',{sourceHead,previousRunId:latest.id},{taskId});
+      }else invariant(kind==='dispatch'?['pending','ready'].includes(task.status):task.kind==='change'&&task.status==='validating'&&task.sourceHead===sourceHead,'INVALID_STATE','Task is not eligible for this request.');
       const role=roleName?this.store.require<Role>("SELECT * FROM roles WHERE workspace_id=? AND name=? AND purpose='developer' AND enabled=1",workflow.workspaceId,roleName):undefined;
-      const payload:Operation['payload']={expectedVersion,planRevision:workflow.planRevision};
+      const payload:Operation['payload']={expectedVersion:requestVersion,planRevision:workflow.planRevision};
       if(role)payload.roleId=role.id;if(sourceHead)payload.sourceHead=sourceHead;
       const requestId=id('request');
       this.store.exec('INSERT INTO operations(id,kind,dedupe_key,entity_id,phase,payload,created_at) VALUES(?,?,?,?,?,?,?)',requestId,kind,key,taskId,'queued',JSON.stringify(payload),now());
@@ -413,7 +423,7 @@ export class TaskCoordinator {
       const result=await Promise.race([handle.result,aborted]);
       rawText=result.text;
       if(result.dshRunId)this.store.exec('UPDATE runs SET dsh_run_id=? WHERE id=?',result.dshRunId,run.id);
-      invariant(['completed','end_turn','stop','success'].includes(result.stopReason),'PROVIDER_STOP',`Provider stopped with ${result.stopReason}.`);
+      invariant(['completed','end_turn','stop','success'].includes(result.stopReason),'PROVIDER_STOP',`Provider stopped with ${result.stopReason}.${result.diagnostic?` ${redact(result.diagnostic,4096)}`:''}`);
       const parsed=parseResult(result.text,{taskId:task.id,runId:run.id,purpose:run.purpose});
       this.store.transaction(()=>this.recordResult(run.id,'succeeded',result.stopReason,parsed));return parsed;
     }catch(error){this.store.transaction(()=>{this.recordResult(run.id,state.cancelled?'cancelled':'failed',state.cancelled?(state.cancelReason??'CANCELLED'):error instanceof RiftError?error.code:'EXECUTION_FAILED',{error:errorMessage(error),...(rawText===undefined?{}:{output:redact(rawText)})});if(!state.handle){if(!startAttempted||(error instanceof RiftError&&(['START_NOT_PUBLISHED','LIVE_LEAD_REQUIRED','PROVIDER_UNAVAILABLE','ABORTED_BEFORE_START'].includes(error.code)||(error.details as {cleanupConfirmed?:boolean}|undefined)?.cleanupConfirmed)))this.confirmCleanup(run.id);else this.store.exec('UPDATE runs SET cleanup_status=? WHERE id=?','unknown',run.id);}});return;}
@@ -479,6 +489,9 @@ export class TaskCoordinator {
       const state:Active={controller:new AbortController(),cancelled:false};this.active.set(reviewRun.id,state);
       const review=await this.execute(reviewRun,task,candidate.cwd,state,candidate) as ReviewResult|undefined;
       invariant(this.store.run(reviewRun.id).cleanupStatus==='confirmed','CLEANUP_UNKNOWN','Review cleanup is unconfirmed.');
+      const settledReview=this.store.run(reviewRun.id);
+      const reviewFailure=settledReview.result&&typeof settledReview.result==='object'&&'error' in settledReview.result&&typeof settledReview.result.error==='string'?settledReview.result.error:'';
+      invariant(review,'REVIEW_EXECUTION_FAILED',`Review execution failed: ${settledReview.stopReason??'UNKNOWN'}. ${reviewFailure}`);
       invariant(review&&review.verdict==='approve'&&review.reviewedCommit===candidate.candidateHead,'REVIEW_REJECTED','Review must approve the exact checked candidate commit.');
       invariant(this.store.task(task.id).status!=='cancelled'&&!terminalWorkflows.has(this.store.workflow(task.workflowId).status),'CANCELLED','Task or workflow was cancelled before publication.');
       this.store.transaction(()=>{this.store.exec('UPDATE integrations SET status=? WHERE id=?','publishing',integrationId);this.store.event(task.workflowId,'publication.intent',candidate,{taskId:task.id,requestId:operation.id});});

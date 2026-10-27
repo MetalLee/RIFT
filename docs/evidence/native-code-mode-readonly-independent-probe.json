@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-26T11:54:32.228Z",
+  "mode": "Real pinned app-server, controlled custom_tool_call exec against formal review/analysis; no external inference or remote writes",
+  "payload": "0.164.0",
+  "temporary": "D:\\Codex Workspace\\RIFT\\.runtime-evidence\\readonly-wrapper-review-yPbJ3H",
+  "status": "pass",
+  "checks": {
+    "reviewWrapperRejected": true,
+    "reviewNoToolOrNetworkExecution": true,
+    "reviewNoFileSideEffect": true,
+    "reviewLegitimateReadWorks": true,
+    "analysisWrapperRejected": true,
+    "analysisNoToolOrNetworkExecution": true,
+    "analysisNoFileSideEffect": true,
+    "analysisLegitimateReadWorks": true
+  },
+  "results": [
+    {
+      "mode": "review",
+      "stopReason": "completed",
+      "dynamicCalls": 0,
+      "networkCalls": 0,
+      "outputs": [
+        "unsupported custom tool call: exec",
+        "{\"path\":\"baseline.txt\",\"content\":\"FORMAL_READ_STILL_AVAILABLE\",\"offset\":0,\"nextOffset\":27,\"totalBytes\":27,\"truncated\":false}"
+      ]
+    },
+    {
+      "mode": "analysis",
+      "stopReason": "completed",
+      "dynamicCalls": 0,
+      "networkCalls": 0,
+      "outputs": [
+        "unsupported custom tool call: exec",
+        "{\"path\":\"baseline.txt\",\"content\":\"FORMAL_READ_STILL_AVAILABLE\",\"offset\":0,\"nextOffset\":27,\"totalBytes\":27,\"truncated\":false}"
+      ]
+    }
+  ],
+  "httpCalls": 8
+}

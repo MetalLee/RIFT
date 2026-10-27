@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-26T12:43:18.978Z",
+  "features": [
+    "Normalize full API operation URLs to protocol-specific base URLs",
+    "Surface credential-redacted provider errors",
+    "Delete unused API routes with durable tombstones and owned credential cleanup",
+    "Do not reflect malformed JSON body content"
+  ],
+  "tests": {
+    "passed": 362,
+    "failed": 0,
+    "skipped": 1
+  },
+  "typecheck": "passed",
+  "productionBuild": "passed",
+  "independentChecks": 9,
+  "claude": {
+    "originalFailure": "HTTP 404 Invalid URL: /v1/chat/completions/chat/completions",
+    "effectiveBaseUrl": "https://newapi.deepwisdom.ai/v1",
+    "minimalRequestPassed": true,
+    "fullRuntimeVerificationPassed": false,
+    "remainingError": "Provider finish_reason: content_filter",
+    "fullVerificationAttempts": 2,
+    "providerPolicyCause": "Unknown; requires provider-side diagnostics"
+  },
+  "host": {
+    "pid": 43892,
+    "httpStatus": 200,
+    "newUiServed": true,
+    "codeDirectory": "C:\\Users\\李祉延\\.codex\\worktrees\\api-connection-management\\RIFT",
+    "backup": "D:/RiftUI-backup-20261026-api-management-final.db",
+    "schemaVersion": 17,
+    "integrity": "ok",
+    "foreignKeyErrors": 0,
+    "activeLeases": 0
+  },
+  "liveConnectionsDeleted": 0
+}

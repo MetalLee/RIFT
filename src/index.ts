@@ -4,7 +4,7 @@ import { RiftHostService, type HostConfig } from './api/host-service.js';
 import { startLocalApi } from './api/local-api.js';
 import { limitsSchema } from './api/schemas.js';
 export const name = 'rift';
-export const inject = ['agents','subagents','tools','llm'];
+export const inject = ['agents','subagents','tools','llm','subprocess','credentials'];
 export { RiftHostService } from './api/host-service.js';
 export { TaskCoordinator } from './task/coordinator.js';
 export { RiftStore } from './storage/database.js';
