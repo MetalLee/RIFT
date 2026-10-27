@@ -93,7 +93,11 @@ describe('Independent API connection management boundaries',()=>{
     const server=http.createServer(async(req,res)=>{
       const parts:Buffer[]=[];for await(const chunk of req)parts.push(Buffer.from(chunk));const body=JSON.parse(Buffer.concat(parts).toString('utf8'));requests.push({url:req.url??'',authorization:req.headers.authorization??'',model:body.model});
       if(fail){res.writeHead(404,{'Content-Type':'application/json'});res.end(JSON.stringify({error:{message:`INDEPENDENT_MODEL_ROUTE_404 ${key}`,type:'invalid_request_error',code:'model_not_found'}}));return;}
-      res.writeHead(200,{'Content-Type':'text/event-stream'});for(const [delta,reason] of [[{role:'assistant',content:'RIFT_API_OK'},null],[{},'stop']] as const)res.write(`data: ${JSON.stringify({id:'endpoint-review',object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason:reason}]})}\n\n`);res.end('data: [DONE]\n\n');
+      // Current verification requires an actual tool round-trip, not the old
+      // fixed-token reply. Keep exercising the real DSH HTTP adapter here.
+      const replied=body.messages.some((message:{role:string})=>message.role==='tool');
+      const delta=replied?{role:'assistant',content:'订单包含笔记本和铅笔，总额为三十元。'}:{role:'assistant',tool_calls:[{index:0,id:'endpoint-order',type:'function',function:{name:'rift_sample_order',arguments:'{}'}}]};
+      res.writeHead(200,{'Content-Type':'text/event-stream'});for(const [chunk,reason] of [[delta,null],[{},replied?'stop':'tool_calls']] as const)res.write(`data: ${JSON.stringify({id:'endpoint-review',object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta:chunk,finish_reason:reason}]})}\n\n`);res.end('data: [DONE]\n\n');
     });await new Promise<void>(done=>server.listen(0,'127.0.0.1',done));const base=`http://127.0.0.1:${(server.address() as import('node:net').AddressInfo).port}/v1`,full=`${base}/chat/completions`;
     process.env.DSH_HOME=path.join(home,'dsh');initializeProfileFromDefault('endpoint-review','sdk-minimal',process.env.DSH_HOME);
     const patch=path.join(home,'headless.patch.yml');await writeFile(patch,'- id: sdk-app-startup\n  disabled: true\n- id: sdk-jsonrpc-server\n  disabled: true\n');
@@ -101,10 +105,11 @@ describe('Independent API connection management boundaries',()=>{
     await runtime.ctx.plugin(LocalCredentialProvider,{path:path.join(home,'.credentials.yaml'),watch:false});let service=new ApiConnectionService(runtime.ctx,store,home);
     try{
       await service.initialize();const connection=await service.create({name:'Full endpoint',protocol:'openai-completions',endpoint:`${full}/`,model:'claude-5.5-review',apiKey:key});expect(connection.endpoint).toBe(base);
-      expect((await service.verify(connection.id)).passed).toBe(true);expect(requests).toEqual([{url:'/v1/chat/completions',authorization:`Bearer ${key}`,model:'claude-5.5-review'}]);
+      const verified=await service.verify(connection.id);expect(verified.passed).toBe(true);expect(verified.connection.verification).toMatchObject({toolCalls:1,conversation:true,cleanupConfirmed:true});
+      expect(requests).toEqual(Array.from({length:2},()=>({url:'/v1/chat/completions',authorization:`Bearer ${key}`,model:'claude-5.5-review'})));
       await service.close();store.exec('UPDATE api_connections SET endpoint=? WHERE id=?',full,connection.id);service=new ApiConnectionService(runtime.ctx,store,home);await service.initialize();fail=true;
       const result=await service.verify(connection.id);expect(result.passed).toBe(false);expect(result.error).toContain('INDEPENDENT_MODEL_ROUTE_404');expect(JSON.stringify(result)).not.toContain(key);expect(result.connection.verificationError).toBe(result.error);
-      expect(requests).toHaveLength(2);expect(requests[1]!.url).toBe('/v1/chat/completions');expect(requests[1]!.authorization).toBe(`Bearer ${key}`);expect(JSON.stringify(store.all('SELECT * FROM api_connections'))).not.toContain(key);
+      expect(requests).toHaveLength(3);expect(requests[2]!.url).toBe('/v1/chat/completions');expect(requests[2]!.authorization).toBe(`Bearer ${key}`);expect(JSON.stringify(store.all('SELECT * FROM api_connections'))).not.toContain(key);
     }finally{await service.close();store.close();await runtime.shutdown.shutdown(0);server.closeAllConnections();await new Promise<void>(done=>server.close(()=>done()));if(previousHome===undefined)delete process.env.DSH_HOME;else process.env.DSH_HOME=previousHome;if(path.dirname(home)!==path.resolve(tmpdir())||!path.basename(home).startsWith('rift-verify-endpoint-review-'))throw new Error('Unsafe cleanup');await rm(home,{recursive:true,force:true});}
   },30000);
 });

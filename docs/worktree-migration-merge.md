@@ -16,7 +16,13 @@ receive only their missing migrations; fresh databases receive all three.
 `tests/core/connection-worktree-migration.test.ts` constructs historical SQL
 schemas and covers fresh, main 16/17/18, and published Worktree 17 upgrades,
 reopening, retained tombstones/verification results/removal evidence, credential
-ownership, foreign keys, and deletion safety triggers.
+ownership, foreign keys, deletion safety triggers, and atomic rollback/retry.
+
+The real HTTP endpoint regression in `api-connection-management-review.test.ts`
+previously returned only the obsolete `RIFT_API_OK` token, incompatible with
+main's conversation-and-tool verification. Its stub now supplies the actual
+tool-call/reply round-trip while retaining endpoint, credential, restart and
+redacted-404 assertions; production verification behavior is unchanged.
 
 The automatically merged `src/api/host-service.ts` retains main's connection
 deletion, verification and diagnostics routes, alongside PR #2's strict
