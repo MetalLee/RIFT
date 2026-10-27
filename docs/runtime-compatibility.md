@@ -171,3 +171,11 @@ DSH 的终止错误与模型正文分别保存，任务失败和连接验证保�
 2026-10-27 的 [Claude 真实验证记录](evidence/claude-connection-verification.json)确认原连接完成一次工具调用，并根据返回数据给出订单明细及 ¥30 总额。此前固定口令请求的 `content_filter` 仍是历史事实，其具体触发原因未确定，不作为整个 Claude API 不可用的结论。
 
 当前 attempt 的独立审查因执行失败或中断而阻塞时，页面重试和 `rift_integration_request` 可以针对同一已收集 source 重新检查和审查，不增加开发 attempt。必须确认先前执行已清理、没有未完成请求或发布操作，并校验任务版本和 source SHA。审查明确要求修改时仍须走开发修复；重试不会绕过候选检查、精确提交审查或发布 CAS。
+
+### Claude Opus 5.5 context capacity
+
+Saved `claude-opus-5-5` routes register a 1,000,000-token context window, matching [Anthropic model specifications](https://platform.claude.com/docs/en/models/opus-5-5/overview) checked on 2026-10-27. The existing 8,192-token per-response budget is a separate policy, not the model context capacity. Exact model IDs are matched; unverified gateway aliases retain the existing 64,000-token fallback rather than inheriting Claude capacity.
+
+The failed reviewer returned a normal `stop` with 82,776 input tokens and 1,495 output tokens. DSH/pi-ai subsequently interpreted usage above RIFT's incorrectly registered 64K capacity as an overflow. Correcting the provider model metadata preserves genuine upstream context errors and local over-capacity detection. The gateway's independent limits still apply; the 1M registration is the documented model capacity, not a claim that this gateway has been load-tested to 1M. No reviewer model, provider, credentials, or role binding is changed.
+
+`connection-context-window.test.ts` exercises the real DSH/pi-ai adapter against a local HTTP stream: the historical 82,776-token response succeeds, a response over 1M remains an overflow, and an explicit upstream context rejection remains an error.
