@@ -24,7 +24,7 @@
     "dev:ui": "vite --config ui/vite.config.ts ui",
     "typecheck": "tsc --noEmit && pnpm typecheck:ui",
     "typecheck:ui": "tsc -p ui/tsconfig.json",
-    "test:ui": "vitest run ui/src/state.test.ts ui/src/api.test.ts ui/src/chat-state.test.ts ui/src/task-order.test.ts",
+    "test:ui": "vitest run ui/src/state.test.ts ui/src/api.test.ts ui/src/chat-state.test.ts ui/src/task-order.test.ts ui/src/skill-library.test.tsx",
     "test": "vitest run",
     "test:acceptance": "vitest run tests/acceptance",
     "rift": "tsx src/cli/main.ts",
