@@ -1,3 +1,4 @@
+import {skillResourceTools} from '../../src/skill/resource-tool.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Context } from '@deepseek-ai/cordis';
 import { ToolRuntime, type ToolDefinition } from '@deepseek-ai/dsh-tools';
@@ -21,7 +22,7 @@ const cleanups:(()=>Promise<void>)[]=[];
 afterEach(async()=>{for(const cleanup of cleanups.splice(0).reverse())await cleanup();});
 const definition=(name:string):ToolDefinition=>({name,description:name,parameters:{type:'object'},output:{schema:{},render:()=>[{type:'text',text:'global'}]},async execute(){return'global';}});
 
-async function fixture(){
+async function fixture(withResources=false){
   const home=await mkdtemp(join(tmpdir(),'rift-analysis-scope-')),cwd=join(home,'worktree');await mkdir(cwd);
   cleanups.push(()=>rm(home,{recursive:true,force:true}));
   await writeFile(join(cwd,'source.ts'),'export const defaultEnabled = true;\n');
@@ -54,8 +55,9 @@ async function fixture(){
     requestContext=request.args.context;
     return{id:'batch',result:(async()=>{child=(await create('analysis-item',request.parent)).agent;return{stopReason:'completed',value:[{id:'audit',text:'Audit result'}]};})(),async dispose(){if(cleanupFailure)throw new Error('cleanup unknown');for(const scope of scopes)await scope.dispose();if(child)agents.delete(child.id);}};
   }} as never);
+  if(withResources)store.exec("INSERT INTO skill_execution_snapshots(owner_type,owner_id,workspace_id,agent_id,snapshot_json,created_at) VALUES('run','run',?,?,?,'now')",workspace.id,role.id,JSON.stringify({instructions:'Read data.csv',versions:[],resources:[{versionId:'captured-version',skillId:'captured-skill',path:'data.csv',bytes:8,sha256:'digest',contentBase64:Buffer.from('CAPTURED').toString('base64')}]}));
   const controller=new AbortController();
-  const handle=await startAnalysisBatch(ctx,store,lead,{task:store.task('task'),run:store.run('run'),role,cwd,prompt:'Audit source.',signal:controller.signal,tools:collaboration.runTools(store.run('run'))});
+  const handle=await startAnalysisBatch(ctx,store,lead,{task:store.task('task'),run:store.run('run'),role,cwd,prompt:'Audit source.',signal:controller.signal,tools:[...collaboration.runTools(store.run('run')),...skillResourceTools(store,'run','run',()=>{})]});
   await handle.result;
   const invoke=(name:string,args:unknown,agent=child!,signal=new AbortController().signal)=>ctx.tools.execute({name,arguments:args,agent,signal,callId:`call-${Math.random()}` as never});
   return{ctx,store,home,cwd,handle,root:root!,child:child!,lead,leadRole,agents,controller,invoke,requestContext,setCleanupFailure:()=>{cleanupFailure=true;}};
@@ -80,6 +82,14 @@ describe('analysis batch actual DSH tool scopes',()=>{
     expect((await f.invoke('pwsh',{})).isError).toBe(true);
     expect(f.requestContext).toContain('Inspect the repository');
     expect(f.requestContext).not.toContain('Analyze only the supplied text');
+    await f.handle.dispose();
+  });
+
+  it('registers captured Skill resources for analysis children without exposing a shell',async()=>{
+    const f=await fixture(true);
+    const result=await f.invoke('rift_skill_resource',{versionId:'captured-version',path:'data.csv'});expect(result.isError).toBe(false);expect(JSON.stringify(result)).toContain('CAPTURED');
+    expect((await f.invoke('rift_skill_resource',{versionId:'foreign',path:'data.csv'})).isError).toBe(true);
+    expect((await f.invoke('pwsh',{})).isError).toBe(true);
     await f.handle.dispose();
   });
 

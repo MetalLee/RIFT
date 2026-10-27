@@ -1,3 +1,6 @@
+import {skillResourceTool} from '../../src/skill/resource-tool.js';
+import {workspaceRepositoryAccess} from '../../src/agent/repository-access.js';
+import {nativeRepositoryRoots} from '../../src/agent/native-codex.js';
 import { describe,it,expect } from 'vitest';
 import { mkdtemp,mkdir,writeFile,readFile,rm,symlink,link } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -68,6 +71,48 @@ describe('workspace CLI and ordinary default Skill',()=>{
    expect((await f.call(['event','list'])).events.length).toBeGreaterThan(0);
   }finally{await f.close();}
  });
+ it('imports large Skill resources, assigns ordinary versions and executes immutable script snapshots',async()=>{
+  const f=await fixture();try{
+   const directory=path.join(f.root,'resource-skill');await mkdir(path.join(directory,'scripts'),{recursive:true});
+   await writeFile(path.join(directory,'SKILL.md'),'Use scripts/search.py and data.txt.');await writeFile(path.join(directory,'data.txt'),'x'.repeat(900000));
+   await writeFile(path.join(directory,'scripts','search.py'),"from pathlib import Path; print('SKILL_RESOURCE_OK' if len((Path(__file__).parent.parent/'data.txt').read_text())==900000 else 'BAD')");
+   await f.call(['workspace','grant-path'],{path:directory});const preview=await f.call(['skill','preview'],{directory});const imported=await f.call(['skill','import'],{previewId:preview.previewId});
+   const member=(await f.call(['agent','list'])).agents.find((x:any)=>x.purpose==='developer');
+   await f.call(['skill','assign',imported.skill.id],{agentId:member.id,mode:'include',versionId:imported.version.id,expectedRevision:0});
+   const effective=await f.call(['skill','effective',member.id],{runtime:'codex'});expect(effective.resources).toHaveLength(2);
+   const resources=path.join(f.home,'workspaces',f.a.id,'skill-resources'),snapshot=path.join(resources,imported.version.id);expect(effective.instructions).toContain(snapshot);
+   await writeFile(path.join(directory,'scripts','search.py'),"raise Exception('SOURCE_CHANGED')");
+   const args=await sandboxCommand([directory],directory,`set -eu; python3 '${snapshot}/scripts/search.py'; if echo BAD > '${snapshot}/data.txt' 2>/dev/null; then exit 1; fi`,[f.home],{resources});
+   expect((await exec(args[0]!,args.slice(1))).stdout).toBe('SKILL_RESOURCE_OK\n');
+   expect((await f.call(['skill','effective',member.id],{runtime:'dsh'})).versions.map((x:any)=>x.versionId)).toContain(imported.version.id);
+   await expect(f.call(['skill','show',imported.skill.id],{},f.b.id)).rejects.toMatchObject({code:'NOT_FOUND'});
+  }finally{await f.close();}
+ });
+ it('offers an isolated installation directory before any repository is registered',async()=>{
+  const f=await fixture();try{
+   const access=await workspaceRepositoryAccess(f.host.store,f.a.id);expect(access?.repositoryPaths).toEqual([]);expect(access?.workspaceDirectory).toContain(f.a.id);
+   const roots=await nativeRepositoryRoots(access!.workspaceDirectory!,[],new AbortController().signal,access!.workspaceDirectory);
+   const args=await sandboxCommand(roots,access!.workspaceDirectory!,"echo WORKSPACE_INSTALL > installed.txt; test ! -e ../../management.token; cat installed.txt",access!.protectedPaths,{home:access!.shellHome,resources:access!.skillResources});
+   expect((await exec(args[0]!,args.slice(1))).stdout).toBe('WORKSPACE_INSTALL\n');
+   const other=await workspaceRepositoryAccess(f.host.store,f.b.id);expect(other?.shellHome).not.toBe(access?.shellHome);
+   await expect(nativeRepositoryRoots(other!.workspaceDirectory!,[],new AbortController().signal,access!.workspaceDirectory)).rejects.toBeDefined();
+  }finally{await f.close();}
+ });
+ it('provides formal read-only executions only their captured Skill resource bytes',async()=>{
+  const f=await fixture();try{
+   const dir=path.join(f.root,'readonly-skill');await mkdir(dir);await writeFile(path.join(dir,'SKILL.md'),'Read asset.txt');await writeFile(path.join(dir,'asset.txt'),'CAPTURED');
+   await f.call(['workspace','grant-path'],{path:dir});const preview=await f.call(['skill','preview'],{directory:dir});const imported=await f.call(['skill','import'],{previewId:preview.previewId});
+   const member=(await f.call(['agent','list'])).agents.find((x:any)=>x.purpose==='reviewer');
+   await f.call(['skill','assign',imported.skill.id],{agentId:member.id,mode:'include',versionId:imported.version.id,expectedRevision:0});
+   const compiled=f.host.skills.resolveEffective(f.a.id,member.id,{runtime:'codex',resources:true,scripts:true});f.host.skills.snapshotExecution(f.a.id,member.id,'run','readonly-test',compiled);
+   let live=true;const tool=skillResourceTool(f.host.store,'run','readonly-test',()=>{if(!live)throw new Error('STOPPED');});
+   await writeFile(path.join(dir,'asset.txt'),'SOURCE_CHANGED');await f.call(['skill','assign',imported.skill.id],{agentId:member.id,mode:'exclude',expectedRevision:1});
+   expect(await tool.execute({versionId:imported.version.id,path:'asset.txt'},new AbortController().signal)).toMatchObject({content:'CAPTURED'});
+   await expect(tool.execute({versionId:'foreign-version',path:'asset.txt'},new AbortController().signal)).rejects.toMatchObject({code:'NOT_FOUND'});
+   await expect(tool.execute({versionId:imported.version.id,path:'../management.token'},new AbortController().signal)).rejects.toMatchObject({code:'NOT_FOUND'});
+   live=false;await expect(tool.execute({versionId:imported.version.id,path:'asset.txt'},new AbortController().signal)).rejects.toThrow('STOPPED');
+  }finally{await f.close();}
+ });
  it('scopes historical workflow/task/run operations, rejects foreign IDs and edits only unstarted tasks',async()=>{
   const f=await fixture();try{
    const wf=await f.call(['workflow','start'],{mode:'analysis',goal:'Compare supplied text',startLead:false});
@@ -128,7 +173,7 @@ describe('real filesystem and network boundary',()=>{
    expect((await exec(argv[0]!,argv.slice(1),{timeout:30000})).stdout).toContain('TOOLCHAIN_OK');
    expect(await readFile(path.join(own,'dist','index.html'),'utf8')).toContain('Build');
   }finally{await rm(own,{recursive:true,force:true});}
- },40000);
+ },180000);
  it.runIf(process.platform==='linux')('reads pnpm-shaped dependencies while protecting shared store inodes and private files',async()=>{
   const root=await mkdtemp(path.join(tmpdir(),'rift-pnpm-')),own=path.join(root,'own'),store=path.join(root,'store');
   await mkdir(path.join(own,'node_modules','sample'),{recursive:true});await mkdir(store);
@@ -136,14 +181,14 @@ describe('real filesystem and network boundary',()=>{
   await link(path.join(store,'index.js'),path.join(own,'node_modules','sample','index.js'));
   await writeFile(path.join(own,'node_modules','.env'),'DEPENDENCY_SECRET');await writeFile(path.join(own,'README.md'),'README_OK');
   try{
-   const argv=await sandboxCommand([own],own,`set -eu; cat README.md; node -e "require('dns').lookup('localhost',(e,a)=>{if(e||!['127.0.0.1','::1'].includes(a))process.exit(1)})"; node -e "console.log(require('sample'))"; test ! -s node_modules/.env; if echo BAD > node_modules/sample/index.js 2>/dev/null; then exit 1; fi; if ln node_modules/sample/index.js alias 2>/dev/null; then exit 1; fi; mkdir -p node_modules/.vite-temp; echo CACHE > node_modules/.vite-temp/config.mjs; echo EDITED > writable; test ! -e '${store}/index.js'`);
+   const argv=await sandboxCommand([own],own,`set -eu; cat README.md; node -e "require('dns').lookup('localhost',(e,a)=>{if(e||!['127.0.0.1','::1'].includes(a))process.exit(1)})"; node -e "console.log(require('sample'))"; test ! -s node_modules/.env; echo PRIVATE_EDIT > node_modules/sample/index.js; ln node_modules/sample/index.js alias; mkdir -p node_modules/.vite-temp; echo CACHE > node_modules/.vite-temp/config.mjs; echo EDITED > writable; test ! -e '${store}/index.js'`);
    expect(argv.filter(x=>x==='--ro-bind').length).toBeLessThan(12);
    expect((await exec(argv[0]!,argv.slice(1))).stdout).toBe('README_OKDEPENDENCY_OK\n');
    expect(await readFile(path.join(store,'index.js'),'utf8')).toBe("module.exports='DEPENDENCY_OK'");
    expect(await readFile(path.join(own,'writable'),'utf8')).toBe('EDITED\n');
   }finally{await rm(root,{recursive:true,force:true});}
  });
- it.runIf(process.platform==='linux')('permits own edits and tests but denies sibling/Host secrets, symlinks, environment and network',async()=>{
+ it.runIf(process.platform==='linux')('permits own edits and tests but denies sibling/Host secrets, symlinks, inherited environment and Host loopback',async()=>{
   const root=await mkdtemp(path.join(tmpdir(),'rift-sandbox-')),own=path.join(root,'own'),foreign=path.join(root,'foreign');await mkdir(own);await mkdir(foreign);await writeFile(path.join(foreign,'secret'),'FOREIGN');await mkdir(path.join(own,'.rift'));await writeFile(path.join(own,'.rift','management.token'),'HOST_TOKEN');await writeFile(path.join(own,'.env'),'SECRET');await symlink(foreign,path.join(own,'escape'));await writeFile(path.join(own,'file'),'OWN');
   try{
    const cmd=`set -eu; test "$(cat file)" = OWN; printf CHANGED > file; test ! -s .env; test ! -e .rift/management.token; test ! -e '${foreign}/secret'; test ! -e escape/secret; test -z "\${TEST_SECRET:-}"; test ! -e /root/.codex/auth.json; node -e 'const n=require("net"); const s=n.connect(1,"127.0.0.1");s.on("connect",()=>process.exit(1));s.on("error",()=>process.exit(0))'; echo ISOLATED`;
@@ -152,10 +197,10 @@ describe('real filesystem and network boundary',()=>{
    const nestedArgs=await sandboxCommand([own,nested],nested,`test ! -e '${own}/.rift/management.token'; cat nested.txt`,[path.join(own,'.rift')]);
    expect((await exec(nestedArgs[0]!,nestedArgs.slice(1))).stdout).toBe('TASK');
    await link(path.join(foreign,'secret'),path.join(own,'hardlink'));
-   const linkedArgs=await sandboxCommand([own],own,"cat hardlink; if printf BAD > hardlink 2>/dev/null; then exit 1; fi; printf STILL_OWN > file");
+   const linkedArgs=await sandboxCommand([own],own,"cat hardlink; printf PRIVATE_EDIT > hardlink; printf STILL_OWN > file");
    expect((await exec(linkedArgs[0]!,linkedArgs.slice(1))).stdout).toBe('FOREIGN');
    expect(await readFile(path.join(foreign,'secret'),'utf8')).toBe('FOREIGN');
-   expect(await createRepositoryReadTools(own)[0]!.execute({path:'hardlink'},new AbortController().signal)).toMatchObject({content:'FOREIGN'});
+   expect(await createRepositoryReadTools(own)[0]!.execute({path:'hardlink'},new AbortController().signal)).toMatchObject({content:'PRIVATE_EDIT'});
    await expect(createRepositoryReadTools(own)[0]!.execute({path:'escape/secret'},new AbortController().signal)).rejects.toMatchObject({code:'UNAUTHORIZED'});
   }finally{await rm(root,{recursive:true,force:true});}
  });

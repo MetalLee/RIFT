@@ -35,8 +35,8 @@ const canonicalPath=(value:string)=>process.platform==='win32'?path.resolve(valu
 /** Resolve only Host-associated repositories and their actual Git metadata.
  * A linked task worktree may live elsewhere, but must share one of these exact
  * common Git directories. No parent directory is broadened into a writable root. */
-export async function nativeRepositoryRoots(cwd:string,repositoryPaths:readonly string[],signal:AbortSignal):Promise<string[]> {
-  if(!repositoryPaths.length||repositoryPaths.length>64)throw new RiftError('NATIVE_REPOSITORY_SCOPE','Select 1–64 registered repository roots.');
+export async function nativeRepositoryRoots(cwd:string,repositoryPaths:readonly string[],signal:AbortSignal,workspaceDirectory?:string):Promise<string[]> {
+  if((!repositoryPaths.length&&!workspaceDirectory)||repositoryPaths.length>64)throw new RiftError('NATIVE_REPOSITORY_SCOPE','Select 1–64 registered repository roots.');
   const directory=async(value:string)=>{
     if(!path.isAbsolute(value))throw new RiftError('NATIVE_REPOSITORY_SCOPE','Repository permissions require absolute Host paths.');
     const actual=await realpath(value);
@@ -51,10 +51,16 @@ export async function nativeRepositoryRoots(cwd:string,repositoryPaths:readonly 
   };
   const repositories=[];
   for(const location of repositoryPaths){const repo=await inspect(location);if(canonicalPath(repo.root)!==canonicalPath(repo.actual))throw new RiftError('NATIVE_REPOSITORY_SCOPE','Repository capabilities must name registered Git roots, not broader directories or arbitrary subdirectories.');repositories.push(repo);}
+  const workspace=workspaceDirectory?await directory(workspaceDirectory):undefined;
+  if(workspace&&canonicalPath(workspace)!==canonicalPath(workspaceDirectory!))throw new RiftError('NATIVE_REPOSITORY_SCOPE','Workspace directory identity changed.');
+  const currentPath=await directory(cwd);
+  const inWorkspace=workspace&&(currentPath===workspace||currentPath.startsWith(workspace+path.sep));
+  if(inWorkspace){signal.throwIfAborted();return [...new Set([workspace,...repositories.flatMap(repo=>[repo.root,repo.gitDir,repo.commonDir])])].sort();}
   const current=await inspect(cwd);
   if(!repositories.some(repo=>canonicalPath(repo.commonDir)===canonicalPath(current.commonDir)))throw new RiftError('NATIVE_REPOSITORY_SCOPE','Execution cwd is not part of a registered workspace repository.');
   const roots=new Map<string,string>();
   for(const repo of [...repositories,current])for(const root of [repo.root,repo.gitDir,repo.commonDir])roots.set(canonicalPath(root),root);
+  if(workspace)roots.set(canonicalPath(workspace),workspace);
   signal.throwIfAborted();return[...roots.values()].sort((a,b)=>canonicalPath(a).localeCompare(canonicalPath(b)));
 }
 
@@ -106,13 +112,13 @@ export class NativeCodexRuntime implements AgentRuntime {
   async start(input: RuntimeTurnInput): Promise<RuntimeHandle> {
     const discussion = !this.options.mode || this.options.mode === 'discussion';
     const formalReadOnly=this.options.mode==='review'||this.options.mode==='analysis';
-    const repositoryWrite=!formalReadOnly&&!!input.repositoryAccess?.repositoryPaths.length;
+    const repositoryWrite=!formalReadOnly&&!!(input.repositoryAccess?.repositoryPaths.length||input.repositoryAccess?.workspaceDirectory);
     const restrictedDiscussion=discussion&&!repositoryWrite;
     const restrictedTools=true; // Native file/shell tools are never an authority boundary.
     input.signal.throwIfAborted();
     if (!path.isAbsolute(input.cwd) || !input.model.trim()) throw new RiftError('NATIVE_CONFIGURATION', 'An absolute staging directory and a model are required.');
     if (discussion && !(VERIFIED_NATIVE_CODEX_MODELS as readonly string[]).includes(input.model)) throw new RiftError('NATIVE_MODEL_UNVERIFIED', 'This native model has not passed RIFT tool-isolation verification. Select a verified model.');
-    const writableRoots=repositoryWrite?await nativeRepositoryRoots(input.cwd,input.repositoryAccess!.repositoryPaths,input.signal):[];
+    const writableRoots=repositoryWrite?await nativeRepositoryRoots(input.cwd,input.repositoryAccess!.repositoryPaths,input.signal,input.repositoryAccess?.workspaceDirectory):[];
     const shell=repositoryWrite?await (await import('./repository-shell.js')).createRepositoryShell({spawn:this.options.spawn} as import('@deepseek-ai/cordis').Context['subprocess'],input):undefined;
     const runtimeTools=[...input.tools,...formalReadOnly?createRepositoryReadTools(input.cwd):[],...shell?[{...shell.tool,name:'rift_exec_command'}]:[]];
     const tools = new Map(runtimeTools.map(tool => [tool.name, tool]));

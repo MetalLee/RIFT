@@ -166,7 +166,7 @@ export class LocalGitService implements GitService {
         const command = this.commands.get(id)!;
         const startedAt = new Date().toISOString();
         const quote=(value:string)=>"'"+value.replaceAll("'","'\"'\"'")+"'";
-        const sandbox=await sandboxCommand([await realpath(candidatePath)],candidatePath,[command.executable,...command.args].map(quote).join(' '));
+        const sandbox=await sandboxCommand([await realpath(candidatePath)],candidatePath,[command.executable,...command.args].map(quote).join(' '),[],{signal:AbortSignal.timeout(command.timeoutMs??120000)});
         const result = await execute(sandbox[0]!, sandbox.slice(1), candidatePath, { timeoutMs: command.timeoutMs ?? 120_000, env:Object.fromEntries(Object.keys(process.env).map(name=>[name,undefined])) });
         checks.push({ id: randomUUID(), commandId: id, candidateHead, ...result, stdout: redact(result.stdout, 1_048_576), stderr: redact(result.stderr, 1_048_576), startedAt, finishedAt: new Date().toISOString() });
         operation = { ...operation, checks, phase: 'checks_recorded' }; await this.record(workspace, operation);

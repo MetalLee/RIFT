@@ -44,7 +44,7 @@ export async function startAnalysisBatch(ctx:Context,store:RiftStore|undefined,l
   // Local DSH agents cannot use inherited tools to delegate or write. External
   // providers retain their own tool policies; their file changes still fail the
   // existing analysis collectSource gate in the isolated worktree.
-  invariant((input.tools??[]).every(tool=>tool.name==='rift_send_message'),'START_NOT_PUBLISHED','Analysis batches accept only the Host scoped collaboration tool.');
+  invariant((input.tools??[]).every(tool=>['rift_send_message','rift_skill_resource'].includes(tool.name)),'START_NOT_PUBLISHED','Analysis batches accept only Host scoped collaboration and immutable Skill resource tools.');
   const repositoryBacked=!!store.workspace(store.workflow(task.workflowId).workspaceId).repositoryPath;
   const scopedTools=[...(input.tools??[]),...(repositoryBacked?createRepositoryReadTools(input.cwd):[])];
   const allowed=scopedTools.map(tool=>tool.name);
