@@ -14,7 +14,7 @@ export class DshChatRuntime implements AgentRuntime {
     input.signal.throwIfAborted();
     if (!this.ctx.llm.listProviders().some(item => item.id === this.provider)) throw new RiftError('START_NOT_PUBLISHED', 'The selected DSH provider is not registered.');
     let failed = false;
-    const attempts = new Map<string, { text: string; kind: 'assistant'|'commentary'|'final'; thinking: boolean; blocks: Map<number,string> }>();
+    const attempts = new Map<string, { text: string; kind: 'assistant'|'commentary'|'final'; started: boolean; reasoning: Map<number,string>; blocks: Map<number,string> }>();
     let toolSequence = 0;
     let failureMessage:string|undefined;
     const recordFailure=(failure:unknown)=>{failed=true;failureMessage=redact(failure&&typeof failure==='object'&&'message' in failure&&typeof failure.message==='string'?failure.message:publicError(failure).message,4096);};
@@ -30,19 +30,21 @@ export class DshChatRuntime implements AgentRuntime {
         scope.on('agent/assistant-stream', ({ frame }) => {
           const messageId = String(frame.attemptId);
           if (frame.type === 'start') {
-            attempts.set(messageId, {text:'',kind:'assistant',thinking:false,blocks:new Map()});
-            input.onEvent?.({type:'message.started',messageId,kind:'assistant'});
+            attempts.set(messageId, {text:'',kind:'assistant',started:false,reasoning:new Map(),blocks:new Map()});
             return;
           }
           const attempt = attempts.get(messageId);
           if (frame.type === 'end') {
             if (attempt) {
-              input.onEvent?.({type:'message.completed',messageId,kind:attempt.kind,text:attempt.text,interrupted:frame.outcome.kind!=='committed'||frame.outcome.eventType!=='assistant/message'});
+              const interrupted = frame.outcome.kind!=='committed'||frame.outcome.eventType!=='assistant/message';
+              for (const [index,text] of attempt.reasoning) input.onEvent?.({type:'message.completed',messageId:`reasoning:${messageId}:${index}`,kind:'reasoning',text,interrupted});
+              if (attempt.started) input.onEvent?.({type:'message.completed',messageId,kind:attempt.kind,text:attempt.text,interrupted});
               attempts.delete(messageId);
             }
             return;
           }
           if (frame.chunk.type === 'text-delta') {
+            if (attempt && !attempt.started) { attempt.started = true; input.onEvent?.({type:'message.started',messageId,kind:'assistant'}); }
             if (attempt) { attempt.text += frame.chunk.text; attempt.blocks.set(frame.chunk.index,(attempt.blocks.get(frame.chunk.index)??'')+frame.chunk.text); }
             if (input.onEvent) input.onEvent({type:'message.delta',messageId,text:frame.chunk.text});
             else input.onText?.(frame.chunk.text);
@@ -51,15 +53,26 @@ export class DshChatRuntime implements AgentRuntime {
             const previous = attempt.blocks.get(frame.chunk.index) ?? '';
             const text = frame.chunk.block.text;
             if (text.startsWith(previous) && text.length > previous.length) {
+              if (!attempt.started) { attempt.started = true; input.onEvent?.({type:'message.started',messageId,kind:'assistant'}); }
               const delta = text.slice(previous.length);
               attempt.text += delta; attempt.blocks.set(frame.chunk.index,text);
               if (input.onEvent) input.onEvent({type:'message.delta',messageId,text:delta});
               else input.onText?.(delta);
             }
           }
-          if (frame.chunk.type === 'reasoning-delta' && attempt && !attempt.thinking) {
-            attempt.thinking = true;
-            input.onEvent?.({type:'status.changed',status:'thinking'});
+          // Only provider-exposed text; opaque signatures/replay metadata stay private.
+          // Keep this out of onText and finalText, which are answer-only contracts.
+          if (attempt && (frame.chunk.type === 'reasoning-delta' || (frame.chunk.type === 'block-end' && frame.chunk.block.type === 'reasoning'))) {
+            const index = frame.chunk.index;
+            const previous = attempt.reasoning.get(index) ?? '';
+            const text = frame.chunk.type === 'reasoning-delta' ? previous + frame.chunk.text : frame.chunk.block.type === 'reasoning' ? frame.chunk.block.text : previous;
+            const id = `reasoning:${messageId}:${index}`;
+            if (!attempt.reasoning.has(index)) {
+              input.onEvent?.({type:'status.changed',status:'thinking'});
+              input.onEvent?.({type:'message.started',messageId:id,kind:'reasoning'});
+            }
+            attempt.reasoning.set(index,text);
+            if (text.startsWith(previous) && text.length > previous.length) input.onEvent?.({type:'message.delta',messageId:id,text:text.slice(previous.length)});
           }
           if (frame.chunk.type === 'finish') {
             if (attempt) attempt.kind = frame.chunk.reason.kind === 'tool-calls' ? 'commentary' : 'final';

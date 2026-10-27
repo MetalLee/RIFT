@@ -61,7 +61,7 @@ function fixture(run: (filename: string) => void): void {
 }
 
 function assertCombinedSchema(store: RiftStore): void {
-  expect(store.all('SELECT version FROM schema_migrations ORDER BY version')).toEqual(Array.from({ length: 21 }, (_, i) => ({ version: i + 1 })));
+  expect(store.all('SELECT version FROM schema_migrations ORDER BY version')).toEqual(Array.from({ length: 22 }, (_, i) => ({ version: i + 1 })));
   expect(store.all<{name:string}>('PRAGMA table_info(api_connections)').map(column => column.name)).toEqual(expect.arrayContaining(['deleted_at', 'credential_deleted_at', 'credential_owned']));
   expect(store.get("SELECT name FROM sqlite_master WHERE type='index' AND name='connection_verifications_latest'")).toBeDefined();
   expect(() => store.exec("INSERT INTO api_connection_verifications VALUES('invalid','missing','now','{}')")).toThrow(/FOREIGN KEY/);
@@ -77,6 +77,27 @@ describe('main API 17/18 and published Worktree 17 migration reconciliation', ()
       const store = new RiftStore(filename);
       try { assertCombinedSchema(store); } finally { store.close(); }
     }
+  }));
+
+  it('upgrades a populated version 21 stream without changing sequence or message identity',()=>fixture(filename=>{
+    historical(filename,18);
+    const old=new DatabaseSync(filename);
+    let before:unknown;
+    try {
+    for(const name of readdirSync(migrations).filter(name=>Number(name.slice(0,4))>=19&&Number(name.slice(0,4))<=21).sort())old.exec(sql(name));
+    old.exec(`INSERT INTO conversations(id,workspace_id,title,created_at) VALUES('chat','w','Kept chat','before');
+      INSERT INTO messages(id,workspace_id,conversation_id,recipient_agent_id,role,content,status,created_at) VALUES('input','w','chat','lead','user','Hello','completed','before');
+      INSERT INTO agent_turns(id,workspace_id,conversation_id,message_id,agent_id,status,configuration,created_at) VALUES('turn','w','chat','input','lead','completed','{}','before');
+      INSERT INTO turn_stream_messages(seq,turn_id,message_id,kind,text,status,version,created_at,updated_at) VALUES(42,'turn','summary','reasoning_summary','Kept text','completed',7,'before','before');`);
+    before=old.prepare('SELECT * FROM turn_stream_messages').all();
+    } finally {old.close();}
+    const store=new RiftStore(filename);
+    try {
+      expect(store.db.prepare('SELECT * FROM turn_stream_messages').all()).toEqual(before);
+      store.exec("INSERT INTO turn_stream_messages(turn_id,message_id,kind,text,created_at,updated_at) VALUES('turn','new','reasoning','New text','after','after')");
+      expect(store.require<{seq:number}>("SELECT seq FROM turn_stream_messages WHERE message_id='new'").seq).toBeGreaterThan(42);
+      expect(store.db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    } finally {store.close();}
   }));
 
   it('rolls back legacy relabeling and API changes if a later migration fails, then retries safely', () => fixture(filename => {

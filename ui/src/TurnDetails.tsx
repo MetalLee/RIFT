@@ -8,14 +8,12 @@ export function turnPhaseLabel(turn: AgentTurn): string {
   if (turn.phase === 'generating' && turn.activities?.at(-1)?.type === 'model.status') return turn.activities.at(-1)!.summary;
   return (turn.phase ? phases[turn.phase] : undefined) ?? statuses[turn.status] ?? '状态待同步';
 }
-export function TurnDetails({ turn, view = 'diagnostics' }: { turn: AgentTurn; view?: 'chat' | 'diagnostics' }) {
-  const compact = view === 'chat';
-  const activities = compact ? turn.activities?.filter(activity => activity.type.startsWith('tool.')) : turn.activities;
+export function TurnDetails({ turn }: { turn: AgentTurn }) {
+  const activities = turn.activities;
   return <div className="turn-diagnostics">
-    {!compact && <><p>{turnPhaseLabel(turn)}{turn.currentToolName ? ` · ${turn.currentToolName}` : ''}</p>
-      <small>阶段开始：{time(turn.phaseStartedAt ?? turn.createdAt)} · 最后有效进展：{time(turn.lastProgressAt ?? turn.createdAt)}</small></>}
-    {compact && turn.phase === 'cleanup' && turn.modelEndedAt && <p>回复已结束，正在清理。</p>}
+    <p>{turnPhaseLabel(turn)}{turn.currentToolName ? ` · ${turn.currentToolName}` : ''}</p>
+      <small>阶段开始：{time(turn.phaseStartedAt ?? turn.createdAt)} · 最后有效进展：{time(turn.lastProgressAt ?? turn.createdAt)}</small>
     {turn.cleanupStatus === 'unknown' && <p>执行资源仍被占用；需要核对清理证据后恢复。</p>}
-    {!!activities?.length && <details open={['running','stopping'].includes(turn.status)}><summary>执行活动 · {activities.length}</summary><ol>{activities.map(activity => <li key={activity.seq}>{!compact && <><time>{time(activity.createdAt)}</time> · </>}{activity.summary}{Object.entries(activity.payload).map(([key,value]) => <span key={key}> · {key}: <code>{value}</code></span>)}</li>)}</ol></details>}
+    {!!activities?.length && <details open={['running','stopping'].includes(turn.status)}><summary>执行活动 · {activities.length}</summary><ol>{activities.map(activity => <li key={activity.seq}><time>{time(activity.createdAt)}</time> · {activity.summary}{Object.entries(activity.payload).map(([key,value]) => <span key={key}> · {key}: <code>{value}</code></span>)}</li>)}</ol></details>}
   </div>;
 }

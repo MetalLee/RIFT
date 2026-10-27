@@ -59,7 +59,9 @@ describe('native Codex Host-owned tool gateway', () => {
   it.each(['我先检查代码。', 'I will inspect the code.'])('streams native commentary, public summaries and tool progress before completion: %s',async text=>{
     const h=harness();const events:RuntimeEvent[]=[];let legacy='';
     h.input.onEvent=event=>events.push(event);h.input.onText=chunk=>{legacy+=chunk;};
-    const handle=await h.start();let done=false;void handle.result.then(()=>{done=true;});
+    const handle=await h.start();
+    expect(h.requests.find(request=>request.method==='turn/start')?.params.summary).toBe('auto');
+    let done=false;void handle.result.then(()=>{done=true;});
     const notify=(method:string,extra:Record<string,unknown>)=>h.peer.notify(method,{threadId:'native-thread',turnId:'native-turn',...extra});
     notify('item/started',{item:{id:'pre',type:'agentMessage',phase:'commentary'}});
     for(const chunk of text)notify('item/agentMessage/delta',{itemId:'pre',delta:chunk});
@@ -81,6 +83,17 @@ describe('native Codex Host-owned tool gateway', () => {
     notify('item/completed',{item:{id:'answer',type:'agentMessage',phase:'final_answer',text:'Done.'}});
     h.peer.notify('turn/completed',{threadId:'native-thread',turn:{id:'native-turn',status:'completed'}});
     await expect(handle.result).resolves.toMatchObject({text:'Done.',finalText:'Done.'});
+  });
+
+  it('recovers completion-only public summaries without exposing raw content',async()=>{
+    const h=harness(),events:RuntimeEvent[]=[];
+    h.input.onEvent=event=>events.push(event);
+    const handle=await h.start();
+    h.peer.notify('item/completed',{threadId:'native-thread',turnId:'native-turn',item:{id:'reason',type:'reasoning',summary:['核对调用结果。','Checking the results.'],content:['opaque private data']}});
+    h.complete();await handle.result;
+    expect(events).toContainEqual({type:'message.completed',messageId:'summary:reason:0',kind:'reasoning_summary',text:'核对调用结果。'});
+    expect(events).toContainEqual({type:'message.completed',messageId:'summary:reason:1',kind:'reasoning_summary',text:'Checking the results.'});
+    expect(JSON.stringify(events)).not.toContain('opaque private data');
   });
 
   it('persists the thread before accepting a turn and resumes with fresh tool closures', async () => {

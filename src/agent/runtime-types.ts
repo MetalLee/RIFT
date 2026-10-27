@@ -59,7 +59,7 @@ export interface AgentRuntime {
   start(input: RuntimeTurnInput): Promise<RuntimeHandle>;
 }
 
-export type RuntimeMessageKind = 'assistant' | 'commentary' | 'final' | 'reasoning_summary';
+export type RuntimeMessageKind = 'assistant' | 'commentary' | 'final' | 'reasoning' | 'reasoning_summary';
 export type RuntimeEvent =
   | { type: 'message.started'; messageId: string; kind: RuntimeMessageKind }
   | { type: 'message.delta'; messageId: string; text: string }

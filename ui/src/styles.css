@@ -55,5 +55,4 @@
 .chat-progress summary { cursor:pointer; }
 .chat-progress ul { margin:8px 0; padding-left:18px; }
 .chat-progress li { margin:6px 0; overflow-wrap:anywhere; }
-.message-draft { margin-top:18px; padding-top:14px; border-top:1px solid var(--border); }
 .message-recipient { color:var(--muted-foreground); }

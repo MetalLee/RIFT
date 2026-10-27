@@ -200,6 +200,15 @@ export class NativeCodexRuntime implements AgentRuntime {
           input.onEvent?.({type:'message.delta',messageId:id,text:params.delta});
         }
         if (method === 'item/completed' && params.item?.type === 'reasoning') {
+          // Some providers deliver summaries only on completion; reconcile the
+          // public summary array without reading content or encrypted state.
+          if (Array.isArray(params.item.summary)) for (const [index,text] of params.item.summary.entries()) {
+            if (typeof text !== 'string') continue;
+            const id = `summary:${messageId(params.item.id)}:${index}`;
+            if (!messages.has(id)) input.onEvent?.({type:'message.started',messageId:id,kind:'reasoning_summary'});
+            messages.set(id,{text,completed:true});
+            input.onEvent?.({type:'message.completed',messageId:id,kind:'reasoning_summary',text});
+          }
           for (const [id, message] of messages) if (id.startsWith(`summary:${messageId(params.item.id)}:`) && !message.completed) {
             message.completed = true;
             input.onEvent?.({type:'message.completed',messageId:id,kind:'reasoning_summary'});
@@ -335,7 +344,7 @@ export class NativeCodexRuntime implements AgentRuntime {
       input.session?.onThread(threadId);
       const prompt = input.messages.map(message => `${message.role === 'user' ? 'User' : 'Assistant'}:\n${message.content}`).join('\n\n');
       startingTurn = true;
-      const turn = record(record(await request('turn/start', { threadId, cwd: input.cwd, clientUserMessageId: input.turnId, input: [{ type: 'text', text: prompt, text_elements: [] }], sandboxPolicy:{type:'readOnly',networkAccess:false}, ...(restrictedTools?{environments: []}:{}), ...(input.reasoningEffort ? { effort: input.reasoningEffort } : {}) })).turn);
+      const turn = record(record(await request('turn/start', { threadId, cwd: input.cwd, clientUserMessageId: input.turnId, input: [{ type: 'text', text: prompt, text_elements: [] }], summary:'auto', sandboxPolicy:{type:'readOnly',networkAccess:false}, ...(restrictedTools?{environments: []}:{}), ...(input.reasoningEffort ? { effort: input.reasoningEffort } : {}) })).turn);
       if (typeof turn.id !== 'string') throw new RiftError('NATIVE_PROTOCOL', 'Missing native turn identity.');
       turnId = turn.id;
       input.session?.onTurn(turnId);

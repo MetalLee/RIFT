@@ -21,7 +21,7 @@ describe('real DSH provider streaming and tool loop',()=>{
   it('streams Chinese and English commentary and final text while the provider request is still open',async()=>{
     const home=await mkdtemp(path.join(tmpdir(),'rift-dsh-live-stream-'));
     const previousHome=process.env.DSH_HOME;
-    let commentary='',answer='',requests=0,gate=deferred<void>();
+    let reasoning='',commentary='',answer='',requests=0,gate=deferred<void>(),reasoningGate=deferred<void>();
     const server=http.createServer(async(req,res)=>{
       let source='';for await(const chunk of req)source+=chunk;
       const body=JSON.parse(source);requests++;
@@ -30,6 +30,10 @@ describe('real DSH provider streaming and tool loop',()=>{
       res.writeHead(200,{'Content-Type':'text/event-stream'});
       const send=(delta:unknown,reason:string|null=null)=>res.write(`data: ${JSON.stringify({id:'local-stream',object:'chat.completion.chunk',created:1,model:body.model,choices:[{index:0,delta,finish_reason:reason}]})}\n\n`);
       send({role:'assistant'});
+      if (!afterTool) {
+        for (const character of reasoning) send({reasoning_content:character});
+        await reasoningGate.promise;
+      }
       for(const character of afterTool?answer:commentary)send({content:character});
       if(afterTool)await gate.promise;
       else send({tool_calls:[{index:0,id:'inspect-call',type:'function',function:{name:'inspect_repository',arguments:'{}'}}]});
@@ -48,11 +52,17 @@ describe('real DSH provider streaming and tool loop',()=>{
       const {workspace}=seedWorkspace(store,'dsh-stream');
       chat=new ChatService({store,home,defaultConnection:()=>({runtime:'dsh',provider:connection.provider,model:connection.model}),validateConnection(){},runtime:()=>new DshChatRuntime(runtime.ctx,connection.provider),tools:()=>[{name:'inspect_repository',description:'Inspect repository',inputSchema:{type:'object',properties:{},additionalProperties:false},execute:()=>tool.promise}]});
       for(const language of ['zh','en']) {
+        reasoning=language==='zh'?'需要核对仓库中的实际文件。':'The repository files need to be checked.';
         commentary=language==='zh'?'我先检查仓库，然后验证输出。':'I will inspect the repository and verify streaming.';
         answer=language==='zh'?'检查完成，输出正常。':'Inspection complete. Streaming works.';
-        gate=deferred<void>();tool=deferred<unknown>();
+        gate=deferred<void>();reasoningGate=deferred<void>();tool=deferred<unknown>();
         const conversation=chat.createConversation(workspace.id,`Real DSH ${language}`);
         const turn=chat.send(workspace.id,conversation.id,{clientMessageId:`real-${language}`,content:`Inspect the repository (${language})`}).turn;
+        await until(()=>!!chat!.turn(workspace.id,turn.id).streamMessages?.some(message=>message.kind==='reasoning'&&message.text===reasoning));
+        const thinking=chat.turn(workspace.id,turn.id);
+        expect(thinking.status).toBe('running');
+        expect(thinking.streamMessages?.filter(message=>message.text).map(message=>message.kind)).toEqual(['reasoning']);
+        reasoningGate.resolve();
         await until(()=>chat!.turn(workspace.id,turn.id).phase==='tool');
         const inTool=chat.turn(workspace.id,turn.id);
         expect(inTool.status).toBe('running');
@@ -69,7 +79,7 @@ describe('real DSH provider streaming and tool loop',()=>{
       }
       expect(requests).toBe(4);
     } finally {
-      gate.resolve();tool.resolve({});await chat?.close();await service.close();store.close();await runtime.shutdown.shutdown(0);
+      gate.resolve();reasoningGate.resolve();tool.resolve({});await chat?.close();await service.close();store.close();await runtime.shutdown.shutdown(0);
       server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));
       if(previousHome===undefined)delete process.env.DSH_HOME;else process.env.DSH_HOME=previousHome;
       await rm(home,{recursive:true,force:true});
