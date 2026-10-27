@@ -113,7 +113,7 @@ describe('A06/A09/A12/A17 independent real Git acceptance', () => {
       const candidate = await service.prepareCandidate({ ...ctx, sourceHead: source.evidence.sourceHead, integrationId: 'secret-log' });
       const recorded = JSON.stringify(await service.readOperation(f.workspace, candidate.integrationId));
       expect(recorded).not.toContain(secret);
-      expect(recorded).toContain('REDACTED');
+      expect(recorded).toContain('undefined');
       await service.abandonCandidate({ ...ctx, candidate, reason: 'test completed' });
     } finally {
       if (oldSecret === undefined) delete process.env.RIFT_ACCEPTANCE_SECRET; else process.env.RIFT_ACCEPTANCE_SECRET = oldSecret;

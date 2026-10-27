@@ -3,7 +3,7 @@ import { lstat } from 'node:fs/promises';
 import path from 'node:path';
 import { invariant, type Task, type Worktree, type Workspace } from '../contracts/index.js';
 import type { LocalGitService } from '../git/integration.js';
-import { gitOk } from '../git/process.js';
+import { gitOk, worktreePorcelain } from '../git/process.js';
 import { key, managedPath, withMetadataLock } from '../git/worktree-binding.js';
 import { provesPreviousBootExited } from '../agent/boot-identity.js';
 import { now, type RiftStore } from '../storage/database.js';
@@ -200,7 +200,7 @@ export class WorktreeRemovalService {
       const directory = await managedPath(this.git.managedRoot, receipt.path);
       invariant(receipt.repositoryId === target.repo.id && receipt.sourceFingerprint === target.fingerprint, 'VERSION_CONFLICT', '保存的删除对象或证据已变化，不能推断删除结果。');
       invariant(directory === await managedPath(this.git.managedRoot, target.tree.path), 'WORKTREE_OWNERSHIP', '保存的目标目录已变化。');
-      const registered = await gitOk(target.repo.canonicalPath, ['worktree','list','--porcelain','-z']);
+      const registered = await worktreePorcelain(target.repo.canonicalPath);
       const normalize = (value: string) => process.platform === 'win32' ? path.resolve(value).toLowerCase() : path.resolve(value);
       const found = registered.split('\0').some(field => field.startsWith('worktree ') && normalize(field.slice(9)) === normalize(directory));
       let exists = true;

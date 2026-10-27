@@ -61,11 +61,13 @@ async function fixture(check = 'process.exit(0)') {
 
 describe('real Git with persistent coordinator and controlled fake activations', () => {
   it('reuses a proven collected source after an infrastructure failure without inventing an empty commit or skipping review',async()=>{
-    const f=await fixture('const fs=require("node:fs"),p=require("node:path").resolve("..","check-once");if(fs.existsSync("a.txt")&&!fs.existsSync(p)){fs.writeFileSync(p,"first infrastructure failure");process.exit(1)}');
+    const f=await fixture('process.exit(require("node:fs").existsSync("a.txt")?1:0)');
     f.plan([{id:'seed',expectedPaths:['seed.txt']},{id:'a',expectedPaths:['a.txt']}]);f.dispatch('seed');
     await f.develop(await f.started('seed','develop'),{'seed.txt':'previous accepted task'});f.review(await f.started('seed','review'));await f.settled('seed','succeeded');
     f.dispatch('a');const first=await f.started('a','develop');await f.develop(first,{'a.txt':'complete implementation'});await f.settled('a','blocked');
     const source=f.store.task('a').sourceHead!;expect(f.store.task('a').blockingReason).toContain('CHECK_FAILED');
+    // Operator repairs the check configuration, not an out-of-sandbox marker file.
+    (f.git as unknown as {commands:Map<string,{args:string[]}>}).commands.get('unit')!.args=['-e','process.exit(0)'];
     f.coordinator.retry({taskId:'a',reason:'Host check infrastructure recovered; implementation unchanged',expectedVersion:f.store.task('a').version});f.dispatch('a','-no-op');
     const repair=await f.started('a','repair',2);expect(await gitOk(repair.cwd,['rev-parse','HEAD'])).toBe(source);
     await f.develop(repair,{});const review=await f.started('a','review',2);

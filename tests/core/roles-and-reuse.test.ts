@@ -42,7 +42,7 @@ describe('free role and official execution options',()=>{
 });
 describe('analysis reuse ledger and cleanup boundary (controlled service)',()=>{
   function fixture(cleanupFailure=false,itemFailure=false){
-    const store=new RiftStore();stores.push(store);seedWorkspace(store,'ws');const parent={id:'lead'} as Agent;
+    const store=new RiftStore();stores.push(store);seedWorkspace(store,'ws');store.exec("UPDATE provider_bindings SET runtime='dsh'");const parent={id:'lead'} as Agent;
     const workflowDispose=vi.fn(async()=>{if(cleanupFailure)throw new Error('unknown cleanup');}),parentDispose=vi.fn(async()=>{}),removeGuard=vi.fn(),removeListener=vi.fn();
     const start=vi.fn((request:any)=>({id:'official-workflow-id',result:Promise.resolve({stopReason:'completed',value:request.args.items.map((item:{id:string})=>({id:item.id,text:itemFailure?null:'analysis'})),agentsStarted:request.args.items.length}),dispose:workflowDispose}));
     const ctx={get:(name:string)=>name==='workflowEngine'?{start}:undefined,agents:{get:()=>parent,create:vi.fn(async()=>({agent:{id:'scoped-parent'},dispose:parentDispose}))},tools:{guard:()=>removeGuard},on:()=>removeListener,subagents:{getProvider:()=>({capabilities:{}})}} as unknown as Context;
@@ -59,7 +59,7 @@ describe('analysis reuse ledger and cleanup boundary (controlled service)',()=>{
   it('retains the business slot and scope guards when Workflow cleanup fails',async()=>{const f=fixture(true);f.coordinator.dispatch({taskId:'task',idempotencyKey:'dispatch',expectedVersion:f.store.task('task').version});await settled(f.store);expect(f.store.require<Run>('SELECT * FROM runs').slotReleasedAt).toBeNull();expect(f.removeGuard).not.toHaveBeenCalled();expect(f.removeListener).not.toHaveBeenCalled();expect(f.parentDispose).toHaveBeenCalledOnce();await f.coordinator.shutdown();});
   it('refuses a fabricated batch outside the durable ledger before engine startup',async()=>{
     const parent={id:'lead'} as Agent,start=vi.fn(),ctx={agents:{get:()=>parent},subagents:{getProvider:()=>({capabilities:{}})},get:()=>({start})} as unknown as Context;
-    const input={signal:new AbortController().signal,task:{id:'not-registered',analysisItems:[{id:'a',prompt:'Analyze'}]},run:{providerSnapshot:{binding:{providerName:'configured'}}}} as Parameters<ActivationBridge['start']>[0];
+    const input={signal:new AbortController().signal,task:{id:'not-registered',analysisItems:[{id:'a',prompt:'Analyze'}]},run:{providerSnapshot:{binding:{providerName:'configured',runtime:'dsh'}}}} as Parameters<ActivationBridge['start']>[0];
     await expect(new DshActivationBridge(ctx,()=>parent).start(input)).rejects.toMatchObject({code:'START_NOT_PUBLISHED'});expect(start).not.toHaveBeenCalled();
   });
 });

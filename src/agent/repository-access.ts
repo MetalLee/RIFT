@@ -1,12 +1,13 @@
-import { realpath, stat } from 'node:fs/promises';
+import { workspaceSkillRoot } from '../skill/runtime.js';
+import { realpath, stat, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { invariant } from '../contracts/index.js';
 import type { RiftStore } from '../storage/database.js';
 import { gitOk } from '../git/process.js';
 
 /** Bump when runtime permission semantics change: old native threads must not resume. */
-export const REPOSITORY_PERMISSION_VERSION = 'workspace-repositories-v5-full-access';
-export interface RepositoryAccess { repositoryPaths: string[] }
+export const REPOSITORY_PERMISSION_VERSION = 'workspace-repositories-v8-public-egress-private-inodes';
+export interface RepositoryAccess { repositoryPaths: string[]; protectedPaths?: string[]; shellHome?:string; skillResources?:string; workspaceDirectory?:string }
 
 /** Resolve only registered roots; model content and context references never grant access. */
 export async function workspaceRepositoryAccess(store: RiftStore, workspaceId: string): Promise<RepositoryAccess | undefined> {
@@ -23,5 +24,9 @@ export async function workspaceRepositoryAccess(store: RiftStore, workspaceId: s
     invariant(canonical(actualRoot)===canonical(resolved)&&canonical(actualCommon)===canonical(row.commonGitDir),'REPOSITORY_IDENTITY_CHANGED','The repository Git identity differs from its registered workspace association.');
     if(!repositoryPaths.some(value=>canonical(value)===canonical(resolved)))repositoryPaths.push(resolved);
   }
-  return repositoryPaths.length?{repositoryPaths}:undefined;
+  const skillResources=store.filePath===':memory:'?undefined:workspaceSkillRoot(path.dirname(path.resolve(store.filePath)),workspaceId);
+  if(skillResources)await mkdir(skillResources,{recursive:true,mode:0o700});
+  const workspaceDirectory=skillResources?path.join(path.dirname(skillResources),'workspace'):undefined;
+  if(workspaceDirectory)await mkdir(workspaceDirectory,{recursive:true,mode:0o700});
+  return repositoryPaths.length||workspaceDirectory?{repositoryPaths,...store.filePath===':memory:'?{}:{skillResources,workspaceDirectory,shellHome:path.join(path.dirname(path.resolve(store.filePath)),'workspaces',workspaceId,'shell-home'),protectedPaths:[path.dirname(path.resolve(store.filePath)),...store.all<{canonicalPath:string;commonGitDir:string}>('SELECT canonical_path,common_git_dir FROM repositories WHERE workspace_id<>?',workspaceId).flatMap(row=>[row.canonicalPath,row.commonGitDir])]} }:undefined;
 }

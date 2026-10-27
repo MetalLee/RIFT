@@ -482,7 +482,7 @@ describe('Independent release acceptance: defaults and history',()=>{
         expect(migrated.require('SELECT message_id FROM native_message_receipts')).toEqual({messageId:'history-reply'});
         expect(migrated.require('SELECT released_at FROM execution_leases')).toEqual({releasedAt:null});
         expect(migrated.require('SELECT status FROM agent_turns')).toEqual({status:'running'});
-        expect(migrated.all('SELECT version FROM schema_migrations WHERE version>=14 ORDER BY version')).toEqual([{version:14},{version:15},{version:16},{version:17}]);
+        expect(migrated.all('SELECT version FROM schema_migrations WHERE version>=14 ORDER BY version')).toEqual([{version:14},{version:15},{version:16},{version:17},{version:18},{version:19},{version:20}]);
       }finally{migrated.close();}
     }finally{await rm(home,{recursive:true,force:true});}
   });

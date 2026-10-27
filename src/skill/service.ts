@@ -4,9 +4,9 @@ import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { invariant, RiftError } from '../contracts/index.js';
 import { RiftStore, now } from '../storage/database.js';
 
-const MAX_FILE = 256 * 1024;
-const MAX_TOTAL = 2 * 1024 * 1024;
-const MAX_FILES = 128;
+const MAX_FILE = 4 * 1024 * 1024;
+const MAX_TOTAL = 32 * 1024 * 1024;
+const MAX_FILES = 512;
 const MAX_PROMPT = 256 * 1024;
 export interface SkillResource { path: string; bytes: number; sha256: string; contentBase64: string }
 export interface SkillRequirements { resources: boolean; scripts: boolean; runtimes: string[] }
@@ -59,7 +59,7 @@ export class SkillService {
     const walk = (directory: string, depth = 0) => {
       invariant(depth <= 32, 'SKILL_SIZE_LIMIT', 'Skill directory nesting exceeds 32 levels.');
       for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-        invariant(++entries <= 512, 'SKILL_SIZE_LIMIT', 'Skill package contains more than 512 directory entries.');
+        invariant(++entries <= 2048, 'SKILL_SIZE_LIMIT', 'Skill package contains more than 2048 directory entries.');
         const absolute = join(directory, entry.name); const info = lstatSync(absolute);
         invariant(!info.isSymbolicLink(), 'SKILL_SYMLINK', 'Skill packages cannot contain symlinks or junctions.');
         const canonical = realpathSync(absolute); const within = relative(root, canonical);
@@ -67,7 +67,7 @@ export class SkillService {
         invariant(!['.git', 'node_modules'].includes(entry.name) && !/^\.env(?:\.|$)/i.test(entry.name), 'SKILL_UNSAFE_RESOURCE', 'Do not import repository internals, dependencies or environment credential files.');
         if (info.isDirectory()) { walk(absolute, depth + 1); continue; }
         invariant(info.isFile(), 'SKILL_UNSAFE_RESOURCE', 'Only regular files can be imported.');
-        invariant(++count <= MAX_FILES && info.size <= MAX_FILE && total + info.size <= MAX_TOTAL, 'SKILL_SIZE_LIMIT', 'Skill package exceeds 128 files, 256 KiB per file, or 2 MiB total.');
+        invariant(++count <= MAX_FILES && info.size <= MAX_FILE && total + info.size <= MAX_TOTAL, 'SKILL_SIZE_LIMIT', 'Skill package exceeds 512 files, 4 MiB per file, or 32 MiB total.');
         const descriptor = openSync(absolute, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
         let bytes: Buffer;
         try { const opened = fstatSync(descriptor); invariant(opened.isFile() && opened.dev === info.dev && opened.ino === info.ino && opened.size <= MAX_FILE, 'SKILL_PATH_CHANGED', 'Skill source changed while importing.'); bytes = readFileSync(descriptor); } finally { closeSync(descriptor); }
@@ -75,7 +75,7 @@ export class SkillService {
         // Recheck canonical identity after opening; snapshots use these bytes, never the source on execution.
         invariant(!lstatSync(absolute).isSymbolicLink() && realpathSync(absolute) === canonical, 'SKILL_PATH_CHANGED', 'Skill source changed while importing.');
         total += bytes.byteLength; const path = relative(root, absolute).split(sep).join('/');
-        if (path === 'SKILL.md') { try { instructions = new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { throw new RiftError('SKILL_ENCODING', 'SKILL.md must be valid UTF-8.'); } }
+        if (path === 'SKILL.md') { invariant(bytes.byteLength<=MAX_PROMPT,'SKILL_SIZE_LIMIT','SKILL.md exceeds 256 KiB.'); try { instructions = new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { throw new RiftError('SKILL_ENCODING', 'SKILL.md must be valid UTF-8.'); } }
         else resources.push({ path, bytes: bytes.byteLength, sha256: sha256(bytes), contentBase64: bytes.toString('base64') });
       }
     };

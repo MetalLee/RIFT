@@ -34,6 +34,7 @@ export class DshActivationBridge implements ActivationBridge {
       if (!this.store) throw new RiftError('START_NOT_PUBLISHED','Persistent Codex requires the RIFT ledger.');
       return provider.startTask(this.store,input);
     }
+    if(binding.runtime!=='dsh')throw new RiftError('FILESYSTEM_ISOLATION_UNAVAILABLE','Select a scoped DSH execution binding or the persistent RIFT Codex backend; this external provider has no verified workspace isolation.');
     const spawn=binding.spawn;
     if(spawn && (binding.runtime!=='dsh' || !provider.capabilities.agentOptions || (spawn.agentPreset&&!provider.capabilities.agentPreset)))throw new RiftError('START_NOT_PUBLISHED','Configured DSH spawn options are not supported by the exact registered provider.');
     const agentOptions:AgentOptions|undefined=spawn?{provider:spawn.provider,model:spawn.model,...spawn.reasoningEffort?{reasoningEffort:ReasoningEffortId(spawn.reasoningEffort)}:{},...spawn.maxTokens?{maxTokens:spawn.maxTokens}:{}}:undefined;
@@ -41,10 +42,10 @@ export class DshActivationBridge implements ActivationBridge {
     const restrictInherited=binding.runtime==='dsh';
     const readOnly=input.task.kind==='analysis'||input.run.purpose==='review';
     const repositoryAccess=restrictInherited&&readOnly&&this.store?await workspaceRepositoryAccess(this.store,this.store.workflow(input.task.workflowId).workspaceId):input.repositoryAccess;
-    const needsRepositoryShell=restrictInherited&&!readOnly&&!!repositoryAccess?.repositoryPaths.length;
+    const needsRepositoryShell=restrictInherited&&!readOnly&&!!(repositoryAccess?.repositoryPaths.length||repositoryAccess?.workspaceDirectory);
     if(restrictInherited&&!provider.prepareContinuable)throw new RiftError('START_NOT_PUBLISHED','This DSH provider cannot install the owned repository execution scope before startup.');
     const shell=needsRepositoryShell?await createRepositoryShell(this.ctx.subprocess,{...input,repositoryAccess}):undefined;
-    if(restrictInherited&&readOnly&&(input.tools??[]).some(tool=>tool.name!=='rift_send_message'))throw new RiftError('START_NOT_PUBLISHED','Formal review and analysis accept only scoped collaboration and file reading tools.');
+    if(restrictInherited&&readOnly&&(input.tools??[]).some(tool=>!['rift_send_message','rift_skill_resource'].includes(tool.name)))throw new RiftError('START_NOT_PUBLISHED','Formal review and analysis accept only scoped collaboration and file reading tools.');
     const scopedTools=[...(input.tools??[]),...(restrictInherited&&readOnly&&repositoryAccess?createRepositoryReadTools(input.cwd):[]),...(shell?[shell.tool]:[])];
     // The manager supports a reserved identity for local DSH children. Install
     // only into that exact child's scope before its first prompt is released.

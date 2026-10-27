@@ -32,9 +32,9 @@ describe('DSH development repository capability ownership',()=>{
     let listener:((payload:{agent:Agent})=>unknown)|undefined;
     vi.mocked(createRepositoryShell).mockResolvedValue({tool:{name:'exec_command',description:'Read-only command',inputSchema:{},async execute(){return{};}},async dispose(){}});
     const ctx={subprocess:{},agents:{get:()=>parent},on:(_event:string,handler:typeof listener)=>{listener=handler;return()=>{};},subagents:{getProvider:()=>({capabilities:{},prepareContinuable:async()=>({})}),startActivation:async()=>{listener?.({agent:child});return{childId:'review',result:Promise.resolve({stopReason:'completed',output:[]}),async dispose(){}};}}} as unknown as Context;
-    const handle=await new DshActivationBridge(ctx,()=>parent).start({run:{id:'review',purpose:'review',providerSnapshot:{binding:{providerName:'spawn',runtime:'dsh'}}},task:{id:'task',kind:'change'},role:{},cwd:'/candidate',repositoryAccess:{repositoryPaths:['/repo']},prompt:'Review.',signal:new AbortController().signal} as unknown as Parameters<ActivationBridge['start']>[0]);
+    const handle=await new DshActivationBridge(ctx,()=>parent).start({run:{id:'review',purpose:'review',providerSnapshot:{binding:{providerName:'spawn',runtime:'dsh'}}},task:{id:'task',kind:'change'},role:{},cwd:'/candidate',repositoryAccess:{repositoryPaths:['/repo']},prompt:'Review.',tools:[{name:'rift_skill_resource',description:'Read immutable assigned Skill bytes',inputSchema:{},async execute(){return{content:'CAPTURED'};}}],signal:new AbortController().signal} as unknown as Parameters<ActivationBridge['start']>[0]);
     expect(createRepositoryShell).not.toHaveBeenCalled();
-    expect(vi.mocked(child.ctx.tools.register).mock.calls.map(([tool])=>tool.name)).toEqual(['rift_read_file','rift_list_files']);
+    expect(vi.mocked(child.ctx.tools.register).mock.calls.map(([tool])=>tool.name)).toEqual(['rift_skill_resource','rift_read_file','rift_list_files']);
     expect(restrict).toHaveBeenCalledWith({allow:[]});await handle.dispose();
   });
 });
