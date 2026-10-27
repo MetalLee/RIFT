@@ -28,6 +28,15 @@ async function fixture() {
   return { root, repositoryPath, baseCommit, service, workspace, workflow, context, run, develop, approve };
 }
 describe('real Git integration', () => {
+  it('runs real Git checks in linked candidates with read-only common metadata', async () => {
+    const f=await fixture(),a=await f.develop('git-check','feature.txt','feature');
+    const service=new LocalGitService({managedRoot:path.join(f.root,'git-check-managed'),commands:[{id:'diff-check',executable:'git',args:['diff','--check','HEAD^','HEAD']},{id:'metadata-readonly',executable:process.execPath,args:['-e',`const fs=require('fs'),cp=require('child_process');const dir=cp.execFileSync('git',['rev-parse','--path-format=absolute','--git-common-dir'],{encoding:'utf8'}).trim();try{fs.writeFileSync(dir+'/MUST_NOT_WRITE','bad');process.exit(1)}catch(e){if(e.code!=='EROFS'&&e.code!=='EACCES')throw e;}console.log('GIT_READABLE_METADATA_READONLY');`]}]});
+    const candidate=await service.prepareCandidate({...a.ctx,sourceHead:a.source.sourceHead,integrationId:'git-check'});
+    expect(candidate.checks!.map(check=>check.exitCode)).toEqual([0,0]);
+    expect(candidate.checks![1]!.stdout).toContain('GIT_READABLE_METADATA_READONLY');
+    expect(await gitOk(f.repositoryPath,['rev-parse','HEAD'])).toBe(f.baseCommit);
+  });
+
   it('isolates Chinese/space paths and rebuilds the second candidate on latest accepted HEAD', async () => {
     const f = await fixture();
     const a = await f.develop('a', '甲.txt', 'A'); const b = await f.develop('b', '乙.txt', 'B');

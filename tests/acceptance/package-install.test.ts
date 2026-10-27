@@ -7,6 +7,34 @@ import {execFile} from 'node:child_process';import {promisify} from 'node:util';
 import {sandboxCommand} from '../../src/agent/filesystem-sandbox.js';
 const exec=promisify(execFile);
 describe('workspace package tooling',()=>{
+ it('does not privatize shared inodes inside read-only metadata nested in a writable root',async()=>{
+  const root=await mkdtemp(path.join(tmpdir(),'rift-readonly-inode-')),project=path.join(root,'project'),metadata=path.join(project,'metadata'),shared=path.join(root,'shared');
+  await mkdir(metadata,{recursive:true});await writeFile(shared,'SHARED_METADATA');await link(shared,path.join(metadata,'value'));const before=await stat(shared);
+  try{
+   const argv=await sandboxCommand([project],project,'cat metadata/value',[],{readOnlyRoots:[metadata]});
+   expect((await exec(argv[0]!,argv.slice(1))).stdout).toBe('SHARED_METADATA');
+   const after=await stat(path.join(metadata,'value'));expect(after.ino).toBe(before.ino);expect(after.nlink).toBe(2);expect(await readFile(shared,'utf8')).toBe('SHARED_METADATA');
+  }finally{await rm(root,{recursive:true,force:true});}
+ });
+ it('rejects a writable HOME alias of read-only metadata before executing',async()=>{
+  const root=await mkdtemp(path.join(tmpdir(),'rift-readonly-home-')),repo=path.join(root,'repo'),metadata=path.join(root,'metadata');await mkdir(repo);await mkdir(metadata);await writeFile(path.join(metadata,'value'),'ORIGINAL');
+  try{
+   for(const home of [metadata,root,path.join(metadata,'nested')]){
+    await expect(sandboxCommand([repo],repo,'echo SHOULD_NOT_EXECUTE',[],{home,readOnlyRoots:[metadata]})).rejects.toMatchObject({code:'FILESYSTEM_SCOPE'});
+   }
+   expect(await readFile(path.join(metadata,'value'),'utf8')).toBe('ORIGINAL');
+  }finally{await rm(root,{recursive:true,force:true});}
+ });
+ it('keeps read-only grants effective under writable parents and over writable children',async()=>{
+  const root=await mkdtemp(path.join(tmpdir(),'rift-readonly-')),child=path.join(root,'child');await mkdir(child);await writeFile(path.join(child,'value'),'ORIGINAL');
+  try{
+   for(const [writable,readonly] of [[root,child],[child,root]]){
+    const argv=await sandboxCommand([writable!],child,`node -e "const fs=require('fs');if(fs.readFileSync('value','utf8')!=='ORIGINAL')process.exit(1);try{fs.writeFileSync('value','CHANGED');process.exit(2)}catch(e){if(e.code!=='EROFS'&&e.code!=='EACCES')throw e;}console.log('READONLY_OK')"`,[],{readOnlyRoots:[readonly!]});
+    expect((await exec(argv[0]!,argv.slice(1))).stdout).toBe('READONLY_OK\n');
+   }
+   expect(await readFile(path.join(child,'value'),'utf8')).toBe('ORIGINAL');
+  }finally{await rm(root,{recursive:true,force:true});}
+ });
  it('persists a private HOME across commands and keeps project Skill paths usable',async()=>{
   const root=await mkdtemp(path.join(tmpdir(),'rift-package-')),repo=path.join(root,'repo'),home=path.join(root,'host','workspaces','own','shell-home');await mkdir(repo);
   await mkdir(path.join(repo,'.codex','skills'),{recursive:true});await writeFile(path.join(repo,'.codex','auth.json'),'HOST_SECRET');

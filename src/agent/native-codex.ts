@@ -36,7 +36,7 @@ const canonicalPath=(value:string)=>process.platform==='win32'?path.resolve(valu
  * A linked task worktree may live elsewhere, but must share one of these exact
  * common Git directories. No parent directory is broadened into a writable root. */
 export async function nativeRepositoryRoots(cwd:string,repositoryPaths:readonly string[],signal:AbortSignal,workspaceDirectory?:string):Promise<string[]> {
-  if((!repositoryPaths.length&&!workspaceDirectory)||repositoryPaths.length>64)throw new RiftError('NATIVE_REPOSITORY_SCOPE','Select 1–64 registered repository roots.');
+  if(!repositoryPaths.length&&!workspaceDirectory)throw new RiftError('NATIVE_REPOSITORY_SCOPE','A registered repository root or workspace directory is required.');
   const directory=async(value:string)=>{
     if(!path.isAbsolute(value))throw new RiftError('NATIVE_REPOSITORY_SCOPE','Repository permissions require absolute Host paths.');
     const actual=await realpath(value);

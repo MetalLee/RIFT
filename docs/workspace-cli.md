@@ -69,3 +69,5 @@ Native dynamic tools have no fixed 128-call cutoff; call identities remain idemp
 Candidate checks/publication compare committed source and ordinary untracked files, not Git-ignored build/cache output. Archive/takeover still preserve ignored/untracked data and refuse destructive cleanup until addressed. Vitest runs the project's tests and UI tests, not stale copies inside `.rift` worktrees.
 
 Repository preparation has no fixed file-count rejection; scanning remains cancellable. Shell calls accept longer explicit `timeoutMs` instead of rejecting anything over five minutes (the JavaScript timer ceiling and enclosing execution deadline still apply). Neither change expands mounted workspace paths.
+
+Candidate checks receive read-only access to their repository's canonical Git metadata, so linked-worktree Git commands work without granting writes to shared refs or indexes. Registered repository counts are not a separate native-runtime permission limit.
