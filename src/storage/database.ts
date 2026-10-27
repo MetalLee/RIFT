@@ -25,8 +25,9 @@ export class RiftStore {
   constructor(path: string = ':memory:', options: { lock?: boolean } = {}) {
     this.filePath=path;
     if (path !== ':memory:') { mkdirSync(dirname(path), { recursive: true }); if (options.lock !== false) this.acquireLock(`${path}.host.lock`); }
+    let opened: DatabaseSync | undefined;
     try {
-      this.db = new DatabaseSync(path);
+      this.db = opened = new DatabaseSync(path);
       this.db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');
       const migration = readFileSync(fileURLToPath(new URL('../../migrations/0001_initial.sql', import.meta.url)), 'utf8');
       if(!this.get("SELECT name FROM sqlite_master WHERE type='table' AND name='schema_migrations'"))this.transaction(() => this.db.exec(migration));
@@ -61,9 +62,22 @@ export class RiftStore {
       }
       if(!this.get('SELECT version FROM schema_migrations WHERE version=15'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0015_safe_chat_stream.sql',import.meta.url)),'utf8')));
       if(!this.get('SELECT version FROM schema_migrations WHERE version=16'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0016_coordination_causality.sql',import.meta.url)),'utf8')));
-      if(!this.get('SELECT version FROM schema_migrations WHERE version=17'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0017_api_connection_deletion.sql',import.meta.url)),'utf8')));
-      if(!this.get('SELECT version FROM schema_migrations WHERE version=18'))this.transaction(()=>this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0018_connection_verifications.sql',import.meta.url)),'utf8')));
-    } catch (error) { this.releaseLock(); throw error; }
+      this.transaction(() => {
+        // The published Worktree branch used version 17 before main assigned
+        // it to API deletion. Identify that historical schema, not just its
+        // version marker. Relabel the receipt without recreating its table or
+        // safety triggers; roll everything back if a later migration fails.
+        if (this.get('SELECT version FROM schema_migrations WHERE version=17')
+          && this.get("SELECT name FROM sqlite_master WHERE type='table' AND name='worktree_removals'")
+          && !this.all<{name:string}>('PRAGMA table_info(api_connections)').some(column => column.name === 'deleted_at')) {
+          this.exec('UPDATE schema_migrations SET version=19 WHERE version=17');
+        }
+        if(!this.get('SELECT version FROM schema_migrations WHERE version=17'))this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0017_api_connection_deletion.sql',import.meta.url)),'utf8'));
+        if(!this.get('SELECT version FROM schema_migrations WHERE version=18'))this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0018_connection_verifications.sql',import.meta.url)),'utf8'));
+        if(!this.get('SELECT version FROM schema_migrations WHERE version=19'))this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0019_worktree_removals.sql',import.meta.url)),'utf8'));
+        if(this.db.prepare('PRAGMA foreign_key_check').all().length)throw new Error('Connection/Worktree migration introduced invalid foreign keys.');
+      });
+    } catch (error) { try { opened?.close(); } finally { this.releaseLock(); } throw error; }
   }
   private acquireLock(path: string): void {
     // The SQLite lease is the cross-process arbiter. Holding its exclusive
