@@ -4,7 +4,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Candidate, GitContext, GitService, ReviewResult, Run, Worktree, Workflow, Workspace } from '../contracts/index.js';
 import { execute, git, gitOk, worktreePorcelain } from './process.js';
-import { assertSafeFiles, checkoutClean, inspectRepository, key, managedPath, withMetadataLock } from './worktree-binding.js';
+import { assertSafeFiles, checkoutClean, sourceCheckoutClean, inspectRepository, key, managedPath, withMetadataLock } from './worktree-binding.js';
 import { parseReviewReport } from './quality-gate.js';
 import { redact } from '../api/security.js';
 import type { CheckCommand, CheckEvidence, GitOperation } from './types.js';
@@ -111,9 +111,7 @@ export class LocalGitService implements GitService {
       reusedSource = true;
     }
     await assertSafeFiles(cwd, changedPaths);
-    const allowed = task.expectedPaths.map(value => value.replace(/\\/g, '/').replace(/\/\*\*$/, '').replace(/\/$/, ''));
-    if (allowed.some(value => value.startsWith('/') || value.includes('..') || /^[A-Za-z]:/.test(value))) throw new Error('INVALID_EXPECTED_PATH');
-    if (allowed.length && changedPaths.some(file => !allowed.some(prefix => file === prefix || file.startsWith(`${prefix}/`) || path.posix.matchesGlob(file.replaceAll('\\','/'),prefix)))) throw new Error('PATH_SCOPE_VIOLATION: changes preserved for inspection');
+    // expectedPaths is legacy planning metadata, never a file allowlist.
     if (!changedPaths.length) throw new Error('EMPTY_CHANGE: change task has no actual diff');
     if (!reusedSource) {
       await gitOk(cwd, ['add', '--', ...changedPaths]);
@@ -166,13 +164,13 @@ export class LocalGitService implements GitService {
         const command = this.commands.get(id)!;
         const startedAt = new Date().toISOString();
         const quote=(value:string)=>"'"+value.replaceAll("'","'\"'\"'")+"'";
-        const sandbox=await sandboxCommand([await realpath(candidatePath)],candidatePath,[command.executable,...command.args].map(quote).join(' '),[],{signal:AbortSignal.timeout(command.timeoutMs??120000)});
+        const sandbox=await sandboxCommand([await realpath(candidatePath)],candidatePath,[command.executable,...command.args].map(quote).join(' '),[],{signal:AbortSignal.timeout(command.timeoutMs??120000),readOnlyRoots:[repository.commonGitDir]});
         const result = await execute(sandbox[0]!, sandbox.slice(1), candidatePath, { timeoutMs: command.timeoutMs ?? 120_000, env:Object.fromEntries(Object.keys(process.env).map(name=>[name,undefined])) });
         checks.push({ id: randomUUID(), commandId: id, candidateHead, ...result, stdout: redact(result.stdout, 1_048_576), stderr: redact(result.stderr, 1_048_576), startedAt, finishedAt: new Date().toISOString() });
         operation = { ...operation, checks, phase: 'checks_recorded' }; await this.record(workspace, operation);
         if (result.exitCode === 124) await this.quarantine(candidatePath, 'CHECK_TIMEOUT_CLEANUP_UNKNOWN: inspect descendant processes before archive');
         if (result.exitCode !== 0) throw new Error(`CHECK_FAILED: ${id} (${result.exitCode})`);
-        if (await gitOk(candidatePath, ['rev-parse', 'HEAD']) !== candidateHead || !(await checkoutClean(candidatePath))) throw new Error('CHECK_MODIFIED_CANDIDATE: changes preserved');
+        if (await gitOk(candidatePath, ['rev-parse', 'HEAD']) !== candidateHead || !(await sourceCheckoutClean(candidatePath))) throw new Error('CHECK_MODIFIED_CANDIDATE: changes preserved');
       }
       await withMetadataLock(repository.commonGitDir, async () => { await mkdir(path.dirname(reviewPath), { recursive: true }); await gitOk(repository.rootPath, ['worktree', 'add', '--detach', '--', reviewPath, candidateHead]); });
       // Review receives committed Host evidence, never the developer's claims.
@@ -198,7 +196,7 @@ export class LocalGitService implements GitService {
       if (review.verdict !== 'approve') throw new Error('REVIEW_REJECTED');
       for (const cwd of [operation.candidatePath, operation.reviewPath]) {
         await managedPath(this.managedRoot, cwd);
-        if (await gitOk(cwd, ['rev-parse', 'HEAD']) !== candidate.candidateHead || !(await checkoutClean(cwd))) throw new Error('REVIEW_MODIFIED_CHECKOUT');
+        if (await gitOk(cwd, ['rev-parse', 'HEAD']) !== candidate.candidateHead || !(await sourceCheckoutClean(cwd))) throw new Error('REVIEW_MODIFIED_CHECKOUT');
       }
       operation = { ...operation, phase: 'publish_planned' }; await this.record(workspace, operation);
       await withMetadataLock(repository.commonGitDir,async()=>{

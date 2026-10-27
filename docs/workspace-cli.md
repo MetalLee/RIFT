@@ -59,3 +59,15 @@ Existing default Skill versions remain immutable. Update an existing installatio
 Implementation references: [Node environment proxy configuration](https://nodejs.org/learn/http/enterprise-network-configuration), [npm proxy/cache/prefix configuration](https://docs.npmjs.com/cli/using-npm/config/).
 
 Regression coverage includes public npm install/update/remove, global CLI installation, npx, pinned Corepack/pnpm, Git HTTPS, immutable Skill import/assignment/resource execution, private HOME persistence, no-repository workspace roots, private destination denial and shared inode isolation. Run external-network regression explicitly with `RIFT_NETWORK_TESTS=1 pnpm test`; the default suite skips that external dependency.
+
+## Development permissions and recovery
+
+`expectedPaths` is optional legacy metadata only. It is absent from execution prompts and is not consulted for file authorization, task overlap scheduling or source acceptance. Agents can add required helpers/tests inside their workspace/task checkout. All actual source changes still receive exact-commit checks and independent review. Task attempts stay monotonic history, but explicit retry has no fixed lifetime count; cleanup/version/ownership validation remains. A completed Run whose source collection failed uses `task recover-source`, preserving its commit and attempt.
+
+Native dynamic tools have no fixed 128-call cutoff; call identities remain idempotent and scoped to the live execution. Saved model routes no longer override the provider adapter's idle timeout with RIFT's former 60-second watchdog; the installed adapter's maintained default applies (currently 300 seconds), and outer turn/Run deadlines still govern cancellation. Transport errors do not automatically replay tools.
+
+Candidate checks/publication compare committed source and ordinary untracked files, not Git-ignored build/cache output. Archive/takeover still preserve ignored/untracked data and refuse destructive cleanup until addressed. Vitest runs the project's tests and UI tests, not stale copies inside `.rift` worktrees.
+
+Repository preparation has no fixed file-count rejection; scanning remains cancellable. Shell calls accept longer explicit `timeoutMs` instead of rejecting anything over five minutes (the JavaScript timer ceiling and enclosing execution deadline still apply). Neither change expands mounted workspace paths.
+
+Candidate checks receive read-only access to their repository's canonical Git metadata, so linked-worktree Git commands work without granting writes to shared refs or indexes. Registered repository counts are not a separate native-runtime permission limit.

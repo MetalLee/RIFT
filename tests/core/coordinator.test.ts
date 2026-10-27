@@ -79,8 +79,19 @@ describe('persistent task coordinator',()=>{
     expect(f.coordinator.status('workflow').slots.developers).toBe(2);expect(f.store.task('a').status).toBe('blocked');expect(f.dispatch('a','a').id).toBe(request.id);
     expect(()=>f.coordinator.retry({taskId:'a',reason:'retry',expectedVersion:f.store.task('a').version})).toThrow(/cleanup/i);expect(f.calls).toHaveLength(2);await f.coordinator.cancelWorkflow('workflow');await f.coordinator.shutdown();
   });
-  it('serializes overlapping paths but lets an independent task proceed',async()=>{
-    const f=fixture();f.plan([{id:'a',paths:['src/shared']},{id:'b',paths:['src/shared/file.ts']},{id:'c',paths:['docs']}]);f.dispatch('a');const b=f.dispatch('b');f.dispatch('c');await tick();expect(b.phase).toBe('queued');expect(f.calls.map(call=>call.run.taskId)).toEqual(['a','c']);f.complete(0);f.complete(1);await tick();expect(f.calls[2]!.run.taskId).toBe('b');f.complete(2);await tick();await f.coordinator.shutdown();
+  it('does not serialize isolated task worktrees because legacy path hints overlap',async()=>{
+    const f=fixture();f.plan([{id:'a',paths:['src/shared']},{id:'b',paths:['src/shared/file.ts']},{id:'c',paths:['docs']}]);f.dispatch('a');const b=f.dispatch('b');f.dispatch('c');await tick();expect(f.calls.map(call=>call.run.taskId)).toEqual(['a','b']);f.complete(0);f.complete(1);await tick();expect(f.calls[2]!.run.taskId).toBe('c');f.complete(2);await tick();await f.coordinator.shutdown();
+  });
+  it('allows explicit retries after repeated transport timeouts without a lifetime attempt cap',async()=>{
+    const f=fixture();f.plan([{id:'transport'}]);f.dispatch('transport');await tick();
+    for(let i=0;i<6;i++){
+      f.calls[i]!.result.resolve({stopReason:'error',text:'',diagnostic:'pi-ai stream idle timeout after 60000ms'});await tick();
+      expect(f.store.task('transport').status).toBe('blocked');
+      const next=f.coordinator.retry({taskId:'transport',reason:'Transport recovered; continue existing work',expectedVersion:f.store.task('transport').version});expect(next.attempt).toBe(i+2);
+      f.dispatch('transport','retry-'+i);await tick();
+    }
+    expect(f.calls).toHaveLength(7);expect(f.store.all("SELECT id FROM runs WHERE task_id='transport' AND status='failed'")).toHaveLength(6);
+    f.complete(6);await tick();expect(f.store.task('transport')).toMatchObject({status:'succeeded',attempt:7});await f.coordinator.shutdown();
   });
   it('rejects cyclic DAG and does not start dependencies until accepted',async()=>{
     const f=fixture();expect(()=>f.plan([{id:'a',dependsOn:['b']},{id:'b',dependsOn:['a']}])).toThrow(/cycle/i);

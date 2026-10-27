@@ -81,7 +81,7 @@ describe('E1 independent SQLite and controlled-activation acceptance', () => {
     await until(() => tasksB.every(task => f.store.task(task.id).status === 'succeeded'));
   });
 
-  it('E1.2 retains unknown cleanup budget and path ownership across shared-repository workspaces', async () => {
+  it('E1.2 retains unknown cleanup budget without treating shared-repository path metadata as ownership', async () => {
     const f = harness({ developers: 2, total: 3 }), a = f.seed('unknown', 'shared-repo'), b = f.seed('peer', 'shared-repo'), c = f.seed('separate');
     const [first] = f.plan(a.workflow.id, [{ expectedPaths: ['src/shared.ts'] }]);
     const [conflict] = f.plan(b.workflow.id, [{ expectedPaths: ['src/shared.ts'] }]);
@@ -89,10 +89,12 @@ describe('E1 independent SQLite and controlled-activation acceptance', () => {
     f.dispatch(first!.id); await until(() => f.starts.length === 1); f.starts[0]!.failCleanup = true; f.complete(f.starts[0]!);
     await until(() => f.store.run(f.starts[0]!.input.run.id).cleanupStatus === 'failed');
     f.dispatch(conflict!.id); f.dispatch(independent!.id); await until(() => f.starts.length === 2);
-    expect(f.starts[1]!.input.task.id).toBe(independent!.id); expect(f.store.run(f.starts[0]!.input.run.id).slotReleasedAt).toBeNull();
+    expect(f.starts[1]!.input.task.id).toBe(conflict!.id); expect(f.store.run(f.starts[0]!.input.run.id).slotReleasedAt).toBeNull();
     expect(() => f.project.configureRoles('unknown', a.bindings, a.roles)).toThrow(/in use|cleanup|executions/i);
-    f.complete(f.starts[1]!); await until(() => f.store.task(independent!.id).status === 'succeeded');
-    expect(f.starts).toHaveLength(2); expect(f.store.operation(f.dispatch(conflict!.id).id).phase).toBe('queued');
+    f.complete(f.starts[1]!); await until(() => f.store.task(conflict!.id).status === 'succeeded');
+    await until(() => f.starts.length === 3); expect(f.starts[2]!.input.task.id).toBe(independent!.id);
+    expect(f.store.run(f.starts[0]!.input.run.id).slotReleasedAt).toBeNull();
+    f.complete(f.starts[2]!); await until(() => f.store.task(independent!.id).status === 'succeeded');
   });
 
   it('E1.4 atomically rejects cycles and stale edits, then preserves queued work through dependency replan', async () => {

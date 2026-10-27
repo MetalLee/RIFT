@@ -9,7 +9,7 @@ import { redact } from '../api/security.js';
 import { nativeRepositoryRoots } from './native-codex.js';
 import type { RuntimeTool, RuntimeTurnInput } from './runtime-types.js';
 
-const commandSchema=z.object({cmd:z.string().min(1).max(32000),cwd:z.string().min(1).optional(),timeoutMs:z.number().int().min(100).max(300000).default(120000)}).strict();
+const commandSchema=z.object({cmd:z.string().min(1).max(32000),cwd:z.string().min(1).optional(),timeoutMs:z.number().int().min(100).max(2147483647).default(120000)}).strict();
 const canonical=(value:string)=>process.platform==='win32'?path.resolve(value).toLowerCase():path.resolve(value);
 
 /** DSH uses the pinned native OS sandbox for its ordinary shell tool. This is
@@ -30,7 +30,7 @@ export async function createRepositoryShell(subprocess:Context['subprocess'],inp
     if(!await child.waitForExit(AbortSignal.timeout(10000)))throw new RiftError('CLEANUP_UNKNOWN','Repository command descendants have not confirmed exit.');
     await child.done.catch(()=>{});active.delete(child);
   };
-  const tool:RuntimeTool={name:'exec_command',description:'Run a shell command in the Host-associated workspace repositories. Supports npm/npx/pnpm installs, public HTTP(S) Git downloads, local commits and project commands. Public HTTP(S) uses the configured proxy; global packages and caches persist in a private workspace HOME. No background services or detached commands; all descendants must finish before returning. Other workspaces, Host credentials and management networking remain inaccessible.',inputSchema:{type:'object',properties:{cmd:{type:'string'},cwd:{type:'string',description:'Optional existing directory inside the granted repository roots.'},timeoutMs:{type:'integer',minimum:100,maximum:300000}},required:['cmd'],additionalProperties:false},
+  const tool:RuntimeTool={name:'exec_command',description:'Run a shell command in the Host-associated workspace repositories. Supports npm/npx/pnpm installs, public HTTP(S) Git downloads, local commits and project commands. Public HTTP(S) uses the configured proxy; global packages and caches persist in a private workspace HOME. No background services or detached commands; all descendants must finish before returning. Other workspaces, Host credentials and management networking remain inaccessible.',inputSchema:{type:'object',properties:{cmd:{type:'string'},cwd:{type:'string',description:'Optional existing directory inside the granted repository roots.'},timeoutMs:{type:'integer',minimum:100,maximum:2147483647}},required:['cmd'],additionalProperties:false},
     execute(args,signal){
       const operation=(async()=>{
         invariant(!closed,'TURN_STOPPED','Repository execution is closed.');

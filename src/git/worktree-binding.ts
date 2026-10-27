@@ -58,6 +58,9 @@ export async function assertSafeFiles(root: string, files: string[]): Promise<vo
 }
 // This is an existence check, not a file inventory. Group ignored/untracked
 // directories so dependency trees cannot overflow the bounded Git evidence log.
+/** Checks validate committed source, not ignored build/cache outputs. Deletion
+ * and takeover still use checkoutClean to preserve every ignored file. */
+export async function sourceCheckoutClean(cwd:string):Promise<boolean> {return (await gitOk(cwd,['status','--porcelain=v1','--untracked-files=normal'])).length===0;}
 export async function checkoutClean(cwd: string): Promise<boolean> { return (await gitOk(cwd, ['status', '--porcelain=v1', '--untracked-files=normal', '--ignored=matching'])).length === 0; }
 const metadataTails = new Map<string, Promise<unknown>>();
 export async function withMetadataLock<T>(commonGitDir: string, operation: () => Promise<T>): Promise<T> {

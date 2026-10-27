@@ -103,6 +103,12 @@ describe('native Codex Host-owned tool gateway', () => {
     expect(h.calls).toHaveLength(1);
   });
 
+  it('continues legitimate tool work beyond 128 calls while preserving replay identity',async()=>{
+    const h=harness(),handle=await h.start();
+    for(let i=0;i<160;i++)expect((await h.toolCall({callId:'long-turn-'+i})).success).toBe(true);
+    expect(h.calls).toHaveLength(160);expect((await h.toolCall({callId:'long-turn-0'})).success).toBe(true);expect(h.calls).toHaveLength(160);
+    h.complete();await handle.result;
+  });
   it('revokes tools on stop and confirms managed-range cleanup separately', async () => {
     const h = harness(); const handle = await h.start();
     h.controller.abort();

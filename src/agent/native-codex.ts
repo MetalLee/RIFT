@@ -36,7 +36,7 @@ const canonicalPath=(value:string)=>process.platform==='win32'?path.resolve(valu
  * A linked task worktree may live elsewhere, but must share one of these exact
  * common Git directories. No parent directory is broadened into a writable root. */
 export async function nativeRepositoryRoots(cwd:string,repositoryPaths:readonly string[],signal:AbortSignal,workspaceDirectory?:string):Promise<string[]> {
-  if((!repositoryPaths.length&&!workspaceDirectory)||repositoryPaths.length>64)throw new RiftError('NATIVE_REPOSITORY_SCOPE','Select 1–64 registered repository roots.');
+  if(!repositoryPaths.length&&!workspaceDirectory)throw new RiftError('NATIVE_REPOSITORY_SCOPE','A registered repository root or workspace directory is required.');
   const directory=async(value:string)=>{
     if(!path.isAbsolute(value))throw new RiftError('NATIVE_REPOSITORY_SCOPE','Repository permissions require absolute Host paths.');
     const actual=await realpath(value);
@@ -216,7 +216,6 @@ export class NativeCodexRuntime implements AgentRuntime {
         const fingerprint = JSON.stringify([params.tool, params.arguments]);
         const prior = calls.get(params.callId);
         if (prior && prior.fingerprint !== fingerprint) throw new RiftError('IDEMPOTENCY_CONFLICT', 'Native call identity was reused for another operation.');
-        if (!prior && calls.size >= 128) throw new RiftError('NATIVE_TOOL_LIMIT', 'Native turn reached its tool-call limit.');
         const result = prior?.result ?? Promise.resolve().then(() => tool.execute(params.arguments, controller.signal, { callId: String(params.callId) }));
         if (!prior) calls.set(params.callId, { fingerprint, result });
         const value = await result;

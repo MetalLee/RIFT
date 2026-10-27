@@ -117,15 +117,15 @@ describe('workspace CLI and ordinary default Skill',()=>{
   const f=await fixture();try{
    const wf=await f.call(['workflow','start'],{mode:'analysis',goal:'Compare supplied text',startLead:false});
    await expect(f.call(['workflow','yield',wf.id],{summary:'handoff'})).rejects.toMatchObject({code:'EXECUTION_REQUIRED'});
-   const tasks=await f.call(['plan','submit',wf.id],{expectedRevision:0,tasks:[{id:'cli-analysis',kind:'analysis',title:'Compare',instructions:'Compare a/b',expectedPaths:[]}]});expect(tasks).toHaveLength(1);
+   const tasks=await f.call(['plan','submit',wf.id],{expectedRevision:0,tasks:[{id:'cli-analysis',kind:'analysis',title:'Compare',instructions:'Compare a/b'}]});expect(tasks).toHaveLength(1);
    const updated=await f.call(['task','update','cli-analysis'],{expectedVersion:0,title:'Compare text'});expect(updated.title).toBe('Compare text');
-   await expect(f.call(['task','update','cli-analysis'],{expectedVersion:updated.version,expectedPaths:['outside']})).rejects.toMatchObject({code:'INVALID_PATH'});
+   expect(await f.call(['task','update','cli-analysis'],{expectedVersion:updated.version,expectedPaths:['outside']})).toMatchObject({expectedPaths:['outside']});
    await expect(f.call(['workflow','show',wf.id],{},f.b.id)).rejects.toMatchObject({code:'NOT_FOUND'});
    await expect(f.call(['task','show','cli-analysis'],{},f.b.id)).rejects.toMatchObject({code:'NOT_FOUND'});
    await expect(f.call(['task','list'],{workflowId:wf.id},f.b.id)).rejects.toMatchObject({code:'NOT_FOUND'});
    expect((await f.call(['task','list'],{kind:'analysis'})).tasks).toHaveLength(1);
    await f.call(['task','cancel','cli-analysis']);expect((await f.call(['task','show','cli-analysis'])).status).toBe('cancelled');
-   await expect(f.call(['task','update','cli-analysis'],{expectedVersion:updated.version+1,title:'Rewrite'})).rejects.toMatchObject({code:'TASK_STARTED'});
+   await expect(f.call(['task','update','cli-analysis'],{expectedVersion:(await f.call(['task','show','cli-analysis'])).version,title:'Rewrite'})).rejects.toMatchObject({code:'TASK_STARTED'});
   }finally{await f.close();}
  });
  it('binds the agent CLI to a live turn without a management token or a caller-selected workspace',async()=>{

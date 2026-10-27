@@ -28,6 +28,15 @@ async function fixture() {
   return { root, repositoryPath, baseCommit, service, workspace, workflow, context, run, develop, approve };
 }
 describe('real Git integration', () => {
+  it('runs real Git checks in linked candidates with read-only common metadata', async () => {
+    const f=await fixture(),a=await f.develop('git-check','feature.txt','feature');
+    const service=new LocalGitService({managedRoot:path.join(f.root,'git-check-managed'),commands:[{id:'diff-check',executable:'git',args:['diff','--check','HEAD^','HEAD']},{id:'metadata-readonly',executable:process.execPath,args:['-e',`const fs=require('fs'),cp=require('child_process');const dir=cp.execFileSync('git',['rev-parse','--path-format=absolute','--git-common-dir'],{encoding:'utf8'}).trim();try{fs.writeFileSync(dir+'/MUST_NOT_WRITE','bad');process.exit(1)}catch(e){if(e.code!=='EROFS'&&e.code!=='EACCES')throw e;}console.log('GIT_READABLE_METADATA_READONLY');`]}]});
+    const candidate=await service.prepareCandidate({...a.ctx,sourceHead:a.source.sourceHead,integrationId:'git-check'});
+    expect(candidate.checks!.map(check=>check.exitCode)).toEqual([0,0]);
+    expect(candidate.checks![1]!.stdout).toContain('GIT_READABLE_METADATA_READONLY');
+    expect(await gitOk(f.repositoryPath,['rev-parse','HEAD'])).toBe(f.baseCommit);
+  });
+
   it('isolates Chinese/space paths and rebuilds the second candidate on latest accepted HEAD', async () => {
     const f = await fixture();
     const a = await f.develop('a', '甲.txt', 'A'); const b = await f.develop('b', '乙.txt', 'B');
@@ -55,7 +64,7 @@ describe('real Git integration', () => {
     await gitOk(f.repositoryPath, ['update-ref', f.workflow.integrationRef, a.source.sourceHead, f.baseCommit]);
     await expect(f.service.publishCandidate({ ...a.ctx, candidate, review: f.approve(a.ctx, candidate) })).rejects.toThrow('STALE_TARGET');
     const c2 = await f.service.prepareCandidate({ ...a.ctx, sourceHead: a.source.sourceHead, integrationId: 'mutation' });
-    await writeFile(path.join(c2.cwd, 'ignored.log'), 'review touched ignored');
+    await writeFile(path.join(c2.cwd, 'base.txt'), 'review changed tracked source');
     await expect(f.service.publishCandidate({ ...a.ctx, candidate: c2, review: f.approve(a.ctx, c2) })).rejects.toThrow('REVIEW_MODIFIED');
   });
   it('preserves accepted work on conflict and allows another candidate afterwards', async () => {
@@ -67,10 +76,12 @@ describe('real Git integration', () => {
     const third = await f.service.prepareCandidate({ ...c.ctx, sourceHead: c.source.sourceHead, integrationId: 'third' }); await f.service.publishCandidate({ ...c.ctx, candidate: third, review: f.approve(c.ctx, third) });
     expect(await readFile(path.join(third.cwd, 'base.txt'), 'utf8')).toBe('A\n');
   });
-  it('blocks out-of-scope changes, unknown cleanup, ignored files and outside paths without removing data', async () => {
+  it('collects unlisted files but protects dirty contents, unknown cleanup and outside paths', async () => {
     const f = await fixture(); const ctx = f.context('scope', ['allowed']); const run = f.run('scope'); const worktree = await f.service.prepareTask({ ...ctx, run });
     await writeFile(path.join(worktree.path, 'outside.txt'), 'keep');
-    await expect(f.service.collectSource({ ...ctx, run, worktree })).rejects.toThrow('PATH_SCOPE');
+    await expect(f.service.collectSource({ ...ctx, run:{...run,cleanupStatus:'unknown'}, worktree })).rejects.toThrow('WORKTREE_OWNERSHIP');
+    expect((await f.service.collectSource({ ...ctx, run, worktree })).changedPaths).toContain('outside.txt');
+    await writeFile(path.join(worktree.path,'pending.txt'),'uncollected');
     const archive = { workspace: f.workspace, worktree, active: false, cleanupConfirmed: true, artifactsSaved: true };
     await expect(f.service.archiveWorktree(archive)).rejects.toThrow('ARCHIVE_BLOCKED');
     const a = await f.develop('a', 'a.txt', 'A'); await writeFile(path.join(a.worktree.path, 'ignored.log'), 'keep ignored');
@@ -79,13 +90,25 @@ describe('real Git integration', () => {
     await expect(f.service.archiveWorktree({ ...archive, worktree: { ...worktree, path: f.repositoryPath } })).rejects.toThrow('UNSAFE_PATH');
     expect(await readFile(path.join(worktree.path, 'outside.txt'), 'utf8')).toBe('keep');
   });
-  it('rejects out-of-scope staged content even when the working file was restored to the base', async () => {
+  it('collects the final working tree without applying the legacy planned-file whitelist', async () => {
     const f = await fixture(); const ctx = f.context('staged', ['allowed.txt']); const run = f.run('staged');
     const worktree = await f.service.prepareTask({ ...ctx, run });
     await writeFile(path.join(worktree.path, 'base.txt'), 'hidden staged change'); await gitOk(worktree.path, ['add', 'base.txt']);
     await writeFile(path.join(worktree.path, 'base.txt'), 'base\n'); await writeFile(path.join(worktree.path, 'allowed.txt'), 'allowed');
-    await expect(f.service.collectSource({ ...ctx, run, worktree })).rejects.toThrow('PATH_SCOPE_VIOLATION');
-    expect(await gitOk(worktree.path, ['show', ':base.txt'])).toBe('hidden staged change');
+    const collected=await f.service.collectSource({ ...ctx, run, worktree });
+    expect(collected.changedPaths).toContain('base.txt');
+    expect(await gitOk(worktree.path,['show',`${collected.sourceHead}:base.txt`])).toBe('base');
+    expect(await gitOk(worktree.path,['show',`${collected.sourceHead}:allowed.txt`])).toBe('allowed');
+  });
+  it('accepts ignored build/cache outputs while preserving them against deletion',async()=>{
+    const f=await fixture(),a=await f.develop('cache-build','a.txt','A');
+    const service=new LocalGitService({managedRoot:f.service.managedRoot,commands:[{id:'build',executable:process.execPath,args:['-e',"require('fs').writeFileSync('ignored.log','build cache')"]}]});
+    const candidate=await service.prepareCandidate({...a.ctx,sourceHead:a.source.sourceHead,integrationId:'cache-build'});
+    expect(candidate.checks?.[0]?.exitCode).toBe(0);
+    const operation=await service.readOperation(f.workspace,'cache-build');expect(await readFile(path.join(operation.candidatePath,'ignored.log'),'utf8')).toBe('build cache');
+    const accepted=await service.publishCandidate({...a.ctx,candidate,review:f.approve(a.ctx,candidate)});expect(accepted.acceptedCommit).toBe(candidate.candidateHead);
+    expect((await gitOk(f.repositoryPath,['ls-tree','--name-only',accepted.acceptedCommit])).split('\n')).not.toContain('ignored.log');
+    await expect(service.archiveWorktree({workspace:f.workspace,worktree:{...a.worktree,kind:'candidate',path:operation.candidatePath},active:false,cleanupConfirmed:true,artifactsSaved:true})).rejects.toThrow('ARCHIVE_BLOCKED');
   });
   it('persists quarantine after a timed-out check and refuses default archive even after restart', async () => {
     const f = await fixture(); const a = await f.develop('timeout', 'a.txt', 'A');

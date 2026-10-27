@@ -6,7 +6,7 @@ import type { RiftStore } from '../storage/database.js';
 import { gitOk } from '../git/process.js';
 
 /** Bump when runtime permission semantics change: old native threads must not resume. */
-export const REPOSITORY_PERMISSION_VERSION = 'workspace-repositories-v8-public-egress-private-inodes';
+export const REPOSITORY_PERMISSION_VERSION = 'workspace-repositories-v9-task-development';
 export interface RepositoryAccess { repositoryPaths: string[]; protectedPaths?: string[]; shellHome?:string; skillResources?:string; workspaceDirectory?:string }
 
 /** Resolve only registered roots; model content and context references never grant access. */
