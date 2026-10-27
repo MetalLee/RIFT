@@ -14,6 +14,7 @@ export const WORKSPACE_COMMANDS = {
   message: ['list','send','retry-delivery'],
   turn: ['show','stop','reconcile'],
   skill: ['list','show','preview','import','discard-preview','shared','assign','effective','archive','restore'],
+  source: ['read'],
   event: ['list'], diagnostic: ['show'], queue: ['list'],
 } as const;
 export function workspaceCommandHelp() {

@@ -1,3 +1,4 @@
+import { readGithubSource } from './upstream-source.js';
 import { key as workspaceKey, managedPath } from '../git/worktree-binding.js';
 import { normalizeExpectedPaths } from '../task/scheduler.js';
 import path from 'node:path';
@@ -20,7 +21,7 @@ const version = z.number().int().nonnegative();
 const objectId = z.string().min(1).max(160);
 const empty = z.object({}).strict();
 const expected = z.object({expectedVersion:version}).strict();
-const readActions = new Set(['list','show','paths','effective','evidence','logs','removals','report']);
+const readActions = new Set(['list','show','paths','effective','evidence','logs','removals','report','read']);
 /** No caller-supplied HTTP paths, identity, SQL, or credentials cross this boundary. */
 export class WorkspaceCli {
   constructor(private readonly host:RiftHostService,
@@ -63,6 +64,7 @@ export class WorkspaceCli {
     const legacy=(entity:string,entityId:string,action?:string,method='POST',body:unknown=b)=>this.route(method,`/v1/${entity}/${enc(entityId)}${action?`/${action}`:''}`,body);
     const versionCheck=(actual:number,expected:number)=>invariant(actual===expected,'VERSION_CONFLICT','Object changed; read it again.');
     // Any embedded id checked here remains checked again by its business service.
+    if(r==='source'){noId();return readGithubSource(z.object({url:z.string().min(1).max(2048),maxBytes:z.number().int().min(1).max(131072).default(65536)}).strict().parse(b));}
     if(r==='workspace'){
       noId();
       if(a==='show'){empty.parse(b);return ui('GET','');}

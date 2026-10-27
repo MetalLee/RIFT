@@ -60,10 +60,10 @@ describe('workspace CLI and ordinary default Skill',()=>{
    expect((await f.call(['conversation','archive',conv.id],{expectedVersion:renamed.version})).archived).toBe(1);
    expect((await f.call(['message','list',conv.id])).messages).toEqual([]);
    await expect(f.call(['message','send',conv.id],{clientMessageId:'archived',content:'hello'})).rejects.toMatchObject({code:'CONVERSATION_ARCHIVED'});
-   const directory=path.join(f.root,'skill');await mkdir(directory);await writeFile(path.join(directory,'SKILL.md'),'# Sample\nUse receipts.');
+   const directory=path.join(f.root,'skill');await mkdir(directory);await writeFile(path.join(f.root,'linked-skill.md'),'# Sample\nUse receipts.');await link(path.join(f.root,'linked-skill.md'),path.join(directory,'SKILL.md'));
    await expect(f.call(['skill','preview'],{directory})).rejects.toMatchObject({code:'PATH_SCOPE'});
    await f.call(['workspace','grant-path'],{path:directory});
-   const preview=await f.call(['skill','preview'],{directory});const imported=await f.call(['skill','import'],{previewId:preview.previewId});expect(imported.version.instructions).toContain('Use receipts');
+   const preview=await f.call(['skill','preview'],{directory});const imported=await f.call(['skill','import'],{previewId:preview.previewId});expect(imported.version.instructions).toContain('Use receipts');await writeFile(path.join(f.root,'linked-skill.md'),'Changed source');expect((await f.call(['skill','show',imported.skill.id])).versions[0].instructions).toContain('Use receipts');
    expect((await f.call(['queue','list'])).leases).toEqual([]);expect((await f.call(['diagnostic','show'])).workspace.workspace.id).toBe(f.a.id);
    expect((await f.call(['event','list'])).events.length).toBeGreaterThan(0);
   }finally{await f.close();}
@@ -116,6 +116,33 @@ describe('workspace CLI and ordinary default Skill',()=>{
  });
 });
 describe('real filesystem and network boundary',()=>{
+ it.runIf(process.platform==='linux')('runs real Vite and Vitest with writable temporary config caches',async()=>{
+  const project=process.cwd(),own=await mkdtemp(path.join(tmpdir(),'rift-vite-'));
+  await mkdir(path.join(own,'node_modules'));await symlink(path.join(project,'node_modules','vitest'),path.join(own,'node_modules','vitest'));
+  await writeFile(path.join(own,'package.json'),'{"type":"module"}');
+  await writeFile(path.join(own,'vite.config.ts'),"export default {test:{globals:true,include:['sample.test.js']}};");
+  await writeFile(path.join(own,'sample.test.js'),"test('sample',()=>expect(1).toBe(1));");
+  await writeFile(path.join(own,'index.html'),'<html><body>Build</body></html>');
+  try{
+   const argv=await sandboxCommand([project,own],own,`set -eu; node '${project}/node_modules/vitest/vitest.mjs' run; node '${project}/node_modules/vite/bin/vite.js' build; echo TOOLCHAIN_OK`,[path.join(project,'.rift')]);
+   expect((await exec(argv[0]!,argv.slice(1),{timeout:30000})).stdout).toContain('TOOLCHAIN_OK');
+   expect(await readFile(path.join(own,'dist','index.html'),'utf8')).toContain('Build');
+  }finally{await rm(own,{recursive:true,force:true});}
+ },40000);
+ it.runIf(process.platform==='linux')('reads pnpm-shaped dependencies while protecting shared store inodes and private files',async()=>{
+  const root=await mkdtemp(path.join(tmpdir(),'rift-pnpm-')),own=path.join(root,'own'),store=path.join(root,'store');
+  await mkdir(path.join(own,'node_modules','sample'),{recursive:true});await mkdir(store);
+  await writeFile(path.join(store,'index.js'),"module.exports='DEPENDENCY_OK'");
+  await link(path.join(store,'index.js'),path.join(own,'node_modules','sample','index.js'));
+  await writeFile(path.join(own,'node_modules','.env'),'DEPENDENCY_SECRET');await writeFile(path.join(own,'README.md'),'README_OK');
+  try{
+   const argv=await sandboxCommand([own],own,`set -eu; cat README.md; node -e "require('dns').lookup('localhost',(e,a)=>{if(e||!['127.0.0.1','::1'].includes(a))process.exit(1)})"; node -e "console.log(require('sample'))"; test ! -s node_modules/.env; if echo BAD > node_modules/sample/index.js 2>/dev/null; then exit 1; fi; if ln node_modules/sample/index.js alias 2>/dev/null; then exit 1; fi; mkdir -p node_modules/.vite-temp; echo CACHE > node_modules/.vite-temp/config.mjs; echo EDITED > writable; test ! -e '${store}/index.js'`);
+   expect(argv.filter(x=>x==='--ro-bind').length).toBeLessThan(12);
+   expect((await exec(argv[0]!,argv.slice(1))).stdout).toBe('README_OKDEPENDENCY_OK\n');
+   expect(await readFile(path.join(store,'index.js'),'utf8')).toBe("module.exports='DEPENDENCY_OK'");
+   expect(await readFile(path.join(own,'writable'),'utf8')).toBe('EDITED\n');
+  }finally{await rm(root,{recursive:true,force:true});}
+ });
  it.runIf(process.platform==='linux')('permits own edits and tests but denies sibling/Host secrets, symlinks, environment and network',async()=>{
   const root=await mkdtemp(path.join(tmpdir(),'rift-sandbox-')),own=path.join(root,'own'),foreign=path.join(root,'foreign');await mkdir(own);await mkdir(foreign);await writeFile(path.join(foreign,'secret'),'FOREIGN');await mkdir(path.join(own,'.rift'));await writeFile(path.join(own,'.rift','management.token'),'HOST_TOKEN');await writeFile(path.join(own,'.env'),'SECRET');await symlink(foreign,path.join(own,'escape'));await writeFile(path.join(own,'file'),'OWN');
   try{
@@ -125,8 +152,10 @@ describe('real filesystem and network boundary',()=>{
    const nestedArgs=await sandboxCommand([own,nested],nested,`test ! -e '${own}/.rift/management.token'; cat nested.txt`,[path.join(own,'.rift')]);
    expect((await exec(nestedArgs[0]!,nestedArgs.slice(1))).stdout).toBe('TASK');
    await link(path.join(foreign,'secret'),path.join(own,'hardlink'));
-   await expect(sandboxCommand([own],own,'true')).rejects.toMatchObject({code:'FILESYSTEM_HARDLINK'});
-   await expect(createRepositoryReadTools(own)[0]!.execute({path:'hardlink'},new AbortController().signal)).rejects.toMatchObject({code:'UNAUTHORIZED'});
+   const linkedArgs=await sandboxCommand([own],own,"cat hardlink; if printf BAD > hardlink 2>/dev/null; then exit 1; fi; printf STILL_OWN > file");
+   expect((await exec(linkedArgs[0]!,linkedArgs.slice(1))).stdout).toBe('FOREIGN');
+   expect(await readFile(path.join(foreign,'secret'),'utf8')).toBe('FOREIGN');
+   expect(await createRepositoryReadTools(own)[0]!.execute({path:'hardlink'},new AbortController().signal)).toMatchObject({content:'FOREIGN'});
    await expect(createRepositoryReadTools(own)[0]!.execute({path:'escape/secret'},new AbortController().signal)).rejects.toMatchObject({code:'UNAUTHORIZED'});
   }finally{await rm(root,{recursive:true,force:true});}
  });
