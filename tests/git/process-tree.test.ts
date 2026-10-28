@@ -34,3 +34,13 @@ it.skipIf(process.platform === 'win32')('kills the owned group even after the pa
   const result = await execute(process.execPath, ['-e', script], process.cwd(), { timeoutMs: 150 });
   expect(result.exitCode).toBe(124); expect(Date.now()-start).toBeLessThan(1200);
 });
+
+it('streams large binary stdin without argv limits and retains early-exit diagnostics',async()=>{
+  const input=Buffer.alloc(3*1024*1024,65);input[1]=0;
+  const received=await execute(process.execPath,['-e',`let size=0,zero=false;process.stdin.on('data',b=>{size+=b.length;zero ||= b.includes(0);});process.stdin.on('end',()=>console.log(size+':'+zero));`],process.cwd(),{input});
+  expect(received.exitCode).toBe(0);expect(received.stdout.trim()).toBe(input.length+':true');
+  const early=await execute(process.execPath,['-e','console.error("INPUT_REJECTED");process.exit(7)'],process.cwd(),{input});
+  expect(early.exitCode).toBe(7);expect(early.stderr).toContain('INPUT_REJECTED');
+  await expect(execute('rift-nonexistent-command-987654',[],process.cwd(),{input})).rejects.toThrow();
+  const timeout=await execute(process.execPath,['-e','setInterval(()=>{},1000)'],process.cwd(),{input,timeoutMs:150});expect(timeout.exitCode).toBe(124);
+});

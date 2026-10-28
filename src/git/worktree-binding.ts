@@ -60,7 +60,21 @@ export async function assertSafeFiles(root: string, files: string[]): Promise<vo
 // directories so dependency trees cannot overflow the bounded Git evidence log.
 /** Checks validate committed source, not ignored build/cache outputs. Deletion
  * and takeover still use checkoutClean to preserve every ignored file. */
-export async function sourceCheckoutClean(cwd:string):Promise<boolean> {return (await gitOk(cwd,['status','--porcelain=v1','--untracked-files=normal'])).length===0;}
+/** Package-store contents are generated cache, not untracked source. Tracked
+ * paths still flow through diff/index checks, including files under this name. */
+export async function sourceUntrackedFiles(cwd:string,directories=false):Promise<string[]> {
+  const result=await git(cwd,['ls-files','--others','--exclude-standard','--exclude=.pnpm-store/',...directories?['--directory','--no-empty-directory']:[],'-z']);
+  if(result.exitCode!==0)throw new Error(`SOURCE_STATUS_FAILED: ${result.stderr}`);
+  return result.stdout.split('\0').filter(Boolean);
+}
+export async function sourceCheckoutClean(cwd:string):Promise<boolean> {
+  for(const args of [['diff','--quiet'],['diff','--cached','--quiet']]){
+    const result=await git(cwd,args);
+    if(result.exitCode===1)return false;
+    if(result.exitCode!==0)throw new Error(`SOURCE_STATUS_FAILED: ${result.stderr}`);
+  }
+  return (await sourceUntrackedFiles(cwd,true)).length===0;
+}
 export async function checkoutClean(cwd: string): Promise<boolean> { return (await gitOk(cwd, ['status', '--porcelain=v1', '--untracked-files=normal', '--ignored=matching'])).length === 0; }
 const metadataTails = new Map<string, Promise<unknown>>();
 export async function withMetadataLock<T>(commonGitDir: string, operation: () => Promise<T>): Promise<T> {
