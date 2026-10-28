@@ -1,3 +1,4 @@
+import { agentSandboxMode, type AgentSandboxMode } from './sandbox-mode.js';
 import { workspaceSkillRoot } from '../skill/runtime.js';
 import { realpath, stat, mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -6,8 +7,8 @@ import type { RiftStore } from '../storage/database.js';
 import { gitOk } from '../git/process.js';
 
 /** Bump when runtime permission semantics change: old native threads must not resume. */
-export const REPOSITORY_PERMISSION_VERSION = 'workspace-repositories-v9-task-development';
-export interface RepositoryAccess { repositoryPaths: string[]; protectedPaths?: string[]; shellHome?:string; skillResources?:string; workspaceDirectory?:string }
+export const REPOSITORY_PERMISSION_VERSION = 'workspace-repositories-v10-explicit-agent-sandbox';
+export interface RepositoryAccess { sandboxMode?:AgentSandboxMode; repositoryPaths: string[]; protectedPaths?: string[]; shellHome?:string; skillResources?:string; workspaceDirectory?:string }
 
 /** Resolve only registered roots; model content and context references never grant access. */
 export async function workspaceRepositoryAccess(store: RiftStore, workspaceId: string): Promise<RepositoryAccess | undefined> {
@@ -28,5 +29,5 @@ export async function workspaceRepositoryAccess(store: RiftStore, workspaceId: s
   if(skillResources)await mkdir(skillResources,{recursive:true,mode:0o700});
   const workspaceDirectory=skillResources?path.join(path.dirname(skillResources),'workspace'):undefined;
   if(workspaceDirectory)await mkdir(workspaceDirectory,{recursive:true,mode:0o700});
-  return repositoryPaths.length||workspaceDirectory?{repositoryPaths,...store.filePath===':memory:'?{}:{skillResources,workspaceDirectory,shellHome:path.join(path.dirname(path.resolve(store.filePath)),'workspaces',workspaceId,'shell-home'),protectedPaths:[path.dirname(path.resolve(store.filePath)),...store.all<{canonicalPath:string;commonGitDir:string}>('SELECT canonical_path,common_git_dir FROM repositories WHERE workspace_id<>?',workspaceId).flatMap(row=>[row.canonicalPath,row.commonGitDir])]} }:undefined;
+  return repositoryPaths.length||workspaceDirectory?{repositoryPaths,...agentSandboxMode()==='unrestricted'?{sandboxMode:'unrestricted' as const}:{},...store.filePath===':memory:'?{}:{skillResources,workspaceDirectory,shellHome:path.join(path.dirname(path.resolve(store.filePath)),'workspaces',workspaceId,'shell-home'),protectedPaths:[path.dirname(path.resolve(store.filePath)),...store.all<{canonicalPath:string;commonGitDir:string}>('SELECT canonical_path,common_git_dir FROM repositories WHERE workspace_id<>?',workspaceId).flatMap(row=>[row.canonicalPath,row.commonGitDir])]} }:undefined;
 }

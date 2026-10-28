@@ -1,4 +1,4 @@
-import { describe,expect,it } from 'vitest';
+import { describe,expect,it,vi } from 'vitest';
 import { mkdtemp,mkdir,readFile,realpath,rm,writeFile,symlink,unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -227,5 +227,44 @@ describe('Independent workspace repository permissions',()=>{
       const attached=await f.host.ensureLead('legacy-permission'),agent=f.agents.get(attached.leadSessionId),tool=f.definitions.find(item=>item.name==='exec_command');f.confirmed=false;
       await expect(tool.execute({cmd:'git status'},{agent,signal:new AbortController().signal})).rejects.toMatchObject({code:'CLEANUP_UNKNOWN'});
     }finally{await f.close();expect(f.disposed).toBe(1);}
+  });
+});
+
+describe('explicit unrestricted Agent execution',()=>{
+  it('propagates operator configuration and rotates the persistent thread when permission mode changes',async()=>{
+    const f=await fixture();try{
+      const conversation=f.host.chat.createConversation(f.own.workspace.id,'Mode change');
+      const first=f.host.chat.send(f.own.workspace.id,conversation.id,{clientMessageId:'sandboxed-mode',content:'Hello'});
+      await until(()=>f.calls.length===1);expect(f.calls[0]!.input.repositoryAccess?.sandboxMode).toBeUndefined();
+      f.calls[0]!.finish({text:'Done',stopReason:'completed'});await until(()=>f.host.chat.turn(f.own.workspace.id,first.turn.id).status==='completed');
+      vi.stubEnv('RIFT_AGENT_SANDBOX','unrestricted');
+      f.host.chat.send(f.own.workspace.id,conversation.id,{clientMessageId:'unrestricted-mode',content:'Again'});
+      await until(()=>f.calls.length===2);expect(f.calls[1]!.input.repositoryAccess?.sandboxMode).toBe('unrestricted');expect(f.calls[1]!.input.session?.threadId).toBeUndefined();
+      f.calls[1]!.finish({text:'Done',stopReason:'completed'});
+    }finally{vi.unstubAllEnvs();await f.close();}
+  });
+
+  it.each(['discussion','develop','review','analysis'] as const)('confirms full-access native policy and exposes the Host shell for %s',async mode=>{
+    const f=await fixture(),p=protocol(mode);
+    try {
+      const input=nativeInput(f.repositories[0]!,[f.repositories[0]!]);(input.repositoryAccess as any).sandboxMode='unrestricted';
+      const handle=await p.runtime.start(input);
+      const request=p.requests.find(r=>r.method==='thread/start')!.params;
+      expect(request.sandbox).toBe('danger-full-access');expect(request.approvalPolicy).toBe('never');
+      expect((request.dynamicTools as {name:string}[]).some(t=>t.name==='rift_exec_command')).toBe(true);
+      expect(p.requests.find(r=>r.method==='turn/start')!.params.sandboxPolicy).toEqual({type:'dangerFullAccess'});
+      await handle.dispose();
+    }finally{p.close();await f.close();}
+  });
+  it('runs directly with Host environment and accepts an outside cwd while keeping disposal checks',async()=>{
+    const f=await fixture();let spec:SubprocessSpawnSpec|undefined;
+    const subprocess={spawn(value:SubprocessSpawnSpec){spec=value;return{collected:{},done:Promise.resolve({exitCode:0,signal:null}),terminate(){},async waitForExit(){return true;}} as SubprocessHandle;}} as unknown as Context['subprocess'];
+    const input={cwd:f.repositories[0]!,repositoryAccess:{repositoryPaths:[f.repositories[0]!],sandboxMode:'unrestricted'},signal:new AbortController().signal};
+    const shell=await createRepositoryShell(subprocess,input as any);
+    try {
+      await shell.tool.execute({cmd:'pwd',cwd:f.repositories[2]},new AbortController().signal);
+      expect(spec!.argv).toEqual(['/bin/bash','--noprofile','--norc','-c','pwd']);expect(spec!.cwd).toBe(f.repositories[2]);expect(spec!.env?.PATH).toBe(process.env.PATH);
+      await shell.dispose();await expect(shell.tool.execute({cmd:'true'},new AbortController().signal)).rejects.toMatchObject({code:'TURN_STOPPED'});
+    }finally{await shell.dispose();await f.close();}
   });
 });

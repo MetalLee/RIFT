@@ -1,3 +1,4 @@
+import type { RepositoryAccess } from './repository-access.js';
 /** Runtime boundaries are owned by the Host. Model arguments never choose an identity. */
 export interface RuntimeTool {
   name: string;
@@ -16,8 +17,8 @@ export interface RuntimeTurnInput {
   cwd: string;
   /** Host-selected repository roots from this workspace's ledger. Never model
    * arguments. Native execution verifies Git roots and derives exact metadata
-   * directories; formal review/analysis modes cannot elevate through this field. */
-  repositoryAccess?: { repositoryPaths: string[]; protectedPaths?: string[]; shellHome?:string; skillResources?:string; workspaceDirectory?:string };
+   * directories; unrestricted mode is selected only by Host operator configuration. */
+  repositoryAccess?: RepositoryAccess;
   model: string;
   reasoningEffort?: string;
   instructions: string;

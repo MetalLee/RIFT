@@ -63,6 +63,28 @@ describe('persistent task coordinator',()=>{
     expect(f.store.task('a').acceptedCommit).toBeNull();f.complete(2);await tick();expect(f.store.task('a').status).toBe('succeeded');
     await f.coordinator.shutdown();
   });
+  it('retries an explicitly blocked review without development and still requires fresh approval',async()=>{
+    const f=fixture();f.plan([{id:'a',kind:'change'}]);f.dispatch('a');await tick();f.complete(0);await tick();
+    const run=f.calls[1]!.run;f.calls[1]!.result.resolve({stopReason:'completed',text:JSON.stringify({schemaVersion:1,taskId:'a',runId:run.id,verdict:'blocked',reviewedCommit:'b'.repeat(40),findings:[{severity:'high',file:'evidence.json',line:1,reason:'Executor evidence unavailable',suggestion:'Repeat verification after environment recovery'}]})});await tick();
+    try {
+      const task=f.store.task('a');expect(task.status).toBe('blocked');expect(f.store.run(run.id).status).toBe('succeeded');
+      expect(()=>f.coordinator.requestIntegration({taskId:'a',sourceHead:'c'.repeat(40),expectedVersion:task.version,idempotencyKey:'wrong-blocked-source'})).toThrow();
+      f.store.exec("UPDATE runs SET cleanup_status='unknown' WHERE id=?",run.id);
+      expect(()=>f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:task.version,idempotencyKey:'blocked-cleanup'})).toThrow(/cleanup/i);
+      f.store.exec("UPDATE runs SET cleanup_status='confirmed' WHERE id=?",run.id);
+      const originalResult=f.store.run(run.id).result as Record<string,unknown>;
+      f.store.exec('UPDATE runs SET result=? WHERE id=?',JSON.stringify({...originalResult,reviewedCommit:'c'.repeat(40)}),run.id);
+      expect(()=>f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:task.version,idempotencyKey:'wrong-candidate'})).toThrow(/explicitly blocked/);
+      f.store.exec('UPDATE runs SET result=?,task_attempt=task_attempt-1 WHERE id=?',JSON.stringify(originalResult),run.id);
+      expect(()=>f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:task.version,idempotencyKey:'wrong-attempt'})).toThrow(/explicitly blocked/);
+      f.store.exec('UPDATE runs SET task_attempt=? WHERE id=?',task.attempt,run.id);
+      const request=f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:task.version,idempotencyKey:'blocked-review-retry'});
+      expect(f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:task.version,idempotencyKey:'blocked-review-retry'}).id).toBe(request.id);
+      await tick();expect(f.calls).toHaveLength(3);expect(f.calls[2]!.run.purpose).toBe('review');expect(f.store.task('a').attempt).toBe(task.attempt);
+      expect(f.store.all('SELECT id FROM worktrees')).toHaveLength(1);expect(f.store.task('a').acceptedCommit).toBeNull();
+      f.complete(2);await tick();expect(f.store.task('a').status).toBe('succeeded');
+    }finally{await f.coordinator.shutdown();}
+  });
   it('does not treat a substantive review rejection as an infrastructure retry',async()=>{
     const f=fixture();f.plan([{id:'a',kind:'change'}]);f.dispatch('a');await tick();f.complete(0);await tick();
     const run=f.calls[1]!.run;f.calls[1]!.result.resolve({stopReason:'completed',text:JSON.stringify({schemaVersion:1,taskId:'a',runId:run.id,verdict:'changes_requested',reviewedCommit:'b'.repeat(40),findings:[]})});await tick();
@@ -191,5 +213,26 @@ describe('persistent task coordinator',()=>{
     f.store.exec("INSERT INTO roles(id,workspace_id,name,purpose,kind,provider_binding_id,prompt,revision) VALUES('third','ws','third','developer','subagent','claude','third',1)");
     expect(()=>f.store.exec("INSERT INTO runs(id,task_id,role_id,purpose,task_attempt,status,provider_snapshot,deadline,created_at) VALUES('overflow','c','third','develop',1,'preparing','{}','later','now')")).toThrow(/capacity/i);
     expect(f.store.all('SELECT * FROM runs')).toHaveLength(2);await f.coordinator.shutdown();
+  });
+});
+
+describe('cleanup persistence failure recovery',()=>{
+  it('stops and releases a completed runtime after disk-full writes recover',async()=>{
+    const f=fixture();f.plan([{id:'a'}]);f.dispatch('a');await tick();
+    const exec=f.store.exec.bind(f.store);let full=true;
+    f.store.exec=(sql,...args)=>{if(full)throw new Error('database or disk is full');return exec(sql,...args);};
+    try {
+      f.complete(0);await tick();await tick();
+      expect(f.calls[0]!.disposed).toBe(true);
+      const state=f.coordinator as unknown as {active:Map<string,unknown>;background:Set<Promise<void>>};
+      expect(state.background.size).toBe(0);
+      expect(state.active.size).toBe(0);
+      full=false;
+      await f.coordinator.cancelTask('a');
+      const run=f.store.run(f.calls[0]!.run.id);
+      expect(run.status).toBe('cancelled');expect(run.cleanupStatus).toBe('confirmed');expect(run.slotReleasedAt).not.toBeNull();
+      expect(f.store.task('a').status).toBe('cancelled');
+      expect(f.coordinator.status('workflow').slots.total).toBe(0);
+    } finally {full=false;f.store.exec=exec;await f.coordinator.shutdown();}
   });
 });

@@ -269,10 +269,30 @@ export class ChatService {
         this.store.exec("UPDATE messages SET status='cancelled',version=version+1 WHERE id=? AND sender_type='user'", turn.messageId);
       } else if (turn.status === 'running') this.store.exec("UPDATE agent_turns SET status='stopping',version=version+1 WHERE id=?", turnId);
     });
-    this.active.get(turnId)?.controller.abort();
+    const active = this.active.get(turnId);
+    if (active) active.controller.abort();
+    else {
+      const turn = this.turn(workspaceId, turnId);
+      if (['running','stopping'].includes(turn.status))
+        this.settleFailure(turn, new RiftError('TURN_HANDLE_LOST', 'Discussion stopped after its execution handle was lost.'), 'cancelled');
+    }
     const result = this.turn(workspaceId, turnId);
     if (queued) this.options.onTurnSettled?.(result);
     return result;
+  }
+  private settleFailure(turn: AgentTurn, failure: unknown, status: 'failed' | 'cancelled' = 'failed'): void {
+    const current = this.turn(turn.workspaceId, turn.id);
+    if (!['running','stopping'].includes(current.status)) return;
+    const cleanup = this.cleanupReceipts.has(turn.id) ? 'confirmed' : 'unknown';
+    const timestamp = now(), error = publicError(failure).message;
+    // Reply persistence can fail after disposal; retain its error without losing the cleanup receipt.
+    this.store.transaction(() => {
+      this.store.exec('UPDATE agent_turns SET status=?,cleanup_status=?,phase=?,cleanup_confirmed_at=?,error=?,ended_at=?,version=version+1 WHERE id=?', status, cleanup, cleanup === 'confirmed' ? 'settled' : 'cleanup_unknown', cleanup === 'confirmed' ? timestamp : null, error, timestamp, turn.id);
+      this.store.exec("UPDATE messages SET status=?,version=version+1 WHERE id=? AND sender_type='user'", status, turn.messageId);
+      this.store.exec("UPDATE turn_stream_messages SET status='interrupted',version=version+1,updated_at=? WHERE turn_id=? AND status='streaming'", timestamp, turn.id);
+      this.store.exec("UPDATE execution_leases SET cleanup_status=?,released_at=? WHERE owner_type='turn' AND owner_id=?", cleanup, cleanup === 'confirmed' ? timestamp : null, turn.id);
+    });
+    this.options.onTurnSettled?.(this.turn(turn.workspaceId, turn.id));
   }
   private reserve(turn: AgentTurn): boolean {
     return this.store.transaction(() => {
@@ -296,7 +316,7 @@ export class ChatService {
       for (const turn of this.store.all<AgentTurn>("SELECT * FROM agent_turns WHERE status='queued' ORDER BY CASE WHEN trigger_id IS NOT NULL AND (SELECT priority FROM turn_triggers WHERE id=trigger_id)>=80 AND (julianday('now')-julianday(created_at))*86400>=1 THEN 0 WHEN trigger_id IS NULL THEN 1 ELSE 2 END,COALESCE((SELECT priority FROM turn_triggers WHERE id=trigger_id),0) DESC,rowid")) {
         if (!this.reserve(turn)) continue;
         const controller = new AbortController();
-        const promise = this.execute(turn, controller).finally(() => { this.active.delete(turn.id); this.options.onLeaseReleased?.(); this.pump(); });
+        const promise = this.execute(turn, controller).catch(failure => this.settleFailure(turn, failure, controller.signal.aborted ? 'cancelled' : 'failed')).finally(() => { this.active.delete(turn.id); this.options.onLeaseReleased?.(); this.pump(); });
         this.active.set(turn.id, { controller, promise });
         void promise.catch(() => { /* execute persists failures; never let background rejection crash Host */ });
       }
@@ -325,7 +345,7 @@ export class ChatService {
       const repositoryAccess=turn.configuration.conversationTitle?undefined:await this.options.repositoryAccess?.(turn.workspaceId);
       const stagingScope=runtime.persistentSessions&&!turn.configuration.conversationTitle?createHash('sha256').update(JSON.stringify([turn.workspaceId,turn.conversationId,turn.agentId])).digest('hex'):turn.id;
       const cwd=repositoryAccess?.repositoryPaths[0] ?? repositoryAccess?.workspaceDirectory ?? path.resolve(this.options.home,'chat-staging',stagingScope);
-      const runtimeAccess={permissionVersion:REPOSITORY_PERMISSION_VERSION,cwd,repositoryPaths:repositoryAccess?.repositoryPaths??[],workspaceDirectory:repositoryAccess?.workspaceDirectory};
+      const runtimeAccess={permissionVersion:REPOSITORY_PERMISSION_VERSION,sandboxMode:repositoryAccess?.sandboxMode??'sandboxed',cwd,repositoryPaths:repositoryAccess?.repositoryPaths??[],workspaceDirectory:repositoryAccess?.workspaceDirectory};
       if (runtime.persistentSessions && !turn.configuration.conversationTitle) {
         native = nativeSession(this.store, {workspaceId:turn.workspaceId,scope:'chat',scopeId:turn.conversationId,agentId:turn.agentId,cwd,
           configuration:{connection:turn.configuration.connection,agentPrompt:turn.configuration.agent.prompt,purpose:turn.configuration.agent.purpose,runtimeAccess,skills:turn.configuration.skillInstructions??'',tools:tools.map(({name,description,inputSchema})=>({name,description,inputSchema}))}});
@@ -431,11 +451,12 @@ export class ChatService {
         this.store.exec('UPDATE agent_turns SET cleanup_started_at=? WHERE id=?',now(),turn.id);
         this.activity(turn.id,'cleanup.started','cleanup','正在清理运行时');
         let timer: ReturnType<typeof setTimeout> | undefined;
-        const disposing = handle.dispose().then(() => this.cleanupReceipt(turn));
+        const disposing = Promise.resolve().then(() => handle!.dispose()).then(() => this.cleanupReceipt(turn));
         try { await Promise.race([disposing, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new RiftError('CLEANUP_TIMEOUT', 'Runtime cleanup timed out.')), this.options.cleanupTimeoutMs ?? 10_000); })]); cleanup = 'confirmed'; }
         catch (failure) { error = publicError(failure).message; cleanup = 'unknown'; }
         finally { if (timer) clearTimeout(timer); }
       }
+      if (controller.signal.aborted && status === 'completed') status = 'cancelled';
       this.store.transaction(() => {
         const timestamp = now();
         if (this.cleanupReceipts.has(turn.id)) cleanup = 'confirmed';

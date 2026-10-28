@@ -414,7 +414,7 @@ export class RiftHostService implements ApiHandler {
       if(method==='POST'&&taskRoute[3]==='retry'){
         const workflow=this.store.workflow(task.workflowId);if(workflow.baseCommit)await this.ensureLead(workflow.id);
         const latest=this.store.get<import('../contracts/index.js').Run>('SELECT * FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1',taskId);
-        if(task.status==='blocked'&&task.sourceHead&&latest?.purpose==='review'&&['failed','interrupted'].includes(latest.status)){
+        if(task.status==='blocked'&&task.sourceHead&&latest?.purpose==='review'&&(['failed','interrupted'].includes(latest.status)||(latest.status==='succeeded'&&(latest.result as Partial<import('../contracts/index.js').ReviewResult>|null)?.verdict==='blocked'))){
           const input=z.object({expectedVersion:z.number().int().nonnegative(),reason:z.string().min(1)}).strict().parse(body);
           const request=this.coordinator.requestIntegration({taskId,sourceHead:task.sourceHead,expectedVersion:input.expectedVersion,idempotencyKey:`browser-review-retry:${taskId}:${input.expectedVersion}`});
           return{task:this.store.task(taskId),request};
