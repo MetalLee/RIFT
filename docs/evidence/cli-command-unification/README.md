@@ -1,5 +1,130 @@
 # CLI command unification: review follow-up evidence
 
+## Attempt 5: current repair and exact-source checks
+
+These are **local developer executions**, not Host acceptance or independent
+review approval. Regression remains red; no failing assertion was removed,
+skipped or mocked for this repair.
+
+Source relationship:
+
+- Task checkout initially had clean HEAD `aeb123c6247744209446b26f4ac4f535c6d9bb22`.
+- It is an ancestor of supplied integration candidate
+  `8060f71396c154703e3a7a4f01f27ef77f354881` (parents `1007bbbe` and `aeb123c`).
+  This checkout was fast-forwarded to that candidate, retaining its protocol/UI.
+- Diagnostic-only test repair: `ba869b566e2cec0a236d70b5afb1b03ca1c38e3c`;
+  checked tree `e4d7721ca47a73ce16d605971863c71281a71b4e`.
+  No production code, UI, protocol source or root manifest was changed.
+- `attempt5-exact.json` records this HEAD before and after execution, empty
+  tracked diffs, and matching byte-hash manifests for all 441 tracked non-doc
+  files. The following evidence commit changes docs only.
+
+### DSH failure: dependency read denied before HTTP
+
+The original line 108 assertion hid the already retained runtime error. Its
+assertion message now includes the verification result and observed requests,
+using the existing credential redactor. The expectation remains `passed === true`;
+all tool-round-trip, URL suffix, old stored endpoint and redacted 404 assertions
+are unchanged.
+
+The real DSH run reports:
+
+```text
+EACCES: permission denied, open '/data/projects/RIFT/node_modules/.pnpm/openai@7.19.0_@aws-sdk+credential-provider-node@3.972.88_@smithy+signature-v4@5.7.4_undici@8.11.2_ws@8.22.0_zod@4.4.3/node_modules/openai/resources/beta/agents/vaults/credentials.mjs'
+```
+
+Observed requests are `[]`, tool calls are zero, stop reason is `failed`, and
+cleanup is confirmed. The error survives in both the verification result and
+saved verification evidence. Independently importing that installed SDK's
+`index.mjs` in a plain Node process reproduces the same EACCES with a Node module
+loader stack, without RIFT verification, the HTTP fixture or DSH activation.
+Thus this observed failure is a dependency-file access denial, not an observed
+endpoint normalization/provider 404 failure. The precise access-policy mechanism
+is not established; a filename-based filter is not assumed. No dependency file
+was copied, renamed, patched or granted broader access to bypass the denial.
+The remainder of this real integration scenario is **not validated** here.
+
+### Sandbox prerequisite: nested UID mapping
+
+A minimal unchanged Bubblewrap invocation also exits 1:
+
+```sh
+/usr/bin/bwrap --unshare-all --die-with-parent --ro-bind / / -- /bin/true
+# bwrap: setting up uid map: Operation not permitted
+```
+
+The probe reports Bubblewrap 0.6.1, UID/GID 0, a single mapped UID
+(`0 0 1`), `NoNewPrivs: 1`, `Seccomp: 0`, user namespaces enabled, and
+`apparmor_restrict_unprivileged_userns=0`. These values alone do not establish
+which outer restriction rejects mapping. All five workspace-cli failures retain
+that same explicit UID-map denial; none is counted as a sandbox pass.
+No sandbox code, UID settings, kernel settings or security boundary was changed.
+
+### Commands and actual results
+
+`attempt5-dsh-diagnostic.json` retains the first focused failure.
+`attempt5-checks.json` retains initial checks, including the SDK import stack and
+UID probe. Those ran on `8060f713` **with the recorded diagnostic test diff**,
+not a clean exact commit: the first commit attempt failed for missing Git author
+identity. An explicit per-command local author identity then created `ba869b5`.
+Do not mistake those initial records for clean-candidate checks.
+
+Offline locked installation failed for a missing Cordis tarball. Existing
+installed dependencies were reused via local links; the local `@rift/protocol`
+link points to this checkout. The first protocol build triggered pnpm's automatic
+install/purge check and aborted for lack of TTY; the first general typecheck
+therefore failed on absent protocol declarations. These failures are preserved.
+With only pnpm's automatic dependency installation disabled, the existing build
+script generated protocol output without changing tracked source or the sandbox:
+
+```sh
+env pnpm_config_verify_deps_before_run=false pnpm build:protocol
+```
+
+`attempt5-exact.json` then records complete command arrays, timestamps,
+stdout/stderr and actual exit codes at clean `ba869b5`:
+
+| Check | Exit | Result |
+| --- | --- | --- |
+| Existing protocol build script, as above | 0 | Generated protocol declarations |
+| `node node_modules/typescript/bin/tsc --noEmit` | 0 | No diagnostics |
+| `node node_modules/typescript/bin/tsc -p tsconfig.build.json --noEmit` | 0 | No diagnostics |
+| Standalone `command-unification.test.ts` | 0 | 9/9 passed |
+| Seven-file regression listed below | 1 | 41 passed, 6 failed / 47 |
+
+For replay, use the exact command arrays in the JSON, or the seven-file list in
+“Reproduce on the exact checkout” below after building the protocol. The six
+failures are the same dependency-read denial and five UID-map denials; this is
+not inferred from historical baseline matching. No full backend suite was rerun.
+
+Required next environment: a Host-approved executor where normal installed
+OpenAI SDK modules can be read (including the module above, **not user credential
+stores**) and the existing unchanged Bubblewrap sandbox can establish its nested
+UID/user namespace mappings. Supply locked dependencies/cache and build protocol
+via the existing script first. Re-run the real DSH scenario and five boundary
+cases there; do not remove assertions, disable sandboxing, or mark them accepted
+here. Lead must independently check and review the next exact integration HEAD.
+
+Binding and record integrity:
+
+```sh
+git diff --exit-code ba869b566e2cec0a236d70b5afb1b03ca1c38e3c HEAD -- . ':!docs'
+git diff --exit-code 8060f71396c154703e3a7a4f01f27ef77f354881 HEAD -- ui packages package.json pnpm-lock.yaml pnpm-workspace.yaml
+sha256sum docs/evidence/cli-command-unification/attempt5*.json
+```
+
+| Record | SHA-256 |
+| --- | --- |
+| `attempt5-dsh-diagnostic.json` | `bdaf8bd3c8b1eccb82b512c445985cf77d04c23cf1c256078bfd0e907261410b` |
+| `attempt5-checks.json` | `f9b0bc6339ab4044b9ae601f2fedcdb463e55e90451fc8c1de8a9b043b035cd0` |
+| `attempt5-exact.json` | `545350303451a14de01904bcff7372a38f5cda9042bfa02b50db8cb57751d44b` |
+
+Skipped: full backend suite, external provider availability, backend protocol
+migration and formal Host/review gates. Risk: the real integration/sandbox cases
+remain unvalidated on this executor; no green regression or acceptance is claimed.
+
+## Historical evidence (attempts 1–4; retained unchanged outputs)
+
 Local implementation evidence, **not Host acceptance or independent approval**.
 The checked source commit is `f330841844aebb441970e6ea2cea3ab0c27364d9`
 (on `b1b948f0fa21435368a1c9796d4bde90b82157c2`). The following evidence
@@ -47,12 +172,12 @@ historical observations, not Lead exact-commit checks. In particular, Git-based
 fixture failures in archive-only comparisons require Git-aware reproduction;
 matching failures alone do not establish environmental causality or acceptance.
 
-The recovery evidence commit is a documentation-only descendant of `39ee0a9`.
-Its production source and tests are unchanged from that exact checked source;
-verify the binding on the final recovery HEAD with:
+The attempt-4 recovery evidence commit `aeb123c` is a documentation-only
+descendant of `39ee0a9`. Its production source and tests were unchanged from that
+checked source. For that historical recovery commit, the binding commands were:
 
 ```sh
-git diff --exit-code 39ee0a93072558e68dd1c86182fff4a60ab941b0 HEAD -- . ':!docs'
+git diff --exit-code 39ee0a93072558e68dd1c86182fff4a60ab941b0 aeb123c -- . ':!docs'
 sha256sum docs/evidence/cli-command-unification/39ee*.json
 ```
 
