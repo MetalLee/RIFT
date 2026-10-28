@@ -66,6 +66,39 @@ are unchanged. Unknown event types can still trigger snapshot refresh; they are
 not rejected by a closed enum. Message offsets, replacement flags, stream kinds,
 activity phases and snapshot cursors remain unchanged.
 
+## Timeline receipt projection
+
+`GET /ui-api/v1/workspaces/:workspaceId/conversations/:id/messages?view=timeline`
+(and its management alias) keeps the existing `ChatPage` contract and cursor
+semantics. `receipts` contains only the structured receipts for `messages` and
+`refreshedMessages` in that response, deduplicated and ordered by `eventSeq`.
+It is not a receipt-history endpoint: at most `limit + 100` receipts are returned
+(`limit` is 1–100; refresh accepts up to 100 IDs).
+
+A public Host receipt message matches by its exact
+`dedupeKey = event:<eventSeq>:<conversationId>`. Workspace, conversation, workflow
+and ledger task/run/request identities must also agree. Receipt lookups use the
+existing unique `(event_seq, conversation_id)` index; no migration is needed.
+Missing or mismatched receipts are omitted, never inferred from message text.
+Unknown ledger types remain unknown; clients must keep their safe default.
+
+For example, a matching receipt uses the unchanged shape:
+
+```json
+{"id":"outbox-…","workspaceId":"w","conversationId":"c","workflowId":"wf","eventSeq":42,"createdAt":"2026-10-28T00:00:00Z","payload":{"eventSeq":42,"workflowId":"wf","type":"source.collected","taskId":"task","runId":"run","requestId":null}}
+```
+
+Only the ledger type/IDs and public receipt `reason` (falling back to `error`)
+are projected; arbitrary stored payload fields are not exposed. Reason is
+redacted and bounded to 1500 UTF-8 bytes plus a truncation marker, rather than the
+short message-label preview. Malformed receipt JSON omits reason, not the page.
+
+Regression coverage: `tests/acceptance/timeline-receipts.test.ts` exercises real
+SQLite projection and authenticated HTTP reads, pagination/refresh, duplicate
+and out-of-order projection, missing/unknown receipts, identity isolation,
+redaction, response bounds and the SQLite query plan. This is backend contract
+evidence, not browser rendering or independent Host acceptance.
+
 ## Checks and clean build
 
 ```sh
