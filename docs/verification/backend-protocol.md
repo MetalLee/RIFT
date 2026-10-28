@@ -13,7 +13,20 @@
 
 ## 精确证据
 
-完整的命令、执行 HEAD、开始/结束时间、退出码和原始 stdout/stderr 记录在同目录 `backend-protocol.raw.json`。记录仅是本地检查证据，不代替 Host 收集源代码、候选检查或独立 exact-commit 审查；PR 仍由 Lead 在 workflow_finish 后发布。
+执行实现提交：`d220642a6e47ad76eb7c8a0b6f269c3c86c6b857`。8 条检查的执行前后均保持该 HEAD 且工作树干净；后续提交仅附加本验证文档和原始记录，不改变实现、测试或构建配置。
+
+| 命令 | 结果 |
+| --- | --- |
+| `pnpm install --frozen-lockfile` | exit 0，当前工作树独立依赖 |
+| `pnpm typecheck` | exit 0，后端 + UI |
+| `pnpm test:protocol` | exit 0，19 passed；独立 consumer 编译及边界检查 |
+| `pnpm test` | exit 0，87 文件、565 passed、1 skipped |
+| `pnpm test:ui` | exit 0，48 passed |
+| `pnpm build` | exit 0，protocol + 后端 + UI |
+| `pnpm test:built-cli` | exit 0，无浏览器构建后 CLI/Host 业务与 SSE |
+| `git diff --check` | exit 0 |
+
+完整的命令、执行 HEAD、开始/结束时间、退出码和原始 stdout/stderr 记录在同目录 [backend-protocol.raw.json](backend-protocol.raw.json)。记录仅是本地检查证据，不代替 Host 收集源代码、候选检查或独立 exact-commit 审查；PR 仍由 Lead 在 workflow_finish 后发布。
 
 复现：
 
