@@ -2,6 +2,11 @@ import type { CoordinationReceipt as Receipt } from '@rift/protocol';
 import { time } from './App';
 import { routeHref } from './state';
 const labels: Record<string,string> = {
+  'integration.blocked': '候选集成受阻，需要处理',
+  'dispatch.blocked': '任务派发受阻',
+  'review.changes_requested': '审核要求修改',
+  'review.blocked': '审核受阻',
+  'workflow.paused': '流程已暂停，等待确认',
   'dispatch.queued': '任务已入队，等待调度',
   activation_accepted: '成员已开始执行任务',
   'source.collected': '开发结果已收集，等待检查与审查',
@@ -37,4 +42,4 @@ export function CoordinationReceipt({ receipt }: { receipt: Receipt }) {
   </article>;
 }
 
-export function receiptLabel(type: string): string { return labels[type] ?? '流程状态已更新'; }
+export function receiptLabel(type: string): string { return labels[type] ?? `流程事件 · ${type}`; }
