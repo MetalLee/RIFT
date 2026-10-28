@@ -1,7 +1,7 @@
 import { TurnDetails } from './TurnDetails';
 import { Button } from './components/ui/button';
 import { useEffect, useState } from 'react';
-import type { AgentTurn } from '../../src/chat/contracts';
+import type { AgentTurn } from '@rift/protocol';
 import { errorText, mutate, request } from './api';
 import { Pill, time } from './App';
 import { routeHref } from './state';

@@ -10,12 +10,8 @@ import { Copy, Icon, Notice, Pill, time } from './App';
 import { useMutation } from './useMutation';
 import { LatestRequest } from './state';
 
-export interface ApiConnection {
-  id: string; name: string; protocol: 'openai-completions' | 'openai-responses' | 'anthropic-messages'; endpoint: string; model: string;
-  provider: string; revision: number; parentId: string | null; createdAt: string; verifiedAt: string | null;
-  verificationStatus: 'not-verified' | 'passed' | 'failed'; verificationError: string | null; available: boolean;
-  verification?: { method: 'conversation-and-tool'; conversation: boolean; toolCalls: number; reply: string; stopReason: string | null; cleanupConfirmed: boolean; error: string | null } | null;
-}
+import type { ApiConnection } from '@rift/protocol';
+export type { ApiConnection } from '@rift/protocol';
 export function ConnectionCatalogue({ csrf, onChanged }: { csrf: string; onChanged: () => void }) {
   const [connections, setConnections] = useState<ApiConnection[]>([]); const [error, setError] = useState(''); const [editing, setEditing] = useState<ApiConnection | 'new' | null>(null); const [busy, setBusy] = useState<string | null>(null); const latest = useRef(new LatestRequest()); const write = useMutation(csrf);
   const saveKey = useRef(randomId()); const [saved, setSaved] = useState(false);

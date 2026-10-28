@@ -1,3 +1,4 @@
+import type { ApiErrorBody } from '@rift/protocol';
 import { timingSafeEqual } from 'node:crypto';
 import { RiftError } from '../contracts/index.js';
 
@@ -41,7 +42,7 @@ export function tokenMatches(received: string | undefined, expected: string): bo
   return actual.length === wanted.length && timingSafeEqual(actual, wanted);
 }
 
-export function publicError(error: unknown): { code: string; message: string } {
+export function publicError(error: unknown): ApiErrorBody['error'] {
   return error instanceof RiftError
     ? { code: error.code, message: redact(error.message, 4096) }
     : { code: 'INVALID_REQUEST', message: redact(error instanceof Error ? error.message : 'Request failed', 4096) };

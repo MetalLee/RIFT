@@ -1,0 +1,48 @@
+# Per-test failure comparison
+
+Current 35 failures all reproduce at the original pre-unification baseline. This is not a claim that these failures are harmless, environmental, or accepted. Exact stacks and all assertion statuses remain in `full.json` and `baseline-full.json`.
+
+| File / test | Observation | Baseline |
+| --- | --- | --- |
+| `acceptance/api-connection-management-review.test.ts` — Independent API connection management boundaries uses one actual completion suffix and preserves a redacted provider 404 through real DSH verification, including old stored full endpoints | DSH adapter/verification assertion mismatch; root cause not established | failed |
+| `acceptance/api-credentials-review.test.ts` — Independent direct API credential integration sends the stored key as the real Bearer header and restores it after a fresh Host and credential-provider restart | DSH adapter/verification assertion mismatch; root cause not established | failed |
+| `acceptance/api-credentials-review.test.ts` — Independent direct API credential integration keeps existing environment-reference connections working without copying their credential into configuration | DSH adapter/verification assertion mismatch; root cause not established | failed |
+| `acceptance/blocked-workflow-recovery-review.test.ts` — Independent blocked Workflow recovery review preserves a blocked uncommitted attempt and accepts only a fresh completed attempt after Host collection, checks and independent review | Downstream review readiness timeout; root cause not established | failed |
+| `acceptance/git-gates.test.ts` — A06/A09/A12/A17 independent real Git acceptance rebases the second candidate on the accepted first result and preserves the user branch | Git deterministic check failed; root cause not established | failed |
+| `acceptance/git-gates.test.ts` — A06/A09/A12/A17 independent real Git acceptance rejects stale target publication and rejects a modified review checkout | Git deterministic check failed; root cause not established | failed |
+| `acceptance/git-gates.test.ts` — A06/A09/A12/A17 independent real Git acceptance redacts credential values before persisting deterministic check logs | Git deterministic check failed; root cause not established | failed |
+| `acceptance/live-dsh-stream.test.ts` — real DSH provider streaming and tool loop streams Chinese and English commentary and final text while the provider request is still open | DSH stream did not progress; root cause not established | failed |
+| `acceptance/package-install.test.ts` — workspace package tooling does not privatize shared inodes inside read-only metadata nested in a writable root | Explicit Bubblewrap UID-map denial | failed |
+| `acceptance/package-install.test.ts` — workspace package tooling keeps read-only grants effective under writable parents and over writable children | Explicit Bubblewrap UID-map denial | failed |
+| `acceptance/package-install.test.ts` — workspace package tooling persists a private HOME across commands and keeps project Skill paths usable | Explicit Bubblewrap UID-map denial | failed |
+| `acceptance/ui-review.test.ts` — Independent real-Git multi-repository boundaries integrates two real repositories through dependency, rejected review, repair and added plan tasks without mixing commits | Git content check failed before review; root cause not established | failed |
+| `acceptance/workspace-cli.test.ts` — workspace CLI and ordinary default Skill imports large Skill resources, assigns ordinary versions and executes immutable script snapshots | Explicit Bubblewrap UID-map denial | failed |
+| `acceptance/workspace-cli.test.ts` — workspace CLI and ordinary default Skill offers an isolated installation directory before any repository is registered | Explicit Bubblewrap UID-map denial | failed |
+| `acceptance/workspace-cli.test.ts` — real filesystem and network boundary runs real Vite and Vitest with writable temporary config caches | Explicit Bubblewrap UID-map denial | failed |
+| `acceptance/workspace-cli.test.ts` — real filesystem and network boundary reads pnpm-shaped dependencies while protecting shared store inodes and private files | Explicit Bubblewrap UID-map denial | failed |
+| `acceptance/workspace-cli.test.ts` — real filesystem and network boundary permits own edits and tests but denies sibling/Host secrets, symlinks, inherited environment and Host loopback | Explicit Bubblewrap UID-map denial | failed |
+| `acceptance/worktree-delete.test.ts` — safe Worktree deletion: real Git, service and browser Host API deletes terminal task, candidate AND reviewer directories while preserving exact integration/run/event/check evidence and detached HEAD reachability | Git deterministic check failed; root cause not established | failed |
+| `acceptance/worktree-delete.test.ts` — safe Worktree deletion: real Git, service and browser Host API does not trust a resolved snapshot if metadata changes before the deletion reservation | Git deterministic check failed; root cause not established | failed |
+| `core/connection-context-window.test.ts` — saved Claude route context capacity classifies 82776 using the registered capacity and real adapter | DSH adapter/verification assertion mismatch; root cause not established | failed |
+| `core/connection-context-window.test.ts` — saved Claude route context capacity classifies 1000001 using the registered capacity and real adapter | DSH adapter/verification assertion mismatch; root cause not established | failed |
+| `core/connection-context-window.test.ts` — saved Claude route context capacity classifies upstream-error using the registered capacity and real adapter | DSH adapter/verification assertion mismatch; root cause not established | failed |
+| `git/core-integration.test.ts` — real Git with persistent coordinator and controlled fake activations reuses a proven collected source after an infrastructure failure without inventing an empty commit or skipping review | Downstream review readiness timeout; root cause not established | failed |
+| `git/core-integration.test.ts` — real Git with persistent coordinator and controlled fake activations collects required helper files beyond legacy path metadata and still requires exact independent review | Downstream review readiness timeout; root cause not established | failed |
+| `git/core-integration.test.ts` — real Git with persistent coordinator and controlled fake activations starts both developers, accepts the second result first and retains both through serial reviews | Downstream review readiness timeout; root cause not established | failed |
+| `git/core-integration.test.ts` — real Git with persistent coordinator and controlled fake activations releases a rejected candidate and repairs in a fresh attempt with prior evidence | Downstream review readiness timeout; root cause not established | failed |
+| `git/core-integration.test.ts` — real Git with persistent coordinator and controlled fake activations a failed deterministic check does not consume the reviewer or block an independent candidate | Downstream review readiness timeout; root cause not established | failed |
+| `git/core-integration.test.ts` — real Git with persistent coordinator and controlled fake activations a conflicting later source preserves accepted changes and lets independent work integrate | Downstream review readiness timeout; root cause not established | failed |
+| `git/integration.test.ts` — real Git integration runs real Git checks in linked candidates with read-only common metadata | Git deterministic check failed; root cause not established | failed |
+| `git/integration.test.ts` — real Git integration isolates Chinese/space paths and rebuilds the second candidate on latest accepted HEAD | Git deterministic check failed; root cause not established | failed |
+| `git/integration.test.ts` — real Git integration rejects mismatched review and releases integration ownership | Git deterministic check failed; root cause not established | failed |
+| `git/integration.test.ts` — real Git integration uses CAS and rejects review checkout mutations | Git deterministic check failed; root cause not established | failed |
+| `git/integration.test.ts` — real Git integration preserves accepted work on conflict and allows another candidate afterwards | Git deterministic check failed; root cause not established | failed |
+| `git/integration.test.ts` — real Git integration accepts ignored build/cache outputs while preserving them against deletion | Git deterministic check failed; root cause not established | failed |
+| `git/integration.test.ts` — real Git integration persists quarantine after a timed-out check and refuses default archive even after restart | Expected quarantine rejection did not occur; root cause not established | failed |
+
+## Baseline-only failures
+
+- `acceptance/native-wrapper-review.test.ts` — Independent native wrapper permission boundary uses a restricted native wrapper for repository discussion on start and resume while preserving the scoped Host gateway (current: passed)
+- `acceptance/native-wrapper-review.test.ts` — Independent native wrapper permission boundary uses a restricted native wrapper for repository develop on start and resume while preserving the scoped Host gateway (current: passed)
+
+The previously un-attributed downstream set is covered explicitly above: six `git/core-integration` review-wait timeouts, blocked recovery review readiness, live DSH streaming, multi-repository UI review pre-check, and quarantine rejection. Baseline reproduction is established for all ten; their causal chain is not proven by these runs.

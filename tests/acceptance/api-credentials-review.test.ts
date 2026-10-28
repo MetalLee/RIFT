@@ -13,7 +13,7 @@ import type { ApiConnection } from '../../src/agent/connections.js';
 async function open(home:string){
   const ctx=new Context(),llm=await ctx.plugin(LlmRuntime),secrets=await ctx.plugin(LocalCredentialProvider,{path:path.join(home,'.credentials.yaml'),watch:false});
   const host=new RiftHostService(ctx,{home:path.join(home,'host'),port:0,leadProvider:'unused',leadModel:'unused',checks:[]});await host.connections.initialize();
-  return{ctx,host,close:async()=>{await host.close();await secrets.dispose();await llm.dispose();}};
+  return{ctx,host,reference:(id:string)=>host.store.require<{credentialRef:string}>('SELECT credential_ref FROM api_connections WHERE id=?',id).credentialRef,close:async()=>{await host.close();await secrets.dispose();await llm.dispose();}};
 }
 async function fixture(){
   const home=await mkdtemp(path.join(tmpdir(),'rift-api-credential-review-'));const authorization:string[]=[];
@@ -37,10 +37,10 @@ describe('Independent direct API credential integration',()=>{
     const f=await fixture();let runtime=await open(f.home);const key='independent-stored-fake-key-unique';
     try{
       const connection=await runtime.host.handleBrowser('POST','/ui-api/v1/connections',{...f.route,apiKey:key},'create-direct') as ApiConnection;
-      const chunks=await request(runtime.ctx,connection);expect(f.authorization).toEqual([`Bearer ${key}`]);expect(process.env[connection.credentialRef]).toBeUndefined();
+      const chunks=await request(runtime.ctx,connection);expect(f.authorization).toEqual([`Bearer ${key}`]);expect(process.env[runtime.reference(connection.id)]).toBeUndefined();
       for(const value of [connection,chunks,runtime.host.connections.list(),runtime.host.store.all('SELECT * FROM api_connections'),runtime.host.store.all('SELECT * FROM management_requests')])expect(JSON.stringify(value)).not.toContain(key);
       await runtime.close();runtime=await open(f.home);
-      const restored=runtime.host.connections.get(connection.id);expect(restored).toMatchObject({provider:connection.provider,credentialRef:connection.credentialRef,available:true});
+      const restored=runtime.host.connections.get(connection.id);expect(restored).toMatchObject({provider:connection.provider,available:true});expect(restored).not.toHaveProperty('credentialRef');
       await request(runtime.ctx,restored);expect(f.authorization).toEqual([`Bearer ${key}`,`Bearer ${key}`]);
       expect((await readFile(path.join(f.home,'host','rift.db'))).includes(Buffer.from(key))).toBe(false);
       expect(await readFile(path.join(f.home,'.credentials.yaml'),'utf8')).toContain(key);
@@ -51,7 +51,7 @@ describe('Independent direct API credential integration',()=>{
     const f=await fixture(),runtime=await open(f.home),reference='RIFT_INDEPENDENT_LEGACY_AUTH',previous=process.env[reference],key='independent-legacy-fake-key-unique';process.env[reference]=key;
     try{
       const connection=await runtime.host.handleBrowser('POST','/ui-api/v1/connections',{...f.route,credentialRef:reference},'legacy-route') as ApiConnection;
-      await request(runtime.ctx,connection);expect(f.authorization).toEqual([`Bearer ${key}`]);expect(connection.credentialRef).toBe(reference);
+      await request(runtime.ctx,connection);expect(f.authorization).toEqual([`Bearer ${key}`]);expect(runtime.reference(connection.id)).toBe(reference);
       expect(JSON.stringify(runtime.host.store.all('SELECT * FROM api_connections'))).not.toContain(key);expect(JSON.stringify(runtime.host.store.all('SELECT * FROM management_requests'))).not.toContain(key);
     }finally{if(previous===undefined)delete process.env[reference];else process.env[reference]=previous;await runtime.close();await f.close();}
   });

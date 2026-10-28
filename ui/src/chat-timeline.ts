@@ -1,6 +1,6 @@
-import type { AgentTurn, ChatMessage, CoordinationReceipt, MessageChunk, RunStreamMessage } from '../../src/chat/contracts.js';
+import type { AgentTurn, ChatMessage, CoordinationReceipt, MessageChunk, RunStreamMessage } from '@rift/protocol';
 export interface TimelineUpdate { id:string; content:string; taskId?:string|null; senderAgentId?:string|null; type?:string }
-export interface TimelineItem { message:ChatMessage; turns:AgentTurn[]; taskIds:string[]; updates:TimelineUpdate[]; drafts:{turn:AgentTurn;text:string;messageId?:string;kind?:import('../../src/chat/contracts.js').StreamMessage['kind'];status?:string}[] }
+export interface TimelineItem { message:ChatMessage; turns:AgentTurn[]; taskIds:string[]; updates:TimelineUpdate[]; drafts:{turn:AgentTurn;text:string;messageId?:string;kind?:import('@rift/protocol').StreamMessage['kind'];status?:string}[] }
 export function messageSender(message:ChatMessage): 'user'|'agent'|'system' { return message.senderType ?? (message.role==='user'?'user':message.role==='system'?'system':'agent'); }
 export function messageAuthor(message:ChatMessage):string|null { return messageSender(message)==='agent' ? message.senderAgentId ?? message.recipientAgentId : null; }
 function finalStream(turn:AgentTurn,final:ChatMessage) {

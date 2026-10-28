@@ -5,9 +5,7 @@ import { applyMessageEvent } from './stream-state';
 import { ChatTimeline } from './ChatTimeline';
 import { buildChatTimeline, buildConversationTimeline } from './chat-timeline';
 import { mergeChatHistory } from './chat-state';
-import type { AgentTurn, ChatMessage, ChatPage, StreamMessage } from '../../src/chat/contracts';
-import type { WorkspaceEvent } from '../../src/events/workspace-events';
-import type { UiWorkspaceDetail } from '../../src/api/ui-contracts';
+import type { AgentTurn, ChatMessage, ChatPage, StreamMessage, WorkspaceEvent, UiWorkspaceDetail } from '@rift/protocol';
 
 const user:ChatMessage={id:'user',workspaceId:'ws',conversationId:'conversation',clientMessageId:'client',recipientAgentId:'lead',role:'user',content:'Inspect',status:'completed',version:0,createdAt:'2026-10-27T12:00:00Z'};
 const turn={id:'turn',messageId:'user',workspaceId:'ws',conversationId:'conversation',agentId:'lead',status:'running',version:0,phase:'generating',createdAt:user.createdAt,configuration:{},streamMessages:[]} as unknown as AgentTurn;

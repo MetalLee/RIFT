@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from './components/ui/alert';
 import { Button } from './components/ui/button';
 import { Textarea } from './components/ui/textarea';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { UiSession, UiWorkspaceDetail, UiWorkspaceList } from '../../src/api/ui-contracts';
+import type { UiSession, UiWorkspaceDetail, UiWorkspaceList } from '@rift/protocol';
 import { api, ApiError, consumeBootstrap, errorText } from './api';
 import { LatestRequest, parseRoute, readDraft, routeHref, saveDraft, type Page } from './state';
 import { Agents, Activity, Repositories, Settings, Skills, Tasks } from './pages';

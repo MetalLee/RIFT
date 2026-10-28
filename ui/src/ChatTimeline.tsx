@@ -1,5 +1,4 @@
-import type { AgentTurn, ChatMessage, CoordinationReceipt, MessageChunk, RunStreamMessage } from '../../src/chat/contracts';
-import type { UiWorkspaceDetail } from '../../src/api/ui-contracts';
+import type { AgentTurn, ChatMessage, CoordinationReceipt, MessageChunk, RunStreamMessage, UiWorkspaceDetail } from '@rift/protocol';
 import { buildConversationTimeline, messageAuthor, messageSender, type TimelineUpdate } from './chat-timeline';
 import { receiptLabel } from './CoordinationReceipt';
 import { MessageBody } from './MessageBody';

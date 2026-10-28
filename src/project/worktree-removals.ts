@@ -1,3 +1,5 @@
+import type { RemovalKind, WorktreeRemovalTarget } from '@rift/protocol';
+export type { RemovalKind, WorktreeRemovalTarget } from '@rift/protocol';
 import { createHash } from 'node:crypto';
 import { lstat } from 'node:fs/promises';
 import path from 'node:path';
@@ -10,12 +12,6 @@ import { now, type RiftStore } from '../storage/database.js';
 import { redact } from '../api/security.js';
 import type { Repository, WorkspaceWorktree } from './repositories.js';
 
-export type RemovalKind = 'user' | 'task' | 'candidate' | 'review';
-export interface WorktreeRemovalTarget {
-  kind: RemovalKind; recordId: string; repositoryId: string; path: string;
-  expectedVersion: string; state: string; canDelete: boolean; reason: string | null;
-  error: string | null; canReconcile: boolean;
-}
 interface Receipt {
   kind: RemovalKind; recordId: string; workspaceId: string; repositoryId: string; path: string;
   state: string; version: number; sourceFingerprint: string; cleanupStatus: string;

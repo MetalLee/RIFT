@@ -1,4 +1,6 @@
 import type { RepositoryAccess } from './repository-access.js';
+import type { RuntimeMessageKind } from '@rift/protocol';
+export type { RuntimeMessageKind } from '@rift/protocol';
 /** Runtime boundaries are owned by the Host. Model arguments never choose an identity. */
 export interface RuntimeTool {
   name: string;
@@ -60,7 +62,6 @@ export interface AgentRuntime {
   start(input: RuntimeTurnInput): Promise<RuntimeHandle>;
 }
 
-export type RuntimeMessageKind = 'assistant' | 'commentary' | 'final' | 'reasoning' | 'reasoning_summary';
 export type RuntimeEvent =
   | { type: 'message.started'; messageId: string; kind: RuntimeMessageKind }
   | { type: 'message.delta'; messageId: string; text: string }

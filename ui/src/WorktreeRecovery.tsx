@@ -1,6 +1,6 @@
 import { Button } from './components/ui/button';
 import { useState } from 'react';
-import type { WorkspaceWorktree } from '../../src/project/repositories';
+import type { WorkspaceWorktree } from '@rift/protocol';
 import { errorText, mutate } from './api';
 import { Copy } from './App';
 export function WorktreeRecovery({ workspaceId, tree, csrf, onChanged }: { workspaceId: string; tree: WorkspaceWorktree; csrf: string; onChanged: () => void }) {

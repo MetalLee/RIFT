@@ -1,4 +1,4 @@
-import type { ChatPage, ContextRef } from '../../src/chat/contracts';
+import type { ChatPage, ContextRef } from '@rift/protocol';
 export interface PendingMessage { text: string; recipient: string; clientMessageId: string; key: string; contextRefs?: ContextRef[]; mentions?: {agentId:string;label:string}[] }
 export function shouldSendOnKey(event: { key: string; ctrlKey: boolean; metaKey: boolean; isComposing: boolean; keyCode?: number }): boolean {
   return event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !event.isComposing && event.keyCode !== 229;

@@ -1,7 +1,7 @@
+import type { WorkspaceEvent, WorkspaceEventPage } from '@rift/protocol';
+export type { WorkspaceEvent, WorkspaceEventPage } from '@rift/protocol';
 import type { RiftStore } from '../storage/database.js';
 import { invariant } from '../contracts/index.js';
-export interface WorkspaceEvent { seq: number; workspaceId: string; type: string; entityId: string; entityVersion: number; payload: Record<string,unknown>; occurredAt: string }
-export interface WorkspaceEventPage { events: WorkspaceEvent[]; cursor: number; nextAfter: number; highWatermark: number; hasMore: boolean; resyncRequired: boolean }
 export function readWorkspaceEvents(store: RiftStore, workspaceId: string, after: number): WorkspaceEventPage {
   invariant(Number.isSafeInteger(after) && after >= 0, 'INVALID_CURSOR', 'Event cursor must be a nonnegative safe integer.');
   return store.transaction(() => {

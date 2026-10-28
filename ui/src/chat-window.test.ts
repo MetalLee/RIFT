@@ -1,8 +1,8 @@
 import {describe,it,expect} from 'vitest';
-import type {ChatPage,ChatMessage} from '../../src/chat/contracts';
+import type {ChatPage,ChatMessage} from '@rift/protocol';
 import {needsTimelineBridge,mergeChatHistory} from './chat-state';
 import {applyMessageEvent} from './stream-state';
-import type {WorkspaceEvent} from '../../src/events/workspace-events';
+import type {WorkspaceEvent} from '@rift/protocol';
 const message=(n:number):ChatMessage=>({id:'m'+n,workspaceId:'ws',conversationId:'c',role:'assistant',senderType:'agent',senderAgentId:'dev',clientMessageId:null,recipientAgentId:null,content:'text '+n,status:'completed',version:0,createdAt:String(n)});
 const page=(start:number,end:number):ChatPage=>({conversation:{id:'c',workspaceId:'ws',title:'Room',version:0,createdAt:'now'},timeline:true,messages:Array.from({length:end-start},(_,i)=>message(start+i)),turns:[],chunks:[],nextBefore:start?String(start):null,snapshotCursor:1});
 describe('lazy live chat window',()=>{

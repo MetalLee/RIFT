@@ -1,4 +1,4 @@
-import type { SkillAssignment, SkillShared, SkillVersion } from '../../src/skill/service';
+import type { SkillAssignment, SkillShared, SkillVersion } from '@rift/protocol';
 
 export type AssignmentMode = SkillAssignment['mode'];
 type Versions = Pick<SkillVersion, 'id' | 'version'>[];

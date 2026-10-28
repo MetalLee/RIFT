@@ -1,17 +1,10 @@
-export type RoleName = string;
-export type RolePurpose = 'lead' | 'developer' | 'reviewer';
-export type TaskStatus = 'pending' | 'ready' | 'running' | 'validating' | 'integrating' | 'succeeded' | 'blocked' | 'failed' | 'cancelled';
-export type WorkflowStatus = 'created' | 'planning' | 'running' | 'paused' | 'blocked' | 'completed' | 'failed' | 'cancelled';
+import type { ErrorCode, Workspace, Role, Workflow, Task, Worktree } from '@rift/protocol';
+export type { RoleName, RolePurpose, TaskStatus, WorkflowStatus, Workspace, Role, Workflow, Task, Worktree } from '@rift/protocol';
 export type RunStatus = 'preparing' | 'running' | 'cancelling' | 'succeeded' | 'failed' | 'cancelled' | 'interrupted';
 export type RunPurpose = 'develop' | 'repair' | 'review';
-export interface Workspace { id: string; version?: number; defaultRepositoryId?: string | null; defaultConversationId?: string | null; leadConnection?: import('../chat/contracts.js').ChatConnection | null; name: string; rootPath: string; repositoryPath: string; commonGitDir: string; baseRef: string; status: string }
 export interface ProviderBinding { id: string; providerName: string; packageVersion: string; configRevision: number; capabilities: Record<string, boolean>; credentialRefs: string[]; runtime?:'dsh'|'codex'|'claude'|null; model?:string|null; reasoningEffort?:string|null; spawn?:{provider:string;model:string;reasoningEffort?:string;agentPreset?:string;maxTokens?:number}|null }
-export interface Role { id: string; workspaceId: string; name: RoleName; purpose?:RolePurpose; enabled?:number; kind: 'dsh-lead' | 'subagent'; providerBindingId: string | null; prompt: string; revision: number }
 export interface ProviderSnapshot { role: Role; binding: ProviderBinding | null; skills?: unknown[]; skillInstructions?: string }
-export interface Workflow { id: string; workspaceId: string; goal: string; leadSessionId: string | null; planRevision: number; version: number; status: WorkflowStatus; integrationRef: string; baseCommit: string; summary: string | null }
-export interface Task { id: string; workflowId: string; roleId: string | null; repositoryId?: string | null; kind: 'change' | 'analysis'; title: string; instructions: string; expectedPaths: string[]; acceptanceCriteria: string[]; priority?:number; analysisItems?:{id:string;prompt:string}[]|null; status: TaskStatus; attempt: number; version: number; acceptedCommit: string | null; sourceHead: string | null; blockingReason: string | null }
 export interface Run { id: string; taskId: string; roleId: string; purpose: RunPurpose; taskAttempt: number; status: RunStatus; providerSnapshot: ProviderSnapshot; dshChildId: string | null; dshRunId: string | null; stopReason: string | null; cleanupStatus: 'pending' | 'confirmed' | 'unknown' | 'failed'; slotReleasedAt: string | null; deadline: string; result: unknown; resultArtifactId?:string|null; createdAt: string; startedAt: string | null; endedAt: string | null }
-export interface Worktree { id: string; taskId: string; attempt: number; kind: 'task' | 'review' | 'candidate'; path: string; branch?: string; baseCommit: string; headCommit?: string; writerRunId?: string | null; status?: string }
 export interface Operation { id: string; kind: 'dispatch' | 'integration'; dedupeKey: string; entityId: string; phase: 'queued' | 'started' | 'completed' | 'blocked' | 'cancelled'; payload: { expectedVersion: number; planRevision: number; roleId?: string; sourceHead?: string; runId?: string; integrationId?: string; error?: string }; createdAt: string }
 export interface TaskEvent { eventSeq: number; workflowId: string; taskId: string | null; runId: string | null; requestId: string | null; type: string; payload: unknown; occurredAt: string }
 export interface PlanTask { id?: string; repositoryId?: string; kind: 'change' | 'analysis'; title: string; instructions: string; expectedPaths?: string[]; acceptanceCriteria?: string[]; roleName?:string; dependsOn?: string[]; priority?:number; analysisItems?:{id:string;prompt:string}[] }
@@ -37,6 +30,6 @@ export interface GitService {
   abandonCandidate?(input: GitContext & { candidate: Candidate; reason: string }): Promise<void>;
 }
 export class RiftError extends Error {
-  constructor(public readonly code: string, message: string, public readonly details?: unknown) { super(message); this.name = 'RiftError'; }
+  constructor(public readonly code: ErrorCode, message: string, public readonly details?: unknown) { super(message); this.name = 'RiftError'; }
 }
-export function invariant(condition: unknown, code: string, message: string): asserts condition { if (!condition) throw new RiftError(code, message); }
+export function invariant(condition: unknown, code: ErrorCode, message: string): asserts condition { if (!condition) throw new RiftError(code, message); }

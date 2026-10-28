@@ -1,7 +1,7 @@
 import { describe,expect,it } from 'vitest';
 import { buildChatTimeline,buildConversationTimeline,messageAuthor,messageSender } from './chat-timeline';
 import { taskHref,parseRoute } from './state';
-import type { AgentTurn,ChatMessage,MessageChunk,StreamMessage } from '../../src/chat/contracts';
+import type { AgentTurn,ChatMessage,MessageChunk,StreamMessage } from '@rift/protocol';
 const message=(id:string,extra:Partial<ChatMessage>={}):ChatMessage=>({id,workspaceId:'ws',conversationId:'c',clientMessageId:null,recipientAgentId:'lead',role:'user',senderType:'user',content:id,status:'completed',version:0,createdAt:'2026-01-01',...extra});
 const turn={id:'turn',messageId:'input',agentId:'lead',status:'running',createdAt:'2026-01-01',activities:[{payload:{taskId:'task-a'}}]} as unknown as AgentTurn;
 describe('conversation author and attached work',()=>{
