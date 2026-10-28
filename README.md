@@ -225,6 +225,14 @@ CLI 对应 `rift ws task evidence TASK --workspace WORKSPACE`、`task evidence-l
 
 真实必需检查代码失败保存为 `blocked`，可通过 `task.retry-dispatch` 正式返修；缺必需项或环境不可用时 integration 保存为 `evidence_waiting`，不启动正式审核或发布，也不自动开发返修。操作员修复环境或明确调整检查配置后，可为未变候选请求补证：只执行缺失、失效或失败的配置检查；成功后复用原 integration/candidate，进入独立审核，无需开发者新建源码提交。更换目标 HEAD、attempt、候选或配置会失效相应证据；批准不能跨候选使用。重用同一操作键不会重复执行；中断中的操作键拒绝自动重跑，需先检查状态。每次执行前持久记录清理未知，正常退出后才确认；超时保留 `cleanup_unknown` 和隔离门禁，不能用补证、改 integration 状态或删隔离文件绕过。重启 Host 本身不证明清理；`integration.reconcile` 仅凭 Host 已记录的同机 OS 重启证明恢复超时清理，证明持久保存，不接受请求自报 cleanup。补证附件落盘后、数据库快照更新前中断时，恢复核验新旧不可变附件及完整绑定，只为当前同候选、未审核的 integration 协调检查代次；已审核候选仍要求原检查 ID 精确一致，目标引用变化仍保留发布未知门禁。当前未审核候选清理恢复后仍需显式补证并独立审核；失效旧 attempt/source 的等待记录保留历史，不阻断新 attempt，清理未知不因 attempt 变化失效。
 
+#### 升级与回退
+
+- 升级前暂停派发，等待在途执行结束并确认清理，停止 Host；备份完整 home、DSH/原生会话数据及对应 Git 仓库（含受管 worktree、集成引用和路径关系），不要仅复制 `rift.db`。备份含凭据与会话，按私有数据保管。
+- 启动新版会自动增量迁移 SQLite；第一批的迁移 0026 保存审核请求别名，旧键重放仍绑定原 operation。没有自动降级迁移。旧 `checks` 不写 `required` 等同必需项；升级不会把任务文字或开发声明转换成检查，仍须配置实际项目测试。调整 profile 后须重启 Host，先读当前证据再为原候选显式补证。
+- 回退须先停止新版并确认清理，保留当前完整现场，使用旧程序及**配套的升级前完整备份**恢复；不要直接用旧程序读写已升级 home，不要删除迁移记录、附件、幂等记录或清理隔离标记。若升级后已有开发、审核或 Git 引用变化，不得把旧数据库覆盖到新仓库状态；先保存并核对两份现场，未能确认时保持暂停/只读，不能借回退绕过精确候选审核或未知清理门禁。
+
+组合验证入口：`pnpm exec vitest run tests/acceptance/evidence-ui-integration.test.tsx tests/acceptance/timeline-ui.test.tsx`。使用真实临时 Git、SQLite、CLI 子进程和鉴权 HTTP，以及现有 UI 读取/投影/服务端渲染；仅模型执行为测试适配器，不代表外部模型实机调用或浏览器交互验收。超时清理与附件/数据库中断恢复的故障注入回归见 `tests/git/core-integration.test.ts`。
+
 待用户分别确认的后续批次（本次不实现）：第二批基线复用/检查 DAG/环境缓存；第三批分阶段队列/跨引用并行。
 
 ## 常用管理命令
