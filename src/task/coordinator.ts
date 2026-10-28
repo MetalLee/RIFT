@@ -1,3 +1,4 @@
+import { CandidateEvidenceError } from '../git/evidence.js';
 import { agentSandboxMode } from '../agent/sandbox-mode.js';
 import { RunChatStream } from './run-stream.js';
 import { recordRunProgress } from './run-progress.js';
@@ -263,6 +264,47 @@ export class TaskCoordinator {
     this.track(work.then(()=>{},()=>{}));
     try{return await work;}finally{this.sourceRecoveries.delete(input.taskId);}
   }
+  /** Execute only operator-configured Host checks; no uploaded log or model claim enters this path. */
+  async supplementEvidence(input: { taskId: string } & import('@rift/protocol').SupplementEvidenceInput) {
+    const task = this.store.task(input.taskId), integration = this.store.require<IntegrationRecord>('SELECT * FROM integrations WHERE id=? AND task_id=?', input.integrationId, task.id);
+    invariant(integration.candidate?.candidateHead === input.candidateHead, 'CANDIDATE_EVIDENCE_MISMATCH', 'Supplement must bind the exact stored candidate.');
+    const key = `supplement:${task.id}:${input.idempotencyKey}`;
+    const prior = this.store.get<Operation>('SELECT * FROM operations WHERE dedupe_key=?', key);
+    if (prior) { invariant(prior.payload.integrationId === integration.id, 'IDEMPOTENCY_CONFLICT', 'Key belongs to another candidate.'); return { task: this.store.task(task.id), request: prior }; }
+    invariant(!this.stopping, 'HOST_STOPPING', 'Host is stopping.');
+    invariant(task.version === input.expectedVersion, 'VERSION_CONFLICT', 'Task changed; reload before supplementing.');
+    invariant(task.status === 'blocked' && integration.status === 'evidence_waiting' && !terminalWorkflows.has(this.store.workflow(task.workflowId).status), 'INVALID_STATE', 'Only a waiting, unreviewed candidate can be supplemented.');
+    invariant(!this.integrationBusy && !this.store.get("SELECT id FROM integrations WHERE status IN ('preparing','reviewing','publishing','cleanup_unknown')"), 'INTEGRATION_ACTIVE', 'An integration is still active or has uncertain cleanup.');
+    invariant(!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL', task.id), 'CLEANUP_UNKNOWN', 'Execution cleanup must be confirmed.');
+    invariant(this.git.resumeCandidate, 'EVIDENCE_UNAVAILABLE', 'Host supplementation is unavailable.');
+    this.integrationBusy = true;
+    this.store.exec("UPDATE integrations SET status='preparing',runtime_boot_id=? WHERE id=?", this.bootIdentity, integration.id);
+    const work = (async () => {
+      try {
+        const candidate = await this.git.resumeCandidate!({ ...this.context(task), integrationId: integration.id, candidateHead: input.candidateHead, idempotencyKey: input.idempotencyKey });
+        return this.store.transaction(() => {
+          const latest = this.store.task(task.id);
+          invariant(latest.version === input.expectedVersion && latest.status === 'blocked' && !terminalWorkflows.has(this.store.workflow(task.workflowId).status), 'CANCELLED', 'Task changed while checks were running.');
+          this.store.exec("UPDATE integrations SET candidate=?,check_ids=?,status='evidence_ready',error=NULL WHERE id=?", JSON.stringify(candidate), JSON.stringify(candidate.checkIds), integration.id);
+          this.store.exec("UPDATE tasks SET status='validating',blocking_reason=NULL,version=version+1 WHERE id=?", task.id);
+          const request = this.enqueue('integration', task.id, key, latest.version + 1, task.sourceHead!);
+          request.payload.integrationId = integration.id;
+          this.store.exec('UPDATE operations SET payload=? WHERE id=?', JSON.stringify(request.payload), request.id);
+          this.store.event(task.workflowId, 'evidence.supplemented', { integrationId: integration.id, candidateHead: candidate.candidateHead, readiness: candidate.readiness }, { taskId: task.id, requestId: request.id });
+          return { task: this.store.task(task.id), request, readiness: candidate.readiness };
+        });
+      } catch (error) {
+        this.store.transaction(() => {
+          if (error instanceof CandidateEvidenceError) this.store.exec('UPDATE integrations SET candidate=?,check_ids=? WHERE id=?', JSON.stringify(error.candidate), JSON.stringify(error.candidate.checkIds), integration.id);
+          this.store.exec("UPDATE integrations SET status='evidence_waiting',error=? WHERE id=?", errorMessage(error), integration.id);
+          this.store.event(task.workflowId, 'evidence.waiting', { integrationId: integration.id, classification: error instanceof CandidateEvidenceError ? error.readiness.blockers : [{ classification: 'environment_unavailable', reason: errorMessage(error) }] }, { taskId: task.id });
+        });
+        throw error;
+      }
+    })();
+    this.track(work.then(() => {}, () => {}));
+    try { return await work; } finally { this.integrationBusy = false; this.pump(); }
+  }
   private enqueue(kind:'dispatch'|'integration',taskId:string,key:string,expectedVersion:number,sourceHead?:string,roleName?:string):Operation {
     invariant(!this.stopping,'HOST_STOPPING','Host is shutting down and cannot accept queue requests.');
     invariant(key.trim()&&key.length<=256,'INVALID_DEDUPE_KEY','A bounded nonempty idempotency key is required.');
@@ -376,8 +418,8 @@ export class TaskCoordinator {
     const sourceEvidence=this.store.all<{payload:unknown}>('SELECT payload FROM task_events WHERE task_id=? AND type=? ORDER BY event_seq DESC LIMIT 1',task.id,'source.collected').map(event=>event.payload);
     const integrationEvidence=this.store.all<IntegrationRecord>('SELECT * FROM integrations WHERE task_id=? ORDER BY rowid',task.id);
     const currentTargetHead=candidate?.expectedTargetHead??(!this.isTextAnalysis(task)&&this.git.currentHead?await this.git.currentHead(this.context(task)):null);
-    if(candidate?.checks)invariant(JSON.stringify(candidate.checks.map(check=>check.id))===JSON.stringify(candidate.checkIds)&&candidate.checks.every(check=>check.candidateHead===candidate.candidateHead&&check.exitCode===0),'CANDIDATE_EVIDENCE_MISMATCH','Review check evidence must match the exact candidate and successful Host checks.');
-    const reviewProtocol=run.purpose==='review'?{stage:'pre-publication-independent-review',instructions:'Review the exact candidate commit against the task requirements. Legacy expectedPaths metadata is not an allowlist; assess the relevance and correctness of all actual changes rather than rejecting new helper or test files merely for being unlisted. candidate.checks contains actual Host command results, not developer checksClaimed; absent check evidence is unavailable, never assumed passed. Your verdict is a prerequisite for publication. Acceptance, acceptedCommit, final Workflow completion, and cleanup of this very reviewer happen only after your result and Host cleanup checks; they cannot be preconditions for returning your review verdict. Approve only when the implementation and available check evidence satisfy the reviewable requirements. The Host separately enforces runtime cleanup, exact-commit publication and final acceptance.',evidenceSource:'Host Git operation',integrationId:candidate?.integrationId}:undefined;
+    if(candidate?.checks)invariant(JSON.stringify(candidate.checks.map(check=>check.id))===JSON.stringify(candidate.checkIds)&&candidate.checks.every(check=>check.candidateHead===candidate.candidateHead&&(check.exitCode===0||candidate.readiness?.status==='ready')),'CANDIDATE_EVIDENCE_MISMATCH','Review check evidence must match the exact candidate and successful Host checks.');
+    const reviewProtocol=run.purpose==='review'?{stage:'pre-publication-independent-review',instructions:'Review the exact candidate commit against the task requirements. Legacy expectedPaths metadata is not an allowlist; assess the relevance and correctness of all actual changes rather than rejecting new helper or test files merely for being unlisted. candidate.checks contains actual Host command results, not developer checksClaimed; absent check evidence is unavailable, never assumed passed. Your verdict is a prerequisite for publication. Acceptance, acceptedCommit, final Workflow completion, and cleanup of this very reviewer happen only after your result and Host cleanup checks; they cannot be preconditions for returning your review verdict. Approve only when the implementation and available check evidence satisfy the reviewable requirements. The Host separately enforces runtime cleanup, exact-commit publication and final acceptance.',evidenceSource:'Host Git operation',integrationId:candidate?.integrationId,evidenceRead:{tool:'rift_read_evidence',cli:['task','evidence',task.id],logCli:['task','evidence-log',task.id],logInput:{integrationId:candidate?.integrationId,checkId:'<candidate.checks[].id>'},http:`/ui-api/v1/workspaces/${this.store.workflow(task.workflowId).workspaceId}/tasks/${task.id}/evidence`}}:undefined;
     const developmentProtocol=task.kind==='change'&&run.purpose!=='review'?{stage:'development-before-host-source-collection',instructions:'Implement the task in the CURRENT cwd, adding or refactoring any files needed within the workspace. Legacy expectedPaths metadata is not a file permission boundary. Local git add/commit is permitted in the assigned current worktree. You may use the Host-authorized workspace repository set, but preserve other active work and use the task checkout for assigned changes. Push or create/update a PR only when explicitly requested by the user. After your result and confirmed cleanup the Host verifies the actual source commits and diff, collects any remaining edits, runs candidate checks and starts independent review. A local commit or PR does not replace those acceptance gates. outcome completed means implementation is ready for Host validation, not that the Task is accepted. Report local test failures or unavailable commands honestly in checksClaimed/summary; sandbox denial of Git writes or test subprocesses alone must not block a ready implementation waiting for Host validation. Actual incomplete implementation or failed behavior remains blocked. Never claim tests passed when they did not. Finish your result promptly; do not wait for Host submission or review inside this Run.'}:undefined;
     const previousAttemptWorktrees=run.purpose!=='review'?this.store.all('SELECT w.attempt,w.path,w.base_commit,w.head_commit FROM worktrees w WHERE w.task_id=? AND w.kind=\'task\' AND w.attempt<? AND w.writer_run_id IS NULL AND NOT EXISTS(SELECT 1 FROM runs r WHERE r.task_id=w.task_id AND r.task_attempt=w.attempt AND r.slot_released_at IS NULL) ORDER BY w.attempt DESC LIMIT 2',task.id,run.taskAttempt):[];
     const retryContext=this.store.get<{payload:unknown}>("SELECT payload FROM task_events WHERE task_id=? AND type='task.retry' ORDER BY event_seq DESC LIMIT 1",task.id)?.payload;
@@ -480,13 +522,16 @@ export class TaskCoordinator {
     finally{this.pump();}
   }
   private async executeIntegration(operation:Operation):Promise<void> {
-    let task=this.store.task(operation.entityId);const integrationId=id('integration');let candidate:Candidate|undefined;let reviewRun:Run|undefined;
-    this.store.transaction(()=>{this.store.exec('INSERT INTO integrations(id,task_id,source_head,status,runtime_boot_id) VALUES(?,?,?,?,?)',integrationId,task.id,operation.payload.sourceHead!,'preparing',this.bootIdentity);operation.payload.integrationId=integrationId;this.operationPhase(operation,'started');this.store.exec('UPDATE tasks SET status=?,version=version+1 WHERE id=?','integrating',task.id);});
+    let task=this.store.task(operation.entityId);const resuming=!!operation.payload.integrationId;const integrationId=operation.payload.integrationId??id('integration');let candidate:Candidate|undefined;let reviewRun:Run|undefined;
+    this.store.transaction(()=>{if(!resuming)this.store.exec('INSERT INTO integrations(id,task_id,source_head,status,runtime_boot_id) VALUES(?,?,?,?,?)',integrationId,task.id,operation.payload.sourceHead!,'preparing',this.bootIdentity);else this.store.exec("UPDATE integrations SET status='preparing',runtime_boot_id=? WHERE id=?",this.bootIdentity,integrationId);operation.payload.integrationId=integrationId;this.operationPhase(operation,'started');this.store.exec('UPDATE tasks SET status=?,version=version+1 WHERE id=?','integrating',task.id);});
     try {
-      candidate=await this.git.prepareCandidate({...this.context(task),sourceHead:operation.payload.sourceHead!,integrationId});
+      if(resuming){const saved=this.store.require<IntegrationRecord>('SELECT * FROM integrations WHERE id=? AND task_id=?',integrationId,task.id);invariant(this.git.resumeCandidate&&saved.candidate,'EVIDENCE_UNAVAILABLE','Stored candidate cannot be resumed.');candidate=await this.git.resumeCandidate({...this.context(task),integrationId,candidateHead:saved.candidate.candidateHead,idempotencyKey:`review:${operation.id}`});}
+      else candidate=await this.git.prepareCandidate({...this.context(task),sourceHead:operation.payload.sourceHead!,integrationId});
+      if(this.git.candidateReadiness){const readiness=await this.git.candidateReadiness({...this.context(task),candidate});if(readiness.status!=='ready')throw new CandidateEvidenceError(candidate,readiness);}
       this.store.transaction(()=>{this.store.exec('UPDATE integrations SET expected_target_head=?,candidate_head=?,check_ids=?,candidate=? WHERE id=?',candidate!.expectedTargetHead,candidate!.candidateHead,JSON.stringify(candidate!.checkIds),JSON.stringify(candidate),integrationId);this.store.event(task.workflowId,'candidate.prepared',candidate,{taskId:task.id,requestId:operation.id});});
       while((this.store.workflow(task.workflowId).status==='paused'||!this.availableReviewer(this.store.workflow(task.workflowId).workspaceId))&&!terminalWorkflows.has(this.store.workflow(task.workflowId).status)&&this.store.task(task.id).status!=='cancelled'&&!this.stopping)await new Promise(resolve=>setTimeout(resolve,25));
       task=this.store.task(task.id);invariant(!this.stopping&&this.store.workflow(task.workflowId).status==='running'&&task.status!=='cancelled','CANCELLED','Integration cancelled before review.');
+      if(this.git.candidateReadiness){const readiness=await this.git.candidateReadiness({...this.context(task),candidate});if(readiness.status!=='ready')throw new CandidateEvidenceError(candidate,readiness);}
       reviewRun=this.store.transaction(()=>{const role=this.availableReviewer(this.store.workflow(task.workflowId).workspaceId);invariant(role,'CAPACITY','Reviewer capacity is occupied.');const run=this.createRun(task,role,'review');this.store.exec('UPDATE integrations SET status=?,review_run_id=? WHERE id=?','reviewing',run.id,integrationId);operation.payload.runId=run.id;this.store.exec('UPDATE operations SET payload=? WHERE id=?',JSON.stringify(operation.payload),operation.id);this.store.event(task.workflowId,'review.reserved',{candidateHead:candidate!.candidateHead},{taskId:task.id,runId:run.id,requestId:operation.id});return run;});
       const state:Active={controller:new AbortController(),cancelled:false};this.active.set(reviewRun.id,state);
       const review=await this.execute(reviewRun,task,candidate.cwd,state,candidate) as ReviewResult|undefined;
@@ -500,6 +545,12 @@ export class TaskCoordinator {
       const accepted=await this.git.publishCandidate({...this.context(task),candidate,review});
       this.store.transaction(()=>{this.store.exec('UPDATE integrations SET status=? WHERE id=?','accepted',integrationId);this.store.exec('UPDATE tasks SET status=?,accepted_commit=?,version=version+1,blocking_reason=NULL WHERE id=?','succeeded',accepted.acceptedCommit,task.id);this.operationPhase(this.store.operation(operation.id),'completed');this.store.event(task.workflowId,'integration.accepted',{integrationId,...accepted},{taskId:task.id,requestId:operation.id});});
     }catch(error){
+      if(error instanceof CandidateEvidenceError){
+        candidate=error.candidate;
+        if(this.git.abandonCandidate)await this.git.abandonCandidate({...this.context(task),candidate,reason:errorMessage(error)}).catch(()=>{});
+        this.store.transaction(()=>{this.store.exec("UPDATE integrations SET status='evidence_waiting',candidate_head=?,expected_target_head=?,candidate=?,check_ids=?,error=? WHERE id=?",candidate!.candidateHead,candidate!.expectedTargetHead,JSON.stringify(candidate),JSON.stringify(candidate!.checkIds),errorMessage(error),integrationId);if(this.store.task(task.id).status!=='cancelled')this.blockTask(task.id,errorMessage(error));this.operationPhase(this.store.operation(operation.id),'blocked',errorMessage(error));this.store.event(task.workflowId,'evidence.waiting',{integrationId,candidateHead:candidate!.candidateHead,readiness:error.readiness},{taskId:task.id,requestId:operation.id});});
+        return;
+      }
       const unknown=reviewRun&&this.store.run(reviewRun.id).cleanupStatus!=='confirmed';
       const publishing=this.store.require<IntegrationRecord>('SELECT * FROM integrations WHERE id=?',integrationId).status==='publishing';
       if(candidate&&!publishing)this.integrationCleanupReceipts.add(integrationId);

@@ -211,6 +211,22 @@ checks:
 
 每项检查使用固定的可执行程序和参数数组，不经 shell 拼接；Windows 下使用实际 `.exe` 或 `node` 加脚本路径，避免直接依赖 `.cmd`。检查成功后候选必须保持干净且 HEAD 不变。服务也支持 `--patch <配置路径>`，自定义 patch 时须正确保留插件入口及其他必要配置。
 
+### Host 证据与补证（第一批）
+
+`checks` 是 Host 操作员配置的显式必需清单，不从任务描述猜测测试。默认每项 `required: true`；可选检查可设置 `required: false`，失败保留为 `optional`，不能伪称通过。至少需要一个必需检查；最多 64 项，单项超时上限 3600000 ms。
+
+每次实际执行保存独立、不可通过 API 改写的附件，绑定工作区、仓库、任务/attempt、integration、精确 candidateHead，以及命令/配置和环境指纹、Host 来源、退出状态、脱敏日志和摘要。原始日志无需（也不应）提交源码。环境指纹标识 Host OS/架构/内核、Node 版本和隔离策略版本，不代表依赖安装或构建缓存可复用。附件使用 Host 私有目录和 0600 文件，日志合计最多捕获 64 KiB；截断明确标记，列表只返回每流 8000 字符摘录。历史记录可读取；没有附件绑定的旧记录不会自动升级为可信 Host 证据。
+
+- `GET /ui-api/v1/workspaces/:workspaceId/tasks/:taskId/evidence`：共享协议 `TaskEvidence`，含 `integrations[].readiness` 和检查摘录（最近 20 个 integration）。状态为 `ready / waiting_evidence / failed / environment_unavailable`；阻塞分类为 `code_defect / evidence_missing / environment_unavailable / optional`。
+- `GET .../tasks/:taskId/evidence/log?integrationId=...&checkId=...`：按附件 ID 读取完整的有界脱敏日志，不接受文件路径。
+- `POST .../tasks/:taskId/evidence`：受控补证，JSON 为 `{ "integrationId": "...", "candidateHead": "完整提交哈希", "expectedVersion": 任务版本, "idempotencyKey": "补证操作键" }`，HTTP 写请求还需既有 `Idempotency-Key`。同样提供 `/v1/workspaces/...` 管理端点。不能上传日志、命令、退出状态或声明来源。
+
+CLI 对应 `rift ws task evidence TASK --workspace WORKSPACE`、`task evidence-log TASK --data '{"integrationId":"...","checkId":"..."}'`、`task supplement-evidence TASK --data '{...}' --key REQUEST_KEY`。成员仅 Lead 可请求补证；Reviewer 另有只读、仅限自身任务和活跃 Run 的 `rift_read_evidence` 工具。
+
+缺必需项时 integration 保存为 `evidence_waiting`，不启动正式审核或发布，也不自动开发返修。操作员修复环境或明确调整检查配置后，可为未变候选请求补证：只执行缺失、失效或失败的配置检查；成功后复用原 integration/candidate，进入独立审核，无需开发者新建源码提交。更换目标 HEAD、attempt、候选或配置会失效相应证据；批准不能跨候选使用。重用同一操作键不会重复执行；中断中的操作键拒绝自动重跑，需先检查状态。超时保留隔离和清理未知门禁，不能用补证绕过。
+
+待用户分别确认的后续批次（本次不实现）：第二批基线复用/检查 DAG/环境缓存；第三批分阶段队列/跨引用并行。
+
 ## 常用管理命令
 
 以下命令沿用终端 B 的 `$RiftHome`、`$workspaceId` 和 `$workflowId`，任务及 Run ID 从 `status` 获取。

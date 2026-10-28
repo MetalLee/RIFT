@@ -20,7 +20,7 @@ const version = z.number().int().nonnegative();
 const objectId = z.string().min(1).max(160);
 const empty = z.object({}).strict();
 const expected = z.object({expectedVersion:version}).strict();
-const readActions = new Set(['list','show','paths','effective','evidence','logs','removals','report','read']);
+const readActions = new Set(['list','show','paths','effective','evidence','evidence-log','logs','removals','report','read']);
 /** No caller-supplied HTTP paths, identity, SQL, or credentials cross this boundary. */
 export class WorkspaceCommands {
   constructor(private readonly host:RiftHostService,
@@ -149,6 +149,8 @@ export class WorkspaceCommands {
       if(a==='list'){noId();const input=z.object({status:z.string().optional(),workflowId:objectId.optional(),roleId:objectId.optional(),repositoryId:objectId.optional(),kind:z.enum(['change','analysis']).optional(),limit:z.number().int().min(1).max(100).optional(),after:version.optional()}).strict().parse(b);return execute('task.list',{},undefined,{query:new URLSearchParams(Object.entries(input).map(([k,v])=>[k,String(v)]))});}
       if(a==='delegate'){noId();invariant(chatActor(actor),'EXECUTION_REQUIRED','Delegation requires a live member execution; operators use plan + dispatch.');return this.agentCommand(actor,'rift_delegate',b);}
       const item=task();
+      if(a==='evidence-log'){const input=z.object({integrationId:objectId,checkId:z.string().uuid()}).strict().parse(b);return execute('task.evidence-log',{},item.id,{query:new URLSearchParams(input)});}
+      if(a==='supplement-evidence'){if(actor)invariant(role(actor.agentId).purpose==='lead','UNAUTHORIZED','Only the Lead or Host operator may request checks.');return execute('task.supplement-evidence',b,item.id);}
       if(a==='show'||a==='evidence'){empty.parse(b);return execute(`task.${a}`,{},item.id);}
       if(a==='update'){
         const input=z.object({expectedVersion:version,title:z.string().min(1).max(240).optional(),instructions:z.string().min(1).max(32000).optional(),expectedPaths:z.array(z.string()).max(100).optional(),acceptanceCriteria:z.array(z.string()).max(100).optional()}).strict().parse(b);

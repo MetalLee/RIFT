@@ -9,7 +9,7 @@ describe('browser review retry routing',()=>{
     const run={purpose:'review',status:['failed','interrupted'].includes(status)?status:'succeeded',result:{verdict:status}};
     const requestIntegration=vi.fn(()=>({id:'integration-request'})),dispatch=vi.fn(()=>({id:'development-request'}));
     const retry=vi.fn(()=>({...task,status:'ready',version:8,attempt:2}));
-    const host={store:{task:()=>task,workflow:()=>({workspaceId:'ws'}),get:()=>run},coordinator:{requestIntegration,dispatch,retry}};
+    const host={store:{task:()=>task,workflow:()=>({workspaceId:'ws'}),get:(sql:string)=>sql.includes('FROM runs')?run:undefined},coordinator:{requestIntegration,dispatch,retry}};
     const commands=new ApplicationCommands(host as unknown as RiftHostService);
     await commands.execute(resolveHttpCommand('POST','/ui-api/v1/workspaces/ws/tasks/task/retry',{expectedVersion:7,reason:'Environment recovered'}));
     if(status==='changes_requested'){

@@ -15,7 +15,7 @@ export interface ActivationHandle { childId: string; result: Promise<ActivationR
 /** Owns only DSH activation handles. A live parent is supplied by the host bridge. */
 export interface ActivationBridge { start(input: { run: Run; task: Task; role: Role; cwd: string; repositoryAccess?: import('../agent/repository-access.js').RepositoryAccess; prompt: string; signal: AbortSignal; tools?: import('../agent/runtime-types.js').RuntimeTool[]; onEvent?:(event:import('../agent/runtime-types.js').RuntimeEvent)=>void; onProgress?:(event:import('../task/run-progress.js').RunActivity)=>void; onAccepted?():void }): Promise<ActivationHandle> }
 export interface GitContext { workspace: Workspace; workflow: Workflow; task: Task }
-export interface Candidate { integrationId: string; sourceHead: string; candidateHead: string; expectedTargetHead: string; cwd: string; checkIds: string[]; checks?: import('../git/types.js').CheckEvidence[] }
+export interface Candidate { integrationId: string; sourceHead: string; candidateHead: string; expectedTargetHead: string; cwd: string; checkIds: string[]; checks?: import('../git/types.js').CheckEvidence[]; readiness?: import('@rift/protocol').EvidenceReadiness }
 /** Git facts are determined by the implementation, never by model claims. */
 export interface GitService {
   prepareTask(input: GitContext & { run: Run }): Promise<Worktree>;
@@ -23,6 +23,8 @@ export interface GitService {
   /** Production Git implementation proves analysis did not change HEAD or any checkout content. */
   verifyAnalysis?(input: GitContext & { run: Run; worktree: Worktree }): Promise<{headCommit:string}>;
   prepareCandidate(input: GitContext & { sourceHead: string; integrationId: string }): Promise<Candidate>;
+  resumeCandidate?(input: GitContext & { integrationId: string; candidateHead: string; idempotencyKey: string }): Promise<Candidate>;
+  candidateReadiness?(input: GitContext & { candidate: Candidate }): Promise<import('@rift/protocol').EvidenceReadiness>;
   publishCandidate(input: GitContext & { candidate: Candidate; review: ReviewResult }): Promise<{ acceptedCommit: string }>;
   containsCommit?(input: { workspace: Workspace; workflow: Workflow; commit: string }): Promise<boolean>;
   currentHead?(input: { workspace: Workspace; workflow: Workflow }): Promise<string>;

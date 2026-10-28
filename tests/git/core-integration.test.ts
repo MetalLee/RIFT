@@ -60,6 +60,25 @@ async function fixture(check = 'process.exit(0)') {
 }
 
 describe('real Git with persistent coordinator and controlled fake activations', () => {
+  it('waits for Host evidence without review or development and resumes the exact candidate after supplementation',async()=>{
+    const f=await fixture('process.exit(127)');f.plan([{id:'a',expectedPaths:['a.txt']}]);f.dispatch('a');
+    await f.develop(await f.started('a','develop'),{'a.txt':'complete'});await f.settled('a','blocked');
+    expect(f.bridge.starts.filter(run=>run.run.purpose==='review')).toHaveLength(0);
+    const original=f.store.require<{id:string;candidate:Candidate;status:string}>('SELECT * FROM integrations WHERE task_id=?','a');
+    expect(original.status).toBe('evidence_waiting');expect(original.candidate.readiness?.status).toBe('environment_unavailable');
+    expect(()=>f.coordinator.finish({workflowId:f.workflow.id,summary:'not ready'})).toThrow('Every task must pass');
+    const before=f.store.task('a');f.coordinator.pause(f.workflow.id);
+    (f.git as unknown as {commands:Map<string,{args:string[]}>}).commands.get('unit')!.args=['-e','console.log("Host evidence restored")'];
+    const input={taskId:'a',integrationId:original.id,candidateHead:original.candidate.candidateHead,expectedVersion:before.version,idempotencyKey:'supplement'};
+    const result=await f.coordinator.supplementEvidence(input);
+    expect(result.task).toMatchObject({attempt:1,status:'validating',sourceHead:before.sourceHead,acceptedCommit:null});
+    expect((await f.coordinator.supplementEvidence(input)).request.id).toBe(result.request.id);
+    expect(f.store.all('SELECT * FROM integrations')).toHaveLength(1);expect(f.bridge.starts).toHaveLength(1);
+    f.coordinator.resume(f.workflow.id);
+    const reviewer=await f.started('a','review');const checked=f.review(reviewer);
+    expect(checked.candidateHead).toBe(original.candidate.candidateHead);expect(checked.integrationId).toBe(original.id);expect(checked.checks![0]!.stdout).toContain('Host evidence restored');
+    await f.settled('a','succeeded');expect(f.store.task('a').acceptedCommit).toBe(original.candidate.candidateHead);expect(f.bridge.starts.filter(run=>run.run.purpose!=='review')).toHaveLength(1);
+  });
   it('reuses a proven collected source after an infrastructure failure without inventing an empty commit or skipping review',async()=>{
     const f=await fixture('process.exit(require("node:fs").existsSync("a.txt")?1:0)');
     f.plan([{id:'seed',expectedPaths:['seed.txt']},{id:'a',expectedPaths:['a.txt']}]);f.dispatch('seed');
