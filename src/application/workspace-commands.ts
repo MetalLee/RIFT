@@ -113,9 +113,12 @@ export class WorkspaceCommands {
       s.transaction(()=>{s.exec('UPDATE workspaces SET default_repository_id=NULL,version=version+1 WHERE id=? AND default_repository_id=?',w,repo.id);s.exec('DELETE FROM repositories WHERE id=? AND workspace_id=?',repo.id,w);s.exec('UPDATE workspaces SET default_repository_id=COALESCE(default_repository_id,(SELECT id FROM repositories WHERE workspace_id=? ORDER BY id LIMIT 1)),version=version+1 WHERE id=?',w,w);});return {disconnected:repo.id};
     }
     if(r==='worktree'){
+      const member = actor ? role(actor.agentId) : undefined;
+      if (actor && ['delete','archive','reconcile-delete'].includes(a!)) invariant(member?.purpose === 'lead' && member.enabled !== 0, 'UNAUTHORIZED', 'Only the workspace Lead may delete its managed worktrees.');
+      const removalActor = chatActor(actor) && member?.purpose === 'lead' ? { turnId: actor.id, agentId: actor.agentId } : undefined;
       if(['list','create','removals'].includes(a!)){
         const repo=h.repositories.get(w,need());
-        if(a==='list'||a==='removals'){empty.parse(b);const result=await execute('worktree.list',{},repo.id) as any;result.discovered=result.discovered.filter((entry:{path:string})=>{try{workspacePath(s,w,entry.path,h.config.home);return true;}catch{return false;}});return result;}
+        if(a==='list'||a==='removals'){empty.parse(b);const result=await execute('worktree.list',{},repo.id,{removalActor}) as any;result.discovered=result.discovered.filter((entry:{path:string})=>{try{workspacePath(s,w,entry.path,h.config.home);return true;}catch{return false;}});return result;}
         const input=z.object({origin:z.enum(['managed','external']),path:z.string().optional(),baseRef:z.string().optional(),branch:z.string().max(200).optional()}).strict().parse(b);
         if(input.origin==='external')input.path=workspacePath(s,w,z.string().parse(input.path),h.config.home);
         else if(input.path)input.path=await managedPath(path.resolve(h.config.home,'workspaces',workspaceKey(w)),input.path);
@@ -123,10 +126,10 @@ export class WorkspaceCommands {
       }
       if(a==='delete'||a==='reconcile-delete'){
         const input=z.object({kind:z.enum(['user','task','candidate','review']),expectedVersion:z.string().min(1),confirmDelete:z.literal(true).optional()}).strict().parse(b);
-        return execute(`worktree.${a}`,{expectedVersion:input.expectedVersion,...a==='delete'?{confirmDelete:input.confirmDelete}:{}},need(),{kind:input.kind});
+        return execute(`worktree.${a}`,{expectedVersion:input.expectedVersion,...a==='delete'?{confirmDelete:input.confirmDelete}:{}},need(),{kind:input.kind,removalActor});
       }
       if(a==='takeover'&&b.destinationPath!==undefined)b={...b,destinationPath:await managedPath(path.resolve(h.config.home,'workspaces',workspaceKey(w)),z.string().parse(b.destinationPath))};
-      return execute(`worktree.${a}`,b,need());
+      return execute(`worktree.${a}`,b,need(),{removalActor});
     }
     if(r==='workflow'){
       if(a==='list'){noId();empty.parse(b);return {workflows:s.all('SELECT * FROM workflows WHERE workspace_id=? ORDER BY rowid DESC',w)};}

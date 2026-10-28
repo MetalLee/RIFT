@@ -8,7 +8,7 @@ import type { LocalGitService } from '../git/integration.js';
 import { gitOk, worktreePorcelain } from '../git/process.js';
 import { checkoutClean, key, managedPath, withMetadataLock } from '../git/worktree-binding.js';
 import { provesPreviousBootExited } from '../agent/boot-identity.js';
-import { WorktreeRemovalService } from './worktree-removals.js';
+import { WorktreeRemovalService, type WorktreeRemovalActor } from './worktree-removals.js';
 
 export class RepositoryService {
   private bootIdentity:string|null=null;
@@ -142,7 +142,7 @@ export class RepositoryService {
       return this.tree(tree.id);
     });
   }
-  async archive(workspaceId: string, worktreeId: string, expectedVersion: number): Promise<WorkspaceWorktree> {
+  async archive(workspaceId: string, worktreeId: string, expectedVersion: number, actor?: WorktreeRemovalActor): Promise<WorkspaceWorktree> {
     const tree = this.store.require<WorkspaceWorktree>('SELECT * FROM workspace_worktrees WHERE workspace_id=? AND id=?', workspaceId, worktreeId);
     invariant(tree.origin === 'managed', 'WORKTREE_OWNERSHIP', 'External worktrees can only be detached; RIFT does not delete them.');
     invariant(tree.version === expectedVersion, 'VERSION_CONFLICT', 'Worktree state changed.');
@@ -152,7 +152,7 @@ export class RepositoryService {
     // The legacy archive endpoint remains compatible, but shares all deletion
     // guards, persistent receipts and optimistic binding with the explicit API.
     invariant(this.tree(tree.id).version === expectedVersion, 'VERSION_CONFLICT', 'Worktree state changed.');
-    await this.removals.remove(workspaceId, 'user', tree.id, { expectedVersion: deletionVersion, confirmDelete: true });
+    await this.removals.remove(workspaceId, 'user', tree.id, { expectedVersion: deletionVersion, confirmDelete: true }, actor);
     return this.tree(tree.id);
   }
   detach(workspaceId: string, worktreeId: string, expectedVersion: number): WorkspaceWorktree {
