@@ -6,6 +6,58 @@ The checked source commit is `f330841844aebb441970e6ea2cea3ab0c27364d9`
 commit changes documentation/output only. Lead must still run the commands below
 on the final exact integration candidate and arrange independent review.
 
+## Lead independent execution on `39ee0a9`
+
+The two raw records below were supplied by Lead and copied byte-for-byte after
+SHA-256 verification in recovery attempt 4. These are **Lead independent shell
+executions via `rift_exec_command`, not automatic Host candidate checks or an
+independent review approval**. This recovery attempt did not rerun these tests.
+
+- Exact source: `39ee0a93072558e68dd1c86182fff4a60ab941b0`.
+- Exact source tree: `e10ce4951e65dc770a0891aa79da82e31088c77a`.
+- `39ee.json`: SHA-256
+  `7dcc96e360189e4b8f9085557ea4b5aa86624f5d4edbd81083cbd4f136dfc4d8`.
+- `39ee-git-regression.json`: SHA-256
+  `cbf490d3bb72635730399df0c9f3d69437a729548bc6d99e1d3c772d31c73dce`.
+
+Lead reused installed dependencies and invoked the TypeScript/Vitest Node entry
+points directly, not pnpm scripts. Commands, timestamps, stdout and stderr are
+retained in the JSON files. No independent full backend suite was run.
+
+| Lead check | Actual result | Raw record |
+| --- | --- | --- |
+| `tsc --noEmit` | exit 0 | `39ee.json` |
+| `tsc -p tsconfig.build.json --noEmit` | exit 0 | `39ee.json` |
+| Standalone command consistency | exit 0; 9 passed / 9 | `39ee.json` |
+| Initial seven-file archive-only regression | exit 1; 23 passed, 24 failed / 47 | `39ee.json` |
+| Seven-file regression with isolated Git metadata and HEAD at exact source | exit 1; 41 passed, 6 failed / 47 | `39ee-git-regression.json` |
+
+The initial archive had no isolated Git metadata: fixture Git identity/HEAD
+operations failed. That invalid fixture setup is not evidence of 24 application
+regressions; its complete failing output is retained, not replaced. Lead then
+initialized isolated Git metadata, fetched the exact source object and set HEAD
+to `39ee0a9`; the corrected record reports an empty tracked diff. The remaining
+six failures are five explicit Bubblewrap UID-map permission denials in
+`workspace-cli.test.ts` and one actual DSH verification assertion mismatch in
+`api-connection-management-review.test.ts`. The latter's root cause is not
+established. Neither run is green.
+
+The older developer full/baseline archive comparisons below are retained as
+historical observations, not Lead exact-commit checks. In particular, Git-based
+fixture failures in archive-only comparisons require Git-aware reproduction;
+matching failures alone do not establish environmental causality or acceptance.
+
+The recovery evidence commit is a documentation-only descendant of `39ee0a9`.
+Its production source and tests are unchanged from that exact checked source;
+verify the binding on the final recovery HEAD with:
+
+```sh
+git diff --exit-code 39ee0a93072558e68dd1c86182fff4a60ab941b0 HEAD -- . ':!docs'
+sha256sum docs/evidence/cli-command-unification/39ee*.json
+```
+
+Formal Host checks and independent exact-candidate review remain outstanding.
+
 ## Reproduce on the exact checkout
 
 Node `v24.18.0`, pnpm `11.4.0`, Vitest `4.0.18`; locked dependencies installed
