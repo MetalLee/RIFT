@@ -13,7 +13,7 @@ export function ChatTimeline({messages,turns,chunks,receipts,runMessages,data,st
     const important=values.filter(value=>!value.collapsible || !value.taskId);
     const groups=new Map<string,TimelineUpdate[]>();
     for(const value of values)if(value.collapsible && value.taskId)groups.set(value.taskId,[...(groups.get(value.taskId)??[]),value]);
-    const list=(entries:TimelineUpdate[]) => <ul>{entries.map(value=><li key={value.id}>{value.senderAgentId ? `${name(value.senderAgentId)}：` : '系统：'}{value.type&&<strong>{receiptLabel(value.type)} · </strong>}{value.content}{value.taskId&&<> · <a href={taskHref(data.workspace.id,value.taskId)}>{data.tasks.find(task=>task.id===value.taskId)?.title??value.taskId}</a></>}</li>)}</ul>;
+    const list=(entries:TimelineUpdate[]) => <ul>{entries.map(value=><li key={value.id}>{value.senderAgentId ? `${name(value.senderAgentId)}：` : '系统：'}{value.type&&<strong>{receiptLabel(value.type)} · </strong>}{value.content}{value.reason&&!value.content.includes(value.reason)&&<p className="preserve-lines">原因：{value.reason}</p>}{value.taskId&&<> · <a href={taskHref(data.workspace.id,value.taskId)}>{data.tasks.find(task=>task.id===value.taskId)?.title??value.taskId}</a></>}</li>)}</ul>;
     return <>{important.length>0&&<div className="chat-notices" aria-label="需要关注的协作事件">{list(important)}</div>}{[...groups].map(([taskId,routine])=><details className="chat-progress" key={taskId}><summary>例行协作进展 · {data.tasks.find(task=>task.id===taskId)?.title??taskId} · {routine.length}</summary>{list(routine)}</details>)}</>;
   };
   const controls=(turn:AgentTurn)=>{

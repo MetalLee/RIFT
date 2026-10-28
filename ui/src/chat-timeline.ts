@@ -1,5 +1,5 @@
 import type { AgentTurn, ChatMessage, CoordinationReceipt, MessageChunk, RunStreamMessage } from '@rift/protocol';
-export interface TimelineUpdate { id:string; content:string; taskId?:string|null; senderAgentId?:string|null; type?:string; collapsible?:boolean; createdAt?:string }
+export interface TimelineUpdate { id:string; content:string; taskId?:string|null; senderAgentId?:string|null; type?:string; reason?:string; collapsible?:boolean; createdAt?:string }
 export interface TimelineItem { message:ChatMessage; turns:AgentTurn[]; taskIds:string[]; updates:TimelineUpdate[]; drafts:{turn:AgentTurn;text:string;messageId?:string;kind?:import('@rift/protocol').StreamMessage['kind'];status?:string}[] }
 export function messageSender(message:ChatMessage): 'user'|'agent'|'system' { return message.senderType ?? (message.role==='user'?'user':message.role==='system'?'system':'agent'); }
 export function messageAuthor(message:ChatMessage):string|null { return messageSender(message)==='agent' ? message.senderAgentId ?? message.recipientAgentId : null; }
@@ -45,7 +45,7 @@ export function buildChatTimeline(messages:ChatMessage[],turns:AgentTurn[],chunk
   }
   for(const message of messages.filter(message=>!main.includes(message))) {
     const receipt=receiptFor(message);
-    const update:TimelineUpdate={id:message.id,content:message.content,taskId:message.taskId,senderAgentId:message.senderAgentId,type:receipt?.payload.type,collapsible:!!receipt&&routine(receipt.payload.type,receipt.payload.reason),createdAt:message.createdAt};
+    const update:TimelineUpdate={id:message.id,content:message.content,taskId:message.taskId,senderAgentId:message.senderAgentId,type:receipt?.payload.type,reason:receipt?.payload.reason,collapsible:!!receipt&&routine(receipt.payload.type,receipt.payload.reason),createdAt:message.createdAt};
     const anchor=find(message); if(anchor){anchor.updates.push(update);if(message.taskId&&!anchor.taskIds.includes(message.taskId))anchor.taskIds.push(message.taskId);}else loose.push(update);
   }
   for(const receipt of receipts) {

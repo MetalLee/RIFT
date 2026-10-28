@@ -38,6 +38,17 @@
 - 完整 UI、协议、类型及生产构建结果见任务结果；构建有 >500 kB chunk 警告。
 - 未运行真实浏览器交互、375px/横屏截图、明暗主题或真实服务端组合链路；后者仍由集成任务验证。
 
+## 本次真实自查（attempt 3）
+
+- 在新任务树从 `eb70ca0` 合并已验收的 producer 提交 `32d945469f331216c48bdea65111593844506a02`，没有重写 producer 或修改旧任务树。
+- `mergeChatHistory` 统一合并分页与刷新消息，并按工作区/对话/事件序号保留去重回执。ChatScreen 的初始 snapshot、后续 snapshot、before 翻页、gap 补读及最终渲染均使用该路径，不再仅传最新页的回执。
+- 匹配到回执时保留完整公开 `reason`；旧消息仅含截短摘要时补充展示，不通过文案猜测类型。未知、错误、决策或带原因事件保持展开。
+- `tests/acceptance/timeline-ui.test.tsx` 启动真实临时 SQLite/Host/orchestration/HTTP 会话，使用浏览器 `request` 客户端、共享历史合并及 ChatTimeline 服务端渲染，覆盖 before、refresh、首屏刷新项、重叠页面、乱序重放、跨页 gap 和缺失元数据。
+- 本组合测试只证明聊天回执读取与 UI 消费，不代表 Host 证据/审核全链路验收，也不是挂载 ChatScreen 的浏览器端到端测试。
+- 检查入口：`pnpm exec vitest run ui/src tests/acceptance/timeline-ui.test.tsx tests/acceptance/timeline-receipts.test.ts tests/acceptance/chat-orchestration-review.test.ts tests/acceptance/collaboration-review.test.ts`；另运行 `pnpm test:ui`、`pnpm typecheck`、`pnpm test:protocol`、`pnpm build:ui` 和 `git diff --check`。
+- 新 HTTP/UI 测试首次因测试目录的经典 JSX 转换缺少 React import 失败，补齐后重跑通过。构建仍有 >500 kB chunk 警告。
+- 无可用浏览器运行器，未运行真实键盘交互、375px/横屏、明暗主题或 reduced-motion 验收；未新增依赖、执行第二三批或 push。
+
 ## 仅登记，不实施
 
 - 第二批：基线复用、检查 DAG、环境缓存；待用户单独明确确认。

@@ -24,3 +24,11 @@ it('groups routine progress by task, never merging different tasks into one coll
   const html=renderToStaticMarkup(<ChatTimeline messages={[input]} turns={[]} chunks={[]} receipts={receipts} data={data} stale={false} onStop={()=>{}}/>);
   expect(html.match(/<details/g)).toHaveLength(2);expect(html).toContain('例行协作进展 · 任务');expect(html).toContain('例行协作进展 · other');
 });
+it('shows the full structured public reason when the matching legacy message contains only a shortened summary',()=>{
+  const reason='完整公开依据。'.repeat(60);
+  const receipt={id:'full-reason',workspaceId:'ws',conversationId:'c',workflowId:'wf',eventSeq:9,createdAt:'2026-01-02',payload:{eventSeq:9,type:'source.collected',taskId:'task',workflowId:'wf',reason}};
+  const notice={...input,id:'notice',role:'system',senderType:'system',kind:'receipt',dedupeKey:'event:9:c',content:'旧的简短摘要',createdAt:receipt.createdAt} as ChatMessage;
+  const html=renderToStaticMarkup(<ChatTimeline messages={[input,notice]} turns={[]} chunks={[]} receipts={[receipt]} data={data} stale={false} onStop={()=>{}}/>);
+  expect(html).toContain(reason);expect(html).toContain('旧的简短摘要');expect(html).not.toContain('<details');
+  expect(html.match(/<li>/g)).toHaveLength(1);
+});
