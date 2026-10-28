@@ -30,6 +30,18 @@ async function fixture() {
   return { root, repositoryPath, baseCommit, service, workspace, workflow, context, run, develop, approve };
 }
 describe('real Git integration', () => {
+  it('compares exact candidate commits using Host Git, with bounded redacted repair context',async()=>{
+    const f=await fixture(),a=await f.develop('repair-context','a.txt','before');
+    const first=await f.service.prepareCandidate({...a.ctx,sourceHead:a.source.sourceHead,integrationId:'context-first'});
+    await f.service.abandonCandidate({...a.ctx,candidate:first,reason:'repair'});
+    const b=await f.develop('repair-context-next','a.txt','after\n'+'x'.repeat(25000));
+    const next=await f.service.prepareCandidate({...b.ctx,sourceHead:b.source.sourceHead,integrationId:'context-next'});
+    const diff=await f.service.compareCandidates({...b.ctx,candidate:next,previousCandidateHead:first.candidateHead});
+    expect(diff).toMatchObject({fromCommit:first.candidateHead,toCommit:next.candidateHead,changedPaths:['a.txt'],truncated:true});
+    expect(diff.diff).toContain('-before');expect(diff.diff.length).toBeLessThan(24100);
+    await expect(f.service.compareCandidates({...b.ctx,candidate:next,previousCandidateHead:'--bad-ref'})).rejects.toThrow('INVALID_COMMIT');
+    await f.service.abandonCandidate({...b.ctx,candidate:next,reason:'done'});
+  });
   it('collects existing committed source while preserving untracked pnpm stores in old worktrees',async()=>{
     const f=await fixture(),ctx=f.context('cache'),run=f.run('cache'),worktree=await f.service.prepareTask({...ctx,run});
     await writeFile(path.join(worktree.path,'feature.txt'),'feature');await gitOk(worktree.path,['add','feature.txt']);await gitOk(worktree.path,['commit','-m','candidate']);

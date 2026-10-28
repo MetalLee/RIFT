@@ -26,7 +26,7 @@ function fixture(options:{failCleanup?:boolean;neverCleanup?:boolean;cleanupTime
   const plan=(tasks:{id:string;paths?:string[];dependsOn?:string[];kind?:'change'|'analysis'}[])=>coordinator.submitPlan({workflowId:workflow.id,expectedRevision:0,tasks:tasks.map(task=>({id:task.id,kind:task.kind??'analysis',title:task.id,instructions:'do task',expectedPaths:task.paths??[`src/${task.id}`],dependsOn:task.dependsOn}))});
   const dispatch=(taskId:string,key=taskId)=>coordinator.dispatch({taskId,idempotencyKey:key,expectedVersion:store.task(taskId).version});
   const complete=(index:number)=>{const call=calls[index]!;call.result.resolve({stopReason:'completed',text:JSON.stringify(call.run.purpose==='review'?{schemaVersion:1,taskId:call.run.taskId,runId:call.run.id,verdict:'approve',reviewedCommit:'b'.repeat(40),findings:[]}:{schemaVersion:1,taskId:call.run.taskId,runId:call.run.id,outcome:'completed',summary:'done',changedPaths:[],checksClaimed:[],blockingReasons:[]})});};
-  return{store,projects,workspace,workflow,coordinator,calls,git,plan,dispatch,complete};
+  return{store,projects,workspace,workflow,coordinator,calls,bridge,git,plan,dispatch,complete};
 }
 describe('persistent task coordinator',()=>{
   it.each(['error','cancel'] as const)('streams task output before %s and closes partial content without restarting the task',async(mode)=>{
@@ -47,6 +47,40 @@ describe('persistent task coordinator',()=>{
     expect(conversationRunMessages(f.store,'ws','conversation')[0]).toMatchObject({status:'interrupted',text:'正在检查文件。'});
     expect(f.calls).toHaveLength(1);
     await f.coordinator.shutdown();
+  });
+
+  it('binds different keys to one active review, including replay after retry and persistent restart',async()=>{
+    const directory=mkdtempSync(join(tmpdir(),'rift-review-keys-')),database=join(directory,'rift.db');
+    const f=fixture({database});
+    try {
+      f.plan([{id:'a',kind:'change'}]);f.dispatch('a');await tick();f.complete(0);await tick();
+      const task=f.store.task('a');
+      const original=f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:0,idempotencyKey:'other-client'});
+      expect(f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:task.version,idempotencyKey:'another-client'}).id).toBe(original.id);
+      expect(f.calls).toHaveLength(2);
+      expect(()=>f.coordinator.dispatch({taskId:'a',expectedVersion:task.version,idempotencyKey:'other-client'})).toThrow(/different request/);
+      expect(()=>f.coordinator.requestIntegration({taskId:'a',sourceHead:'c'.repeat(40),expectedVersion:task.version,idempotencyKey:'other-client'})).toThrow(/different request/);
+      f.calls[1]!.result.resolve({stopReason:'error',text:'',diagnostic:'transport failed'});await tick();
+      expect(f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:0,idempotencyKey:'other-client'}).id).toBe(original.id);
+      expect(f.calls).toHaveLength(2);
+      const retry=f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:f.store.task('a').version,idempotencyKey:'explicit-retry'});
+      await tick();expect(retry.id).not.toBe(original.id);expect(f.calls).toHaveLength(3);
+      expect(f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:0,idempotencyKey:'another-client'}).id).toBe(original.id);
+      f.complete(2);await tick();await f.coordinator.shutdown();
+      stores.splice(stores.indexOf(f.store),1);f.store.close();
+      const reopened=new RiftStore(database),restored=new TaskCoordinator({store:reopened,bridge:f.bridge,git:f.git});
+      try {
+        await restored.recover();
+        const replay=restored.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:0,idempotencyKey:'other-client'});
+        expect(replay.id).toBe(original.id);expect(replay.phase).toBe('blocked');expect(f.calls).toHaveLength(3);
+        expect(reopened.all("SELECT id FROM runs WHERE purpose='review'")).toHaveLength(2);
+        expect(reopened.all("SELECT * FROM operation_request_keys")).toHaveLength(2);
+        expect(reopened.task('a').attempt).toBe(1);expect(reopened.task('a').status).toBe('succeeded');
+      }finally{await restored.shutdown();reopened.close();}
+    }finally{
+      if(stores.includes(f.store)){await f.coordinator.shutdown();stores.splice(stores.indexOf(f.store),1);f.store.close();}
+      rmSync(directory,{recursive:true});
+    }
   });
 
   it('retries an infrastructure-failed review with the same source and attempt, without dispatching development',async()=>{
@@ -187,7 +221,9 @@ describe('persistent task coordinator',()=>{
     const f=fixture(),entered=deferred<void>(),release=deferred<void>();const prepare=f.git.prepareCandidate.bind(f.git);
     f.git.prepareCandidate=async input=>{const candidate=await prepare(input);entered.resolve();await release.promise;return candidate;};
     f.plan([{id:'a',kind:'change'}]);f.dispatch('a');await tick();f.complete(0);await entered.promise;f.coordinator.pause('workflow');release.resolve();await tick();
+    const duplicate=f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:0,idempotencyKey:'cancelled-review-replay'});
     await f.coordinator.cancelTask('a');await new Promise(resolve=>setTimeout(resolve,60));
+    expect(f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:0,idempotencyKey:'cancelled-review-replay'})).toMatchObject({id:duplicate.id,phase:'cancelled'});
     expect(f.coordinator.status('workflow').integrations[0]!.status).toBe('blocked');expect(f.calls).toHaveLength(1);expect(f.coordinator.status('workflow').operations.find(op=>op.kind==='integration')!.phase).toBe('cancelled');await f.coordinator.shutdown();
   });
   it('bounds unresponsive cleanup without releasing unknown slots or hanging shutdown',async()=>{
