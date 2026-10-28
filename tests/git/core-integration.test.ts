@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
+import { key } from '../../src/git/worktree-binding.js';
 import os from 'node:os';
 import { RiftStore } from '../../src/storage/database.js';
 import { createWorkspace } from '../../src/project/workspace.js';
@@ -34,7 +37,7 @@ async function fixture(check = 'process.exit(0)') {
   await writeFile(path.join(repo, 'base.txt'), 'base\n'); await gitOk(repo, ['add', '.']);
   await gitOk(repo, ['-c', 'user.name=Test', '-c', 'user.email=test@localhost', 'commit', '-m', 'base file']);
   const baseCommit = await gitOk(repo, ['rev-parse', 'HEAD']);
-  const store = new RiftStore(path.join(root, 'rift.db'));
+  let store = new RiftStore(path.join(root, 'rift.db'));
   const workspace = createWorkspace(store, { id: 'workspace', name: 'test', rootPath: repo, repositoryPath: repo, commonGitDir: path.join(repo, '.git'), baseRef: 'main' });
   configureRoles(store, workspace.id, [
     { id: 'dev', providerName: 'fake-dev', packageVersion: 'test', configRevision: 1, capabilities: {}, credentialRefs: [] },
@@ -46,8 +49,8 @@ async function fixture(check = 'process.exit(0)') {
     { name: 'reviewer', kind: 'subagent', providerBindingId: 'review', prompt: 'Review', revision: 1 },
   ], new Set(['fake-dev', 'fake-review']));
   const bridge = new ControlledBridge();
-  const git = new LocalGitService({ managedRoot: path.join(root, '受管 目录'), commands: [{ id: 'unit', executable: process.execPath, args: ['-e', check] }] });
-  const coordinator = new TaskCoordinator({ store, bridge, git });
+  let git = new LocalGitService({ managedRoot: path.join(root, '受管 目录'), commands: [{ id: 'unit', executable: process.execPath, args: ['-e', check] }] });
+  let coordinator = new TaskCoordinator({ store, bridge, git });
   const workflow = coordinator.createWorkflow({ id: 'workflow', workspaceId: workspace.id, goal: 'Integration proof', integrationRef: 'refs/heads/rift/integration/core', baseCommit });
   cleanups.push(async () => { await coordinator.shutdown(); store.close(); if (!path.basename(root).startsWith('rift-core-git-') || path.dirname(root) !== path.resolve(os.tmpdir())) throw new Error('Unsafe test cleanup'); await rm(root, { recursive: true, force: true }); });
   const plan = (tasks: { id: string; expectedPaths: string[] }[]) => coordinator.submitPlan({ workflowId: workflow.id, expectedRevision: 0, tasks: tasks.map(task => ({ ...task, kind: 'change', title: task.id, instructions: `Implement ${task.id}` } satisfies PlanTask)) });
@@ -56,10 +59,114 @@ async function fixture(check = 'process.exit(0)') {
   const develop = async (execution: Started, files: Record<string, string>) => { for (const [file, content] of Object.entries(files)) await writeFile(path.join(execution.cwd, file), content); execution.finish({ stopReason: 'completed', text: JSON.stringify({ schemaVersion: 1, taskId: execution.task.id, runId: execution.run.id, outcome: 'completed', summary: 'Implemented', changedPaths: Object.keys(files), checksClaimed: [], blockingReasons: [] }) }); };
   const review = (execution: Started, verdict = 'approve') => { const payload = JSON.parse(execution.prompt) as { candidate: Candidate }; execution.finish({ stopReason: 'completed', text: JSON.stringify({ schemaVersion: 1, taskId: execution.task.id, runId: execution.run.id, verdict, reviewedCommit: payload.candidate.candidateHead, findings: verdict === 'approve' ? [] : [{ severity: 'medium', file: 'a.txt', line: 1, reason: 'Needs refinement', suggestion: 'Refine content' }] }) }); return payload.candidate; };
   const settled = (id: string, status: string) => eventually(() => store.task(id).status === status, `${id} ${status}; current=${store.task(id).status}`);
-  return { root, repo, baseCommit, store, workspace, bridge, git, coordinator, workflow, plan, dispatch, started, develop, review, settled };
+  const restart = async (check: string, whileClosed: (databasePath: string) => void) => {
+    await coordinator.shutdown(); store.close();
+    try { whileClosed(path.join(root, 'rift.db')); }
+    finally {
+      store = new RiftStore(path.join(root, 'rift.db'));
+      git = new LocalGitService({ managedRoot: git.managedRoot, commands: [{ id: 'unit', executable: process.execPath, args: ['-e', check] }] });
+      coordinator = new TaskCoordinator({ store, bridge, git });
+    }
+  };
+  return { root, repo, baseCommit, get store() { return store; }, workspace, bridge, get git() { return git; }, get coordinator() { return coordinator; }, workflow, plan, dispatch, started, develop, review, settled, restart };
+}
+
+const beforeBoot = `v1:${'a'.repeat(64)}:${'1'.repeat(64)}`, afterBoot = `v1:${'a'.repeat(64)}:${'2'.repeat(64)}`;
+async function interruptedSupplement() {
+  const f = await fixture('process.exit(127)');
+  f.coordinator.setBootIdentity(beforeBoot); f.plan([{ id: 'a', expectedPaths: ['a.txt'] }]); f.dispatch('a');
+  await f.develop(await f.started('a', 'develop'), { 'a.txt': 'complete' }); await f.settled('a', 'blocked');
+  f.coordinator.pause(f.workflow.id);
+  const record = () => f.store.require<{ id: string; version: number; status: string; candidate: Candidate; checkIds: string[] }>('SELECT * FROM integrations WHERE task_id=?', 'a');
+  const original = record(), check = 'console.log("durable supplementary evidence")';
+  const input = { taskId: 'a', integrationId: original.id, candidateHead: original.candidate.candidateHead, expectedVersion: f.store.task('a').version, idempotencyKey: 'interrupted-supplement' };
+  await f.restart(check, databasePath => {
+    const moduleUrl = (name: string) => JSON.stringify(pathToFileURL(path.resolve(name)).href);
+    const script = `
+      import { RiftStore } from ${moduleUrl('src/storage/database.ts')};
+      import { LocalGitService } from ${moduleUrl('src/git/integration.ts')};
+      import { TaskCoordinator } from ${moduleUrl('src/task/coordinator.ts')};
+      const store = new RiftStore(${JSON.stringify(databasePath)});
+      const git = new LocalGitService(${JSON.stringify({ managedRoot: f.git.managedRoot, commands: [{ id: 'unit', executable: process.execPath, args: ['-e', check] }] })});
+      const coordinator = new TaskCoordinator({store, git, bridge: {start: async () => {throw new Error('unexpected review');}}});
+      coordinator.setBootIdentity(${JSON.stringify(beforeBoot)});
+      const exec = store.exec.bind(store);
+      store.exec = (sql, ...args) => {
+        if (sql.startsWith('UPDATE integrations SET candidate=')) process.exit(73);
+        return exec(sql, ...args);
+      };
+      await coordinator.supplementEvidence(${JSON.stringify(input)});
+      process.exit(74);
+    `;
+    const child = spawnSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', script], { cwd: process.cwd(), encoding: 'utf8', timeout: 20_000 });
+    expect(child.error, child.stderr).toBeUndefined(); expect(child.status, child.stderr).toBe(73);
+  });
+  expect(record().status).toBe('preparing'); expect(record().candidate.checkIds).toEqual(original.candidate.checkIds);
+  const operation = await f.git.readOperation(f.workspace, original.id);
+  expect(operation.checks?.[0]).toMatchObject({ exitCode: 0, host: { executionSource: 'host' } });
+  expect(operation.checks?.map(check => check.id)).not.toEqual(original.candidate.checkIds);
+  f.coordinator.setBootIdentity(beforeBoot); await f.coordinator.recover();
+  return { f, record, original, operation, input, directory: path.join(f.git.managedRoot, key(f.workspace.id), 'operations', key(original.id)) };
 }
 
 describe('real Git with persistent coordinator and controlled fake activations', () => {
+  it('recovers an attachment/DB crash window without rerunning checks or carrying approval forward', async () => {
+    const { f, record, original, operation, input } = await interruptedSupplement();
+    await f.coordinator.recover();
+    await expect(f.coordinator.reconcileIntegration(record().id, record().version)).rejects.toMatchObject({ code: 'CLEANUP_UNKNOWN' });
+    expect(record().status).toBe('cleanup_unknown'); expect(f.bridge.starts).toHaveLength(1);
+    f.coordinator.setBootIdentity(afterBoot);
+    // Crash a second time after verification but before the ledger transaction commits.
+    const event = f.store.event.bind(f.store);
+    f.store.event = (...args: Parameters<typeof event>) => { if (args[1] === 'integration.reconciled') throw new Error('injected ledger failure'); return event(...args); };
+    await expect(f.coordinator.reconcileIntegration(record().id, record().version)).rejects.toThrow('injected ledger failure');
+    f.store.event = event;
+    expect(record().candidate.checkIds).toEqual(original.candidate.checkIds);
+    await f.coordinator.reconcileIntegration(record().id, record().version);
+    expect(record()).toMatchObject({ status: 'evidence_waiting', checkIds: operation.checks!.map(check => check.id), candidate: { candidateHead: original.candidate.candidateHead, readiness: { status: 'ready' } } });
+    const saved = record(); await f.coordinator.recover(); await f.coordinator.recover(); expect(record()).toEqual(saved);
+    expect(f.store.task('a').acceptedCommit).toBeNull(); expect(f.bridge.starts).toHaveLength(1);
+    const supplement = { ...input, expectedVersion: f.store.task('a').version };
+    const result = await f.coordinator.supplementEvidence(supplement);
+    expect((await f.coordinator.supplementEvidence(supplement)).request.id).toBe(result.request.id);
+    expect(record().candidate.checkIds).toEqual(operation.checks!.map(check => check.id));
+    f.coordinator.resume(f.workflow.id);
+    const reviewed = f.review(await f.started('a', 'review'));
+    expect(reviewed.checkIds).toEqual(record().checkIds); expect(reviewed.candidateHead).toBe(original.candidate.candidateHead);
+    await f.settled('a', 'succeeded'); expect(f.store.task('a').attempt).toBe(1); expect(f.store.task('a').sourceHead).toBe(original.candidate.sourceHead);
+  });
+  it.each(['workspace', 'repository', 'repositoryFingerprint', 'task', 'attempt', 'integration', 'candidate', 'source', 'target', 'path', 'missing_new', 'corrupt_new', 'missing_old', 'old_attempt', 'db_reviewed', 'missing_binding', 'untrusted_attachment', 'reviewed', 'publication_intent', 'changed_ref'])(
+    'refuses unsafe attachment reconciliation: %s', async fault => {
+      const { f, record, original, operation, directory } = await interruptedSupplement();
+      f.coordinator.setBootIdentity(afterBoot);
+      const binding = operation.binding!;
+      if (fault === 'workspace') binding.workspaceId = 'foreign';
+      if (fault === 'repository') binding.repositoryId = 'foreign';
+      if (fault === 'repositoryFingerprint') binding.repositoryFingerprint = 'f'.repeat(64);
+      if (fault === 'task') operation.taskId = binding.taskId = 'foreign';
+      if (fault === 'attempt') binding.attempt++;
+      if (fault === 'integration') operation.integrationId = binding.integrationId = 'foreign';
+      if (fault === 'candidate') operation.candidateHead = binding.candidateHead = 'f'.repeat(40);
+      if (fault === 'source') operation.sourceHead = 'f'.repeat(40);
+      if (fault === 'target') operation.expectedTargetHead = 'f'.repeat(40);
+      if (fault === 'path') operation.reviewPath += '-foreign';
+      if (fault === 'missing_new') await rm(path.join(directory, operation.checks![0]!.id + '.json'));
+      if (fault === 'corrupt_new') await writeFile(path.join(directory, operation.checks![0]!.id + '.json'), '{}');
+      if (fault === 'missing_old') await rm(path.join(directory, original.candidate.checkIds[0]! + '.json'));
+      if (fault === 'old_attempt') f.store.exec("UPDATE tasks SET attempt=attempt+1,version=version+1 WHERE id='a'");
+      if (fault === 'db_reviewed') f.store.exec("UPDATE integrations SET review_run_id=(SELECT id FROM runs WHERE task_id='a' LIMIT 1) WHERE id=?", record().id);
+      if (fault === 'missing_binding') delete operation.binding;
+      if (fault === 'untrusted_attachment') delete operation.checks![0]!.host;
+      if (fault === 'reviewed') operation.review = { schemaVersion: 1, taskId: 'a', runId: 'old-review', verdict: 'approve', reviewedCommit: original.candidate.candidateHead, findings: [] };
+      if (fault === 'publication_intent') operation.phase = 'publish_planned';
+      if (fault === 'changed_ref') await gitOk(f.repo, ['update-ref', f.workflow.integrationRef, original.candidate.sourceHead]);
+      await writeFile(path.join(directory, 'operation.json'), JSON.stringify(operation));
+      await expect(f.coordinator.reconcileIntegration(record().id, record().version)).rejects.toThrow();
+      expect(record().status).toBe('cleanup_unknown'); expect(record().candidate.checkIds).toEqual(original.candidate.checkIds);
+      expect(f.store.task('a').acceptedCommit).toBeNull(); expect(f.bridge.starts).toHaveLength(1);
+      await expect(f.coordinator.supplementEvidence({ taskId: 'a', integrationId: record().id, candidateHead: original.candidate.candidateHead, expectedVersion: f.store.task('a').version, idempotencyKey: 'unsafe' })).rejects.toThrow();
+    },
+  );
   it('classifies real required failures as defects and permits a fresh development repair',async()=>{
     const f=await fixture('process.exit(require("node:fs").readFileSync("a.txt","utf8")==="fixed"?0:1)');
     f.plan([{id:'a',expectedPaths:['a.txt']}]);f.dispatch('a');

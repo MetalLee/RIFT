@@ -25,6 +25,7 @@ export interface GitService {
   prepareCandidate(input: GitContext & { sourceHead: string; integrationId: string }): Promise<Candidate>;
   resumeCandidate?(input: GitContext & { integrationId: string; candidateHead: string; idempotencyKey: string }): Promise<Candidate>;
   reconcileCandidateCleanup?(input: GitContext & { candidate: Candidate; previousBootId: string | null; currentBootId: string | null }): Promise<boolean>;
+  reconcileCandidateEvidence?(input: GitContext & { candidate: Candidate; allowEvidenceRefresh: boolean }): Promise<Candidate>;
   candidateReadiness?(input: GitContext & { candidate: Candidate }): Promise<import('@rift/protocol').EvidenceReadiness>;
   publishCandidate(input: GitContext & { candidate: Candidate; review: ReviewResult }): Promise<{ acceptedCommit: string }>;
   containsCommit?(input: { workspace: Workspace; workflow: Workflow; commit: string }): Promise<boolean>;

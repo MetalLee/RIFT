@@ -223,7 +223,7 @@ checks:
 
 CLI 对应 `rift ws task evidence TASK --workspace WORKSPACE`、`task evidence-log TASK --data '{"integrationId":"...","checkId":"..."}'`、`task supplement-evidence TASK --data '{...}' --key REQUEST_KEY`。成员仅 Lead 可请求补证；Reviewer 另有只读、仅限自身任务和活跃 Run 的 `rift_read_evidence` 工具。
 
-真实必需检查代码失败保存为 `blocked`，可通过 `task.retry-dispatch` 正式返修；缺必需项或环境不可用时 integration 保存为 `evidence_waiting`，不启动正式审核或发布，也不自动开发返修。操作员修复环境或明确调整检查配置后，可为未变候选请求补证：只执行缺失、失效或失败的配置检查；成功后复用原 integration/candidate，进入独立审核，无需开发者新建源码提交。更换目标 HEAD、attempt、候选或配置会失效相应证据；批准不能跨候选使用。重用同一操作键不会重复执行；中断中的操作键拒绝自动重跑，需先检查状态。每次执行前持久记录清理未知，正常退出后才确认；超时保留 `cleanup_unknown` 和隔离门禁，不能用补证、改 integration 状态或删隔离文件绕过。重启 Host 本身不证明清理；`integration.reconcile` 仅凭 Host 已记录的同机 OS 重启证明恢复超时清理，证明持久保存，不接受请求自报 cleanup。当前未审核候选清理恢复后仍需显式补证并独立审核；失效旧 attempt/source 的等待记录保留历史，不阻断新 attempt，清理未知不因 attempt 变化失效。
+真实必需检查代码失败保存为 `blocked`，可通过 `task.retry-dispatch` 正式返修；缺必需项或环境不可用时 integration 保存为 `evidence_waiting`，不启动正式审核或发布，也不自动开发返修。操作员修复环境或明确调整检查配置后，可为未变候选请求补证：只执行缺失、失效或失败的配置检查；成功后复用原 integration/candidate，进入独立审核，无需开发者新建源码提交。更换目标 HEAD、attempt、候选或配置会失效相应证据；批准不能跨候选使用。重用同一操作键不会重复执行；中断中的操作键拒绝自动重跑，需先检查状态。每次执行前持久记录清理未知，正常退出后才确认；超时保留 `cleanup_unknown` 和隔离门禁，不能用补证、改 integration 状态或删隔离文件绕过。重启 Host 本身不证明清理；`integration.reconcile` 仅凭 Host 已记录的同机 OS 重启证明恢复超时清理，证明持久保存，不接受请求自报 cleanup。补证附件落盘后、数据库快照更新前中断时，恢复核验新旧不可变附件及完整绑定，只为当前同候选、未审核的 integration 协调检查代次；已审核候选仍要求原检查 ID 精确一致，目标引用变化仍保留发布未知门禁。当前未审核候选清理恢复后仍需显式补证并独立审核；失效旧 attempt/source 的等待记录保留历史，不阻断新 attempt，清理未知不因 attempt 变化失效。
 
 待用户分别确认的后续批次（本次不实现）：第二批基线复用/检查 DAG/环境缓存；第三批分阶段队列/跨引用并行。
 

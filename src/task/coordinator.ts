@@ -70,23 +70,28 @@ export class TaskCoordinator {
   private cleanupReceipt(runId:string):void {if(this.closed)return;this.cleanupReceipts.add(runId);const run=this.store.run(runId) as Run & {version:number};if(['unknown','failed'].includes(run.cleanupStatus)&&terminalRuns.has(run.status))this.reconcileRun(runId,run.version);}
   async reconcileIntegration(integrationId:string,expectedVersion:number) {
     invariant(!this.integrationBusy,'INTEGRATION_ACTIVE','Wait for the current integration worker to stop.');
-    const integration=this.store.require<IntegrationRecord & {version:number;runtimeBootId:string|null}>('SELECT * FROM integrations WHERE id=?',integrationId),task=this.store.task(integration.taskId);
+    const integration=this.store.require<IntegrationRecord & {version:number;runtimeBootId:string|null;sourceHead:string;candidateHead:string|null;expectedTargetHead:string|null;checkIds:string[]}>('SELECT * FROM integrations WHERE id=?',integrationId),task=this.store.task(integration.taskId);
     invariant(integration.version===expectedVersion,'VERSION_CONFLICT','Integration changed; reload before reconciling.');
     invariant(['cleanup_unknown','publishing'].includes(integration.status),'INVALID_STATE','Only an uncertain integration can be reconciled.');
     invariant(!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',task.id),'CLEANUP_UNKNOWN','Verify all Run cleanup before inspecting publication.');
     invariant(this.integrationCleanupReceipts.has(integrationId)||provesPreviousBootExited(integration.runtimeBootId,this.bootIdentity),'CLEANUP_UNKNOWN','Git/check subprocess cleanup has no owned completion receipt or same-machine reboot proof. Missing candidate/Run rows do not prove cleanup.');
+    if(integration.candidate)invariant(integration.candidate.integrationId===integration.id&&integration.candidate.sourceHead===integration.sourceHead&&integration.candidate.candidateHead===integration.candidateHead&&integration.candidate.expectedTargetHead===integration.expectedTargetHead&&JSON.stringify(integration.candidate.checkIds)===JSON.stringify(integration.checkIds),'CANDIDATE_EVIDENCE_MISMATCH','Stored integration and candidate bindings differ.');
     const checkCleanupReconciled=integration.candidate&&this.git.reconcileCandidateCleanup?await this.git.reconcileCandidateCleanup({...this.context(task),candidate:integration.candidate,previousBootId:integration.runtimeBootId,currentBootId:this.bootIdentity}):false;
+    const recoveredCandidate=integration.candidate&&this.git.reconcileCandidateEvidence?await this.git.reconcileCandidateEvidence({...this.context(task),candidate:integration.candidate,allowEvidenceRefresh:!integration.reviewRunId}):null;
+    const candidate=recoveredCandidate??integration.candidate;
     let publication:'published'|'not-published'|'unknown'='not-published';
-    if(integration.candidate){invariant(this.git.recoverPublication,'PUBLICATION_UNKNOWN','Git publication verification is unavailable.');publication=await this.git.recoverPublication({...this.context(task),candidate:integration.candidate});}
+    if(candidate){invariant(this.git.recoverPublication,'PUBLICATION_UNKNOWN','Git publication verification is unavailable.');publication=await this.git.recoverPublication({...this.context(task),candidate});}
     invariant(publication!=='unknown','PUBLICATION_UNKNOWN','Git cannot establish the exact publication outcome; no ledger state was released.');
-    if(publication==='not-published'&&integration.candidate&&this.git.abandonCandidate)await this.git.abandonCandidate({...this.context(task),candidate:integration.candidate,reason:'Execution cleanup verified; unpublished candidate abandoned for explicit retry.'});
-    const readiness=publication==='not-published'&&integration.candidate&&this.git.candidateReadiness&&candidateMatchesTask(integration.candidate,task)?await this.git.candidateReadiness({...this.context(task),candidate:integration.candidate}):undefined;
-    const waiting=checkCleanupReconciled&&!integration.reviewRunId&&readiness&&readiness.status!=='failed';
+    if(publication==='not-published'&&candidate&&this.git.abandonCandidate)await this.git.abandonCandidate({...this.context(task),candidate,reason:'Execution cleanup verified; unpublished candidate abandoned for explicit retry.'});
+    const readiness=publication==='not-published'&&candidate&&this.git.candidateReadiness&&candidateMatchesTask(candidate,task)?await this.git.candidateReadiness({...this.context(task),candidate}):undefined;
+    const waiting=(checkCleanupReconciled||recoveredCandidate)&&!integration.reviewRunId&&readiness&&readiness.status!=='failed';
     this.store.transaction(()=>{
       invariant(this.store.require<{version:number}>('SELECT version FROM integrations WHERE id=?',integrationId).version===expectedVersion,'VERSION_CONFLICT','Integration changed during verification.');
+      invariant(this.store.task(task.id).version===task.version,'VERSION_CONFLICT','Task changed during verification.');
       invariant(!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',task.id),'CLEANUP_UNKNOWN','Execution ownership changed during verification.');
-      this.store.exec('UPDATE integrations SET status=?,error=? WHERE id=?',publication==='published'?'accepted':waiting?'evidence_waiting':'blocked',publication==='published'?null:'Cleanup verified; candidate was not published. Retry the task explicitly.',integrationId);
-      if(publication==='published')this.store.exec('UPDATE tasks SET status=?,accepted_commit=?,blocking_reason=NULL,version=version+1 WHERE id=?',task.status==='cancelled'?'cancelled':'succeeded',integration.candidate!.candidateHead,task.id);
+      if(recoveredCandidate)this.store.exec('UPDATE integrations SET candidate=?,check_ids=? WHERE id=?',JSON.stringify(recoveredCandidate),JSON.stringify(recoveredCandidate.checkIds),integrationId);
+      this.store.exec('UPDATE integrations SET status=?,error=? WHERE id=?',publication==='published'?'accepted':waiting?'evidence_waiting':'blocked',publication==='published'?null:waiting?'Cleanup verified; candidate evidence recovered. Supplement explicitly before independent review.':'Cleanup verified; candidate was not published. Retry the task explicitly.',integrationId);
+      if(publication==='published')this.store.exec('UPDATE tasks SET status=?,accepted_commit=?,blocking_reason=NULL,version=version+1 WHERE id=?',task.status==='cancelled'?'cancelled':'succeeded',candidate!.candidateHead,task.id);
       else this.blockTask(task.id,'RECOVERED_NOT_PUBLISHED');
       for(const operation of this.store.all<Operation>("SELECT * FROM operations WHERE entity_id=? AND kind='integration' AND phase IN ('queued','started')",task.id))this.operationPhase(operation,publication==='published'?'completed':'blocked');
       this.store.event(task.workflowId,'integration.reconciled',{integrationId,publication},{taskId:task.id});
