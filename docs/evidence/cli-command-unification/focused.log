@@ -1,0 +1,16 @@
+
+ RUN  v4.0.18 /data/projects/RIFT/.rift/workspaces/e168007d2bbb66742fc6990a/worktrees/c78aefff324fc65a24665805
+
+ ✓ tests/acceptance/command-unification.test.ts (9 tests) 25506ms
+     ✓ shares creation, optimistic versions, errors and durable replay across browser and executable CLI  2185ms
+     ✓ matches browser retry-and-dispatch and report export instead of silently using reset-only retry  1344ms
+     ✓ creates, verifies and deletes connections without UI, using key files and never logging plaintext  3185ms
+     ✓ waits for the real verification lifecycle: slow-success  6109ms
+     ✓ waits for the real verification lifecycle: service-timeout  6102ms
+     ✓ waits for the real verification lifecycle: cleanup-timeout  6099ms
+     ✓ denies management without token, cookie writes without CSRF, foreign workspace ids and agent global scope  357ms
+
+ Test Files  1 passed (1)
+      Tests  9 passed (9)
+   Start at  08:34:02
+   Duration  26.66s (transform 606ms, setup 0ms, import 981ms, tests 25.51s, environment 0ms)
