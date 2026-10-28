@@ -1,0 +1,17 @@
+{
+  "verifiedAt": "2026-10-28T08:34:22.991481+00:00",
+  "executor": "frontend-developer via Host rift_exec_command; evidence binding only, no test rerun",
+  "taskId": "protocol-ui-extraction",
+  "runId": "run-a8f5ea07-14fc-49ab-9474-8d12ab155a74",
+  "sourceHead": "f2912621b9e6ea07c2bc85a52a950f12922ab5c1",
+  "testedCandidate": "6e89c201372410229537dd2f9ec5dbffc00b172c",
+  "sharedTree": "cb30d9f32a7d9b5bf7456369174ec508241cf9f5",
+  "trackedFilesCompared": 667,
+  "comparison": "For each git ls-tree -r --name-only sourceHead path: current file bytes == git show sourceHead:path == git show testedCandidate:path",
+  "mismatches": [],
+  "rawEvidenceFile": "protocol-6e89.raw.json",
+  "rawEvidenceSha256": "ea9a8687b0615e6c9391ac4ba282b200f16734eafbb3f6762dafada5922397ab",
+  "rawEvidenceCopiedWithoutModification": true,
+  "successfulRecordedCommands": 8,
+  "scope": "Existing 667 tracked files only; this commit adds verification documents, so its whole Git tree differs. Not an automatic integration check or acceptance."
+}
