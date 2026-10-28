@@ -43,3 +43,29 @@ pnpm test:built-cli
 首次迭代中，类型检查指出旧测试依赖泄漏字段，协议独立编译暴露 Loader 事件声明依赖，新增 AST 检查暴露测试节点缺少 parent 链；均已修正后重跑。没有删除凭证断言或绕过权限边界。
 
 未执行真实外部模型/公网 npm 安装测试；全量测试中 `RIFT_NETWORK_TESTS=1` 才启用的公网安装用例默认跳过。构建保留现有 Vite 大 chunk 提示（非失败）。没有 push、PR 或最终验收声明。
+
+## P2 复审修复：旧连接幂等回执
+
+上一轮候选 `be303f8818ac88f0cf433014116038f3897ed215` 的独立审查指出：新连接响应已投影，但升级前保存的 create/verify 回执仍直接返回 `credentialRef`。上文与原始文件保留为上一轮证据，不代表该问题已在上一轮修复。
+
+本轮从 `87ca36717050ffd7057ebf097a1bb2f2f197d1a9` 最小增量修复，执行实现 HEAD：`8ce2459970e4afa990e3d836528e53e84e22c49e`。
+
+- 复用同一连接白名单，按共享命令名投影历史 create/verify 响应；只读取历史 JSON，不查询当前连接代替历史结果，不重新执行操作，不修改回执、key、状态或指纹。
+- 新增 `tests/acceptance/connection-receipt-upgrade.test.ts`：真实 HTTP 两传输 × 验证通过/失败，共 4 项；预置旧字段、改变当前状态并重启 Host 后重复重放，检查完整历史结果、无 Host-only 字段、原指纹冲突行为、无重复创建/验证、数据库记录不变、凭证可解析及内部绑定不变。
+- 未修改 UI、旧工作树或既有验证原始记录。只增加公共出站兼容投影，不迁移或删除历史存储数据。
+
+以下 9 条检查均在上述干净精确实现 HEAD 执行，执行前后 HEAD 与 tracked status 不变；后续提交仅附加本节和 [本轮原始 stdout/stderr](connection-receipt-upgrade.raw.json)，不改变实现、测试或构建配置。
+
+| 命令 | 结果 |
+| --- | --- |
+| `pnpm install --frozen-lockfile` | exit 0 |
+| `pnpm typecheck` | exit 0，后端 + UI |
+| 定向 `pnpm exec vitest run`（完整参数见原始记录） | exit 0，7 文件、41 passed；旧回执、共享命令、凭证、连接删除/验证回归 |
+| `pnpm test:protocol` | exit 0，19 passed |
+| `pnpm test` | exit 0，88 文件、569 passed、1 skipped |
+| `pnpm test:ui` | exit 0，48 passed |
+| `pnpm build` | exit 0；保留 Vite chunk 大小提示 |
+| `pnpm test:built-cli` | exit 0；protocol ESM、无浏览器共享业务命令、版本/幂等及 SSE |
+| `git diff --check` | exit 0 |
+
+未执行真实外部模型或显式启用的公网安装测试，未 push 或创建 PR。本轮本地通过不等于 Host 候选检查、独立 exact-commit 复审或验收。
