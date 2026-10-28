@@ -1,6 +1,8 @@
+import { ApplicationCommands } from '../application/commands.js';
+import { resolveHttpCommand } from './command-routes.js';
 import { skillResourceTools } from '../skill/resource-tool.js';
 import { installedSkills } from '../skill/runtime.js';
-import { WorkspaceCli, cliEnvelope } from './workspace-cli.js';
+import { WorkspaceCommands, cliEnvelope } from '../application/workspace-commands.js';
 import { installWorkspaceSkill } from '../skill/default.js';
 import { workspaceRepositoryAccess } from '../agent/repository-access.js';
 import { createRepositoryShell } from '../agent/repository-shell.js';
@@ -11,7 +13,6 @@ import { SessionId } from '@deepseek-ai/dsh-session';
 import { MessageId } from '@deepseek-ai/dsh-llm';
 import { randomUUID, createHash } from 'node:crypto';
 import path from 'node:path';
-import { mkdir, writeFile } from 'node:fs/promises';
 import { z } from 'zod';
 import { RiftStore } from '../storage/database.js';
 import { ProjectService } from '../project/index.js';
@@ -19,18 +20,16 @@ import { TaskCoordinator } from '../task/coordinator.js';
 import { DshActivationBridge } from '../task/activation-bridge.js';
 import { LocalGitService } from '../git/integration.js';
 import type { CheckCommand } from '../git/types.js';
-import { RiftError, type ProviderBinding, type Workflow, type Worktree } from '../contracts/index.js';
+import { RiftError, type ProviderBinding, type Workflow } from '../contracts/index.js';
 import { installLeadTools } from '../tools/rift-tools.js';
 import * as schemas from './schemas.js';
 import { publicError, redact } from './security.js';
 import type { ApiHandler } from './local-api.js';
-import { workspaceDetail, workspaceList, workspaceTasks } from './workspace-views.js';
-import { taskView } from './task-diagnostics.js';
-import { ChatService, sendMessageSchema } from '../chat/service.js';
+import { ChatService } from '../chat/service.js';
 import { DshChatRuntime } from '../chat/dsh-runtime.js';
 import type { AgentRuntime, RuntimeTool } from '../agent/runtime-types.js';
 import type { AgentTurn, ChatConnection, ContextRef, ContextSnapshot } from '../chat/contracts.js';
-import { connectionSchema, createAgentSchema, createBrowserAgent, updateAgentSchema, updateBrowserAgent } from '../project/browser-agents.js';
+import { createBrowserAgent } from '../project/browser-agents.js';
 import { invariant } from '../contracts/index.js';
 import { SkillService } from '../skill/service.js';
 import { readWorkspaceEvents } from '../events/workspace-events.js';
@@ -56,18 +55,19 @@ export class RiftHostService implements ApiHandler {
   readonly orchestration: ChatOrchestration;
   readonly collaboration: CollaborationService;
   readonly skills: SkillService;
-  readonly workspaceCli: WorkspaceCli;
+  readonly workspaceCli: WorkspaceCommands;
+  readonly commands: ApplicationCommands;
   readonly repositories: RepositoryService;
   readonly connections: ApiConnectionService;
-  private readonly chatRuntimes = new Map<string, AgentRuntime>();
-  private readonly runtimeModels = new Map<string, readonly string[]>();
-  private nativeRuntimeUnavailable = 'Native subprocess service is not mounted in this Host.';
-  private readonly leads = new Map<string, AgentHandle>();
+  readonly chatRuntimes = new Map<string, AgentRuntime>();
+  readonly runtimeModels = new Map<string, readonly string[]>();
+  nativeRuntimeUnavailable = 'Native subprocess service is not mounted in this Host.';
+  readonly leads = new Map<string, AgentHandle>();
   private readonly leadStarts = new Map<string, Promise<AgentHandle>>();
-  private readonly providerNames = new Set<string>();
+  readonly providerNames = new Set<string>();
   private readonly executionProviderDisposers: (() => void)[] = [];
   private closing = false;
-  constructor(private readonly ctx: Context, readonly config: HostConfig) {
+  constructor(readonly ctx: Context, readonly config: HostConfig) {
     this.store = new RiftStore(path.join(config.home, 'rift.db'));
     try {
     if (config.leadTurnLimit !== undefined) {
@@ -82,7 +82,8 @@ export class RiftHostService implements ApiHandler {
     this.connections = new ApiConnectionService(ctx, this.store, config.home);
     const bridge = new DshActivationBridge(ctx, taskId => this.leads.get(this.store.task(taskId).workflowId)?.agent, this.store);
     this.skills = new SkillService(this.store);
-    this.workspaceCli = new WorkspaceCli(this, (method, pathname, body) => this.route(method, pathname, body), async (turn, name, input) => {
+    this.commands = new ApplicationCommands(this);
+    this.workspaceCli = new WorkspaceCommands(this, async (turn, name, input) => {
       const tool = this.chatTools(turn).find(tool=>tool.name===name);
       invariant(tool,'TOOL_UNAVAILABLE','This execution has no such coordination capability.');
       return tool.execute(input, new AbortController().signal);
@@ -108,11 +109,11 @@ export class RiftHostService implements ApiHandler {
   async initialize(): Promise<void> { for(const row of this.store.all<{id:string}>('SELECT id FROM workspaces'))installWorkspaceSkill(this.store,row.id); await this.connections.initialize(); const boot=await localBootIdentity();this.repositories.setBootIdentity(boot);this.coordinator.setBootIdentity(boot);await this.coordinator.recover();this.store.exec("UPDATE native_executions SET status='interrupted',updated_at=? WHERE status IN ('starting','running')",new Date().toISOString());this.chat.setBootIdentity(boot);this.chat.initialize();this.orchestration.initialize();this.collaboration.initialize(); }
   registerChatRuntime(name: 'codex', runtime: AgentRuntime, models: readonly string[]): void { this.chatRuntimes.set(name, runtime); this.runtimeModels.set(name, models); }
   browserEvents(workspaceId: string, after: number) { return readWorkspaceEvents(this.store, workspaceId, after); }
-  private validateChatConnection(connection: ChatConnection): void {
+  validateChatConnection(connection: ChatConnection): void {
     if (connection.runtime === 'dsh') invariant(this.ctx.llm?.listProviders().some(provider => provider.id === connection.provider), 'PROVIDER_UNAVAILABLE', 'The selected model API provider is not registered.');
     else { invariant(this.chatRuntimes.has(connection.runtime), 'PROVIDER_UNAVAILABLE', 'The selected native discussion runtime is not enabled.'); invariant(this.runtimeModels.get(connection.runtime)?.includes(connection.model), 'MODEL_UNVERIFIED', 'This native model has not passed the restricted tool-boundary probe.'); }
   }
-  private executionBinding(workspaceId: string, providerName: string): string {
+  executionBinding(workspaceId: string, providerName: string): string {
     this.store.workspace(workspaceId); this.refreshProviders();
     const provider = this.ctx.subagents.getProvider(providerName);
     invariant(provider && this.providerNames.has(providerName), 'PROVIDER_UNAVAILABLE', 'Choose an exact registered execution provider.');
@@ -120,7 +121,7 @@ export class RiftHostService implements ApiHandler {
     if (!this.store.get('SELECT id FROM provider_bindings WHERE id=?', bindingId)) this.store.exec('INSERT INTO provider_bindings(id,workspace_id,provider_name,package_version,config_revision,capabilities,credential_refs,runtime,spawn) VALUES(?,?,?,?,1,?,?,?,?)', bindingId, workspaceId, providerName, '0.2.1-rc.3', JSON.stringify(provider.capabilities), '[]', providerName === 'spawn' ? 'dsh' : null, providerName === 'spawn' ? JSON.stringify({ provider: this.config.leadProvider, model: this.config.leadModel }) : null);
     return bindingId;
   }
-  private configuredExecutionBinding(workspaceId: string, connection: ChatConnection): string {
+  configuredExecutionBinding(workspaceId: string, connection: ChatConnection): string {
     this.store.workspace(workspaceId);
     this.validateChatConnection(connection);
     const providerName = connection.runtime === 'dsh' ? 'spawn' : `rift-native-codex-${connection.model}`;
@@ -217,14 +218,14 @@ export class RiftHostService implements ApiHandler {
     register('rift_workflow_finish', 'Complete only when all registered tasks passed real acceptance gates.', schemas.finishSchema, input => this.coordinator.finish({ workflowId: activeWorkflow().id, ...input }));
     return tools;
   }
-  private refreshProviders(): void { this.providerNames.clear(); for (const name of this.ctx.subagents.list()) this.providerNames.add(name); }
-  private defaultMembers() {
+  refreshProviders(): void { this.providerNames.clear(); for (const name of this.ctx.subagents.list()) this.providerNames.add(name); }
+  defaultMembers() {
     return [
       { name: 'developer-a', purpose: 'developer' as const, providerName: this.config.developerProvider ?? 'claude-code-dev', prompt: 'Implement only the supplied task in this worktree. Preserve other files. Return one JSON object matching resultSchema with exact taskId and runId.' },
       { name: 'reviewer', purpose: 'reviewer' as const, providerName: this.config.reviewerProvider ?? 'codex-review', prompt: 'Review the exact candidate commit read-only. Never edit or commit. Return one JSON object matching resultSchema; approve only when all acceptance criteria pass.' },
     ];
   }
-  private defaults(workspaceId: string): void {
+  defaults(workspaceId: string): void {
     this.refreshProviders();
     const members = this.defaultMembers();
     const bindings: ProviderBinding[] = [...new Set(members.map(member => member.providerName))].map(providerName => {
@@ -304,7 +305,7 @@ export class RiftHostService implements ApiHandler {
     return attached;
   }
   async handle(method: string, pathname: string, body: unknown, key?: string): Promise<unknown> {
-    if(method==='POST'&&pathname==='/ui-api/v1/connections')registerConnectionCredential(body);
+    if(method==='POST'&&['/ui-api/v1/connections','/v1/connections'].includes(pathname))registerConnectionCredential(body);
     if (this.closing) throw new RiftError('HOST_CLOSING','Host is closing.');
     if (method === 'GET') return this.route(method, pathname, body);
     if (!key) throw new RiftError('IDEMPOTENCY_KEY_REQUIRED','Write requests require a key.');
@@ -327,158 +328,10 @@ export class RiftHostService implements ApiHandler {
   /** Explicit browser allowlist; never forward arbitrary management paths. */
   async handleBrowser(method: string, pathname: string, body: unknown, key?: string): Promise<unknown> {
     invariant(this.config.uiEnabled!==false,'NOT_FOUND','Browser UI is disabled.');
+    invariant(new URL(pathname,'http://rift.local').pathname.startsWith('/ui-api/v1/'),'NOT_FOUND','Unknown browser route.');
     return this.handle(method, pathname, body, key ? `browser:${key}` : undefined);
   }
-  private async routeBrowser(method: string, pathname: string, body: unknown): Promise<unknown> {
-    if (this.closing) throw new RiftError('HOST_CLOSING', 'Host is closing.');
-    const url = new URL(pathname, 'http://127.0.0.1'); pathname = url.pathname;
-    if(method==='POST'&&pathname==='/ui-api/v1/connections')return this.connections.create(body);
-    const connectionVerify=/^\/ui-api\/v1\/connections\/([^/]+)\/verify$/.exec(pathname);
-    const connectionDelete=/^\/ui-api\/v1\/connections\/([^/]+)$/.exec(pathname);
-    if(method==='DELETE'&&connectionDelete){
-      z.object({}).strict().parse(body);const connectionId=decodeURIComponent(connectionDelete[1]!);
-      const saved=this.store.get<{provider:string;deletedAt:string|null}>('SELECT provider,deleted_at FROM api_connections WHERE id=?',connectionId);
-      invariant(!saved||saved.deletedAt||saved.provider!==this.config.leadProvider,'CONNECTION_IN_USE','The Host default Lead still selects this API connection. Choose another default before deleting it.');
-      return this.connections.remove(connectionId);
-    }
-    if(method==='POST'&&connectionVerify){z.object({}).strict().parse(body);return this.connections.verify(decodeURIComponent(connectionVerify[1]!));}
-    if (method === 'GET' && pathname === '/ui-api/v1/connections') return { savedConnections: this.connections.list(), configuration: this.connections.configurationCapability(), executionProviders: this.ctx.subagents.list().map(name => ({ name, capabilities: this.ctx.subagents.getProvider(name)?.capabilities ?? {}, authentication: 'not-verified' })), connections: [...(this.ctx.llm?.listProviders() ?? []).map(provider => ({ id: `dsh:${provider.id}`, runtime: 'dsh', provider: provider.id, available: true, authentication: 'not-verified', modelSelection: 'explicit', models: [], executionAvailable: Boolean(this.ctx.subagents.getProvider('spawn')?.capabilities.agentOptions), tools: true, streaming: true, output: 'redacted-event-stream' })), { id: 'codex', runtime: 'codex', available: this.chatRuntimes.has('codex'), authentication: 'not-verified', modelSelection: 'verified-only', models: this.runtimeModels.get('codex') ?? [], executionAvailable: VERIFIED_NATIVE_CODEX_MODELS.every(model => Boolean(this.ctx.subagents.getProvider(`rift-native-codex-${model}`))), disabledReason: this.chatRuntimes.has('codex') ? null : this.nativeRuntimeUnavailable, tools: true, streaming: true, output: 'redacted-event-stream' }] };
-    if (method === 'GET' && pathname === '/ui-api/v1/workspaces') return workspaceList(this.store);
-    const match = /^\/ui-api\/v1\/workspaces\/([^/]+)$/.exec(pathname);
-    if (method === 'GET' && match) {
-      this.refreshProviders();
-      return workspaceDetail(this.store, decodeURIComponent(match[1]!), this.providerNames, { provider: this.config.leadProvider, model: this.config.leadModel });
-    }
-    if (method === 'POST' && pathname === '/ui-api/v1/workspaces') {
-      const input = z.object({ name: z.string().trim().min(1).max(120), repositoryPath: z.string().min(1).optional(), baseRef: z.string().min(1).optional(), leadConnection: connectionSchema.optional() }).strict().parse(body);
-      if (input.leadConnection) this.validateChatConnection(input.leadConnection);
-      let workspace: import('../contracts/index.js').Workspace;
-      if (input.repositoryPath) workspace = await this.route('POST', '/v1/workspaces', { name: input.name, repositoryPath: input.repositoryPath, baseRef: input.baseRef ?? 'HEAD' }) as typeof workspace;
-      else {
-        invariant(!input.baseRef, 'INVALID_WORKSPACE', 'A base ref requires a repository.');
-        const id = `workspace-${randomUUID()}`;
-        workspace = this.store.transaction(() => {
-          this.store.exec('INSERT INTO workspaces(id,name,root_path,status) VALUES(?,?,?,?)', id, input.name, path.join(this.config.home, 'workspaces', id), 'active');
-          this.store.exec("INSERT INTO roles(id,workspace_id,name,purpose,kind,prompt,revision,display_name) VALUES(?,?,'lead','lead','dsh-lead',?,1,?)", `${id}:lead`, id, 'Help the user discuss and plan. Register all code work through RIFT tools; never bypass acceptance gates.', '主 Agent');
-          // A discussion-only Host may have no execution providers yet.
-          // Bind registered providers when available; otherwise retain inert discussion members.
-          for (const { providerName, ...member } of this.defaultMembers()) createBrowserAgent(this.store, id, {
-            ...member, displayName: member.name, chatConnection: null,
-            ...(this.ctx.subagents.list().includes(providerName) ? { providerBindingId: this.executionBinding(id, providerName) } : {}),
-          });
-          return this.store.workspace(id);
-        });
-      }
-      if (input.leadConnection) this.store.exec('UPDATE workspaces SET lead_connection=?,version=version+1 WHERE id=?', JSON.stringify(input.leadConnection), workspace.id);
-      installWorkspaceSkill(this.store,workspace.id);
-      this.chat.createConversation(workspace.id);
-      return this.store.workspace(workspace.id);
-    }
-    const archiveWorkspace=/^\/ui-api\/v1\/workspaces\/([^/]+)\/archive$/.exec(pathname);
-    if(archiveWorkspace&&method==='POST'){z.object({}).strict().parse(body);return this.route('POST',`/v1/workspaces/${archiveWorkspace[1]}/archive`,{});}
-    const retryDelivery=/^\/ui-api\/v1\/workspaces\/([^/]+)\/messages\/([^/]+)\/retry-delivery$/.exec(pathname);
-    if(retryDelivery&&method==='POST'){z.object({}).strict().parse(body);return this.collaboration.retryDelivery(decodeURIComponent(retryDelivery[1]!),decodeURIComponent(retryDelivery[2]!));}
-    const taskList=/^\/ui-api\/v1\/workspaces\/([^/]+)\/tasks$/.exec(pathname);
-    if(taskList&&method==='GET')return workspaceTasks(this.store,decodeURIComponent(taskList[1]!),url.searchParams);
-    const repositoryRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/repositories(?:\/([^/]+)(?:\/(worktrees))?)?$/.exec(pathname);
-    if (repositoryRoute) {
-      const workspaceId = decodeURIComponent(repositoryRoute[1]!), repositoryId = repositoryRoute[2] ? decodeURIComponent(repositoryRoute[2]) : undefined;
-      if (!repositoryId && method === 'GET') return { repositories: this.repositories.list(workspaceId) };
-      if (!repositoryId && method === 'POST') return this.repositories.connect(workspaceId, z.object({ repositoryPath: z.string().min(1), baseRef: z.string().min(1).default('HEAD'), expectedVersion: z.number().int().nonnegative() }).strict().parse(body));
-      if (repositoryId && repositoryRoute[3] === 'worktrees' && method === 'GET') return { worktrees: this.repositories.worktrees(workspaceId, repositoryId), discovered: await this.repositories.discover(workspaceId, repositoryId), removals: await this.repositories.removals.list(workspaceId, repositoryId) };
-      if (repositoryId && repositoryRoute[3] === 'worktrees' && method === 'POST') return this.repositories.createWorktree(workspaceId, repositoryId, z.object({ origin: z.enum(['managed','external']), path: z.string().min(1).optional(), baseRef: z.string().min(1).optional(), branch: z.string().min(1).max(200).optional() }).strict().parse(body));
-    }
-    const removalRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/worktree-removals\/(user|task|candidate|review)\/([^/]+)\/(delete|reconcile)$/.exec(pathname);
-    if (removalRoute && method === 'POST') {
-      const workspaceId = decodeURIComponent(removalRoute[1]!), kind = removalRoute[2] as import('../project/worktree-removals.js').RemovalKind, recordId = decodeURIComponent(removalRoute[3]!);
-      if (removalRoute[4] === 'reconcile') return this.repositories.removals.reconcile(workspaceId, kind, recordId, z.object({ expectedVersion: z.string().min(1) }).strict().parse(body).expectedVersion);
-      return this.repositories.removals.remove(workspaceId, kind, recordId, z.object({ expectedVersion: z.string().min(1), confirmDelete: z.literal(true) }).strict().parse(body));
-    }
-    const worktreeRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/worktrees\/([^/]+)\/(archive|detach|takeover|reconcile)$/.exec(pathname);
-    if (worktreeRoute && method === 'POST') {
-      const workspaceId=decodeURIComponent(worktreeRoute[1]!),treeId=decodeURIComponent(worktreeRoute[2]!);
-      if(worktreeRoute[3]==='takeover')return this.repositories.takeover(workspaceId,treeId,z.object({expectedVersion:z.number().int().nonnegative(),confirmExclusiveOwnership:z.literal(true),destinationPath:z.string().min(1).optional()}).strict().parse(body));
-      const input = z.object({ expectedVersion: z.number().int().nonnegative() }).strict().parse(body); if(worktreeRoute[3]==='reconcile')return this.repositories.reconcile(workspaceId,treeId,input.expectedVersion);return this.repositories[worktreeRoute[3] === 'archive' ? 'archive' : 'detach'](workspaceId,treeId,input.expectedVersion);
-    }
-    const taskRoute=/^\/ui-api\/v1\/workspaces\/([^/]+)\/tasks\/([^/]+)(?:\/(retry|evidence))?$/.exec(pathname);
-    const runReconcile=/^\/ui-api\/v1\/workspaces\/([^/]+)\/runs\/([^/]+)\/reconcile$/.exec(pathname);
-    if(runReconcile&&method==='POST'){const workspaceId=decodeURIComponent(runReconcile[1]!),runId=decodeURIComponent(runReconcile[2]!),run=this.store.run(runId);invariant(this.store.workflow(this.store.task(run.taskId).workflowId).workspaceId===workspaceId,'NOT_FOUND','Run does not belong to this workspace.');this.coordinator.reconcileRun(runId,z.object({expectedVersion:z.number().int().nonnegative()}).strict().parse(body).expectedVersion);return this.store.require('SELECT id,task_id,status,version,cleanup_status,slot_released_at FROM runs WHERE id=?',runId);}
-    const integrationReconcile=/^\/ui-api\/v1\/workspaces\/([^/]+)\/integrations\/([^/]+)\/reconcile$/.exec(pathname);
-    if(integrationReconcile&&method==='POST'){const workspaceId=decodeURIComponent(integrationReconcile[1]!),integrationId=decodeURIComponent(integrationReconcile[2]!),integration=this.store.require<{taskId:string}>('SELECT task_id FROM integrations WHERE id=?',integrationId);invariant(this.store.workflow(this.store.task(integration.taskId).workflowId).workspaceId===workspaceId,'NOT_FOUND','Integration does not belong to this workspace.');return this.coordinator.reconcileIntegration(integrationId,z.object({expectedVersion:z.number().int().nonnegative()}).strict().parse(body).expectedVersion);}
-    if(taskRoute){
-      const workspaceId=decodeURIComponent(taskRoute[1]!),taskId=decodeURIComponent(taskRoute[2]!),task=this.store.task(taskId);
-      invariant(this.store.workflow(task.workflowId).workspaceId===workspaceId,'NOT_FOUND','Task does not belong to this workspace.');
-      if(method==='GET'&&!taskRoute[3])return taskView(this.store,task);
-      if(method==='POST'&&taskRoute[3]==='retry'){
-        const workflow=this.store.workflow(task.workflowId);if(workflow.baseCommit)await this.ensureLead(workflow.id);
-        const latest=this.store.get<import('../contracts/index.js').Run>('SELECT * FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1',taskId);
-        if(task.status==='blocked'&&task.sourceHead&&latest?.purpose==='review'&&['failed','interrupted'].includes(latest.status)){
-          const input=z.object({expectedVersion:z.number().int().nonnegative(),reason:z.string().min(1)}).strict().parse(body);
-          const request=this.coordinator.requestIntegration({taskId,sourceHead:task.sourceHead,expectedVersion:input.expectedVersion,idempotencyKey:`browser-review-retry:${taskId}:${input.expectedVersion}`});
-          return{task:this.store.task(taskId),request};
-        }
-        const retried=await this.route('POST',`/v1/tasks/${encodeURIComponent(taskId)}/retry`,body) as import('../contracts/index.js').Task;
-        const request=this.coordinator.dispatch({taskId,expectedVersion:retried.version,idempotencyKey:`browser-retry:${taskId}:${retried.attempt}`});
-        return{task:this.store.task(taskId),request};
-      }
-      if(method==='GET'&&taskRoute[3]==='evidence'){
-        const records=this.store.all<{id:string;status:string;candidate:unknown}>('SELECT id,status,candidate FROM integrations WHERE task_id=? ORDER BY rowid',taskId);
-        const integrations=await Promise.all(records.map(async record=>{if(!record.candidate)return{...record,checks:[],review:null,evidenceUnavailable:true};try{const operation=await this.git.readOperation(this.store.workspace(workspaceId),record.id);return{id:record.id,status:record.status,candidateHead:operation.candidateHead,checks:operation.checks??[],review:operation.review??null,evidenceUnavailable:false};}catch{return{id:record.id,status:record.status,checks:[],review:null,evidenceUnavailable:true};}}));
-        return{taskId,acceptedCommit:task.acceptedCommit,integrations};
-      }
-    }
-    const skillRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/skills(?:\/([^/]+))?(?:\/(shared|archive))?$/.exec(pathname);
-    if (skillRoute) {
-      const workspaceId = decodeURIComponent(skillRoute[1]!), skillId = skillRoute[2] ? decodeURIComponent(skillRoute[2]) : undefined, action = skillRoute[3];
-      if (method === 'GET' && !skillId) return { skills: this.skills.list(workspaceId) };
-      if (method === 'POST' && skillId === 'preview') return this.skills.previewImport({ workspaceId, ...z.object({ directory: z.string().min(1), name: z.string().max(120).optional(), description: z.string().max(2000).optional(), skillId: z.string().max(160).optional(), expectedRevision: z.number().int().nonnegative().optional(), runtimes: z.array(z.string()).max(20).optional() }).strict().parse(body) });
-      if (method === 'POST' && skillId === 'import') {
-        const result = this.skills.saveImport({ workspaceId, ...z.object({ previewId: z.string().min(1).max(160) }).strict().parse(body) });
-        return { ...result, version: { ...result.version, resources: result.version.resources.map(({ contentBase64: _content, ...resource }) => resource) } };
-      }
-      if (method === 'PUT' && skillId && action === 'shared') return this.skills.setShared(workspaceId, skillId, z.object({ versionId: z.string().min(1).max(160), enabled: z.boolean(), expectedRevision: z.number().int().nonnegative() }).strict().parse(body));
-      if (method === 'POST' && skillId && action === 'archive') return this.skills.archive(workspaceId, skillId, z.object({ expectedRevision: z.number().int().nonnegative() }).strict().parse(body).expectedRevision);
-    }
-    const assignmentRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/agents\/([^/]+)\/skills\/([^/]+)$/.exec(pathname);
-    if (assignmentRoute) {
-      const workspaceId = decodeURIComponent(assignmentRoute[1]!), agentId = decodeURIComponent(assignmentRoute[2]!), skillId = decodeURIComponent(assignmentRoute[3]!);
-      if (method === 'GET' && skillId === 'effective') { const effective = installedSkills(this.skills,this.config.home,workspaceId,agentId,url.searchParams.get('runtime') ?? 'dsh'); return { ...effective, resources: effective.resources.map(({ contentBase64: _content, ...resource }) => resource) }; }
-      if (method === 'PUT') return this.skills.setAgent(workspaceId, agentId, skillId, z.object({ mode: z.enum(['include','exclude','inherit']), versionId: z.string().min(1).max(160).optional(), expectedRevision: z.number().int().nonnegative() }).strict().parse(body));
-    }
-    const scoped = /^\/ui-api\/v1\/workspaces\/([^/]+)(?:\/(agents|conversations|turns|workflows|snapshot)(?:\/([^/]+))?(?:\/(messages|stop|reconcile|pause|resume|cancel|retry|replan))?)?$/.exec(pathname);
-    if (scoped) {
-      const workspaceId = decodeURIComponent(scoped[1]!), section = scoped[2], entityId = scoped[3] ? decodeURIComponent(scoped[3]) : undefined, action = scoped[4];
-      this.store.workspace(workspaceId);
-      if (method === 'PATCH' && !section) {
-        const input = z.object({ expectedVersion: z.number().int().nonnegative(), name: z.string().trim().min(1).max(120).optional(), leadConnection: connectionSchema.optional() }).strict().parse(body);
-        if (input.leadConnection) this.validateChatConnection(input.leadConnection);
-        return this.store.transaction(() => {
-          const workspace = this.store.workspace(workspaceId) as import('../contracts/index.js').Workspace & { version: number; leadConnection: ChatConnection | null };
-          invariant(workspace.version === input.expectedVersion, 'VERSION_CONFLICT', 'Workspace configuration changed.');
-          this.store.exec('UPDATE workspaces SET name=?,lead_connection=?,version=version+1 WHERE id=?', input.name ?? workspace.name, input.leadConnection ? JSON.stringify(input.leadConnection) : workspace.leadConnection ? JSON.stringify(workspace.leadConnection) : null, workspaceId);
-          return this.store.workspace(workspaceId);
-        });
-      }
-      if (section === 'snapshot' && method === 'GET') return this.routeBrowser('GET', `/ui-api/v1/workspaces/${encodeURIComponent(workspaceId)}`, {});
-      if (section === 'agents') {
-        if (method === 'GET' && !entityId) return { agents: this.store.all('SELECT * FROM roles WHERE workspace_id=? ORDER BY name', workspaceId) };
-        if (method === 'POST' && !entityId) { const input = createAgentSchema.parse(body); if (input.chatConnection) this.validateChatConnection(input.chatConnection); invariant([input.executionConnection, input.executionProviderName, input.providerBindingId].filter(Boolean).length <= 1, 'INVALID_CONFIG', 'Select one execution connection.'); return this.store.transaction(() => createBrowserAgent(this.store, workspaceId, { ...input, ...(input.executionConnection ? { providerBindingId: this.configuredExecutionBinding(workspaceId, input.executionConnection) } : input.executionProviderName ? { providerBindingId: this.executionBinding(workspaceId, input.executionProviderName) } : {}) })); }
-        if (method === 'PATCH' && entityId) { const input = updateAgentSchema.parse(body); if (input.chatConnection) this.validateChatConnection(input.chatConnection); invariant([input.executionConnection, input.executionProviderName, input.providerBindingId].filter(Boolean).length <= 1, 'INVALID_CONFIG', 'Select one execution connection.'); return this.store.transaction(() => updateBrowserAgent(this.store, workspaceId, entityId, { ...input, ...(input.executionConnection ? { providerBindingId: this.configuredExecutionBinding(workspaceId, input.executionConnection) } : input.executionProviderName ? { providerBindingId: this.executionBinding(workspaceId, input.executionProviderName) } : {}) })); }
-      }
-      if (section === 'conversations') {
-        if (method === 'GET' && !entityId) return { conversations: this.chat.list(workspaceId) };
-        if (method === 'POST' && !entityId) return this.chat.createConversation(workspaceId, z.object({ title: z.string().trim().min(1).max(240).default('新对话') }).strict().parse(body).title);
-        if (entityId && action === 'messages' && method === 'GET') return this.chat.page(workspaceId, entityId, url.searchParams.get('before') ?? undefined, Number(url.searchParams.get('limit') ?? 50));
-        if (entityId && action === 'messages' && method === 'POST') return this.chat.send(workspaceId, entityId, sendMessageSchema.parse(body));
-      }
-      if (section === 'turns' && entityId && action === 'stop' && method === 'POST') return this.chat.stop(workspaceId, entityId);
-      if (section === 'turns' && entityId && action === 'reconcile' && method === 'POST') return this.chat.reconcile(workspaceId, entityId, z.object({expectedVersion:z.number().int().nonnegative()}).strict().parse(body).expectedVersion);
-      if (section === 'turns' && entityId && !action && method === 'GET') return this.chat.turn(workspaceId, entityId);
-      if (section === 'workflows' && entityId && action && method === 'POST') { const workflow=this.store.workflow(entityId); invariant(workflow.workspaceId === workspaceId, 'NOT_FOUND', 'Workflow does not belong to this workspace.'); if(action==='resume'&&workflow.baseCommit)await this.ensureLead(entityId); return this.route(method, `/v1/workflows/${encodeURIComponent(entityId)}/${action}`, body); }
-    }
-    throw new RiftError('NOT_FOUND', 'Unknown browser route.');
-  }
-  private async createChatWorkflow(turn:AgentTurn|undefined,body:unknown,assertLive:()=>void=()=>{}):Promise<Workflow> {
+  async createChatWorkflow(turn:AgentTurn|undefined,body:unknown,assertLive:()=>void=()=>{}):Promise<Workflow> {
       const create=(input:Parameters<TaskCoordinator['createWorkflow']>[0])=>this.store.transaction(()=>{assertLive();const workflow=this.coordinator.createWorkflow(input);if(turn&&this.config.chatOrchestration!==false&&turn.configuration.agent.purpose==='lead')this.orchestration.bind(workflow.id,turn);return workflow;});
       const input = schemas.workflowSchema.parse(body), workspace = this.store.workspace(input.workspaceId), available = this.repositories.list(workspace.id), id = `workflow-${randomUUID()}`;
       if(input.mode==='analysis'){
@@ -497,84 +350,10 @@ export class RiftHostService implements ApiHandler {
       if (input.startLead) await this.startLead(id);
       return this.store.workflow(workflow.id);
   }
-  private async route(method:string, pathname:string, body:unknown):Promise<unknown> {
-    if (pathname.startsWith('/ui-api/')) return this.routeBrowser(method, pathname, body);
-    // Management-token clients can recover a retained-history gap without a
-    // browser cookie. These are read-only projections of the same scoped ledger.
-    const streamSnapshot = /^\/v1\/workspaces\/([^/]+)\/(conversations|turns)\/([^/]+)(\/messages)?$/.exec(new URL(pathname,'http://rift.local').pathname);
-    if (method === 'GET' && streamSnapshot) {
-      const workspaceId=decodeURIComponent(streamSnapshot[1]!),entityId=decodeURIComponent(streamSnapshot[3]!);
-      if (streamSnapshot[2]==='turns' && !streamSnapshot[4]) return this.chat.turn(workspaceId,entityId);
-      if (streamSnapshot[2]==='conversations' && streamSnapshot[4]) {
-        const query=new URL(pathname,'http://rift.local').searchParams;
-        return this.chat.page(workspaceId,entityId,query.get('before')??undefined,Number(query.get('limit')??50));
-      }
-    }
-    if (method === 'GET' && pathname === '/v1/doctor') return this.doctor();
-    if (method === 'GET' && pathname === '/v1/workspaces') return this.store.all('SELECT * FROM workspaces ORDER BY id');
-    if (method === 'POST' && pathname === '/v1/workspaces') {
-      const input = schemas.workspaceSchema.parse(body), repo = await this.git.inspectRepository(input.repositoryPath,input.baseRef), id = `workspace-${randomUUID()}`;
-      const workspace = this.store.transaction(() => { const workspace = this.project.createWorkspace({ id,name:input.name,rootPath:path.join(this.config.home,'workspaces',id),repositoryPath:repo.rootPath,commonGitDir:repo.commonGitDir,baseRef:input.baseRef }); this.defaults(id); return workspace; });
-      installWorkspaceSkill(this.store,workspace.id);
-      return workspace;
-    }
-    const cliRoute=/^\/v1\/workspaces\/([^/]+)\/cli$/.exec(pathname);
-    if(method==='POST'&&cliRoute)return this.workspaceCli.execute(decodeURIComponent(cliRoute[1]!),body);
-    if (method === 'POST' && pathname === '/v1/workflows') return this.createChatWorkflow(undefined,body);
-    const match = /^\/v1\/(workspaces|workflows|tasks|runs)\/([^/]+)(?:\/(roles|plan|replan|dispatch|integration|retry|recover-source|cancel|pause|resume|lead|finish|wait|logs|archive|report))?$/.exec(pathname);
-    if (!match) throw new RiftError('NOT_FOUND','Unknown management route.');
-    const [,entity,rawId,action] = match; const id = decodeURIComponent(rawId);
-    if (entity === 'workspaces') {
-      if (method === 'PUT' && action === 'roles') { const input = schemas.rolesSchema.parse(body); this.refreshProviders(); return this.project.configureRoles(id,input.bindings,input.roles); }
-      if (method === 'POST' && action === 'archive') {
-        const workspace = this.store.workspace(id);
-        if(workspace.status==='archived')return workspace;
-        invariant(!this.store.get("SELECT id FROM workspace_worktrees WHERE workspace_id=? AND status IN ('creating','creation_unknown','moving','move_unknown')",id),'WORKSPACE_ACTIVE','Reconcile unfinished worktree operations before archiving.');
-        invariant(!this.store.get("SELECT id FROM agent_turns WHERE workspace_id=? AND status IN ('queued','running','stopping')", id) && !this.store.get('SELECT id FROM execution_leases WHERE workspace_id=? AND released_at IS NULL', id), 'WORKSPACE_ACTIVE', 'Finish or stop queued discussions and confirm all execution cleanup before archiving.');
-        if (this.store.get("SELECT id FROM workflows WHERE workspace_id=? AND status NOT IN ('completed','cancelled','failed')",id)) throw new RiftError('WORKSPACE_ACTIVE','Finish or cancel the active workflow first.');
-        const trees=this.store.all<Worktree>('SELECT w.* FROM worktrees w JOIN tasks t ON t.id=w.task_id JOIN workflows f ON f.id=t.workflow_id WHERE f.workspace_id=?',id);
-        for(const worktree of trees) {
-          if (worktree.status === 'archived') continue;
-          const expectedVersion = await this.repositories.removals.versionFor(id, 'task', worktree.id);
-          await this.repositories.removals.remove(id, 'task', worktree.id, { expectedVersion, confirmDelete: true });
-        }
-        this.store.exec('UPDATE workspaces SET status=? WHERE id=?','archived',id); return this.store.workspace(id);
-      }
-    }
-    if (entity === 'workflows') {
-      if (method === 'GET' && !action) return this.coordinator.status(id);
-      if (method === 'GET' && action === 'report') { const report=this.coordinator.status(id);const folder=path.join(this.config.home,'workspaces',report.workflow.workspaceId,'reports');await mkdir(folder,{recursive:true});const file=path.join(folder,`${id}.json`);await writeFile(file,JSON.stringify(report,(_key,item)=>typeof item==='string'?redact(item):item,2));return{file,report}; }
-      if (method === 'POST' && action === 'plan') return this.coordinator.submitPlan({workflowId:id,...schemas.planForCoordinator(schemas.planSchema.parse(body))});
-      if (method === 'POST' && action === 'replan') return this.coordinator.replan({workflowId:id,...schemas.replanSchema.parse(body)});
-      if (method === 'POST' && action === 'wait') return this.coordinator.wait({workflowId:id,...schemas.waitSchema.parse(body)});
-      if (method === 'POST' && action === 'finish') return this.coordinator.finish({workflowId:id,...schemas.finishSchema.parse(body)});
-      if (method === 'POST' && action === 'cancel') {
-        let leadError: unknown;
-        try { await this.leads.get(id)?.agent.cancel({kind:'user'} as Parameters<Agent['cancel']>[0]); } catch (error) { leadError = error; }
-        const result = await this.coordinator.cancelWorkflow(id);
-        if (leadError) {
-          this.store.event(id,'lead.cancel_failed',{error:publicError(leadError)});
-          throw new RiftError('LEAD_CANCEL_FAILED','Workflow work was cancelled, but Lead cancellation could not be confirmed.');
-        }
-        return result;
-      }
-      if (method === 'POST' && (action === 'pause'||action === 'resume')) {const input=z.object({expectedVersion:z.number().int().nonnegative()}).strict().parse(body); if(action==='resume'&&this.store.workflow(id).baseCommit&&!this.leads.has(id))throw new RiftError('LIVE_LEAD_REQUIRED','Attach a new Lead before resuming queues.');return this.coordinator[action](id,input.expectedVersion);}
-      if (method === 'POST' && action === 'lead') return this.startLead(id,z.object({instruction:z.string().trim().min(1).max(16000).optional()}).strict().parse(body).instruction);
-    }
-    if (entity === 'tasks') {
-      if (method === 'GET' && !action) return this.store.task(id);
-      if (method === 'POST' && action === 'dispatch') return this.coordinator.dispatch(schemas.dispatchSchema.parse({...body as object,taskId:id}));
-      if (method === 'POST' && action === 'integration') return this.coordinator.requestIntegration(schemas.integrationSchema.parse({...body as object,taskId:id}));
-      if (method === 'POST' && action === 'retry') return this.coordinator.retry(schemas.retrySchema.parse({...body as object,taskId:id}));
-      if (method === 'POST' && action === 'recover-source') return this.coordinator.recoverSource(schemas.recoverSourceSchema.parse({...body as object,taskId:id}));
-      if (method === 'POST' && action === 'cancel') return this.coordinator.cancelTask(id);
-    }
-    if (entity === 'runs') {
-      if (method === 'GET' && !action) return this.store.run(id);
-      if (method === 'GET' && action === 'logs') {const run=this.store.run(id);return this.store.events(this.store.task(run.taskId).workflowId).filter(event=>event.runId===id);}
-      if (method === 'POST' && action === 'cancel') return this.coordinator.cancelRun(id);
-    }
-    throw new RiftError('NOT_FOUND','Unknown management route.');
+  private async route(method:string,pathname:string,body:unknown):Promise<unknown> {
+    const command=resolveHttpCommand(method,pathname,body);
+    if(command.name==='workspace.cli')return this.workspaceCli.execute(command.workspaceId!,body);
+    return this.commands.execute(command);
   }
   doctor() {
     return {
