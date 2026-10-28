@@ -3,6 +3,7 @@ import { mkdtemp,readFile,rm,writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { redact } from '../../src/api/security.js';
 import { startLocalApi } from '../../src/api/local-api.js';
 import { Context } from '@deepseek-ai/cordis';
 import LlmRuntime from '@deepseek-ai/dsh-llm';
@@ -105,7 +106,7 @@ describe('Independent API connection management boundaries',()=>{
     await runtime.ctx.plugin(LocalCredentialProvider,{path:path.join(home,'.credentials.yaml'),watch:false});let service=new ApiConnectionService(runtime.ctx,store,home);
     try{
       await service.initialize();const connection=await service.create({name:'Full endpoint',protocol:'openai-completions',endpoint:`${full}/`,model:'claude-5.5-review',apiKey:key});expect(connection.endpoint).toBe(base);
-      const verified=await service.verify(connection.id);expect(verified.passed).toBe(true);expect(verified.connection.verification).toMatchObject({toolCalls:1,conversation:true,cleanupConfirmed:true});
+      const verified=await service.verify(connection.id);expect(verified.passed,redact(JSON.stringify({verified,requests}))).toBe(true);expect(verified.connection.verification).toMatchObject({toolCalls:1,conversation:true,cleanupConfirmed:true});
       expect(requests).toEqual(Array.from({length:2},()=>({url:'/v1/chat/completions',authorization:`Bearer ${key}`,model:'claude-5.5-review'})));
       await service.close();store.exec('UPDATE api_connections SET endpoint=? WHERE id=?',full,connection.id);service=new ApiConnectionService(runtime.ctx,store,home);await service.initialize();fail=true;
       const result=await service.verify(connection.id);expect(result.passed).toBe(false);expect(result.error).toContain('INDEPENDENT_MODEL_ROUTE_404');expect(JSON.stringify(result)).not.toContain(key);expect(result.connection.verificationError).toBe(result.error);
