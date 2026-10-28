@@ -1,3 +1,4 @@
+import { observeDshRun } from './run-progress.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { Agent, AgentOptions } from '@deepseek-ai/dsh-agent';
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm';
@@ -42,7 +43,7 @@ export class DshActivationBridge implements ActivationBridge {
     const restrictInherited=binding.runtime==='dsh';
     const readOnly=input.task.kind==='analysis'||input.run.purpose==='review';
     const repositoryAccess=restrictInherited&&readOnly&&this.store?await workspaceRepositoryAccess(this.store,this.store.workflow(input.task.workflowId).workspaceId):input.repositoryAccess;
-    const needsRepositoryShell=restrictInherited&&!readOnly&&!!(repositoryAccess?.repositoryPaths.length||repositoryAccess?.workspaceDirectory);
+    const needsRepositoryShell=restrictInherited&&(!readOnly||repositoryAccess?.sandboxMode==='unrestricted')&&!!(repositoryAccess?.repositoryPaths.length||repositoryAccess?.workspaceDirectory);
     if(restrictInherited&&!provider.prepareContinuable)throw new RiftError('START_NOT_PUBLISHED','This DSH provider cannot install the owned repository execution scope before startup.');
     const shell=needsRepositoryShell?await createRepositoryShell(this.ctx.subprocess,{...input,repositoryAccess}):undefined;
     if(restrictInherited&&readOnly&&(input.tools??[]).some(tool=>!['rift_send_message','rift_skill_resource'].includes(tool.name)))throw new RiftError('START_NOT_PUBLISHED','Formal review and analysis accept only scoped collaboration and file reading tools.');
@@ -54,8 +55,9 @@ export class DshActivationBridge implements ActivationBridge {
     const removeTools=childId?this.ctx.on('agent/created',({agent})=>{
       if(agent.id!==childId)return;
       child=agent;
+      observeDshRun(agent,input.onProgress,input.onEvent);
       if(restrictInherited)agent.ctx.tools.restrict({allow:[]});
-      for(const tool of scopedTools)agent.ctx.tools.register({name:tool.name,description:tool.description,parameters:tool.inputSchema as ToolDefinition['parameters'],output:{schema:{},render:(_args,value)=>[{type:'text',text:redact(JSON.stringify(value))}]},execute:async(args,execution)=>{if(execution.agent!==agent||this.ctx.agents.get(agent.id)!==agent)throw new RiftError('UNAUTHORIZED','Only this live Run may use its scoped tools.');input.signal.throwIfAborted();execution.signal.throwIfAborted();return tool.execute(args,execution.signal);}});
+      for(const tool of scopedTools)agent.ctx.tools.register({name:tool.name,description:tool.description,parameters:tool.inputSchema as ToolDefinition['parameters'],output:{schema:{},render:(_args,value)=>[{type:'text',text:redact(JSON.stringify(value))}]},execute:async(args,execution)=>{if(execution.agent!==agent||this.ctx.agents.get(agent.id)!==agent)throw new RiftError('UNAUTHORIZED','Only this live Run may use its scoped tools.');input.signal.throwIfAborted();execution.signal.throwIfAborted();input.onProgress?.({phase:'tool',toolName:tool.name});try{const result=await tool.execute(args,execution.signal);input.onProgress?.({phase:'tool_done',toolName:tool.name});return result;}catch(error){input.onProgress?.({phase:'tool_failed',toolName:tool.name});throw error;}}});
       return undefined;
     }):undefined;
     let activation:Awaited<ReturnType<Context['subagents']['startActivation']>>;

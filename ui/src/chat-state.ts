@@ -18,3 +18,7 @@ export function mergeChatHistory(older: Pick<ChatPage, 'messages' | 'turns' | 'c
     chunks: [...new Map([...older.chunks, ...newer.chunks].map(value => [value.seq, value])).values()].sort((a, b) => a.seq - b.seq),
   };
 }
+/** A cursor gap covers only unseen live arrivals, never the entire old transcript. */
+export function needsTimelineBridge(previous:ChatPage|undefined,next:ChatPage):boolean {
+  return !!(previous?.timeline&&next.timeline&&next.nextBefore&&previous.messages.length&&next.messages.length&&!next.messages.some(message=>previous.messages.some(old=>old.id===message.id)));
+}

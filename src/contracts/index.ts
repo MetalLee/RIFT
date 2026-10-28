@@ -13,7 +13,7 @@ export interface ReviewResult { schemaVersion: 1; taskId: string; runId: string;
 export interface ActivationResult { stopReason: string; text: string; diagnostic?: string; dshRunId?: string }
 export interface ActivationHandle { childId: string; result: Promise<ActivationResult>; dispose(): Promise<void> }
 /** Owns only DSH activation handles. A live parent is supplied by the host bridge. */
-export interface ActivationBridge { start(input: { run: Run; task: Task; role: Role; cwd: string; repositoryAccess?: import('../agent/repository-access.js').RepositoryAccess; prompt: string; signal: AbortSignal; tools?: import('../agent/runtime-types.js').RuntimeTool[]; onAccepted?():void }): Promise<ActivationHandle> }
+export interface ActivationBridge { start(input: { run: Run; task: Task; role: Role; cwd: string; repositoryAccess?: import('../agent/repository-access.js').RepositoryAccess; prompt: string; signal: AbortSignal; tools?: import('../agent/runtime-types.js').RuntimeTool[]; onEvent?:(event:import('../agent/runtime-types.js').RuntimeEvent)=>void; onProgress?:(event:import('../task/run-progress.js').RunActivity)=>void; onAccepted?():void }): Promise<ActivationHandle> }
 export interface GitContext { workspace: Workspace; workflow: Workflow; task: Task }
 export interface Candidate { integrationId: string; sourceHead: string; candidateHead: string; expectedTargetHead: string; cwd: string; checkIds: string[]; checks?: import('../git/types.js').CheckEvidence[] }
 /** Git facts are determined by the implementation, never by model claims. */

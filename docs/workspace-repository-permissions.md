@@ -1,6 +1,24 @@
 # 工作区仓库执行权限
 
-当前 Codex 配置已按用户要求调整：开发、返工和关联仓库聊天默认 `danger-full-access`，不再用仓库集合限制操作系统访问；Host 的仓库/cwd 归属校验及验收门禁保留。正式审查、分析和无仓库聊天维持显式只读。权限版本为 `workspace-repositories-v5-full-access`。下文的 workspace-write 系统隔离与旧探针结果属于此前配置，不能作为当前 Codex 开发隔离保证；DSH 命令工厂的权限策略未随本次修改改变。
+## 当前配置（2026-10-28）
+
+权限版本为 `workspace-repositories-v10-explicit-agent-sandbox`。Host 通过环境变量 `RIFT_AGENT_SANDBOX` 选择执行模式：未配置时为 `sandboxed`，显式设置 `unrestricted` 后，关联工作区的 Lead、聊天成员、正式开发、review 和仓库 analysis 共用 Host 权限。未知值报错，不隐式降级。
+
+```ini
+# /etc/systemd/system/rift.service.d/agent-permissions.conf
+[Service]
+Environment=RIFT_AGENT_SANDBOX=unrestricted
+```
+
+重新构建后执行 `systemctl daemon-reload && systemctl restart rift.service` 生效。unrestricted 下 `rift_exec_command`（DSH 为 `exec_command`）直接运行 Host Bash，继承 Host 环境、用户、文件系统和网络，不套外层 Bubblewrap，不遮蔽 SDK 模块或限制 cwd。Codex thread 与 turn 同时设置 full-access；权限配置进入会话指纹，旧只读 thread 不续用。标题生成及纯文本分析仍不添加仓库执行工具。
+
+取消、超时、子进程清理、任务版本和精确提交验收保持有效。review 可以运行验收命令，但必须保持候选源码及历史不变。切回 `sandboxed` 并重启恢复隔离执行；已启动的执行不会在中途切换权限。
+
+审核恢复同时支持基础设施失败的 reviewer Run，以及正常结束但 `verdict=blocked` 的最新审核。后者必须对应当前 attempt、source 和已阻塞 integration 的候选提交。`changes_requested` 仍走开发返工；恢复只创建新的检查/审核，不直接批准旧候选，浏览器重试与管理 API 一致。
+
+## 历史配置与证据
+
+以下内容记录此前权限迭代，不代表当前 unrestricted 配置的隔离保证。
 
 更新：2026-10-26。本次实现把工作区已经关联的全部仓库交给主代理和成员的普通讨论执行，也交给正式开发 Run。权限由 Host 生成，不依赖模型在消息或工具参数里声明路径。本次用户选择先完成本地提交，稍后再登录 GitHub；不推送、不创建远程 PR。
 

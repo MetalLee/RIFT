@@ -1,4 +1,4 @@
-import type { AgentTurn, ChatMessage, CoordinationReceipt, MessageChunk } from '@rift/protocol';
+import type { AgentTurn, ChatMessage, CoordinationReceipt, MessageChunk, RunStreamMessage } from '@rift/protocol';
 export interface TimelineUpdate { id:string; content:string; taskId?:string|null; senderAgentId?:string|null; type?:string }
 export interface TimelineItem { message:ChatMessage; turns:AgentTurn[]; taskIds:string[]; updates:TimelineUpdate[]; drafts:{turn:AgentTurn;text:string;messageId?:string;kind?:import('@rift/protocol').StreamMessage['kind'];status?:string}[] }
 export function messageSender(message:ChatMessage): 'user'|'agent'|'system' { return message.senderType ?? (message.role==='user'?'user':message.role==='system'?'system':'agent'); }
@@ -46,7 +46,7 @@ export function buildChatTimeline(messages:ChatMessage[],turns:AgentTurn[],chunk
 }
 
 /** Each model message is a peer in the conversation, never a draft inside a user message. */
-export function buildConversationTimeline(messages:ChatMessage[],turns:AgentTurn[],chunks:MessageChunk[],receipts:CoordinationReceipt[] = []) {
+export function buildConversationTimeline(messages:ChatMessage[],turns:AgentTurn[],chunks:MessageChunk[],receipts:CoordinationReceipt[] = [],runMessages:RunStreamMessage[] = []) {
   const timeline = buildChatTimeline(messages,turns,chunks,receipts);
   const rows:TimelineItem[] = [];
   for (const item of timeline.items) {
@@ -66,6 +66,24 @@ export function buildConversationTimeline(messages:ChatMessage[],turns:AgentTurn
     const canonical = owner && finalStream(owner,item.message);
     rows.push({...item,message:canonical?{...item.message,id:`stream:${owner!.id}:${canonical.messageId}`,createdAt:canonical.createdAt}:item.message,turns:[],drafts:[]});
   }
+  // Public member-authored progress is a conversation message, not a hidden
+  // Host receipt. Keep lifecycle receipts grouped separately.
+  const progress=messages.filter(message=>message.kind==='progress'&&messageSender(message)==='agent'&&message.visibility!=='internal');
+  const progressIds=new Set(progress.map(message=>message.id));
+  for(const item of rows)item.updates=item.updates.filter(update=>!progressIds.has(update.id));
+  for(const message of progress)rows.push({message,turns:[],taskIds:message.taskId?[message.taskId]:[],updates:[],drafts:[]});
+  for(const stream of runMessages){
+    if(!stream.text)continue;
+    let content=stream.text;
+    // The task's machine result remains authoritative; show its human summary in chat.
+    if(stream.kind==='final'&&stream.status==='completed'){
+      try{const result=JSON.parse(content);if(result?.schemaVersion===1&&result.runId===stream.runId&&typeof result.summary==='string')content=result.summary;}catch{/* Ordinary text stays unchanged. */}
+    }
+    const message:ChatMessage={id:`run-stream:${stream.runId}:${stream.messageId}`,workspaceId:stream.workspaceId,conversationId:stream.conversationId,
+      clientMessageId:null,recipientAgentId:null,senderType:'agent',senderAgentId:stream.roleId,role:'assistant',kind:'chat',
+      content,status:stream.status,version:stream.version,createdAt:stream.createdAt,runId:stream.runId,taskId:stream.taskId};
+    rows.push({message,turns:[],taskIds:[stream.taskId],updates:[],drafts:[]});
+  }
   // Stable sorting preserves per-stream sequence when a batch shares a timestamp.
   rows.sort((a,b)=>a.message.createdAt.localeCompare(b.message.createdAt) ||
     (Number(messageSender(b.message)==='user')-Number(messageSender(a.message)==='user')));
@@ -75,5 +93,5 @@ export function buildConversationTimeline(messages:ChatMessage[],turns:AgentTurn
       ?? rows.find(item=>item.message.id===turn.messageId);
     if (row) row.turns.push(turn); else looseTurns.push(turn);
   }
-  return {items:rows,loose:timeline.loose,looseTurns};
+  return {items:rows,loose:timeline.loose.filter(update=>!progressIds.has(update.id)),looseTurns};
 }

@@ -1,3 +1,4 @@
+import { parseTimelineRefresh } from '../chat/timeline-page.js';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -91,7 +92,7 @@ export class ApplicationCommands {
       if(name==='task.retry-dispatch'){
         const workflow=this.host.store.workflow(task.workflowId);if(workflow.baseCommit)await this.host.ensureLead(workflow.id);
         const latest=this.host.store.get<import('../contracts/index.js').Run>('SELECT * FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1',taskId);
-        if(task.status==='blocked'&&task.sourceHead&&latest?.purpose==='review'&&['failed','interrupted'].includes(latest.status)){
+        if(task.status==='blocked'&&task.sourceHead&&latest?.purpose==='review'&&(['failed','interrupted'].includes(latest.status)||(latest.status==='succeeded'&&(latest.result as Partial<import('../contracts/index.js').ReviewResult>|null)?.verdict==='blocked'))){
           const input=z.object({expectedVersion:z.number().int().nonnegative(),reason:z.string().min(1)}).strict().parse(body);
           const request=this.host.coordinator.requestIntegration({taskId,sourceHead:task.sourceHead,expectedVersion:input.expectedVersion,idempotencyKey:`browser-review-retry:${taskId}:${input.expectedVersion}`});
           return{task:this.host.store.task(taskId),request};
@@ -143,7 +144,7 @@ export class ApplicationCommands {
       if (section==='conversation'||section==='message') {
         if (name==='conversation.list') return { conversations: this.host.chat.list(workspaceId) };
         if (action==='create') return this.host.chat.createConversation(workspaceId, z.object({ title: z.string().trim().min(1).max(240).default('新对话') }).strict().parse(body).title);
-        if (name==='message.list') return this.host.chat.page(workspaceId, entityId, query.get('before') ?? undefined, Number(query.get('limit') ?? 50));
+        if (name==='message.list') return this.host.chat.page(workspaceId, entityId, query.get('before') ?? undefined, Number(query.get('limit') ?? 50), query.get('view')==='timeline', parseTimelineRefresh(query.get('refresh')));
         if (name==='message.send') return this.host.chat.send(workspaceId, entityId, sendMessageSchema.parse(body));
       }
       if (section==='turn' && name==='turn.stop') return this.host.chat.stop(workspaceId, entityId);

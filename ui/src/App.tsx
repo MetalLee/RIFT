@@ -76,7 +76,7 @@ export function App({ initialSession }: { initialSession: Promise<UiSession> }) 
     let timer: ReturnType<typeof setTimeout> | undefined;
     const close = subscribeWorkspaceEvents(route.workspaceId, detail.snapshotCursor, {
       changed: event => {
-        if(route.page==='chat') { try { const type=JSON.parse(event.data).type as string; if(type.startsWith('message.')||type==='turn.activity'||type==='turn.chunk')return; } catch { /* Unknown payload still requests a snapshot. */ } }
+        if(route.page==='chat') { try { const type=JSON.parse(event.data).type as string; if(type.startsWith('message.')||type==='turn.activity'||type==='turn.chunk'||type==='turn.message'||type==='run.message'||type==='run.progress')return; } catch { /* Unknown payload still requests a snapshot. */ } }
         if (!timer) timer = setTimeout(() => { timer = undefined; setRefresh(n => n + 1); }, 200); },
       snapshot: async signal => { const value = await api.detail(route.workspaceId, signal); if (!signal.aborted && value.workspace.id === route.workspaceId) setDetail(previous => previous?.workspace.id === value.workspace.id && previous.snapshotCursor > value.snapshotCursor ? previous : value); return value.snapshotCursor; },
       error: message => { if (message) setError(message); else setError(''); },

@@ -26,3 +26,14 @@ const missingAuthentication: import('@rift/protocol').ApiConnectionCreate = { na
 // @ts-expect-error A key and reference are mutually exclusive, not a fallback chain.
 const ambiguousAuthentication: import('@rift/protocol').ApiConnectionCreate = { ...referencedConnection, apiKey: 'fake-test-only' };
 void [referencedConnection, missingAuthentication, ambiguousAuthentication];
+
+// Timeline additions must remain available from the standalone public package.
+const runMessage: import('@rift/protocol').RunStreamMessage = {
+  seq: 1, runId: 'run', roleId: 'agent', taskId: 'task', workspaceId: 'workspace',
+  conversationId: 'conversation', messageId: 'message', kind: 'commentary',
+  text: 'Working', status: 'streaming', version: 1, createdAt: 'now', updatedAt: 'now',
+};
+const timeline: Pick<ChatPage, 'timeline' | 'refreshedMessages' | 'runMessages'> = {
+  timeline: true, refreshedMessages: [], runMessages: [runMessage],
+};
+void timeline;
