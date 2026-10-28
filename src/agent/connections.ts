@@ -1,3 +1,7 @@
+// Declare Loader events even when this module is compiled without the Host entry.
+import type {} from '@deepseek-ai/dsh-app-boot';
+import type { ApiConnection, ConnectionVerification } from '@rift/protocol';
+export type { ApiConnection, ConnectionVerification } from '@rift/protocol';
 import type { Context, Fiber } from '@deepseek-ai/cordis';
 import * as piAi from '@deepseek-ai/dsh-llm-pi-ai';
 import type { PiAiProviderProfile } from '@deepseek-ai/dsh-llm-pi-ai';
@@ -41,22 +45,8 @@ export function registerConnectionCredential(raw: unknown): void {
     registerCredentialRedaction('RIFT_SUBMITTED_API_KEY', value.trim());
   }
 }
-export interface ApiConnection {
-  id: string; name: string; protocol: z.infer<typeof createConnectionSchema>['protocol']; endpoint: string; model: string;
-  credentialRef: string; provider: string; revision: number; parentId: string | null; createdAt: string;
-  verifiedAt: string | null; verificationStatus: 'not-verified' | 'passed' | 'failed'; verificationError: string | null;
-  available: boolean;
-  verification?: ConnectionVerification | null;
-}
-export interface ConnectionVerification {
-  method: 'conversation-and-tool';
-  conversation: boolean;
-  toolCalls: number;
-  reply: string;
-  stopReason: string | null;
-  cleanupConfirmed: boolean;
-  error: string | null;
-}
+/** Host-only storage record; never return this from a business command. */
+interface ApiConnectionRecord extends ApiConnection { credentialRef: string }
 
 /** Saved API routes are immutable. Editing creates another provider identity so
  * an already queued Turn/Run can never silently adopt a different endpoint.
@@ -72,14 +62,29 @@ export class ApiConnectionService {
   private closed = false;
   private unavailable: string | null = null;
   constructor(private readonly ctx: Context, private readonly store: RiftStore, private readonly home: string) {}
+  private records(): ApiConnectionRecord[] {
+    return this.store.all<ApiConnectionRecord>('SELECT id,name,protocol,endpoint,model,credential_ref,provider,revision,parent_id,created_at,verified_at,verification_status,verification_error FROM api_connections WHERE deleted_at IS NULL ORDER BY created_at,id').map(row => ({ ...row, verification:this.store.get<{result:ConnectionVerification}>('SELECT result FROM api_connection_verifications WHERE connection_id=? ORDER BY rowid DESC LIMIT 1',row.id)?.result??null, endpoint:normalizeApiEndpoint(row.endpoint,row.protocol), available: Boolean(this.ctx.llm?.listProviders().some(provider => provider.id === row.provider)) }));
+  }
   list(): ApiConnection[] {
-    return this.store.all<ApiConnection>('SELECT id,name,protocol,endpoint,model,credential_ref,provider,revision,parent_id,created_at,verified_at,verification_status,verification_error FROM api_connections WHERE deleted_at IS NULL ORDER BY created_at,id').map(row => ({ ...row, verification:this.store.get<{result:ConnectionVerification}>('SELECT result FROM api_connection_verifications WHERE connection_id=? ORDER BY rowid DESC LIMIT 1',row.id)?.result??null, endpoint:normalizeApiEndpoint(row.endpoint,row.protocol), available: Boolean(this.ctx.llm?.listProviders().some(provider => provider.id === row.provider)) }));
+    // An allowlist, not a spread: future storage fields must stay Host-only too.
+    return this.records().map(row => ({
+      id: row.id, name: row.name, protocol: row.protocol, endpoint: row.endpoint, model: row.model,
+      provider: row.provider, revision: row.revision, parentId: row.parentId, createdAt: row.createdAt,
+      verifiedAt: row.verifiedAt, verificationStatus: row.verificationStatus,
+      verificationError: row.verificationError, available: row.available,
+      verification: row.verification ? {
+        method: row.verification.method, conversation: row.verification.conversation,
+        toolCalls: row.verification.toolCalls, reply: row.verification.reply,
+        stopReason: row.verification.stopReason, cleanupConfirmed: row.verification.cleanupConfirmed,
+        error: row.verification.error,
+      } : null,
+    }));
   }
   get(connectionId: string): ApiConnection {
     const connection = this.list().find(item => item.id === connectionId);
     invariant(connection, 'NOT_FOUND', 'API connection does not exist.'); return connection;
   }
-  private profiles(connections = this.list()): Record<string, PiAiProviderProfile> {
+  private profiles(connections = this.records()): Record<string, PiAiProviderProfile> {
     return Object.fromEntries(connections.map(connection => [connection.provider, {
       displayName: connection.name, api: connection.protocol, baseURL: normalizeApiEndpoint(connection.endpoint,connection.protocol), apiKeyEnv: connection.credentialRef,
       models: [{ id: connection.model, input: ['text'], contextWindow: connectionContextWindow(connection.model), maxTokens: 8192 }],
@@ -88,7 +93,7 @@ export class ApiConnectionService {
       retryPolicy: { mode: 'normal', maxRetries: 0 },
     }]));
   }
-  private async protectCredentials(connections: ApiConnection[]): Promise<void> {
+  private async protectCredentials(connections: ApiConnectionRecord[]): Promise<void> {
     const credentials = this.ctx.get?.('credentials') as { resolve(reference: string): Promise<{ value: string } | undefined> } | undefined;
     for (const connection of connections) {
       registerCredentialRedaction(connection.credentialRef, process.env[connection.credentialRef]);
@@ -113,7 +118,7 @@ export class ApiConnectionService {
     }
     if (!this.ctx.llm || typeof this.ctx.plugin !== 'function') { this.unavailable = 'This Host does not mount the DSH model service.'; return; }
     if (this.list().length === 0) return;
-    await this.protectCredentials(this.list());
+    await this.protectCredentials(this.records());
     try { await this.mount(this.profiles()); }
     catch (error) { this.unavailable = publicError(error).message; }
   }
@@ -129,7 +134,7 @@ export class ApiConnectionService {
       const credentialRef = input.apiKey === undefined ? input.credentialRef! : `RIFT_API_${connectionId.replace(/^connection-/,'').replaceAll('-','').toUpperCase()}`;
       // Explicit projection is intentional: plaintext apiKey never enters a
       // connection DTO, profile, business database, or process environment.
-      const row: ApiConnection = { name: input.name, protocol: input.protocol, endpoint: input.endpoint, model: input.model, credentialRef, id: connectionId, parentId: parent?.id ?? null, provider: `rift-api-${connectionId}`, revision: parent ? parent.revision + 1 : 1, createdAt: now(), verifiedAt: null, verificationStatus: 'not-verified', verificationError: null, available: false };
+      const row: ApiConnectionRecord = { name: input.name, protocol: input.protocol, endpoint: input.endpoint, model: input.model, credentialRef, id: connectionId, parentId: parent?.id ?? null, provider: `rift-api-${connectionId}`, revision: parent ? parent.revision + 1 : 1, createdAt: now(), verifiedAt: null, verificationStatus: 'not-verified', verificationError: null, available: false };
       const previous = this.profiles();
       const credentials = this.ctx.get?.('credentials') as Context['credentials'] | undefined;
       let stored = false;
@@ -140,8 +145,8 @@ export class ApiConnectionService {
           stored = true;
         }
         await this.protectCredentials([row]);
-        if (this.fiber) this.replaceProfiles(this.profiles([...this.list(), row]));
-        else await this.mount(this.profiles([...this.list(), row]));
+        if (this.fiber) this.replaceProfiles(this.profiles([...this.records(), row]));
+        else await this.mount(this.profiles([...this.records(), row]));
         invariant(!this.closed, 'HOST_CLOSING', 'Host closed while preparing the connection.');
         invariant(this.ctx.llm.listProviders().some(item => item.id === row.provider), 'API_CONFIGURATION_UNAVAILABLE', 'The DSH adapter did not register this API route.');
         this.store.exec('INSERT INTO api_connections(id,name,protocol,endpoint,model,credential_ref,provider,revision,parent_id,created_at,credential_owned) VALUES(?,?,?,?,?,?,?,?,?,?,?)', row.id, row.name, row.protocol, row.endpoint, row.model, row.credentialRef, row.provider, row.revision, row.parentId, row.createdAt,Number(input.apiKey!==undefined));

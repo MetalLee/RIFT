@@ -17,3 +17,12 @@ type NoPreviewBytes = Assert<'contentBase64' extends keyof SkillImportPreview['r
 type EffectiveBytes = Assert<'contentBase64' extends keyof CompiledSkills['resources'][number] ? true : false>;
 export type Consumer = [AgentTurn, BrowserAgent, ChatPage, ErrorCode, UiWorkspaceDetail, UiWorkspaceList, WorktreeRemovalTarget];
 void [session, error, event];
+
+const referencedConnection: import('@rift/protocol').ApiConnectionCreate = {
+  name: 'Host reference', protocol: 'openai-completions', endpoint: 'https://example.invalid/v1', model: 'test', credentialRef: 'HOST_AUTH',
+};
+// @ts-expect-error The Host requires exactly one authentication source.
+const missingAuthentication: import('@rift/protocol').ApiConnectionCreate = { name: 'Missing', protocol: 'openai-completions', endpoint: 'https://example.invalid', model: 'test' };
+// @ts-expect-error A key and reference are mutually exclusive, not a fallback chain.
+const ambiguousAuthentication: import('@rift/protocol').ApiConnectionCreate = { ...referencedConnection, apiKey: 'fake-test-only' };
+void [referencedConnection, missingAuthentication, ambiguousAuthentication];

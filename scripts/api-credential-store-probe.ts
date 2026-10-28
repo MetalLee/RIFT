@@ -23,7 +23,7 @@ for(const patch of ['rift.patch.yml','rift.codex.patch.yml']){
     try{
       results[`${patch}:officialStoreMounted`]=typeof ctx.get('credentials')?.set==='function';
       await service.initialize();
-      if(!restart){const connection=await service.create({name:'Controlled API',protocol:'openai-completions',endpoint:'https://example.invalid/v1',model:'controlled',apiKey:key});ref=connection.credentialRef;connectionId=connection.id;}
+      if(!restart){const connection=await service.create({name:'Controlled API',protocol:'openai-completions',endpoint:'https://example.invalid/v1',model:'controlled',apiKey:key});ref=store.require<{credentialRef:string}>('SELECT credential_ref FROM api_connections WHERE id=?',connection.id).credentialRef;connectionId=connection.id;}
       results[`${patch}:${restart?'restart':'initial'}Resolved`]=(await ctx.credentials.resolve(credentialRef(ref)))?.value===key;
       results[`${patch}:${restart?'restart':'initial'}Route`]=service.get(connectionId).available;
       results[`${patch}:${restart?'restart':'initial'}NoKeyInDTO`]=!JSON.stringify(service.list()).includes(key);

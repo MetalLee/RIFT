@@ -129,7 +129,7 @@ export class RiftHostService implements ApiHandler {
     const provider = this.ctx.subagents.getProvider(providerName);
     invariant(provider, 'PROVIDER_UNAVAILABLE', 'The selected execution runtime is not available in this Host.');
     if (connection.runtime === 'codex' && connection.reasoningEffort) invariant(['low','medium','high','xhigh','max','ultra'].includes(connection.reasoningEffort), 'INVALID_CONFIG', 'Choose a supported Codex reasoning effort.');
-    const saved = connection.runtime === 'dsh' ? this.connections.list().find(item => item.provider === connection.provider) : undefined;
+    const saved = connection.runtime === 'dsh' ? this.store.get<{ model: string; credentialRef: string }>('SELECT model,credential_ref FROM api_connections WHERE provider=? AND deleted_at IS NULL', connection.provider!) : undefined;
     invariant(!saved || saved.model === connection.model, 'INVALID_CONFIG', 'Use the model configured for this API connection.');
     const binding: ProviderBinding = {
       id: `${workspaceId}:execution:${randomUUID()}`, providerName, packageVersion: '0.2.1-rc.3', configRevision: 1,

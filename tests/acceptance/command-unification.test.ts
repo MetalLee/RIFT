@@ -24,14 +24,14 @@ async function fixture(uiEnabled=true){
   const host=new RiftHostService(ctx,{home,port:0,leadProvider:'unused',leadModel:'unused',checks:[],chatOrchestration:false,uiEnabled});
   await host.initialize();const api=await startLocalApi(host,{home,port:0,uiEnabled});
   const origin=`http://127.0.0.1:${api.port}`,token=(await readFile(path.join(home,'management.token'),'utf8')).trim();
-  const management=(method:string,route:string,body?:unknown,key=randomUUID())=>fetch(origin+route,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json','Idempotency-Key':key},...(body===undefined?{}:{body:JSON.stringify(body)})});
+  const management=(method:string,route:string,body?:unknown,key:string=randomUUID())=>fetch(origin+route,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json','Idempotency-Key':key},...(body===undefined?{}:{body:JSON.stringify(body)})});
   const session=uiEnabled?await fetch(origin+'/ui-api/v1/session/connect',{method:'POST',headers:{Origin:origin,'Sec-Fetch-Site':'same-origin','Content-Type':'application/json'},body:'{}'}):undefined;
   const cookie=session?.headers.get('set-cookie')?.split(';')[0]??'',csrf=session?(await session.json() as {csrfToken:string}).csrfToken:'';
-  const browser=async(method:string,route:string,body?:unknown,key=randomUUID())=>{
+  const browser=async(method:string,route:string,body?:unknown,key:string=randomUUID())=>{
     const response=await fetch(origin+'/ui-api/v1'+route,{method,headers:{Origin:origin,'Sec-Fetch-Site':'same-origin','Content-Type':'application/json',Cookie:cookie,'X-CSRF-Token':csrf,'Idempotency-Key':key},...(body===undefined?{}:{body:JSON.stringify(body)})});
     return {status:response.status,value:await response.json() as any};
   };
-  return {home,ctx,host,api,origin,management,browser,close:async()=>{await api.close();await host.close();await secrets.dispose();await llm.dispose();await rm(home,{recursive:true,force:true});}};
+  return {home,ctx,host,api,origin,management,browser,reference:(id:string)=>host.store.require<{credentialRef:string}>('SELECT credential_ref FROM api_connections WHERE id=?',id).credentialRef,close:async()=>{await api.close();await host.close();await secrets.dispose();await llm.dispose();await rm(home,{recursive:true,force:true});}};
 }
 describe('shared application commands and executable capability coverage',()=>{
   it('documents and resolves every HTTP business entry, without transport paths in execution',async()=>{
@@ -47,6 +47,24 @@ describe('shared application commands and executable capability coverage',()=>{
     }
     expect(()=>resolveHttpCommand('POST','/ui-api/v1/workspaces/w/workflows/f/retry',{})).toThrow();
     expect(()=>resolveHttpCommand('POST','/ui-api/v1/workspaces/w/worktree-removals/invalid/id/delete',{})).toThrow();
+  });
+  it('projects the same safe connection DTO for browser, management and CLI receipts',async()=>{
+    const f=await fixture();try{
+      const input={name:'Public contract',protocol:'openai-completions',endpoint:'https://example.invalid/v1',model:'test',credentialRef:'HOST_ONLY_CONTRACT_AUTH'};
+      const created=await f.browser('POST','/connections',input,'public-create');expect(created.status).toBe(200);
+      expect(f.reference(created.value.id)).toBe(input.credentialRef);
+      const keys=['id','name','protocol','endpoint','model','provider','revision','parentId','createdAt','verifiedAt','verificationStatus','verificationError','available','verification'];
+      const browser=(await f.browser('GET','/connections')).value.savedConnections;
+      const management=await (await f.management('GET','/v1/connections')).json() as {savedConnections:unknown[]};
+      const executable=(await cli(f.home,'connection','list')).savedConnections;
+      for(const value of [created.value,browser[0],management.savedConnections[0],executable[0]]) {
+        expect(Object.keys(value as object).sort()).toEqual([...keys].sort());
+        expect(JSON.stringify(value)).not.toContain(input.credentialRef);
+      }
+      expect(browser).toEqual(executable);expect(management.savedConnections).toEqual(browser);
+      expect((await f.browser('POST','/connections',input,'public-create')).value).toEqual(created.value);
+      expect(JSON.stringify(f.host.store.all('SELECT response FROM management_requests'))).not.toContain(input.credentialRef);
+    }finally{await f.close();}
   });
   it('shares creation, optimistic versions, errors and durable replay across browser and executable CLI',async()=>{
     const f=await fixture();try{
@@ -70,7 +88,7 @@ describe('shared application commands and executable capability coverage',()=>{
   it('matches browser retry-and-dispatch and report export instead of silently using reset-only retry',async()=>{
     const f=await fixture();try{
       const workspace=await cli(f.home,'workspace','create','--name','Retry text');
-      const invoke=(argv:string[],input:unknown={},key=randomUUID())=>f.host.handle('POST',`/v1/workspaces/${workspace.id}/cli`,{argv,input},key) as Promise<any>;
+      const invoke=(argv:string[],input:unknown={},key:string=randomUUID())=>f.host.handle('POST',`/v1/workspaces/${workspace.id}/cli`,{argv,input},key) as Promise<any>;
       const flow=await invoke(['workflow','start'],{mode:'analysis',goal:'Compare text',startLead:false});
       const tasks=await invoke(['plan','submit',flow.id],{expectedRevision:0,tasks:[{id:'retry-text',kind:'analysis',title:'Compare',instructions:'Compare a/b'}]});
       await invoke(['task','cancel',tasks[0].id]);const task=await invoke(['task','show',tasks[0].id]);
@@ -91,26 +109,26 @@ describe('shared application commands and executable capability coverage',()=>{
       const config=path.join(f.home,'connection.json'),keyFile=path.join(f.home,'key.txt');
       await writeFile(config,JSON.stringify({name:'File key',protocol:'openai-completions',endpoint:'https://example.invalid/v1',model:'test'}));await writeFile(keyFile,secret+'\n',{mode:0o600});
       const connection=await cli(f.home,'connection','create','--file',config,'--api-key-file',keyFile,'--key','create-connection');
-      expect(JSON.stringify(connection)).not.toContain(secret);expect(connection).not.toHaveProperty('apiKey');
+      expect(JSON.stringify(connection)).not.toContain(secret);expect(connection).not.toHaveProperty('apiKey');expect(connection).not.toHaveProperty('credentialRef');
       expect(await cli(f.home,'connection','create','--file',config,'--api-key-file',keyFile,'--key','create-connection')).toEqual(connection);
-      expect((await f.ctx.credentials.resolve(credentialRef(connection.credentialRef)))?.value).toBe(secret);
-      expect((await cli(f.home,'connection','list')).savedConnections).toHaveLength(1);
+      expect((await f.ctx.credentials.resolve(credentialRef(f.reference(connection.id))))?.value).toBe(secret);
+      const saved=(await cli(f.home,'connection','list')).savedConnections;expect(saved).toHaveLength(1);expect(saved[0]).toEqual(connection);
       // Exercise the real verification service; only the external model activation is replaced.
       const dispose=vi.fn(async()=>{}),activation=vi.spyOn(DshChatRuntime.prototype,'start').mockImplementation(async input=>{
         await input.tools![0]!.execute({},input.signal);
         return {result:Promise.resolve({text:'Sample total 30',finalText:'Sample total 30',stopReason:'completed'}),dispose};
       });
       try{
-        const verified=await cli(f.home,'connection','verify',connection.id,'--key','verify');expect(verified.passed).toBe(true);
+        const verified=await cli(f.home,'connection','verify',connection.id,'--key','verify');expect(verified.passed).toBe(true);expect(verified.connection).not.toHaveProperty('credentialRef');
         expect(verified.connection.verification).toMatchObject({toolCalls:1,conversation:true,cleanupConfirmed:true});expect(dispose).toHaveBeenCalledOnce();
         expect(await cli(f.home,'connection','verify',connection.id,'--key','verify')).toEqual(verified);expect(dispose).toHaveBeenCalledOnce();
       }finally{activation.mockRestore();}
       f.host.config.leadProvider=connection.provider;
       await expect(cli(f.home,'connection','delete',connection.id)).rejects.toMatchObject({stderr:expect.stringContaining('CONNECTION_IN_USE')});
       f.host.config.leadProvider='unused';expect(await cli(f.home,'connection','delete',connection.id)).toEqual({id:connection.id,deleted:true});
-      expect(await f.ctx.credentials.resolve(credentialRef(connection.credentialRef))).toBeUndefined();
+      expect(await f.ctx.credentials.resolve(credentialRef(f.reference(connection.id)))).toBeUndefined();
       const ledger=JSON.stringify(f.host.store.all('SELECT * FROM management_requests')),rows=JSON.stringify(f.host.store.all('SELECT * FROM api_connections'));
-      expect(ledger+rows).not.toContain(secret);
+      expect(ledger+rows).not.toContain(secret);expect(ledger).not.toContain(f.reference(connection.id));
       const disabled=await f.management('POST','/ui-api/v1/connections',{});expect(disabled.status).not.toBe(200);
       await expect(cli(f.home,'connection','create','--data',JSON.stringify({apiKey:secret}))).rejects.toMatchObject({stderr:expect.not.stringContaining(secret)});
       await writeFile(config,`{"apiKey":"${secret}",`);

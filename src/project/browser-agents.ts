@@ -1,11 +1,11 @@
+import type { BrowserAgent } from '@rift/protocol';
+export type { BrowserAgent } from '@rift/protocol';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { invariant, type Role } from '../contracts/index.js';
+import { invariant } from '../contracts/index.js';
 import type { RiftStore } from '../storage/database.js';
-import type { ChatConnection } from '../chat/contracts.js';
 
 export const connectionSchema = z.object({ runtime: z.enum(['dsh','codex']), provider: z.string().min(1).max(160).optional(), model: z.string().min(1).max(160), reasoningEffort: z.string().max(40).optional() }).strict().refine(value => value.runtime !== 'dsh' || Boolean(value.provider), 'DSH connections require a provider.');
-export interface BrowserAgent extends Role { displayName: string; version: number; chatConnection: ChatConnection | null }
 const fields = { displayName: z.string().trim().min(1).max(120), prompt: z.string().max(16000), chatConnection: connectionSchema.nullable() };
 export const createAgentSchema = z.object({ ...fields, name: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/).optional(), purpose: z.enum(['developer','reviewer']), providerBindingId: z.string().min(1).max(160).optional(), executionProviderName: z.string().min(1).max(160).optional(), executionConnection: connectionSchema.optional() }).strict();
 export const updateAgentSchema = z.object({ expectedVersion: z.number().int().nonnegative(), displayName: fields.displayName.optional(), prompt: fields.prompt.optional(), chatConnection: fields.chatConnection.optional(), enabled: z.boolean().optional(), providerBindingId: z.string().min(1).max(160).optional(), executionProviderName: z.string().min(1).max(160).optional(), executionConnection: connectionSchema.optional() }).strict();

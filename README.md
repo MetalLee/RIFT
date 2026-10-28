@@ -12,6 +12,34 @@ RIFT 是运行在 DeepSeek Harness（DSH）中的多智能体开发协作插件�
 
 构建并启动 Host 后，直接打开本机地址 `http://127.0.0.1:<端口>/` 即可自动连接（端口见同一 home 下的 `endpoint.json`）；会话过期或 Host 重启后重新打开页面也会自动建立会话。`node dist/cli/main.js ui --home <同一 home>` 的一次性链接仍可使用，Tailscale 远程地址也支持直接打开并自动连接，无需一次性链接验证。UI 可先创建无仓库工作区开始对话，代码任务再明确选择仓库。旧 CLI 与 [E1 使用指南](docs/e1-guide.md)继续适用。
 
+## 无浏览器 CLI 与共享协议
+
+CLI 与浏览器的业务入口共用 Host 命令层，能力与权限边界见 [CLI 能力矩阵](docs/cli-capability-matrix.md)。Host 启动后，以下命令不需要打开浏览器；`$RiftHome` 使用与 Host 相同的目录：
+
+```powershell
+$workspace = node dist/cli/main.js workspace create --home $RiftHome --name discussion --key discussion-create --json | ConvertFrom-Json
+node dist/cli/main.js ws workspace show --workspace $workspace.id --home $RiftHome
+node dist/cli/main.js ws agent list --workspace $workspace.id --home $RiftHome
+node dist/cli/main.js ws event list --workspace $workspace.id --data '{"after":0}' --home $RiftHome
+node dist/cli/main.js connection list --home $RiftHome
+```
+
+写操作使用新读取的 `expectedVersion` / `expectedRevision`；仅用**相同输入和相同 key**查询重放结果，超时不代表取消。连接响应不含 API key 或 Host `credentialRef`，现有引用仍可作为受认证的创建输入。
+
+前后端 wire 类型唯一来源为依赖无关的 `@rift/protocol`，后端旧类型入口兼容转导出。部署需保留 workspace 包的 manifest、`dist/` 与依赖链接；不要只复制根 `dist/`。见 [协议边界](docs/client-protocol.md)。组合验证：
+
+```sh
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm test:protocol
+pnpm test
+pnpm test:ui
+pnpm build
+pnpm test:built-cli
+```
+
+`test:built-cli` 在临时目录运行已构建 CLI 和 Host（禁用 UI），检查共享命令、版本/幂等、SSE 和 protocol 的 ESM 加载；不激活外部模型。验证记录见 [后端组合验证](docs/verification/backend-protocol.md)。
+
 ## 工作方式
 
 | 角色 | 默认执行方式 | 职责 |

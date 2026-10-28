@@ -21,7 +21,7 @@ async function connections(){
   const host=new RiftHostService(ctx,{home:path.join(home,'host'),port:0,leadProvider:'unused',leadModel:'unused',checks:[]});await host.connections.initialize();const seed=seedWorkspace(host.store,'delete-review');let sequence=0;
   const create=(extra:Record<string,unknown>={})=>host.handleBrowser('POST','/ui-api/v1/connections',{name:'Review connection',protocol:'openai-completions',endpoint:'https://example.invalid/v1',model:'review-model',apiKey:'deletion-independent-fake-key',...extra},`create-${sequence++}`) as Promise<ApiConnection>;
   const remove=(id:string)=>host.handleBrowser('DELETE',`/ui-api/v1/connections/${id}`,{},`delete-${sequence++}`);
-  return{home,ctx,host,seed,create,remove,close:async()=>{await host.close();await secrets.dispose();await llm.dispose();if(path.dirname(home)!==path.resolve(tmpdir())||!path.basename(home).startsWith('rift-connection-delete-review-'))throw new Error('Unsafe cleanup');await rm(home,{recursive:true,force:true});}};
+  return{home,ctx,host,seed,create,remove,reference:(id:string)=>host.store.require<{credentialRef:string}>('SELECT credential_ref FROM api_connections WHERE id=?',id).credentialRef,close:async()=>{await host.close();await secrets.dispose();await llm.dispose();if(path.dirname(home)!==path.resolve(tmpdir())||!path.basename(home).startsWith('rift-connection-delete-review-'))throw new Error('Unsafe cleanup');await rm(home,{recursive:true,force:true});}};
 }
 
 describe('Independent API connection management boundaries',()=>{
@@ -43,7 +43,7 @@ describe('Independent API connection management boundaries',()=>{
       if(mode==='workspace-lead')f.host.store.exec('UPDATE workspaces SET lead_connection=? WHERE id=?',selection,f.seed.workspace.id);
       if(mode==='member-chat')f.host.store.exec('UPDATE roles SET chat_connection=? WHERE id=?',selection,developer.id);
       if(mode==='member-execution')f.host.store.exec('UPDATE provider_bindings SET runtime=?,spawn=? WHERE id=?','dsh',JSON.stringify({provider:connection.provider,model:connection.model}),developer.providerBindingId!);
-      await expect(f.remove(connection.id)).rejects.toMatchObject({code:'CONNECTION_IN_USE'});expect(f.host.connections.get(connection.id).available).toBe(true);expect((await f.ctx.credentials.resolve(credentialRef(connection.credentialRef)))?.value).toBe('deletion-independent-fake-key');
+      await expect(f.remove(connection.id)).rejects.toMatchObject({code:'CONNECTION_IN_USE'});expect(f.host.connections.get(connection.id).available).toBe(true);expect((await f.ctx.credentials.resolve(credentialRef(f.reference(connection.id))))?.value).toBe('deletion-independent-fake-key');
     }finally{await f.close();}
   });
 
@@ -68,15 +68,15 @@ describe('Independent API connection management boundaries',()=>{
       const before=f.host.store.all('SELECT * FROM runs'),messages=f.host.store.all('SELECT * FROM messages'),turns=f.host.store.all('SELECT * FROM agent_turns');
       expect(await f.remove(connection.id)).toEqual({id:connection.id,deleted:true});expect(f.host.connections.list()).toEqual([]);expect(f.ctx.llm.listProviders().some(item=>item.id===connection.provider)).toBe(false);
       expect(f.host.store.all('SELECT * FROM runs')).toEqual(before);expect(f.host.store.all('SELECT * FROM messages')).toEqual(messages);expect(f.host.store.all('SELECT * FROM agent_turns')).toEqual(turns);
-      expect(f.host.store.require<{deletedAt:string}>('SELECT deleted_at FROM api_connections WHERE id=?',connection.id).deletedAt).toBeTruthy();expect(await f.ctx.credentials.resolve(credentialRef(connection.credentialRef))).toBeUndefined();
+      expect(f.host.store.require<{deletedAt:string}>('SELECT deleted_at FROM api_connections WHERE id=?',connection.id).deletedAt).toBeTruthy();expect(await f.ctx.credentials.resolve(credentialRef(f.reference(connection.id)))).toBeUndefined();
     }finally{await f.close();}
   });
 
   it('does not delete a shared generated key until its last saved reference is removed',async()=>{
     const f=await connections();try{
-      const owner=await f.create(),alias=await f.create({name:'Shared existing reference',apiKey:undefined,credentialRef:owner.credentialRef});
-      await expect(f.remove(owner.id)).rejects.toMatchObject({code:'CONNECTION_IN_USE'});await f.remove(alias.id);expect((await f.ctx.credentials.resolve(credentialRef(owner.credentialRef)))?.value).toBe('deletion-independent-fake-key');
-      await f.remove(owner.id);expect(await f.ctx.credentials.resolve(credentialRef(owner.credentialRef))).toBeUndefined();
+      const owner=await f.create(),alias=await f.create({name:'Shared existing reference',apiKey:undefined,credentialRef:f.reference(owner.id)});
+      await expect(f.remove(owner.id)).rejects.toMatchObject({code:'CONNECTION_IN_USE'});await f.remove(alias.id);expect((await f.ctx.credentials.resolve(credentialRef(f.reference(owner.id))))?.value).toBe('deletion-independent-fake-key');
+      await f.remove(owner.id);expect(await f.ctx.credentials.resolve(credentialRef(f.reference(owner.id)))).toBeUndefined();
     }finally{await f.close();}
   });
 

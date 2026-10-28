@@ -18,7 +18,7 @@ async function fixture(){
   const llm=await ctx.plugin(LlmRuntime);disposers.push(()=>llm.dispose());
   const credentials=await ctx.plugin(LocalCredentialProvider,{path:path.join(home,'.credentials.yaml'),watch:false});disposers.push(()=>credentials.dispose());
   const service=new ApiConnectionService(ctx,store,home);await service.initialize();disposers.push(()=>service.close());
-  return{home,ctx,store,service};
+  return{home,ctx,store,service,reference:(id:string)=>store.require<{credentialRef:string}>('SELECT credential_ref FROM api_connections WHERE id=?',id).credentialRef,};
 }
 describe('API connection tombstones and owned credential cleanup',()=>{
   it('deletes an idle parent without changing its revision descendants or remounting it',async()=>{
@@ -27,8 +27,8 @@ describe('API connection tombstones and owned credential cleanup',()=>{
     expect(await f.service.remove(parent.id)).toEqual({id:parent.id,deleted:true});
     expect(f.service.list().map(item=>item.id)).toEqual([child.id]);expect(f.service.get(child.id)).toMatchObject({parentId:parent.id,revision:2});
     expect(f.store.get('SELECT deleted_at,credential_deleted_at,credential_owned FROM api_connections WHERE id=?',parent.id)).toMatchObject({deletedAt:expect.any(String),credentialDeletedAt:expect.any(String),credentialOwned:1});
-    expect(await f.ctx.credentials.resolve(credentialRef(parent.credentialRef))).toBeUndefined();
-    expect((await f.ctx.credentials.resolve(credentialRef(child.credentialRef)))?.value).toBe('keep-child-fake-key');
+    expect(await f.ctx.credentials.resolve(credentialRef(f.reference(parent.id)))).toBeUndefined();
+    expect((await f.ctx.credentials.resolve(credentialRef(f.reference(child.id))))?.value).toBe('keep-child-fake-key');
     await expect(f.service.verify(parent.id)).rejects.toMatchObject({code:'NOT_FOUND'});
     expect(await f.service.remove(parent.id)).toEqual({id:parent.id,deleted:true});
     await f.service.close();const restored=new ApiConnectionService(f.ctx,f.store,f.home);disposers.push(()=>restored.close());await restored.initialize();
@@ -47,14 +47,14 @@ describe('API connection tombstones and owned credential cleanup',()=>{
     expect(f.service.list()).toEqual([]);expect(f.ctx.llm.listProviders().map(item=>item.id)).not.toContain(connection.provider);
     expect(f.store.get('SELECT deleted_at,credential_deleted_at FROM api_connections WHERE id=?',connection.id)).toMatchObject({deletedAt:expect.any(String),credentialDeletedAt:null});
     unset.mockRestore();await f.service.close();const restored=new ApiConnectionService(f.ctx,f.store,f.home);disposers.push(()=>restored.close());await restored.initialize();
-    expect(restored.list()).toEqual([]);expect(await f.ctx.credentials.resolve(credentialRef(connection.credentialRef))).toBeUndefined();
+    expect(restored.list()).toEqual([]);expect(await f.ctx.credentials.resolve(credentialRef(f.reference(connection.id)))).toBeUndefined();
     expect(f.store.get('SELECT credential_deleted_at FROM api_connections WHERE id=?',connection.id)).toMatchObject({credentialDeletedAt:expect.any(String)});
   });
   it('rolls back provider withdrawal when tombstone persistence fails',async()=>{
     const f=await fixture(),connection=await f.service.create({...route,apiKey:'retain-on-db-failure'});
     f.store.exec("CREATE TRIGGER reject_deletion BEFORE UPDATE OF deleted_at ON api_connections BEGIN SELECT RAISE(ABORT,'controlled persistence failure'); END");
     await expect(f.service.remove(connection.id)).rejects.toThrow('controlled persistence failure');
-    expect(f.service.get(connection.id).available).toBe(true);expect((await f.ctx.credentials.resolve(credentialRef(connection.credentialRef)))?.value).toBe('retain-on-db-failure');
+    expect(f.service.get(connection.id).available).toBe(true);expect((await f.ctx.credentials.resolve(credentialRef(f.reference(connection.id))))?.value).toBe('retain-on-db-failure');
   });
   it('migrates only exact unique Host-generated credential ownership',async()=>{
     const home=await mkdtemp(path.join(tmpdir(),'rift-delete-migration-')),filename=path.join(home,'rift.db');

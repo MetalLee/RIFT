@@ -1,3 +1,5 @@
+import type { Repository, WorkspaceWorktree } from '@rift/protocol';
+export type { Repository, WorkspaceWorktree } from '@rift/protocol';
 import path from 'node:path';
 import { lstat, mkdir, realpath } from 'node:fs/promises';
 import { invariant } from '../contracts/index.js';
@@ -8,8 +10,6 @@ import { checkoutClean, key, managedPath, withMetadataLock } from '../git/worktr
 import { provesPreviousBootExited } from '../agent/boot-identity.js';
 import { WorktreeRemovalService } from './worktree-removals.js';
 
-export interface Repository { id: string; workspaceId: string; canonicalPath: string; commonGitDir: string; baseRef: string }
-export interface WorkspaceWorktree { id: string; workspaceId: string; repositoryId: string; origin: 'managed' | 'external'; path: string; pendingPath?: string | null; baseCommit: string; branch: string | null; status: string; version: number; createdAt: string }
 export class RepositoryService {
   private bootIdentity:string|null=null;
   private readonly operationReceipts=new Set<string>();

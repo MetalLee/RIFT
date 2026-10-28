@@ -1,3 +1,4 @@
+import type { ApiErrorBody } from '@rift/protocol';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -14,7 +15,7 @@ export async function managementRequest(home:string,method:string,route:string,b
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
   try {
     const response=await fetch(`${url.origin}${route}`,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json',...(method!=='GET'?{'Idempotency-Key':key}:{})},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:controller.signal});
-    const value=await response.json() as {error?:{code:string;message:string}};
+    const value=await response.json() as Partial<ApiErrorBody>;
     if(!response.ok)throw new RiftError(value.error?.code??'HTTP_ERROR',value.error?.message??`HTTP ${response.status}`);
     return value;
   } catch(error) {
