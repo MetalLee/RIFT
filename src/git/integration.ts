@@ -1,10 +1,11 @@
+import { provesPreviousBootExited } from '../agent/boot-identity.js';
 import { sandboxCommand } from '../agent/filesystem-sandbox.js';
-import { mkdir, readFile, open, rename, realpath, lstat } from 'node:fs/promises';
+import { mkdir, readFile, open, rename, realpath, lstat, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import type { EvidenceBinding, EvidenceReadiness } from '@rift/protocol';
-import { bindingOf, CandidateEvidenceError, configurationFingerprint, environmentFingerprint, evidenceReadiness, fingerprint } from './evidence.js';
+import { bindingOf, candidateCleanupUnknown, CandidateEvidenceError, configurationFingerprint, environmentFingerprint, evidenceReadiness, fingerprint } from './evidence.js';
 import type { Candidate, GitContext, GitService, ReviewResult, Run, Worktree, Workflow, Workspace } from '../contracts/index.js';
 import { execute, git, gitOk, stageSourcePaths, worktreePorcelain } from './process.js';
 import { assertSafeFiles, checkoutClean, sourceCheckoutClean, sourceUntrackedFiles, inspectRepository, key, managedPath, withMetadataLock } from './worktree-binding.js';
@@ -95,7 +96,7 @@ export class LocalGitService implements GitService {
   private selectedCommands(): CheckCommand[] { return this.checkIds.map(id => this.commands.get(id)!); }
   private candidate(operation: GitOperation): Candidate {
     const checks = operation.checks ?? [];
-    return { integrationId: operation.integrationId, sourceHead: operation.sourceHead, candidateHead: operation.candidateHead!, expectedTargetHead: operation.expectedTargetHead, cwd: operation.reviewPath, checkIds: checks.map(check => check.id), readiness: evidenceReadiness(operation, this.selectedCommands()), checks: checks.map(check => ({ ...check, stdout: check.stdout.slice(0, 8000), stderr: check.stderr.slice(0, 8000), truncated: check.truncated || check.stdout.length > 8000 || check.stderr.length > 8000 })) };
+    return { taskAttempt: operation.binding?.attempt, integrationId: operation.integrationId, sourceHead: operation.sourceHead, candidateHead: operation.candidateHead!, expectedTargetHead: operation.expectedTargetHead, cwd: operation.reviewPath, checkIds: checks.map(check => check.id), readiness: evidenceReadiness(operation, this.selectedCommands()), checks: checks.map(check => ({ ...check, stdout: check.stdout.slice(0, 8000), stderr: check.stderr.slice(0, 8000), truncated: check.truncated || check.stdout.length > 8000 || check.stderr.length > 8000 })) };
   }
   private async assertBinding(input: GitContext, operation: GitOperation, candidateHead: string): Promise<void> {
     const repository = await inspectRepository(input.workspace.repositoryPath, input.workflow.baseCommit);
@@ -109,20 +110,46 @@ export class LocalGitService implements GitService {
     const operation = await this.readOperation(input.workspace, input.candidate.integrationId);
     if (!operation.binding) {
       if (operation.taskId !== input.task.id || operation.candidateHead !== input.candidate.candidateHead) throw new Error('CANDIDATE_EVIDENCE_MISMATCH');
-      return evidenceReadiness(operation, this.selectedCommands());
+      return this.operationReadiness(operation);
     }
     await this.assertBinding(input, operation, input.candidate.candidateHead);
+    return this.operationReadiness(operation);
+  }
+  private async operationReadiness(operation: GitOperation): Promise<EvidenceReadiness> {
+    try {
+      await readFile(await this.quarantinePath(operation.candidatePath));
+      operation.checkCleanup = 'unknown';
+    } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
     return evidenceReadiness(operation, this.selectedCommands());
+  }
+  private async assertCheckCleanup(workspace: Workspace, operation: GitOperation): Promise<void> {
+    const readiness = await this.operationReadiness(operation);
+    if (candidateCleanupUnknown(operation)) throw new CandidateEvidenceError(this.candidate(operation), readiness, true);
+  }
+  async reconcileCandidateCleanup(input: GitContext & { candidate: Candidate; previousBootId: string | null; currentBootId: string | null }): Promise<boolean> {
+    const operation = await this.readOperation(input.workspace, input.candidate.integrationId);
+    await this.operationReadiness(operation);
+    if (!candidateCleanupUnknown(operation)) return !!operation.cleanupRebootProof;
+    if (!provesPreviousBootExited(input.previousBootId, input.currentBootId)) throw new Error('CLEANUP_UNKNOWN: same-machine OS reboot proof required');
+    // Historical attempts may be reconciled, but never rebound to the current attempt.
+    await this.assertBinding({ ...input, task: { ...input.task, attempt: operation.binding!.attempt, sourceHead: operation.sourceHead } }, operation, input.candidate.candidateHead);
+    await unlink(await this.quarantinePath(operation.candidatePath)).catch(error => { if (error.code !== 'ENOENT') throw error; });
+    operation.checkCleanup = 'confirmed';
+    operation.cleanupRebootProof = { previousBootId: input.previousBootId!, currentBootId: input.currentBootId! };
+    await this.record(input.workspace, operation);
+    return true;
   }
   private async checkCandidate(input: GitContext, operation: GitOperation): Promise<Candidate> {
     const repository = await inspectRepository(input.workspace.repositoryPath, input.workflow.baseCommit);
     const candidatePath = await managedPath(this.managedRoot, operation.candidatePath);
-    try { await readFile(await this.quarantinePath(candidatePath)); throw new Error('CLEANUP_UNKNOWN: timed out check must be inspected before reuse'); }
-    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    await this.assertCheckCleanup(input.workspace, operation);
     if (await gitOk(candidatePath, ['rev-parse', 'HEAD']) !== operation.candidateHead || !(await sourceCheckoutClean(candidatePath))) throw new Error('CHECK_MODIFIED_CANDIDATE: changes preserved');
     for (const command of this.selectedCommands()) {
       const prior = operation.checks?.findLast(check => check.commandId === command.id);
       if (prior?.host?.exitStatus === 'passed' && prior.exitCode === 0 && prior.host.configurationFingerprint === configurationFingerprint(command) && prior.host.environmentFingerprint === environmentFingerprint()) continue;
+      // Persist before spawning: interruption is not proof that descendants exited.
+      operation.checkCleanup = 'unknown';
+      await this.record(input.workspace, operation);
       const startedAt = new Date().toISOString();
       let result: import('./process.js').CommandResult, unavailable = false;
       try {
@@ -144,11 +171,13 @@ export class LocalGitService implements GitService {
       try { await file.writeFile(JSON.stringify(check)); await file.sync(); } finally { await file.close(); }
       // Latest result for each command; previous immutable attachments remain available by ID.
       operation.checks = [...(operation.checks ?? []).filter(item => item.commandId !== command.id), check];
+      operation.checkCleanup = result.exitCode === 124 ? 'unknown' : 'confirmed';
       operation.phase = 'checks_recorded'; operation.readiness = evidenceReadiness(operation, this.selectedCommands());
       await this.record(input.workspace, operation);
       if (result.exitCode === 124) { await this.quarantine(candidatePath, 'CHECK_TIMEOUT_CLEANUP_UNKNOWN: inspect descendant processes before archive'); break; }
       if (await gitOk(candidatePath, ['rev-parse', 'HEAD']) !== operation.candidateHead || !(await sourceCheckoutClean(candidatePath))) throw new Error('CHECK_MODIFIED_CANDIDATE: changes preserved');
     }
+    await this.assertCheckCleanup(input.workspace, operation);
     const candidate = this.candidate(operation);
     if (candidate.readiness!.status !== 'ready') throw new CandidateEvidenceError(candidate, candidate.readiness!);
     try { await lstat(operation.reviewPath); }
@@ -168,6 +197,7 @@ export class LocalGitService implements GitService {
     try {
       const operation = await this.readOperation(input.workspace, input.integrationId);
       await this.assertBinding(input, operation, input.candidateHead);
+      await this.assertCheckCleanup(input.workspace, operation);
       if (operation.review || ['publish_planned', 'ref_published', 'completed'].includes(operation.phase)) throw new Error('INVALID_STATE: reviewed candidates cannot be supplemented');
       if (await this.currentHead(input) !== operation.expectedTargetHead) throw new Error('STALE_TARGET: new candidate and independent review required');
       const requests = operation.evidenceRequests ??= {};
@@ -185,6 +215,10 @@ export class LocalGitService implements GitService {
       requests[requestKey] = { candidateHead: input.candidateHead, complete: false };
       await this.record(input.workspace, operation);
       try { return await this.checkCandidate(input, operation); }
+      catch (error) {
+        if (candidateCleanupUnknown(operation)) throw new CandidateEvidenceError(this.candidate(operation), evidenceReadiness(operation, this.selectedCommands()), true);
+        throw error;
+      }
       finally { requests[requestKey]!.complete = true; await this.record(input.workspace, operation); }
     } finally { integrationOwners.delete(ownerKey); }
   }
@@ -291,7 +325,9 @@ export class LocalGitService implements GitService {
       return await this.checkCandidate(input, operation);
     } catch (error) {
       if (operation) await this.record(workspace, { ...operation, phase: 'blocked', reason: String(error) });
-      integrationOwners.delete(ownerKey); throw error;
+      integrationOwners.delete(ownerKey);
+      if (operation && candidateCleanupUnknown(operation)) throw new CandidateEvidenceError(this.candidate(operation), evidenceReadiness(operation, this.selectedCommands()), true);
+      throw error;
     }
   }
   async publishCandidate(input: GitContext & { candidate: Candidate; review: ReviewResult }): Promise<{ acceptedCommit: string }> {
@@ -301,6 +337,7 @@ export class LocalGitService implements GitService {
     if (integrationOwners.has(ownerKey) && integrationOwners.get(ownerKey) !== candidate.integrationId) throw new Error('INTEGRATION_OWNERSHIP');
     let operation = await this.readOperation(workspace, candidate.integrationId);
     await this.assertBinding(input, operation, candidate.candidateHead);
+    await this.assertCheckCleanup(workspace, operation);
     if (evidenceReadiness(operation, this.selectedCommands()).status !== 'ready') throw new Error('EVIDENCE_NOT_READY');
     integrationOwners.set(ownerKey, candidate.integrationId);
     let published = false;
@@ -331,7 +368,7 @@ export class LocalGitService implements GitService {
     finally { integrationOwners.delete(ownerKey); }
   }
   private verifyCandidate(operation: GitOperation, candidate: Candidate, taskId: string, integrationRef: string): void {
-    if (operation.taskId !== taskId || operation.integrationRef !== integrationRef || operation.sourceHead !== candidate.sourceHead || operation.candidateHead !== candidate.candidateHead || operation.expectedTargetHead !== candidate.expectedTargetHead || operation.reviewPath !== candidate.cwd || !operation.checks?.length || operation.checks.some(check => check.candidateHead !== candidate.candidateHead || check.exitCode !== 0 && this.commands.has(check.commandId) && this.commands.get(check.commandId)!.required !== false) || JSON.stringify(operation.checks.map(check => check.id)) !== JSON.stringify(candidate.checkIds)) throw new Error('CANDIDATE_EVIDENCE_MISMATCH');
+    if (operation.taskId !== taskId || operation.integrationRef !== integrationRef || operation.sourceHead !== candidate.sourceHead || operation.candidateHead !== candidate.candidateHead || operation.expectedTargetHead !== candidate.expectedTargetHead || operation.reviewPath !== candidate.cwd || (operation.checks??[]).some(check => check.candidateHead !== candidate.candidateHead) || JSON.stringify((operation.checks??[]).map(check => check.id)) !== JSON.stringify(candidate.checkIds)) throw new Error('CANDIDATE_EVIDENCE_MISMATCH');
   }
   async abandonCandidate(input: GitContext & { candidate: Candidate; reason: string }): Promise<void> {
     const repository = await inspectRepository(input.workspace.repositoryPath, input.workflow.baseCommit);
@@ -356,7 +393,7 @@ export class LocalGitService implements GitService {
       const operation = await this.readOperation(input.workspace, input.candidate.integrationId);
       this.verifyCandidate(operation, input.candidate, input.task.id, input.workflow.integrationRef);
       const head = await gitOk(input.workspace.repositoryPath, ['rev-parse', '--verify', this.ref(input.workflow)]);
-      if (head === input.candidate.candidateHead && ['publish_planned', 'ref_published', 'completed'].includes(operation.phase)) return 'published';
+      if (head === input.candidate.candidateHead && ['publish_planned', 'ref_published', 'completed'].includes(operation.phase)) return (await this.operationReadiness(operation)).status === 'ready' ? 'published' : 'unknown';
       if (head === input.candidate.expectedTargetHead) return 'not-published';
       return 'unknown';
     } catch { return 'unknown'; }

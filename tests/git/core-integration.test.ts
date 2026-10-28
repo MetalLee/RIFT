@@ -60,11 +60,58 @@ async function fixture(check = 'process.exit(0)') {
 }
 
 describe('real Git with persistent coordinator and controlled fake activations', () => {
+  it('classifies real required failures as defects and permits a fresh development repair',async()=>{
+    const f=await fixture('process.exit(require("node:fs").readFileSync("a.txt","utf8")==="fixed"?0:1)');
+    f.plan([{id:'a',expectedPaths:['a.txt']}]);f.dispatch('a');
+    await f.develop(await f.started('a','develop'),{'a.txt':'broken'});await f.settled('a','blocked');
+    const failed=f.store.require<{status:string;candidate:Candidate}>('SELECT * FROM integrations WHERE task_id=?','a');
+    expect(failed).toMatchObject({status:'blocked',candidate:{taskAttempt:1,readiness:{status:'failed',blockers:[{classification:'code_defect'}]}}});
+    expect(f.bridge.starts.filter(run=>run.run.purpose==='review')).toHaveLength(0);
+    f.coordinator.retry({taskId:'a',expectedVersion:f.store.task('a').version,reason:'Fix actual failed check'});f.dispatch('a','-fix');
+    await f.develop(await f.started('a','repair',2),{'a.txt':'fixed'});
+    f.review(await f.started('a','review',2));await f.settled('a','succeeded');
+    expect(f.store.task('a').attempt).toBe(2);
+  });
+  it.each([true,false])('retains cleanup ownership across cancellation and restart (required=%s)',async required=>{
+    const f=await fixture('setInterval(()=>{},1000)');
+    const command=(f.git as unknown as {commands:Map<string,{timeoutMs?:number;required?:boolean}>}).commands.get('unit')!;command.timeoutMs=100;
+    // Keep a successful required check when the timeout itself is optional.
+    if(!required){command.required=false;const internals=f.git as unknown as {commands:Map<string,unknown>;checkIds:string[]};internals.commands.set('required',{id:'required',executable:process.execPath,args:['-e','process.exit(0)']});internals.checkIds.unshift('required');}
+    const before=`v1:${'a'.repeat(64)}:${'1'.repeat(64)}`,after=`v1:${'a'.repeat(64)}:${'2'.repeat(64)}`;
+    f.coordinator.setBootIdentity(before);f.plan([{id:'a',expectedPaths:['a.txt']}]);f.dispatch('a');
+    await f.develop(await f.started('a','develop'),{'a.txt':'complete'});await f.settled('a','blocked');
+    const record=()=>f.store.require<{id:string;version:number;status:string;candidate:Candidate}>('SELECT * FROM integrations WHERE task_id=?','a');
+    expect(record().status).toBe('cleanup_unknown');expect(f.bridge.starts.filter(run=>run.run.purpose==='review')).toHaveLength(0);
+    expect(()=>f.coordinator.retry({taskId:'a',expectedVersion:f.store.task('a').version,reason:'not proof'})).toThrow();
+    await expect(f.coordinator.supplementEvidence({taskId:'a',integrationId:record().id,candidateHead:record().candidate.candidateHead,expectedVersion:f.store.task('a').version,idempotencyKey:'not-proof'})).rejects.toThrow();
+    await f.coordinator.cancelTask('a');await f.coordinator.shutdown();
+    const restarted=new TaskCoordinator({store:f.store,bridge:f.bridge,git:f.git});
+    cleanups.unshift(()=>restarted.shutdown());restarted.setBootIdentity(before);await restarted.recover();
+    await expect(restarted.reconcileIntegration(record().id,record().version)).rejects.toMatchObject({code:'CLEANUP_UNKNOWN'});
+    restarted.setBootIdentity(after);await restarted.reconcileIntegration(record().id,record().version);
+    expect(record().status).toBe('evidence_waiting');expect(f.store.task('a').status).toBe('cancelled');
+    const retried=restarted.retry({taskId:'a',expectedVersion:f.store.task('a').version,reason:'cleanup proven'});expect(retried.attempt).toBe(2);
+  });
+  it('resumes the same timed-out candidate only after Host reboot proof and explicit supplementation',async()=>{
+    const f=await fixture('setInterval(()=>{},1000)');
+    const command=(f.git as unknown as {commands:Map<string,{args:string[];timeoutMs?:number}>}).commands.get('unit')!;command.timeoutMs=100;
+    const before=`v1:${'a'.repeat(64)}:${'1'.repeat(64)}`,after=`v1:${'a'.repeat(64)}:${'2'.repeat(64)}`;
+    f.coordinator.setBootIdentity(before);f.plan([{id:'a',expectedPaths:['a.txt']}]);f.dispatch('a');
+    await f.develop(await f.started('a','develop'),{'a.txt':'complete'});await f.settled('a','blocked');f.coordinator.pause(f.workflow.id);
+    const saved=f.store.require<{id:string;version:number;candidate:Candidate}>('SELECT * FROM integrations WHERE task_id=?','a');
+    f.coordinator.setBootIdentity(after);await f.coordinator.reconcileIntegration(saved.id,saved.version);
+    command.args=['-e','process.exit(0)'];command.timeoutMs=5000;
+    await f.coordinator.supplementEvidence({taskId:'a',integrationId:saved.id,candidateHead:saved.candidate.candidateHead,expectedVersion:f.store.task('a').version,idempotencyKey:'after-cleanup-proof'});
+    expect(f.bridge.starts).toHaveLength(1);f.coordinator.resume(f.workflow.id);
+    const reviewed=f.review(await f.started('a','review'));expect(reviewed.candidateHead).toBe(saved.candidate.candidateHead);
+    await f.settled('a','succeeded');expect(f.store.task('a').attempt).toBe(1);
+  });
   it('waits for Host evidence without review or development and resumes the exact candidate after supplementation',async()=>{
     const f=await fixture('process.exit(127)');f.plan([{id:'a',expectedPaths:['a.txt']}]);f.dispatch('a');
     await f.develop(await f.started('a','develop'),{'a.txt':'complete'});await f.settled('a','blocked');
     expect(f.bridge.starts.filter(run=>run.run.purpose==='review')).toHaveLength(0);
     const original=f.store.require<{id:string;candidate:Candidate;status:string}>('SELECT * FROM integrations WHERE task_id=?','a');
+    expect(()=>f.coordinator.retry({taskId:'a',expectedVersion:f.store.task('a').version,reason:'not a code fix'})).toThrow('supplement-evidence');
     expect(original.status).toBe('evidence_waiting');expect(original.candidate.readiness?.status).toBe('environment_unavailable');
     expect(()=>f.coordinator.finish({workflowId:f.workflow.id,summary:'not ready'})).toThrow('Every task must pass');
     const before=f.store.task('a');f.coordinator.pause(f.workflow.id);

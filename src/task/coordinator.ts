@@ -1,4 +1,4 @@
-import { CandidateEvidenceError } from '../git/evidence.js';
+import { candidateMatchesTask, CandidateEvidenceError } from '../git/evidence.js';
 import { agentSandboxMode } from '../agent/sandbox-mode.js';
 import { RunChatStream } from './run-stream.js';
 import { recordRunProgress } from './run-progress.js';
@@ -75,14 +75,17 @@ export class TaskCoordinator {
     invariant(['cleanup_unknown','publishing'].includes(integration.status),'INVALID_STATE','Only an uncertain integration can be reconciled.');
     invariant(!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',task.id),'CLEANUP_UNKNOWN','Verify all Run cleanup before inspecting publication.');
     invariant(this.integrationCleanupReceipts.has(integrationId)||provesPreviousBootExited(integration.runtimeBootId,this.bootIdentity),'CLEANUP_UNKNOWN','Git/check subprocess cleanup has no owned completion receipt or same-machine reboot proof. Missing candidate/Run rows do not prove cleanup.');
+    const checkCleanupReconciled=integration.candidate&&this.git.reconcileCandidateCleanup?await this.git.reconcileCandidateCleanup({...this.context(task),candidate:integration.candidate,previousBootId:integration.runtimeBootId,currentBootId:this.bootIdentity}):false;
     let publication:'published'|'not-published'|'unknown'='not-published';
     if(integration.candidate){invariant(this.git.recoverPublication,'PUBLICATION_UNKNOWN','Git publication verification is unavailable.');publication=await this.git.recoverPublication({...this.context(task),candidate:integration.candidate});}
     invariant(publication!=='unknown','PUBLICATION_UNKNOWN','Git cannot establish the exact publication outcome; no ledger state was released.');
     if(publication==='not-published'&&integration.candidate&&this.git.abandonCandidate)await this.git.abandonCandidate({...this.context(task),candidate:integration.candidate,reason:'Execution cleanup verified; unpublished candidate abandoned for explicit retry.'});
+    const readiness=publication==='not-published'&&integration.candidate&&this.git.candidateReadiness&&candidateMatchesTask(integration.candidate,task)?await this.git.candidateReadiness({...this.context(task),candidate:integration.candidate}):undefined;
+    const waiting=checkCleanupReconciled&&!integration.reviewRunId&&readiness&&readiness.status!=='failed';
     this.store.transaction(()=>{
       invariant(this.store.require<{version:number}>('SELECT version FROM integrations WHERE id=?',integrationId).version===expectedVersion,'VERSION_CONFLICT','Integration changed during verification.');
       invariant(!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',task.id),'CLEANUP_UNKNOWN','Execution ownership changed during verification.');
-      this.store.exec('UPDATE integrations SET status=?,error=? WHERE id=?',publication==='published'?'accepted':'blocked',publication==='published'?null:'Cleanup verified; candidate was not published. Retry the task explicitly.',integrationId);
+      this.store.exec('UPDATE integrations SET status=?,error=? WHERE id=?',publication==='published'?'accepted':waiting?'evidence_waiting':'blocked',publication==='published'?null:'Cleanup verified; candidate was not published. Retry the task explicitly.',integrationId);
       if(publication==='published')this.store.exec('UPDATE tasks SET status=?,accepted_commit=?,blocking_reason=NULL,version=version+1 WHERE id=?',task.status==='cancelled'?'cancelled':'succeeded',integration.candidate!.candidateHead,task.id);
       else this.blockTask(task.id,'RECOVERED_NOT_PUBLISHED');
       for(const operation of this.store.all<Operation>("SELECT * FROM operations WHERE entity_id=? AND kind='integration' AND phase IN ('queued','started')",task.id))this.operationPhase(operation,publication==='published'?'completed':'blocked');
@@ -267,7 +270,7 @@ export class TaskCoordinator {
   /** Execute only operator-configured Host checks; no uploaded log or model claim enters this path. */
   async supplementEvidence(input: { taskId: string } & import('@rift/protocol').SupplementEvidenceInput) {
     const task = this.store.task(input.taskId), integration = this.store.require<IntegrationRecord>('SELECT * FROM integrations WHERE id=? AND task_id=?', input.integrationId, task.id);
-    invariant(integration.candidate?.candidateHead === input.candidateHead, 'CANDIDATE_EVIDENCE_MISMATCH', 'Supplement must bind the exact stored candidate.');
+    invariant(candidateMatchesTask(integration.candidate, task) && integration.candidate?.candidateHead === input.candidateHead, 'CANDIDATE_EVIDENCE_MISMATCH', 'Supplement must bind the exact stored candidate.');
     const key = `supplement:${task.id}:${input.idempotencyKey}`;
     const prior = this.store.get<Operation>('SELECT * FROM operations WHERE dedupe_key=?', key);
     if (prior) { invariant(prior.payload.integrationId === integration.id, 'IDEMPOTENCY_CONFLICT', 'Key belongs to another candidate.'); return { task: this.store.task(task.id), request: prior }; }
@@ -296,8 +299,8 @@ export class TaskCoordinator {
       } catch (error) {
         this.store.transaction(() => {
           if (error instanceof CandidateEvidenceError) this.store.exec('UPDATE integrations SET candidate=?,check_ids=? WHERE id=?', JSON.stringify(error.candidate), JSON.stringify(error.candidate.checkIds), integration.id);
-          this.store.exec("UPDATE integrations SET status='evidence_waiting',error=? WHERE id=?", errorMessage(error), integration.id);
-          this.store.event(task.workflowId, 'evidence.waiting', { integrationId: integration.id, classification: error instanceof CandidateEvidenceError ? error.readiness.blockers : [{ classification: 'environment_unavailable', reason: errorMessage(error) }] }, { taskId: task.id });
+          this.store.exec('UPDATE integrations SET status=?,error=? WHERE id=?', error instanceof CandidateEvidenceError ? error.cleanupUnknown ? 'cleanup_unknown' : error.readiness.status === 'failed' ? 'blocked' : 'evidence_waiting' : 'blocked', errorMessage(error), integration.id);
+          this.store.event(task.workflowId, error instanceof CandidateEvidenceError && error.cleanupUnknown ? 'evidence.cleanup_unknown' : error instanceof CandidateEvidenceError && error.readiness.status === 'failed' ? 'evidence.failed' : 'evidence.waiting', { integrationId: integration.id, classification: error instanceof CandidateEvidenceError ? error.readiness.blockers : [{ classification: 'environment_unavailable', reason: errorMessage(error) }] }, { taskId: task.id });
         });
         throw error;
       }
@@ -548,7 +551,7 @@ export class TaskCoordinator {
       if(error instanceof CandidateEvidenceError){
         candidate=error.candidate;
         if(this.git.abandonCandidate)await this.git.abandonCandidate({...this.context(task),candidate,reason:errorMessage(error)}).catch(()=>{});
-        this.store.transaction(()=>{this.store.exec("UPDATE integrations SET status='evidence_waiting',candidate_head=?,expected_target_head=?,candidate=?,check_ids=?,error=? WHERE id=?",candidate!.candidateHead,candidate!.expectedTargetHead,JSON.stringify(candidate),JSON.stringify(candidate!.checkIds),errorMessage(error),integrationId);if(this.store.task(task.id).status!=='cancelled')this.blockTask(task.id,errorMessage(error));this.operationPhase(this.store.operation(operation.id),'blocked',errorMessage(error));this.store.event(task.workflowId,'evidence.waiting',{integrationId,candidateHead:candidate!.candidateHead,readiness:error.readiness},{taskId:task.id,requestId:operation.id});});
+        this.store.transaction(()=>{this.store.exec("UPDATE integrations SET status=?,candidate_head=?,expected_target_head=?,candidate=?,check_ids=?,error=? WHERE id=?",error.cleanupUnknown?'cleanup_unknown':error.readiness.status==='failed'?'blocked':'evidence_waiting',candidate!.candidateHead,candidate!.expectedTargetHead,JSON.stringify(candidate),JSON.stringify(candidate!.checkIds),errorMessage(error),integrationId);if(this.store.task(task.id).status!=='cancelled')this.blockTask(task.id,errorMessage(error));this.operationPhase(this.store.operation(operation.id),'blocked',errorMessage(error));this.store.event(task.workflowId,error.cleanupUnknown?'evidence.cleanup_unknown':error.readiness.status==='failed'?'evidence.failed':'evidence.waiting',{integrationId,candidateHead:candidate!.candidateHead,readiness:error.readiness},{taskId:task.id,requestId:operation.id});});
         return;
       }
       const unknown=reviewRun&&this.store.run(reviewRun.id).cleanupStatus!=='confirmed';
@@ -580,6 +583,12 @@ export class TaskCoordinator {
     const deadline=Date.now()+Math.min(Math.max(input.timeoutMs??30_000,0),60_000),after=input.afterEventSeq??0;
     while(true){const events=this.store.events(input.workflowId,after).filter(event=>(event.runId&&input.runIds?.includes(event.runId))||(event.requestId&&input.requestIds?.includes(event.requestId)));const timedOut=Date.now()>=deadline;if(events.length||timedOut||this.stopping){const status=this.status(input.workflowId);return{events,eventSeq:status.eventSeq,timedOut:events.length===0,status};}await new Promise(resolve=>setTimeout(resolve,20));}
   }
+  assertDevelopmentRetry(taskId: string): void {
+    const task = this.store.task(taskId);
+    invariant(!this.store.get("SELECT id FROM integrations WHERE task_id=? AND status='cleanup_unknown'",task.id),'CLEANUP_UNKNOWN','Host check cleanup must be proven before development retry.');
+    const waiting = this.store.all<IntegrationRecord>("SELECT * FROM integrations WHERE task_id=? AND source_head=? AND status='evidence_waiting'",task.id,task.sourceHead).some(record=>candidateMatchesTask(record.candidate,task)&&record.candidate?.readiness?.status!=='failed');
+    invariant(task.status!=='blocked'||!waiting,'EVIDENCE_NOT_READY','Use supplement-evidence for this unchanged candidate; missing evidence is not a development defect.');
+  }
   retry(input:{taskId:string;reason:string;expectedVersion:number}):Task {
     invariant(!this.stopping,'HOST_STOPPING','Host is shutting down and cannot accept retries.');
     invariant(!this.sourceRecoveries.has(input.taskId),'SOURCE_RECOVERY_ACTIVE','Wait for source recovery before retrying this task.');
@@ -593,6 +602,7 @@ export class TaskCoordinator {
       invariant(!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',task.id),'CLEANUP_UNKNOWN','Old execution cleanup must be confirmed before retry.');
       invariant(!this.store.get('SELECT id FROM operations WHERE entity_id=? AND phase=? AND kind=?',task.id,'started','dispatch'),'FINALIZATION_PENDING','Previous source collection or finalization must finish before retry.');
       invariant(!this.store.get('SELECT id FROM integrations WHERE task_id=? AND status IN (\'preparing\',\'reviewing\',\'publishing\',\'cleanup_unknown\')',task.id),'INTEGRATION_ACTIVE','Task still owns an integration operation.');
+      this.assertDevelopmentRetry(task.id);
       this.store.exec('UPDATE tasks SET status=?,attempt=attempt+1,version=version+1,blocking_reason=NULL WHERE id=?','ready',task.id);
       this.store.event(task.workflowId,'task.retry',{reason:input.reason,attempt:task.attempt+1},{taskId:task.id});return this.store.task(task.id);
     });

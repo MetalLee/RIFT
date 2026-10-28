@@ -14,8 +14,9 @@ export interface HostCheckAttachment extends EvidenceBinding {
 export interface EvidenceBlocker { classification: BlockerClassification; commandId: string; reason: string }
 export interface EvidenceReadiness {
   status: 'ready' | 'waiting_evidence' | 'failed' | 'environment_unavailable';
+  cleanupStatus?: 'unknown' | 'confirmed';
   requiredCheckIds: string[]; missingCheckIds: string[]; blockers: EvidenceBlocker[];
 }
 export interface TaskEvidenceIntegration { id: string; status: string; candidateHead?: string; checks: CheckEvidence[]; review: ReviewReport | null; evidenceUnavailable: boolean; readiness: EvidenceReadiness }
-export interface TaskEvidence { taskId: string; acceptedCommit: string | null; integrations: TaskEvidenceIntegration[] }
+export interface TaskEvidence { taskId: string; acceptedCommit: string | null; currentCandidate?: { integrationId: string; candidateHead: string; sourceHead: string; taskAttempt: number } | null; integrations: TaskEvidenceIntegration[] }
 export interface SupplementEvidenceInput { integrationId: string; candidateHead: string; expectedVersion: number; idempotencyKey: string }

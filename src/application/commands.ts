@@ -105,10 +105,10 @@ export class ApplicationCommands {
       }
 
       if(name==='task.retry-dispatch'){
-        invariant(!this.host.store.get("SELECT id FROM integrations WHERE task_id=? AND status='evidence_waiting'",taskId),'EVIDENCE_NOT_READY','Use supplement-evidence for this unchanged candidate; missing evidence is not a development defect.');
+        this.host.coordinator.assertDevelopmentRetry(taskId);
         const workflow=this.host.store.workflow(task.workflowId);if(workflow.baseCommit)await this.host.ensureLead(workflow.id);
         const latest=this.host.store.get<import('../contracts/index.js').Run>('SELECT * FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1',taskId);
-        if(task.status==='blocked'&&task.sourceHead&&latest?.purpose==='review'&&(['failed','interrupted'].includes(latest.status)||(latest.status==='succeeded'&&(latest.result as Partial<import('../contracts/index.js').ReviewResult>|null)?.verdict==='blocked'))){
+        if(task.status==='blocked'&&task.sourceHead&&latest?.purpose==='review'&&latest.taskAttempt===task.attempt&&(['failed','interrupted'].includes(latest.status)||(latest.status==='succeeded'&&(latest.result as Partial<import('../contracts/index.js').ReviewResult>|null)?.verdict==='blocked'))){
           const input=z.object({expectedVersion:z.number().int().nonnegative(),reason:z.string().min(1)}).strict().parse(body);
           const request=this.host.coordinator.requestIntegration({taskId,sourceHead:task.sourceHead,expectedVersion:input.expectedVersion,idempotencyKey:`browser-review-retry:${taskId}:${input.expectedVersion}`});
           return{task:this.host.store.task(taskId),request};
@@ -119,15 +119,22 @@ export class ApplicationCommands {
       }
       if(name==='task.evidence'){
         const records=this.host.store.all<{id:string;status:string;candidate:import('../contracts/index.js').Candidate|null}>('SELECT id,status,candidate FROM integrations WHERE task_id=? ORDER BY rowid DESC LIMIT 20',taskId);
+        const current: NonNullable<import('@rift/protocol').TaskEvidence['currentCandidate']>[] = [];
         const integrations=await Promise.all(records.map(async record=>{
           try {
             const operation=await this.host.git.readOperation(this.host.store.workspace(workspaceId),record.id);
             invariant(operation.taskId===taskId,'CANDIDATE_EVIDENCE_MISMATCH','Evidence belongs to another task.');
-            const readiness=record.candidate ? await this.host.git.candidateReadiness({ ...evidenceContext(), candidate:record.candidate }).catch(()=>({status:'waiting_evidence' as const,requiredCheckIds:[],missingCheckIds:[],blockers:[{classification:'evidence_missing' as const,commandId:'',reason:'Historical or stale candidate binding; attachments remain read-only.'}]})) : {status:'waiting_evidence' as const,requiredCheckIds:[],missingCheckIds:[],blockers:[{classification:'evidence_missing' as const,commandId:'',reason:'Candidate is not yet available.'}]};
+            let readiness: import('@rift/protocol').EvidenceReadiness = {status:'waiting_evidence',requiredCheckIds:[],missingCheckIds:[],blockers:[{classification:'evidence_missing',commandId:'',reason:'Candidate is not yet available.'}]};
+            if(record.candidate) {
+              try {
+                readiness=await this.host.git.candidateReadiness({ ...evidenceContext(),candidate:record.candidate });
+                if(operation.binding?.attempt===task.attempt&&operation.sourceHead===task.sourceHead&&operation.binding.candidateHead===record.candidate.candidateHead)current.push({integrationId:record.id,candidateHead:record.candidate.candidateHead,sourceHead:operation.sourceHead,taskAttempt:operation.binding.attempt});
+              } catch { readiness={status:'waiting_evidence',requiredCheckIds:[],missingCheckIds:[],blockers:[{classification:'evidence_missing',commandId:'',reason:'Historical or stale candidate binding; attachments remain read-only.'}]}; }
+            }
             return {id:record.id,status:record.status,candidateHead:operation.candidateHead,checks:(operation.checks??[]).map(check=>({...check,stdout:check.stdout.slice(0,8000),stderr:check.stderr.slice(0,8000),truncated:check.truncated||check.stdout.length>8000||check.stderr.length>8000})),review:operation.review??null,evidenceUnavailable:false,readiness};
           } catch {return {id:record.id,status:record.status,checks:[],review:null,evidenceUnavailable:true,readiness:{status:'waiting_evidence' as const,requiredCheckIds:[],missingCheckIds:[],blockers:[{classification:'evidence_missing' as const,commandId:'',reason:'Host evidence is unavailable or its binding could not be verified.'}]}};}
         }));
-        return {taskId,acceptedCommit:task.acceptedCommit,integrations} satisfies import('@rift/protocol').TaskEvidence;
+        return {taskId,acceptedCommit:task.acceptedCommit,currentCandidate:current.length===1?current[0]:null,integrations} satisfies import('@rift/protocol').TaskEvidence;
       }
     }
     if(name.startsWith('skill.')) {
