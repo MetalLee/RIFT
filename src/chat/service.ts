@@ -1,3 +1,5 @@
+import { timelinePage } from './timeline-page.js';
+import { conversationRunMessages } from '../task/run-stream.js';
 import { TurnStream } from './turn-stream.js';
 import { bindingConnection } from '../agent/execution-connection.js';
 import { captureTriggerContext } from './trigger-context.js';
@@ -242,7 +244,8 @@ export class ChatService {
     const current=this.turn(turn.workspaceId,turn.id);
     if(current.cleanupStatus==='unknown')this.reconcile(turn.workspaceId,turn.id,current.version);
   }
-  page(workspaceId: string, conversationId: string, before?: string, limit = 50): ChatPage {
+  page(workspaceId: string, conversationId: string, before?: string, limit = 50, timeline = false, refresh:string[]=[]): ChatPage {
+    if(timeline)return timelinePage(this.store,this.conversation(workspaceId,conversationId),before,limit,refresh);
     invariant(Number.isInteger(limit) && limit >= 1 && limit <= 100, 'INVALID_PAGE', 'Message limit must be 1–100.');
     return this.store.transaction(() => {
       const conversation = this.conversation(workspaceId, conversationId);
@@ -253,7 +256,7 @@ export class ChatService {
       const turns = this.store.all<AgentTurn>('SELECT * FROM agent_turns WHERE conversation_id=? ORDER BY rowid', conversationId).filter(turn => !turn.configuration.conversationTitle && ((turn.messageId !== null && ids.has(turn.messageId)) || rows.some(message=>message.sourceTurnId===turn.id) || (!!turn.triggerId && (!before || !turn.endedAt || turn.cleanupStatus !== 'confirmed' || rows.some(message => message.createdAt >= turn.createdAt))) || ['queued','running','stopping'].includes(turn.status))).map(turn => this.turn(workspaceId,turn.id));
       const chunks = turns.flatMap(turn => this.store.all<{seq:number;turnId:string;text:string;createdAt:string}>('SELECT * FROM message_chunks WHERE turn_id=? ORDER BY seq', turn.id));
       const receipts = this.store.all<CoordinationReceipt>('SELECT * FROM coordination_receipts WHERE conversation_id=? AND workspace_id=? ORDER BY event_seq',conversationId,workspaceId);
-      return { conversation, messages: rows, turns, chunks, receipts, nextBefore: more ? rows[0]?.id ?? null : null, snapshotCursor: this.store.require<{cursor:number}>('SELECT COALESCE(MAX(seq),0) AS cursor FROM workspace_events').cursor };
+      return { conversation, messages: rows, turns, chunks, receipts, runMessages:conversationRunMessages(this.store,workspaceId,conversationId), nextBefore: more ? rows[0]?.id ?? null : null, snapshotCursor: this.store.require<{cursor:number}>('SELECT COALESCE(MAX(seq),0) AS cursor FROM workspace_events').cursor };
     });
   }
   stop(workspaceId: string, turnId: string): AgentTurn {

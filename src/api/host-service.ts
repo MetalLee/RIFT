@@ -1,3 +1,5 @@
+import {parseTimelineRefresh} from '../chat/timeline-page.js';
+import { observeNativeRun } from '../task/run-progress.js';
 import { skillResourceTools } from '../skill/resource-tool.js';
 import { installedSkills } from '../skill/runtime.js';
 import { WorkspaceCli, cliEnvelope } from './workspace-cli.js';
@@ -156,7 +158,7 @@ export class RiftHostService implements ApiHandler {
     this.validateChatConnection(connection);
     const runtime:AgentRuntime=connection.runtime==='dsh'?new DshChatRuntime(this.ctx,connection.provider!):this.chatRuntimes.get(connection.runtime)!;
     const session=runtime.persistentSessions?nativeSession(this.store,{workspaceId:role.workspaceId,scope:'task',scopeId:input.task.id,agentId:role.id,cwd:input.cwd,configuration:{connection,mode:'text-analysis',prompt:role.prompt,skills:input.run.providerSnapshot.skillInstructions??'',tools:(input.tools??[]).map(({name,description,inputSchema})=>({name,description,inputSchema}))}}):undefined;
-    const handle=await runtime.start({workspaceId:role.workspaceId,agentId:role.id,turnId:input.run.id,cwd:input.cwd,model:connection.model,reasoningEffort:connection.reasoningEffort,...session?{session:sessionCallbacks(this.store,session,input.run.id,input.cwd,input.onAccepted)}:{},instructions:`You are executing a registered text-only analysis task. Analyze only the supplied text, do not access files or delegate. The latest task envelope and runId supersede previous execution details.\n${role.prompt}\n${input.run.providerSnapshot.skillInstructions??''}`,messages:[{role:'user',content:input.prompt}],tools:input.tools??[],signal:input.signal});
+    const handle=await runtime.start({onEvent:observeNativeRun(input.onProgress,input.onEvent),workspaceId:role.workspaceId,agentId:role.id,turnId:input.run.id,cwd:input.cwd,model:connection.model,reasoningEffort:connection.reasoningEffort,...session?{session:sessionCallbacks(this.store,session,input.run.id,input.cwd,input.onAccepted)}:{},instructions:`You are executing a registered text-only analysis task. Analyze only the supplied text, do not access files or delegate. The latest task envelope and runId supersede previous execution details.\n${role.prompt}\n${input.run.providerSnapshot.skillInstructions??''}`,messages:[{role:'user',content:input.prompt}],tools:input.tools??[],signal:input.signal});
     return{childId:`text-${input.run.id}`,dispose:()=>handle.dispose(),result:handle.result.then(result=>({stopReason:result.stopReason,text:JSON.stringify({schemaVersion:1,taskId:input.task.id,runId:input.run.id,outcome:'completed',summary:result.text,changedPaths:[],checksClaimed:[],blockingReasons:[]})}))};
   }
   private chatTools(turn: AgentTurn): RuntimeTool[] {
@@ -468,7 +470,7 @@ export class RiftHostService implements ApiHandler {
       if (section === 'conversations') {
         if (method === 'GET' && !entityId) return { conversations: this.chat.list(workspaceId) };
         if (method === 'POST' && !entityId) return this.chat.createConversation(workspaceId, z.object({ title: z.string().trim().min(1).max(240).default('新对话') }).strict().parse(body).title);
-        if (entityId && action === 'messages' && method === 'GET') return this.chat.page(workspaceId, entityId, url.searchParams.get('before') ?? undefined, Number(url.searchParams.get('limit') ?? 50));
+        if (entityId && action === 'messages' && method === 'GET') return this.chat.page(workspaceId, entityId, url.searchParams.get('before') ?? undefined, Number(url.searchParams.get('limit') ?? 50),url.searchParams.get('view')==='timeline',parseTimelineRefresh(url.searchParams.get('refresh')));
         if (entityId && action === 'messages' && method === 'POST') return this.chat.send(workspaceId, entityId, sendMessageSchema.parse(body));
       }
       if (section === 'turns' && entityId && action === 'stop' && method === 'POST') return this.chat.stop(workspaceId, entityId);
@@ -507,7 +509,7 @@ export class RiftHostService implements ApiHandler {
       if (streamSnapshot[2]==='turns' && !streamSnapshot[4]) return this.chat.turn(workspaceId,entityId);
       if (streamSnapshot[2]==='conversations' && streamSnapshot[4]) {
         const query=new URL(pathname,'http://rift.local').searchParams;
-        return this.chat.page(workspaceId,entityId,query.get('before')??undefined,Number(query.get('limit')??50));
+        return this.chat.page(workspaceId,entityId,query.get('before')??undefined,Number(query.get('limit')??50),query.get('view')==='timeline',parseTimelineRefresh(query.get('refresh')));
       }
     }
     if (method === 'GET' && pathname === '/v1/doctor') return this.doctor();

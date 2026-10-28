@@ -11,7 +11,7 @@ export class TurnStream {
   private messages = new Map<string, Pending>();
   private timer?: ReturnType<typeof setTimeout>;
   private size = 0;
-  constructor(private store: RiftStore, private turnId: string, private workspaceId: string, private conversationId: string, private onError: (error:unknown)=>void) {}
+  constructor(private store: RiftStore, private turnId: string, private workspaceId: string, private conversationId: string, private onError: (error:unknown)=>void, private save?: (messageId:string, message:Pick<StreamMessage,'kind'|'text'|'status'>)=>void) {}
 
   accept(event: Extract<RuntimeEvent, {messageId: string}>): void {
     if (!event.messageId || event.messageId.length > 256) throw new Error('STREAM_MESSAGE_ID');
@@ -61,6 +61,7 @@ export class TurnStream {
     this.store.transaction(() => {
       for (const [messageId, message] of this.messages) {
         this.appendPending(message);
+        if(this.save){this.save(messageId,{kind:message.kind,text:message.text,status:message.status});continue;}
         const prior = this.store.get<StreamMessage>('SELECT * FROM turn_stream_messages WHERE turn_id=? AND message_id=?', this.turnId, messageId);
         if (prior && prior.text === message.text && prior.status === message.status && prior.kind === message.kind) continue;
         const timestamp = now();
