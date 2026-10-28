@@ -78,6 +78,9 @@ export class RiftStore {
         if(!this.get('SELECT version FROM schema_migrations WHERE version=20'))this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0020_workspace_cli.sql',import.meta.url)),'utf8'));
         if(!this.get('SELECT version FROM schema_migrations WHERE version=21'))this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0021_live_agent_stream.sql',import.meta.url)),'utf8'));
         if(!this.get('SELECT version FROM schema_migrations WHERE version=22'))this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0022_provider_reasoning_stream.sql',import.meta.url)),'utf8'));
+        if(!this.get('SELECT version FROM schema_migrations WHERE version=23'))this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0023_run_progress.sql',import.meta.url)),'utf8'));
+        if(!this.get('SELECT version FROM schema_migrations WHERE version=24'))this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0024_run_stream_messages.sql',import.meta.url)),'utf8'));
+        if(!this.get('SELECT version FROM schema_migrations WHERE version=25'))this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0025_chat_paging_indexes.sql',import.meta.url)),'utf8'));
         if(this.db.prepare('PRAGMA foreign_key_check').all().length)throw new Error('Connection/Worktree migration introduced invalid foreign keys.');
       });
     } catch (error) { try { opened?.close(); } finally { this.releaseLock(); } throw error; }

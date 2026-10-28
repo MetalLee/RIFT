@@ -71,3 +71,57 @@ The Windows Git global-config null-device path was changed from Node's device na
 ## Reference implementation
 
 The revision follows Hermes’ [stream delivery](https://github.com/NousResearch/hermes-agent/blob/main/agent/stream_delivery.py) and [CLI stream callbacks](https://github.com/NousResearch/hermes-agent/blob/main/hermes_cli/cli_stream_mixin.py): receive reasoning and answer deltas independently, preserve intermediate messages, and deduplicate settled output. RIFT presents the available text as ordinary chat messages per the requested UI, rather than copying Hermes’ terminal boxes. Native summary parameters and events follow the [official app-server contract](https://learn.chatgpt.com/docs/app-server). Enabling summaries does not make a model emit a token during every silent inference interval.
+
+## Task sub-agent messages in the shared conversation
+
+Task output now uses the same chronological chat timeline as Lead replies.
+There is no child-agent progress card or separate execution panel in chat.
+Each public commentary, summary and answer has the registered role's identity,
+its own stable message ID and an associated task link. Text grows while the
+model is producing it; earlier commentary remains after subsequent tools/results.
+Runs request concise factual public updates before tool phases and on significant
+findings. A silent provider interval is not filled with invented text.
+
+Migration 24 adds `run_stream_messages`. `ChatPage.runMessages` is scoped through
+workflow_conversations and its workspace owner. `run.message` SSE uses the same
+version/offset/delta/replace protocol as turn messages, applies directly in the
+browser, and recovers from snapshots on gaps/reconnection. The projection is not
+model context and never wakes the Lead. Existing activity metadata remains an
+internal diagnostic, not the chat presentation.
+
+Ordinary DSH task children, owned analysis-batch descendants, persistent native
+runs, and repository-free text analysis all feed this stream. Child/attempt IDs
+are namespaced; only exact owned scopes can publish. Raw reasoning, prompts,
+tool arguments/results and replay metadata are not part of this public Run stream.
+Provider public reasoning summaries and ordinary assistant commentary are supported.
+Credential redaction and batching reuse TurnStream/SafeChatStream, not a second
+raw-text transport. Cancellation/error closes partial messages as interrupted;
+crash-recovered terminal Runs also project unfinished messages as interrupted.
+Structured final results retain their original task-validation path; valid
+completed task JSON summaries are rendered as human text without changing storage.
+Old runs without recorded public output are not retroactively replayed.
+
+
+## Lazy conversation window and scroll ownership
+
+The browser requests `?view=timeline&limit=30`: a keyset page across public chat
+messages, individual Turn/Run stream messages and legacy drafts, rather than
+loading entire parent Turns/Runs. Cursors bind the conversation and the stable
+(timestamp, source/message key) order; equal timestamps cannot skip or duplicate
+entries. Migration 25 adds paging indexes. The compatibility snapshot remains
+available without this view parameter.
+
+The latest page renders first; scrolling to the transcript's top loads earlier
+pages and preserves the current visual anchor. Routine SSE text applies directly
+without triggering a complete workspace/chat snapshot per token. Periodic
+snapshots remain a fallback. Recovery renders the newest page immediately and
+bridges only unseen arrivals back to the last snapshot; failed bridge requests
+retain their cursor for retry. Retained active message/turn IDs request scoped,
+small refresh projections so failure without text and older interrupted streams
+cannot remain falsely live. Execution context/prompts/Skill text are not part of
+the browser's Turn controls.
+
+The transcript owns a dedicated scroll viewport in a fixed-height flex layout.
+The composer participates in that layout instead of covering it with a fixed
+position overlay. Bottom detection, jump-to-latest, prepend anchoring and resize
+following all use this viewport, including mobile width and a growing textarea.

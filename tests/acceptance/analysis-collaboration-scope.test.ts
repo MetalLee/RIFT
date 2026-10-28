@@ -1,3 +1,5 @@
+import type {RuntimeEvent} from '../../src/agent/runtime-types.js';
+import {recordRunProgress,type RunActivity} from '../../src/task/run-progress.js';
 import {skillResourceTools} from '../../src/skill/resource-tool.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Context } from '@deepseek-ai/cordis';
@@ -57,13 +59,28 @@ async function fixture(withResources=false){
   }} as never);
   if(withResources)store.exec("INSERT INTO skill_execution_snapshots(owner_type,owner_id,workspace_id,agent_id,snapshot_json,created_at) VALUES('run','run',?,?,?,'now')",workspace.id,role.id,JSON.stringify({instructions:'Read data.csv',versions:[],resources:[{versionId:'captured-version',skillId:'captured-skill',path:'data.csv',bytes:8,sha256:'digest',contentBase64:Buffer.from('CAPTURED').toString('base64')}]}));
   const controller=new AbortController();
-  const handle=await startAnalysisBatch(ctx,store,lead,{task:store.task('task'),run:store.run('run'),role,cwd,prompt:'Audit source.',signal:controller.signal,tools:[...collaboration.runTools(store.run('run')),...skillResourceTools(store,'run','run',()=>{})]});
+  const progress:RunActivity[]=[],events:RuntimeEvent[]=[];
+  const handle=await startAnalysisBatch(ctx,store,lead,{task:store.task('task'),run:store.run('run'),role,cwd,prompt:'Audit source.',signal:controller.signal,onEvent:event=>events.push(event),onProgress:event=>{progress.push(event);recordRunProgress(store,'run',event);},tools:[...collaboration.runTools(store.run('run')),...skillResourceTools(store,'run','run',()=>{})]});
   await handle.result;
   const invoke=(name:string,args:unknown,agent=child!,signal=new AbortController().signal)=>ctx.tools.execute({name,arguments:args,agent,signal,callId:`call-${Math.random()}` as never});
-  return{ctx,store,home,cwd,handle,root:root!,child:child!,lead,leadRole,agents,controller,invoke,requestContext,setCleanupFailure:()=>{cleanupFailure=true;}};
+  return{events,progress,ctx,store,home,cwd,handle,root:root!,child:child!,lead,leadRole,agents,controller,invoke,requestContext,setCleanupFailure:()=>{cleanupFailure=true;}};
 }
 
 describe('analysis batch actual DSH tool scopes',()=>{
+  it('streams activity from the actual analysis descendant scope into the reserved Run projection',async()=>{
+    const f=await fixture();
+    await f.child.ctx.serial('agent/assistant-stream',{agent:f.child,frame:{type:'start',attemptId:'attempt'}} as never);
+    await f.child.ctx.serial('agent/assistant-stream',{agent:f.child,frame:{type:'chunk',attemptId:'attempt',chunk:{type:'reasoning-delta',text:'PRIVATE_REASONING',index:0}}} as never);
+    await f.child.ctx.serial('agent/assistant-stream',{agent:f.child,frame:{type:'chunk',attemptId:'attempt',chunk:{type:'text-delta',text:'正在检查源文件。',index:1}}} as never);
+    expect(f.events).toContainEqual(expect.objectContaining({type:'message.delta',text:'正在检查源文件。'}));
+    expect(JSON.stringify(f.events)).not.toContain('PRIVATE_REASONING');
+    const result=await f.invoke('rift_list_files',{path:'.'});
+    expect(result.isError).not.toBe(true);
+    expect(f.progress).toEqual(expect.arrayContaining([{phase:'thinking',step:true},{phase:'tool',toolName:'rift_list_files'},{phase:'tool_done',toolName:'rift_list_files'}]));
+    expect(f.store.require('SELECT model_steps,tool_calls,phase FROM run_progress WHERE run_id=?','run')).toEqual({modelSteps:1,toolCalls:1,phase:'tool_done'});
+    expect(JSON.stringify(f.store.all('SELECT * FROM run_progress'))).not.toContain('PRIVATE_REASONING');
+  });
+
   it('publishes with real global-only restriction and installs tools in each exact child scope',async()=>{
     const f=await fixture();
     expect(()=>f.root.ctx.tools.restrict({allow:['rift_send_message']})).toThrow(/unknown global tool/);

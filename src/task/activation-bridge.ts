@@ -1,3 +1,4 @@
+import { observeDshRun } from './run-progress.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { Agent, AgentOptions } from '@deepseek-ai/dsh-agent';
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm';
@@ -54,8 +55,9 @@ export class DshActivationBridge implements ActivationBridge {
     const removeTools=childId?this.ctx.on('agent/created',({agent})=>{
       if(agent.id!==childId)return;
       child=agent;
+      observeDshRun(agent,input.onProgress,input.onEvent);
       if(restrictInherited)agent.ctx.tools.restrict({allow:[]});
-      for(const tool of scopedTools)agent.ctx.tools.register({name:tool.name,description:tool.description,parameters:tool.inputSchema as ToolDefinition['parameters'],output:{schema:{},render:(_args,value)=>[{type:'text',text:redact(JSON.stringify(value))}]},execute:async(args,execution)=>{if(execution.agent!==agent||this.ctx.agents.get(agent.id)!==agent)throw new RiftError('UNAUTHORIZED','Only this live Run may use its scoped tools.');input.signal.throwIfAborted();execution.signal.throwIfAborted();return tool.execute(args,execution.signal);}});
+      for(const tool of scopedTools)agent.ctx.tools.register({name:tool.name,description:tool.description,parameters:tool.inputSchema as ToolDefinition['parameters'],output:{schema:{},render:(_args,value)=>[{type:'text',text:redact(JSON.stringify(value))}]},execute:async(args,execution)=>{if(execution.agent!==agent||this.ctx.agents.get(agent.id)!==agent)throw new RiftError('UNAUTHORIZED','Only this live Run may use its scoped tools.');input.signal.throwIfAborted();execution.signal.throwIfAborted();input.onProgress?.({phase:'tool',toolName:tool.name});try{const result=await tool.execute(args,execution.signal);input.onProgress?.({phase:'tool_done',toolName:tool.name});return result;}catch(error){input.onProgress?.({phase:'tool_failed',toolName:tool.name});throw error;}}});
       return undefined;
     }):undefined;
     let activation:Awaited<ReturnType<Context['subagents']['startActivation']>>;
