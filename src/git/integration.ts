@@ -3,8 +3,8 @@ import { mkdir, readFile, open, rename, realpath, lstat } from 'node:fs/promises
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Candidate, GitContext, GitService, ReviewResult, Run, Worktree, Workflow, Workspace } from '../contracts/index.js';
-import { execute, git, gitOk, worktreePorcelain } from './process.js';
-import { assertSafeFiles, checkoutClean, sourceCheckoutClean, inspectRepository, key, managedPath, withMetadataLock } from './worktree-binding.js';
+import { execute, git, gitOk, stageSourcePaths, worktreePorcelain } from './process.js';
+import { assertSafeFiles, checkoutClean, sourceCheckoutClean, sourceUntrackedFiles, inspectRepository, key, managedPath, withMetadataLock } from './worktree-binding.js';
 import { parseReviewReport } from './quality-gate.js';
 import { redact } from '../api/security.js';
 import type { CheckCommand, CheckEvidence, GitOperation } from './types.js';
@@ -96,7 +96,7 @@ export class LocalGitService implements GitService {
     let changedPaths = [...new Set([
       ...split((await git(cwd, ['diff', '--name-only', '-z', '--no-renames', worktree.baseCommit, '--'])).stdout),
       ...split((await git(cwd, ['diff', '--cached', '--name-only', '-z', '--no-renames', worktree.baseCommit, '--'])).stdout),
-      ...split((await git(cwd, ['ls-files', '--others', '--exclude-standard', '-z'])).stdout),
+      ...await sourceUntrackedFiles(cwd),
     ])].sort();
     if (!changedPaths.length) {
       const head = await gitOk(cwd, ['rev-parse', 'HEAD']);
@@ -114,7 +114,7 @@ export class LocalGitService implements GitService {
     // expectedPaths is legacy planning metadata, never a file allowlist.
     if (!changedPaths.length) throw new Error('EMPTY_CHANGE: change task has no actual diff');
     if (!reusedSource) {
-      await gitOk(cwd, ['add', '--', ...changedPaths]);
+      await stageSourcePaths(cwd,changedPaths);
       const staged = await git(cwd, ['diff', '--cached', '--quiet']);
       if (staged.exitCode === 1) await gitOk(cwd, ['-c', 'user.name=RIFT', '-c', 'user.email=rift@localhost', 'commit', '-m', `RIFT task ${task.id} attempt ${task.attempt}`]);
       else if (staged.exitCode !== 0) throw new Error('SOURCE_INDEX_INVALID');

@@ -4,7 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import type { GitContext, Run, ReviewResult, Candidate } from '../../src/contracts/index.js';
 import { LocalGitService } from '../../src/git/integration.js';
-import { gitOk } from '../../src/git/process.js';
+import { sourceCheckoutClean, checkoutClean } from '../../src/git/worktree-binding.js';
+import { gitOk,stageSourcePaths } from '../../src/git/process.js';
 
 const roots: string[] = [];
 afterEach(async () => { for (const root of roots.splice(0)) { if (!path.basename(root).startsWith('rift-git-')) throw new Error('unsafe test cleanup'); await rm(root, { recursive: true, force: true }); } });
@@ -28,6 +29,46 @@ async function fixture() {
   return { root, repositoryPath, baseCommit, service, workspace, workflow, context, run, develop, approve };
 }
 describe('real Git integration', () => {
+  it('collects existing committed source while preserving untracked pnpm stores in old worktrees',async()=>{
+    const f=await fixture(),ctx=f.context('cache'),run=f.run('cache'),worktree=await f.service.prepareTask({...ctx,run});
+    await writeFile(path.join(worktree.path,'feature.txt'),'feature');await gitOk(worktree.path,['add','feature.txt']);await gitOk(worktree.path,['commit','-m','candidate']);
+    const head=await gitOk(worktree.path,['rev-parse','HEAD']);
+    for(const folder of ['.pnpm-store/v10/files','nested/.pnpm-store/v10/files']){
+      await mkdir(path.join(worktree.path,folder),{recursive:true});await writeFile(path.join(worktree.path,folder,'cache'),'CACHE_PRESERVED');
+    }
+    const source=await f.service.collectSource({...ctx,run,worktree});
+    expect(source.sourceHead).toBe(head);expect(source.changedPaths).toEqual(['feature.txt']);
+    expect(await sourceCheckoutClean(worktree.path)).toBe(true);expect(await checkoutClean(worktree.path)).toBe(false);
+    expect(await readFile(path.join(worktree.path,'.pnpm-store/v10/files/cache'),'utf8')).toBe('CACHE_PRESERVED');
+    await expect(f.service.archiveWorktree({workspace:f.workspace,worktree,active:false,cleanupConfirmed:true,artifactsSaved:true})).rejects.toThrow('ARCHIVE_BLOCKED');
+  });
+  it('still collects tracked cache-name files and detects modifications to them',async()=>{
+    const f=await fixture(),ctx=f.context('tracked-cache'),run=f.run('tracked-cache'),worktree=await f.service.prepareTask({...ctx,run});
+    await mkdir(path.join(worktree.path,'.pnpm-store'));await writeFile(path.join(worktree.path,'.pnpm-store','tracked.txt'),'tracked');
+    await gitOk(worktree.path,['add','.pnpm-store/tracked.txt']);
+    const source=await f.service.collectSource({...ctx,run,worktree});expect(source.changedPaths).toContain('.pnpm-store/tracked.txt');
+    await writeFile(path.join(worktree.path,'.pnpm-store','tracked.txt'),'changed');expect(await sourceCheckoutClean(worktree.path)).toBe(false);
+  });
+  it('collects literal unusual filenames and staged deletions without pathspec expansion',async()=>{
+    const f=await fixture(),ctx=f.context('literal'),run=f.run('literal'),worktree=await f.service.prepareTask({...ctx,run});
+    const names=[' leading space.txt','[ab].txt','--option.txt',...process.platform==='win32'?[]:[':(glob)*','line\nbreak.txt']];
+    for(const name of names)await writeFile(path.join(worktree.path,name),'exact');
+    await rm(path.join(worktree.path,'base.txt'));
+    const source=await f.service.collectSource({...ctx,run,worktree});
+    expect(source.changedPaths.sort()).toEqual([...names,'base.txt'].sort());
+    expect((await gitOk(worktree.path,['ls-files','-z'])).split('\0')).not.toContain('base.txt');
+    expect(await sourceCheckoutClean(worktree.path)).toBe(true);
+  });
+  it('stages a legitimate source list larger than Linux ARG_MAX through stdin',async()=>{
+    const f=await fixture(),ctx=f.context('large'),run=f.run('large'),worktree=await f.service.prepareTask({...ctx,run});
+    const names=Array.from({length:12000},(_,n)=>`file-${String(n).padStart(5,'0')}-${'x'.repeat(175)}.txt`);
+    for(let i=0;i<names.length;i+=100)await Promise.all(names.slice(i,i+100).map(name=>writeFile(path.join(worktree.path,name),'source')));
+    expect(Buffer.byteLength(names.join('\0'))).toBeGreaterThan(2097152);
+    await stageSourcePaths(worktree.path,names);
+    expect((await gitOk(worktree.path,['diff','--cached','--name-only','-z'])).split('\0').filter(Boolean)).toHaveLength(names.length);
+    await gitOk(worktree.path,['commit','-m','large-source']);expect(await sourceCheckoutClean(worktree.path)).toBe(true);
+  },60000);
+
   it('runs real Git checks in linked candidates with read-only common metadata', async () => {
     const f=await fixture(),a=await f.develop('git-check','feature.txt','feature');
     const service=new LocalGitService({managedRoot:path.join(f.root,'git-check-managed'),commands:[{id:'diff-check',executable:'git',args:['diff','--check','HEAD^','HEAD']},{id:'metadata-readonly',executable:process.execPath,args:['-e',`const fs=require('fs'),cp=require('child_process');const dir=cp.execFileSync('git',['rev-parse','--path-format=absolute','--git-common-dir'],{encoding:'utf8'}).trim();try{fs.writeFileSync(dir+'/MUST_NOT_WRITE','bad');process.exit(1)}catch(e){if(e.code!=='EROFS'&&e.code!=='EACCES')throw e;}console.log('GIT_READABLE_METADATA_READONLY');`]}]});
