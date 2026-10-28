@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm, symlink, lstat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import type { GitContext, Run, ReviewResult, Candidate } from '../../src/contracts/index.js';
+import { CandidateEvidenceError, fingerprint } from '../../src/git/evidence.js';
 import { LocalGitService } from '../../src/git/integration.js';
 import { sourceCheckoutClean, checkoutClean } from '../../src/git/worktree-binding.js';
 import { gitOk,stageSourcePaths } from '../../src/git/process.js';
@@ -155,9 +156,118 @@ describe('real Git integration', () => {
     const f = await fixture(); const a = await f.develop('timeout', 'a.txt', 'A');
     const options = { managedRoot: f.service.managedRoot, commands: [{ id: 'hang', executable: process.execPath, args: ['-e', 'setInterval(()=>{},1000)'], timeoutMs: 100 }] };
     const service = new LocalGitService(options);
-    await expect(service.prepareCandidate({ ...a.ctx, sourceHead: a.source.sourceHead, integrationId: 'timeout-check' })).rejects.toThrow('CHECK_FAILED');
+    await expect(service.prepareCandidate({ ...a.ctx, sourceHead: a.source.sourceHead, integrationId: 'timeout-check' })).rejects.toThrow('EVIDENCE_NOT_READY');
     const operation = await service.readOperation(f.workspace, 'timeout-check');
     const restarted = new LocalGitService(options);
     await expect(restarted.archiveWorktree({ workspace: f.workspace, worktree: { ...a.worktree, kind: 'candidate', path: operation.candidatePath }, active: false, cleanupConfirmed: true, artifactsSaved: true })).rejects.toThrow('descendant cleanup is unconfirmed');
   });
+  it.each([true, false])('makes timed-out checks a durable hard gate (required=%s), with reboot-only cleanup recovery', async required => {
+    const f=await fixture(),a=await f.develop('timeout-gate','a.txt','A'),integrationId='timeout-gate';
+    const unit={id:'unit',executable:process.execPath,args:['-e','process.exit(0)']};
+    const hang={id:'hang',executable:process.execPath,args:['-e','setInterval(()=>{},1000)'],timeoutMs:100,required};
+    const options={managedRoot:f.service.managedRoot,commands:[unit,hang]};
+    const service=new LocalGitService(options);let candidate!:Candidate;
+    try { await service.prepareCandidate({...a.ctx,sourceHead:a.source.sourceHead,integrationId}); }
+    catch(error) { expect(error).toBeInstanceOf(CandidateEvidenceError);expect(error).toMatchObject({cleanupUnknown:true,readiness:{status:'environment_unavailable',cleanupStatus:'unknown'}});candidate=(error as CandidateEvidenceError).candidate; }
+    const operation=await service.readOperation(f.workspace,integrationId);
+    expect(operation.checks?.map(check=>check.exitCode)).toEqual([0,124]);
+    await expect(lstat(operation.reviewPath)).rejects.toMatchObject({code:'ENOENT'});
+    const restarted=new LocalGitService(options);
+    expect(await restarted.candidateReadiness({...a.ctx,candidate})).toMatchObject({status:'environment_unavailable',cleanupStatus:'unknown'});
+    await expect(restarted.publishCandidate({...a.ctx,candidate,review:f.approve(a.ctx,candidate)})).rejects.toMatchObject({cleanupUnknown:true});
+    const attempts=await Promise.allSettled(['one','two'].map(idempotencyKey=>restarted.resumeCandidate({...a.ctx,integrationId,candidateHead:candidate.candidateHead,idempotencyKey})));
+    expect(attempts.every(result=>result.status==='rejected')).toBe(true);
+    expect((await restarted.readOperation(f.workspace,integrationId)).checks?.map(check=>check.id)).toEqual(candidate.checkIds);
+    // Removing the sidecar or changing configuration cannot certify process cleanup.
+    await rm(path.join(service.managedRoot,'quarantine'),{recursive:true});
+    const repaired=new LocalGitService({managedRoot:service.managedRoot,commands:[unit]});
+    expect(await repaired.candidateReadiness({...a.ctx,candidate})).toMatchObject({cleanupStatus:'unknown'});
+    const before=`v1:${'a'.repeat(64)}:${'1'.repeat(64)}`,after=`v1:${'a'.repeat(64)}:${'2'.repeat(64)}`;
+    await expect(repaired.reconcileCandidateCleanup({...a.ctx,candidate,previousBootId:before,currentBootId:before})).rejects.toThrow('CLEANUP_UNKNOWN');
+    await expect(repaired.reconcileCandidateCleanup({...a.ctx,candidate,previousBootId:before,currentBootId:after.replace('a'.repeat(64),'b'.repeat(64))})).rejects.toThrow('CLEANUP_UNKNOWN');
+    await repaired.reconcileCandidateCleanup({...a.ctx,candidate,previousBootId:before,currentBootId:after});
+    expect((await repaired.readOperation(f.workspace,integrationId)).cleanupRebootProof).toEqual({previousBootId:before,currentBootId:after});
+    const resumed=await repaired.resumeCandidate({...a.ctx,integrationId,candidateHead:candidate.candidateHead,idempotencyKey:'after-reboot'});
+    expect(resumed.readiness).toMatchObject({status:'ready',cleanupStatus:'confirmed'});
+    expect(await repaired.publishCandidate({...a.ctx,candidate:resumed,review:f.approve(a.ctx,resumed)})).toEqual({acceptedCommit:candidate.candidateHead});
+  });
+  it('persists immutable redacted Host attachments and rejects wrong bindings, log paths and forged sources', async () => {
+    const f=await fixture(),a=await f.develop('evidence','a.txt','A');
+    const options={managedRoot:f.service.managedRoot,commands:[{id:'log',executable:process.execPath,args:['-e',`console.log('token=private-credential-value');console.log('x'.repeat(70000))`]}]};
+    const service=new LocalGitService(options),candidate=await service.prepareCandidate({...a.ctx,sourceHead:a.source.sourceHead,integrationId:'evidence'});
+    const check=candidate.checks![0]!,operation=await service.readOperation(f.workspace,'evidence');
+    expect(check.host).toMatchObject({executionSource:'host',workspaceId:f.workspace.id,taskId:a.ctx.task.id,attempt:1,integrationId:'evidence',candidateHead:candidate.candidateHead,exitStatus:'passed'});
+    expect(check.truncated).toBe(true);expect(JSON.stringify(operation)).not.toContain('private-credential-value');
+    const restarted=new LocalGitService(options),input={...a.ctx,integrationId:'evidence',checkId:check.id};
+    const full=await restarted.readCheckEvidence(input);expect(full.stdout.length).toBeGreaterThan(check.stdout.length);expect(full.stdout).toContain('[REDACTED]');
+    await expect(restarted.readOperation({...f.workspace,id:'foreign'},'evidence')).rejects.toThrow();
+    await expect(restarted.readCheckEvidence({...input,checkId:'../../management.token'})).rejects.toThrow('UNSAFE_EVIDENCE_PATH');
+    await expect(restarted.candidateReadiness({...a.ctx,candidate:{...candidate,candidateHead:f.baseCommit}})).rejects.toThrow('CANDIDATE_EVIDENCE_MISMATCH');
+    await expect(restarted.candidateReadiness({...a.ctx,task:{...a.ctx.task,attempt:2},candidate})).rejects.toThrow('CANDIDATE_EVIDENCE_MISMATCH');
+    expect((await restarted.readCheckEvidence({...input,task:{...a.ctx.task,attempt:2,sourceHead:f.baseCommit}})).id).toBe(check.id);
+    const {key}=await import('../../src/git/worktree-binding.js');
+    const actual=path.join(service.managedRoot,key(f.workspace.id),'operations',key('evidence'));
+    const journal=path.join(actual,'operation.json'),saved=JSON.parse(await readFile(journal,'utf8'));
+    saved.checks[0].host.executionSource='developer';await writeFile(journal,JSON.stringify(saved));
+    await expect(restarted.readOperation(f.workspace,'evidence')).rejects.toThrow('CANDIDATE_EVIDENCE_MISMATCH');
+    saved.checks=operation.checks;await writeFile(journal,JSON.stringify(saved));
+    const attachment=path.join(actual,`${check.id}.json`);await rm(attachment);await symlink(path.join(f.repositoryPath,'base.txt'),attachment);
+    await expect(restarted.readOperation(f.workspace,'evidence')).rejects.toThrow();
+    await service.abandonCandidate({...a.ctx,candidate,reason:'done'}).catch(()=>{});
+  });
+  it('supplements the same persisted candidate after environment repair and invalidates changed check configuration', async () => {
+    const f=await fixture(),a=await f.develop('supplement','a.txt','A'),integrationId='supplement';
+    const bad={id:'unit',executable:'rift-missing-executable',args:[]};
+    const service=new LocalGitService({managedRoot:f.service.managedRoot,commands:[bad]});
+    await expect(service.prepareCandidate({...a.ctx,sourceHead:a.source.sourceHead,integrationId})).rejects.toMatchObject({readiness:{status:'environment_unavailable',blockers:[{classification:'environment_unavailable',commandId:'unit',reason:expect.any(String)}]}});
+    const original=await service.readOperation(f.workspace,integrationId);
+    const repaired=new LocalGitService({managedRoot:f.service.managedRoot,commands:[{id:'unit',executable:process.execPath,args:['-e','console.log("repaired")']},{id:'advisory',executable:process.execPath,args:['-e','process.exit(3)'],required:false}]});
+    const candidate=await repaired.resumeCandidate({...a.ctx,integrationId,candidateHead:original.candidateHead!,idempotencyKey:'repair'});
+    expect(candidate.candidateHead).toBe(original.candidateHead);expect(candidate.readiness).toMatchObject({status:'ready',blockers:[{classification:'optional'}]});
+    const repeated=await repaired.resumeCandidate({...a.ctx,integrationId,candidateHead:original.candidateHead!,idempotencyKey:'repair'});
+    expect(repeated.checkIds).toEqual(candidate.checkIds);
+    expect((await repaired.readCheckEvidence({...a.ctx,integrationId,checkId:original.checks![0]!.id})).host?.exitStatus).toBe('environment_unavailable');
+    const changed=new LocalGitService({managedRoot:f.service.managedRoot,commands:[{id:'unit',executable:process.execPath,args:['-e','console.log("changed")']}]});
+    expect(await changed.candidateReadiness({...a.ctx,candidate})).toMatchObject({status:'waiting_evidence',missingCheckIds:['unit']});
+    await expect(changed.publishCandidate({...a.ctx,candidate,review:f.approve(a.ctx,candidate)})).rejects.toThrow('EVIDENCE_NOT_READY');
+    await expect(repaired.resumeCandidate({...a.ctx,integrationId,candidateHead:f.baseCommit,idempotencyKey:'wrong-head'})).rejects.toThrow('CANDIDATE_EVIDENCE_MISMATCH');
+    await gitOk(f.repositoryPath,['update-ref',f.workflow.integrationRef,a.source.sourceHead]);
+    await expect(repaired.resumeCandidate({...a.ctx,integrationId,candidateHead:original.candidateHead!,idempotencyKey:'stale-target'})).rejects.toThrow('STALE_TARGET');
+  });
+  it('publishes with an explicitly optional ordinary failure without claiming that check passed',async()=>{
+    const f=await fixture(),a=await f.develop('optional','a.txt','A');
+    const service=new LocalGitService({managedRoot:f.service.managedRoot,commands:[{id:'required',executable:process.execPath,args:['-e','process.exit(0)']},{id:'optional',executable:process.execPath,args:['-e','process.exit(3)'],required:false}]});
+    const candidate=await service.prepareCandidate({...a.ctx,sourceHead:a.source.sourceHead,integrationId:'optional'});
+    expect(candidate.readiness).toMatchObject({status:'ready',cleanupStatus:'confirmed',blockers:[{classification:'optional'}]});
+    expect(candidate.checks?.[1]).toMatchObject({exitCode:3,host:{exitStatus:'failed'}});
+    expect(await service.publishCandidate({...a.ctx,candidate,review:f.approve(a.ctx,candidate)})).toEqual({acceptedCommit:candidate.candidateHead});
+  });
+  it('keeps old records readable without treating legacy or interrupted checks as passed Host evidence', async () => {
+    const f=await fixture(),a=await f.develop('legacy','a.txt','A');
+    const candidate=await f.service.prepareCandidate({...a.ctx,sourceHead:a.source.sourceHead,integrationId:'legacy'});
+    await f.service.abandonCandidate({...a.ctx,candidate,reason:'simulate restart'});
+    const {key}=await import('../../src/git/worktree-binding.js');
+    const file=path.join(f.service.managedRoot,key(f.workspace.id),'operations',key('legacy'),'operation.json');
+    const saved=JSON.parse(await readFile(file,'utf8'));delete saved.checks[0].host;await writeFile(file,JSON.stringify(saved));
+    expect((await f.service.readOperation(f.workspace,'legacy')).checks).toHaveLength(1);
+    expect(await f.service.candidateReadiness({...a.ctx,candidate})).toMatchObject({status:'waiting_evidence',missingCheckIds:['unit']});
+    saved.evidenceRequests={[fingerprint('interrupted')]:{candidateHead:candidate.candidateHead,complete:false}};await writeFile(file,JSON.stringify(saved));
+    const restarted=new LocalGitService({managedRoot:f.service.managedRoot,commands:[{id:'unit',executable:process.execPath,args:['-e','process.stdout.write("verified")']}]});
+    await expect(restarted.resumeCandidate({...a.ctx,integrationId:'legacy',candidateHead:candidate.candidateHead,idempotencyKey:'interrupted'})).rejects.toThrow('REQUEST_PENDING');
+    expect((await restarted.readOperation(f.workspace,'legacy')).checks![0]!.id).toBe(candidate.checkIds[0]);
+  });
+
+  it('keeps an unexecuted required configuration waiting and ignores only explicitly removed optional checks', async () => {
+    const f=await fixture(),a=await f.develop('unconfigured','a.txt','A'),integrationId='unconfigured';
+    const missing=new LocalGitService({managedRoot:f.service.managedRoot,commands:[]});
+    await expect(missing.prepareCandidate({...a.ctx,sourceHead:a.source.sourceHead,integrationId})).rejects.toMatchObject({readiness:{status:'waiting_evidence',blockers:[{classification:'evidence_missing',commandId:'',reason:expect.any(String)}]}});
+    const operation=await missing.readOperation(f.workspace,integrationId);expect(operation.checks??[]).toEqual([]);
+    const unit={id:'unit',executable:process.execPath,args:['-e','console.log("required")']};
+    const supplied=new LocalGitService({managedRoot:f.service.managedRoot,commands:[unit,{id:'optional',executable:process.execPath,args:['-e','process.exit(1)'],required:false}]});
+    const candidate=await supplied.resumeCandidate({...a.ctx,integrationId,candidateHead:operation.candidateHead!,idempotencyKey:'configure'});
+    const removed=new LocalGitService({managedRoot:f.service.managedRoot,commands:[unit]});
+    expect(await removed.candidateReadiness({...a.ctx,candidate})).toMatchObject({status:'ready'});
+    expect(await removed.publishCandidate({...a.ctx,candidate,review:f.approve(a.ctx,candidate)})).toEqual({acceptedCommit:operation.candidateHead});
+  });
+
 });

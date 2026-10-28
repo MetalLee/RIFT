@@ -44,6 +44,11 @@ for(const action of ['stop','reconcile'])route('POST',`${w}/turns/:id/${action}`
 route('GET',`${w}/tasks`,'task.list');
 route('GET',`${w}/tasks/:id`,'task.show');
 route('GET',`${w}/tasks/:id/evidence`,'task.evidence');
+route('POST',`${w}/tasks/:id/evidence`,'task.supplement-evidence');
+route('GET',`${w}/tasks/:id/evidence/log`,'task.evidence-log');
+route('GET','/v1/workspaces/:workspaceId/tasks/:id/evidence','task.evidence');
+route('POST','/v1/workspaces/:workspaceId/tasks/:id/evidence','task.supplement-evidence');
+route('GET','/v1/workspaces/:workspaceId/tasks/:id/evidence/log','task.evidence-log');
 route('POST',`${w}/tasks/:id/retry`,'task.retry-dispatch');
 route('POST',`${w}/runs/:id/reconcile`,'run.reconcile');
 route('POST',`${w}/integrations/:id/reconcile`,'integration.reconcile');
