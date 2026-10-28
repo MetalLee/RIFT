@@ -345,7 +345,7 @@ export class ChatService {
       const repositoryAccess=turn.configuration.conversationTitle?undefined:await this.options.repositoryAccess?.(turn.workspaceId);
       const stagingScope=runtime.persistentSessions&&!turn.configuration.conversationTitle?createHash('sha256').update(JSON.stringify([turn.workspaceId,turn.conversationId,turn.agentId])).digest('hex'):turn.id;
       const cwd=repositoryAccess?.repositoryPaths[0] ?? repositoryAccess?.workspaceDirectory ?? path.resolve(this.options.home,'chat-staging',stagingScope);
-      const runtimeAccess={permissionVersion:REPOSITORY_PERMISSION_VERSION,cwd,repositoryPaths:repositoryAccess?.repositoryPaths??[],workspaceDirectory:repositoryAccess?.workspaceDirectory};
+      const runtimeAccess={permissionVersion:REPOSITORY_PERMISSION_VERSION,sandboxMode:repositoryAccess?.sandboxMode??'sandboxed',cwd,repositoryPaths:repositoryAccess?.repositoryPaths??[],workspaceDirectory:repositoryAccess?.workspaceDirectory};
       if (runtime.persistentSessions && !turn.configuration.conversationTitle) {
         native = nativeSession(this.store, {workspaceId:turn.workspaceId,scope:'chat',scopeId:turn.conversationId,agentId:turn.agentId,cwd,
           configuration:{connection:turn.configuration.connection,agentPrompt:turn.configuration.agent.prompt,purpose:turn.configuration.agent.purpose,runtimeAccess,skills:turn.configuration.skillInstructions??'',tools:tools.map(({name,description,inputSchema})=>({name,description,inputSchema}))}});

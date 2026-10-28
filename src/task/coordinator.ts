@@ -1,3 +1,4 @@
+import { agentSandboxMode } from '../agent/sandbox-mode.js';
 import { RunChatStream } from './run-stream.js';
 import { recordRunProgress } from './run-progress.js';
 import type { RepositoryAccess } from '../agent/repository-access.js';
@@ -277,13 +278,16 @@ export class TaskCoordinator {
       let requestVersion=expectedVersion;
       if(kind==='integration'&&task.status==='blocked'&&task.kind==='change'&&task.sourceHead===sourceHead){
         const latest=this.store.get<Run>('SELECT * FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1',task.id);
-        invariant(latest?.purpose==='review'&&latest.taskAttempt===task.attempt&&['failed','interrupted'].includes(latest.status),'INVALID_STATE','Only an infrastructure-failed review can retry integration without development.');
+        const report=latest?.result as Partial<ReviewResult>|null|undefined;
+        const previous=latest?this.store.get<IntegrationRecord>("SELECT * FROM integrations WHERE task_id=? AND review_run_id=? AND source_head=? AND status='blocked' ORDER BY rowid DESC LIMIT 1",task.id,latest.id,sourceHead):undefined;
+        const blockedReview=latest?.status==='succeeded'&&report?.verdict==='blocked'&&report.taskId===task.id&&report.runId===latest.id&&!!previous?.candidate&&report.reviewedCommit===previous.candidate.candidateHead;
+        invariant(latest?.purpose==='review'&&latest.taskAttempt===task.attempt&&(['failed','interrupted'].includes(latest.status)||blockedReview),'INVALID_STATE','Only an infrastructure-failed or explicitly blocked review can retry integration without development; changes_requested requires development.');
         invariant(!this.store.get("SELECT id FROM runs WHERE task_id=? AND (slot_released_at IS NULL OR cleanup_status<>'confirmed')",task.id),'CLEANUP_UNKNOWN','All previous execution cleanup must be confirmed before review retry.');
         invariant(!this.store.get("SELECT id FROM integrations WHERE task_id=? AND status IN ('preparing','reviewing','publishing','cleanup_unknown')",task.id),'INTEGRATION_ACTIVE','Previous integration must settle before review retry.');
         invariant(!this.store.get("SELECT id FROM operations WHERE entity_id=? AND phase IN ('queued','started')",task.id),'FINALIZATION_PENDING','Previous task requests must settle before review retry.');
         this.store.exec("UPDATE tasks SET status='validating',blocking_reason=NULL,version=version+1 WHERE id=?",task.id);
         requestVersion++;
-        this.store.event(workflow.id,'review.retry_requested',{sourceHead,previousRunId:latest.id},{taskId});
+        this.store.event(workflow.id,'review.retry_requested',{sourceHead,previousRunId:latest.id,reason:blockedReview?'review_blocked':'infrastructure_failure'},{taskId});
       }else invariant(kind==='dispatch'?['pending','ready'].includes(task.status):task.kind==='change'&&task.status==='validating'&&task.sourceHead===sourceHead,'INVALID_STATE','Task is not eligible for this request.');
       const role=roleName?this.store.require<Role>("SELECT * FROM roles WHERE workspace_id=? AND name=? AND purpose='developer' AND enabled=1",workflow.workspaceId,roleName):undefined;
       const payload:Operation['payload']={expectedVersion:requestVersion,planRevision:workflow.planRevision};
@@ -405,7 +409,7 @@ export class TaskCoordinator {
     const aborted=new Promise<never>((_,reject)=>{abortListener=()=>reject(new RiftError('CANCELLED','Run was cancelled.'));state.controller.signal.addEventListener('abort',abortListener,{once:true});});
     void aborted.catch(()=>undefined);
     try {
-      const repositoryAccess=task.kind==='change'&&run.purpose!=='review'?await this.collaboration.repositoryAccess?.(this.store.workflow(task.workflowId).workspaceId):undefined;
+      const repositoryAccess=!task.analysisItems?.length&&((task.kind==='change'&&run.purpose!=='review')||agentSandboxMode()==='unrestricted')?await this.collaboration.repositoryAccess?.(this.store.workflow(task.workflowId).workspaceId):undefined;
       const prompt=await this.prompt(run,task,cwd,candidate,worktree,repositoryAccess);
       if(state.controller.signal.aborted)throw new RiftError('ABORTED_BEFORE_START','Run was cancelled before provider invocation.');
       this.store.transaction(()=>{const input=safeValue(JSON.parse(prompt));const artifactId=saveResultArtifact(this.store,this.store.workflow(task.workflowId).workspaceId,run.id,input,'input');this.store.event(task.workflowId,'run.input_prepared',{artifactId,promptSha256:createHash('sha256').update(JSON.stringify(input)).digest('hex'),cwd,baseCommit:worktree?.baseCommit??candidate?.candidateHead??null,sourceHead:task.sourceHead,candidateHead:candidate?.candidateHead??null},{taskId:task.id,runId:run.id});});
