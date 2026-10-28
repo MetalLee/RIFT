@@ -56,3 +56,13 @@
 .chat-progress ul { margin:8px 0; padding-left:18px; }
 .chat-progress li { margin:6px 0; overflow-wrap:anywhere; }
 .message-recipient { color:var(--muted-foreground); }
+
+/* Evidence identities and diagnostics must remain readable in narrow detail panes. */
+.task-evidence, .integration-evidence, .review-evidence, .chat-notices { min-width:0; overflow-wrap:anywhere; }
+.task-evidence .copy-field { min-width:0; }
+.task-evidence .copy-field code { min-width:0; overflow-wrap:anywhere; white-space:normal; }
+.task-evidence .pill { white-space:normal; flex-shrink:1; overflow:visible; }
+.task-evidence summary:focus-visible, .chat-progress summary:focus-visible { outline:2px solid var(--ring); outline-offset:3px; }
+.chat-notices { margin-top:12px; }
+.chat-notices ul { padding-left:20px; }
+.chat-notices li { margin:8px 0; white-space:pre-wrap; }

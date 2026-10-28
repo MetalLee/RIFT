@@ -13,7 +13,7 @@ describe('conversation author and attached work',()=>{
   it('places progress and the task tag under the matching delegation, not an unrelated newer message',()=>{
     const delegated=message('delegation',{role:'assistant',senderType:'agent',senderAgentId:'lead',recipientAgentId:'developer',taskId:'task-a'});
     const result=buildChatTimeline([delegated,message('other'),message('progress',{senderType:'agent',role:'assistant',senderAgentId:'developer',kind:'progress',taskId:'task-a',content:'Checking'})],[],[]);
-    expect(result.items).toHaveLength(2);expect(result.items[0]!.taskIds).toEqual(['task-a']);expect(result.items[0]!.updates[0]?.content).toBe('Checking');expect(result.items[1]!.updates).toEqual([]);
+    expect(result.items).toHaveLength(2);expect(result.items.find(item=>item.message.id==='delegation')!.taskIds).toEqual(['task-a']);expect(result.items.find(item=>item.message.id==='delegation')!.updates[0]?.content).toBe('Checking');expect(result.items.find(item=>item.message.id==='other')!.updates).toEqual([]);
   });
   it('merges draft chunks by monotonic seq and replaces the draft with its final sourceTurnId message',()=>{
     const chunks=[{seq:2,turnId:'turn',text:'world'},{seq:1,turnId:'turn',text:'hello '},{seq:1,turnId:'turn',text:'hello '}] as MessageChunk[];
@@ -51,4 +51,19 @@ describe('conversation author and attached work',()=>{
     expect(settled[1]!.message.status).toBe('interrupted');
   });
 
+});
+
+it('deduplicates versioned messages and decision receipts by identity, independent of replay order',()=>{
+  const input=message('input',{createdAt:'2026-01-01T00:00:00Z',taskId:'task-a'});
+  const old=message('notice',{senderType:'system',role:'system',kind:'receipt',version:0,content:'old',taskId:'task-a',dedupeKey:'event:7:c',createdAt:'2026-01-01T00:00:02Z'});
+  const current={...old,version:1,content:'需要用户决定是否继续'};
+  const decision={id:'decision',workspaceId:'ws',conversationId:'c',workflowId:'wf',eventSeq:7,payload:{eventSeq:7,type:'coordination.blocked',reason:'COORDINATION_AUTOMATIC_BUDGET',workflowId:'wf',taskId:'task-a'},createdAt:current.createdAt};
+  const routine={...decision,id:'routine',eventSeq:6,payload:{eventSeq:6,type:'source.collected',workflowId:'wf',taskId:'task-a'},createdAt:'2026-01-01T00:00:01Z'};
+  const one=buildChatTimeline([input,old,current],[],[],[decision,routine,decision]);
+  const replay=buildChatTimeline([current,input,old],[],[],[routine,decision]);
+  expect(replay).toEqual(one);
+  const updates=one.items[0]!.updates;
+  expect(updates).toHaveLength(2);
+  expect(updates[0]).toMatchObject({type:'source.collected',collapsible:true});
+  expect(updates[1]).toMatchObject({type:'coordination.blocked',content:'需要用户决定是否继续',collapsible:false});
 });
