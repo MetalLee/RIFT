@@ -1,6 +1,6 @@
 import { Button } from './components/ui/button';
 import { useState } from 'react';
-import type { UiIntegration } from '../../src/api/ui-contracts';
+import type { UiIntegration } from '@rift/protocol';
 import { errorText, mutate } from './api';
 export function IntegrationRecovery({ workspaceId, integration, csrf, onChanged }: { workspaceId: string; integration: UiIntegration; csrf: string; onChanged: () => void }) {
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');

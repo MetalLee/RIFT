@@ -1,4 +1,4 @@
-import type { UiTask } from '../../src/api/ui-contracts';
+import type { UiTask } from '@rift/protocol';
 /** Stable topological order. Missing/cyclic evidence remains visible at the end instead of being discarded. */
 export function dependencyOrder(tasks: UiTask[]): UiTask[] {
   const byId = new Map(tasks.map(task => [task.id, task])); const remaining = new Map<string, number>(); const dependents = new Map<string, string[]>();

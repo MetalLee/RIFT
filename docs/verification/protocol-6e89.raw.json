@@ -1,0 +1,117 @@
+{
+  "candidate": "6e89c201372410229537dd2f9ec5dbffc00b172c",
+  "tree": "cb30d9f32a7d9b5bf7456369174ec508241cf9f5",
+  "trackedFilesVerifiedBeforeAndAfter": 667,
+  "executor": "Lead via Host rift_exec_command",
+  "cwd": "/data/projects/RIFT/.rift/workspaces/workspace-a6791aae-4934-4069-a7d9-870bf02d2539/workspace/verify-8a31a8f",
+  "limitations": [
+    "Existing installed dependencies reused; direct tool invocations, not pnpm scripts (earlier pnpm auto-install NO_TTY failure)",
+    "No browser E2E/visual or empty-cache installation"
+  ],
+  "results": [
+    {
+      "command": [
+        "/usr/local/bin/node",
+        "/data/projects/RIFT/node_modules/typescript/bin/tsc",
+        "-p",
+        "packages/protocol/tsconfig.json"
+      ],
+      "startedAt": "2026-10-28T08:31:40.369Z",
+      "finishedAt": "2026-10-28T08:31:41.152Z",
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/node",
+        "/data/projects/RIFT/node_modules/typescript/bin/tsc",
+        "--noEmit"
+      ],
+      "startedAt": "2026-10-28T08:31:41.152Z",
+      "finishedAt": "2026-10-28T08:31:50.345Z",
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/node",
+        "/data/projects/RIFT/node_modules/typescript/bin/tsc",
+        "-p",
+        "ui/tsconfig.json"
+      ],
+      "startedAt": "2026-10-28T08:31:50.345Z",
+      "finishedAt": "2026-10-28T08:31:55.998Z",
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/node",
+        "/data/projects/RIFT/node_modules/typescript/bin/tsc",
+        "-p",
+        "tests/protocol/tsconfig.json"
+      ],
+      "startedAt": "2026-10-28T08:31:55.998Z",
+      "finishedAt": "2026-10-28T08:31:57.946Z",
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/node",
+        "scripts/check-protocol.mjs"
+      ],
+      "startedAt": "2026-10-28T08:31:57.946Z",
+      "finishedAt": "2026-10-28T08:31:58.950Z",
+      "exitCode": 0,
+      "stdout": "Protocol: isolated package consumer, empty runtime, and UI/server boundary passed.\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/node",
+        "/data/projects/RIFT/node_modules/vitest/vitest.mjs",
+        "run",
+        "tests/protocol",
+        "ui/src"
+      ],
+      "startedAt": "2026-10-28T08:31:58.950Z",
+      "finishedAt": "2026-10-28T08:32:02.614Z",
+      "exitCode": 0,
+      "stdout": "\n\u001b[1m\u001b[46m RUN \u001b[49m\u001b[22m \u001b[36mv4.0.18 \u001b[39m\u001b[90m/data/projects/RIFT/.rift/workspaces/workspace-a6791aae-4934-4069-a7d9-870bf02d2539/workspace/verify-8a31a8f\u001b[39m\n\n \u001b[32m✓\u001b[39m ui/src/skill-library.test.tsx \u001b[2m(\u001b[22m\u001b[2m8 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 136\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m ui/src/task-diagnostics.test.tsx \u001b[2m(\u001b[22m\u001b[2m1 test\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 73\u001b[2mms\u001b[22m\u001b[39m\n\u001b[90mstdout\u001b[2m | tests/protocol/boundary.test.ts\u001b[2m > \u001b[22m\u001b[2mclient dependency boundary\u001b[2m > \u001b[22m\u001b[2mconsumes only the built package entry without repo sources or Node types\n\u001b[22m\u001b[39mProtocol: isolated package consumer, empty runtime, and UI/server boundary passed.\n\n \u001b[32m✓\u001b[39m ui/src/api.test.ts \u001b[2m(\u001b[22m\u001b[2m12 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 34\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m tests/protocol/boundary.test.ts \u001b[2m(\u001b[22m\u001b[2m8 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 962\u001b[2mms\u001b[22m\u001b[39m\n     \u001b[33m\u001b[2m✓\u001b[22m\u001b[39m consumes only the built package entry without repo sources or Node types \u001b[33m 936\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m ui/src/chat-timeline.test.ts \u001b[2m(\u001b[22m\u001b[2m6 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 20\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m ui/src/worktree-delete.test.tsx \u001b[2m(\u001b[22m\u001b[2m3 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 16\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m ui/src/protocol-contract.test.ts \u001b[2m(\u001b[22m\u001b[2m3 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 11\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m ui/src/connection-verification.test.tsx \u001b[2m(\u001b[22m\u001b[2m1 test\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 12\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m ui/src/workspace-stream.test.ts \u001b[2m(\u001b[22m\u001b[2m2 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 15\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m ui/src/browser-platform.test.ts \u001b[2m(\u001b[22m\u001b[2m1 test\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 8\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m ui/src/stream-state.test.tsx \u001b[2m(\u001b[22m\u001b[2m6 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 163\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m ui/src/chat-state.test.ts \u001b[2m(\u001b[22m\u001b[2m6 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 8\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m ui/src/state.test.ts \u001b[2m(\u001b[22m\u001b[2m4 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 5\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m ui/src/task-order.test.ts \u001b[2m(\u001b[22m\u001b[2m1 test\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 5\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m tests/protocol/wire.test.ts \u001b[2m(\u001b[22m\u001b[2m1 test\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 3\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m tests/protocol/build-boundary.test.ts \u001b[2m(\u001b[22m\u001b[2m5 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 5\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m16 passed\u001b[39m\u001b[22m\u001b[90m (16)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m68 passed\u001b[39m\u001b[22m\u001b[90m (68)\u001b[39m\n\u001b[2m   Start at \u001b[22m 08:31:59\n\u001b[2m   Duration \u001b[22m 3.15s\u001b[2m (transform 1.61s, setup 0ms, import 4.10s, tests 1.48s, environment 3ms)\u001b[22m\n\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/node",
+        "/data/projects/RIFT/node_modules/typescript/bin/tsc",
+        "-p",
+        "tsconfig.build.json"
+      ],
+      "startedAt": "2026-10-28T08:32:02.614Z",
+      "finishedAt": "2026-10-28T08:32:08.644Z",
+      "exitCode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/usr/local/bin/node",
+        "/data/projects/RIFT/node_modules/vite/bin/vite.js",
+        "build",
+        "--config",
+        "ui/vite.config.ts",
+        "ui"
+      ],
+      "startedAt": "2026-10-28T08:32:08.644Z",
+      "finishedAt": "2026-10-28T08:32:09.994Z",
+      "exitCode": 0,
+      "stdout": "vite v8.3.5 building client environment for production...\ntransforming...\n✓ 2343 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/ui/index.html                   0.45 kB │ gzip:   0.32 kB\ndist/ui/assets/index-DXOz_3Rj.css  218.98 kB │ gzip:  58.49 kB\ndist/ui/assets/index-NAP9xf9r.js   687.63 kB │ gzip: 209.78 kB\n\n✓ built in 879ms\n",
+      "stderr": "[plugin builtin:vite-reporter] \n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\n"
+    }
+  ]
+}

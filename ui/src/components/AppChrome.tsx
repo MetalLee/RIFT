@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import type { UiWorkspaceDetail, UiWorkspaceList } from '../../../src/api/ui-contracts';
+import type { UiWorkspaceDetail, UiWorkspaceList } from '@rift/protocol';
 import { routeHref, type Page } from '../state';
 import { Icon } from './Icon';
 import { Button } from './ui/button';

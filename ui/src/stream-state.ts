@@ -1,5 +1,4 @@
-import type { ChatPage, StreamMessage, TurnActivity } from '../../src/chat/contracts';
-import type { WorkspaceEvent } from '../../src/events/workspace-events';
+import type { ChatPage, StreamMessage, TurnActivity, WorkspaceEvent } from '@rift/protocol';
 
 /** Apply ordered, redacted SSE deltas. A missing base requires a fresh snapshot. */
 export function applyMessageEvent(page: ChatPage, event: WorkspaceEvent): ChatPage | undefined {

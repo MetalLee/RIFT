@@ -1,7 +1,7 @@
 import { randomId } from './browser-platform';
 import { WorkspaceTopology } from './components/WorkspaceTopology';
 import { useRef, useState, type FormEvent } from 'react';
-import type { UiWorkspaceList } from '../../src/api/ui-contracts';
+import type { UiWorkspaceList } from '@rift/protocol';
 import { api, errorText } from './api';
 import { routeHref } from './state';
 import { Empty, Heading, Pill } from './App';

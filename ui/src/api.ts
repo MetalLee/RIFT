@@ -1,14 +1,11 @@
 import { randomId } from './browser-platform';
-import type { UiSession, UiWorkspaceCreate, UiWorkspaceDetail, UiWorkspaceList } from '../../src/api/ui-contracts';
+import type { ApiConnectionCreate, ErrorCode, UiSession, UiWorkspaceCreate, UiWorkspaceDetail, UiWorkspaceList } from '@rift/protocol';
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string, public code?: string) { super(message); }
+  constructor(public status: number, message: string, public code?: ErrorCode) { super(message); }
 }
 
-export interface ApiConnectionCreate {
-  name: string; protocol: 'openai-completions'|'openai-responses'|'anthropic-messages'; endpoint: string; model: string;
-  apiKey: string; parentId?: string;
-}
+export type { ApiConnectionCreate } from '@rift/protocol';
 
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`/ui-api/v1${path}`, { ...init, credentials: 'same-origin', cache: 'no-store' });
