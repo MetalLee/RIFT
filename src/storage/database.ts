@@ -81,6 +81,7 @@ export class RiftStore {
         if(!this.get('SELECT version FROM schema_migrations WHERE version=23'))this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0023_run_progress.sql',import.meta.url)),'utf8'));
         if(!this.get('SELECT version FROM schema_migrations WHERE version=24'))this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0024_run_stream_messages.sql',import.meta.url)),'utf8'));
         if(!this.get('SELECT version FROM schema_migrations WHERE version=25'))this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0025_chat_paging_indexes.sql',import.meta.url)),'utf8'));
+        if(!this.get('SELECT version FROM schema_migrations WHERE version=26'))this.db.exec(readFileSync(fileURLToPath(new URL('../../migrations/0026_operation_request_keys.sql',import.meta.url)),'utf8'));
         if(this.db.prepare('PRAGMA foreign_key_check').all().length)throw new Error('Connection/Worktree migration introduced invalid foreign keys.');
       });
     } catch (error) { try { opened?.close(); } finally { this.releaseLock(); } throw error; }

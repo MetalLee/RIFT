@@ -40,6 +40,6 @@ export function installLeadTools(ctx: Context, lead: Agent, workflowId: string, 
   register('rift_wait', 'Wait for any matching durable result or request event. Track eventSeq and accept out-of-order completion. Does not stop background work.', waitSchema, input => coordinator.wait({ workflowId, ...input }));
   register('rift_status', 'Read workflow tasks, versions, runs, cleanup, slots, queues and exact integration evidence.', z.object({}).strict(), () => coordinator.status(workflowId));
   register('rift_task_retry', 'Create a new repair attempt with prior evidence after cleanup. Then dispatch the new version.', retrySchema, input => { taskOwned(input.taskId); return coordinator.retry(input); });
-  register('rift_integration_request', 'Request serial checking and exact-commit review. Completed development is automatically queued; repeated keys return the same operation.', integrationSchema, input => { taskOwned(input.taskId); return coordinator.requestIntegration(input); });
+  register('rift_integration_request', 'Request serial checking and exact-commit review. Completed development is automatically queued; equivalent active requests return the same operation. Discussion clarification is not a request for another review.', integrationSchema, input => { taskOwned(input.taskId); return coordinator.requestIntegration(input); });
   register('rift_workflow_finish', 'Finish only after every task has actually passed gates and all executions are cleaned.', finishSchema, input => coordinator.finish({ workflowId, ...input }));
 }

@@ -23,6 +23,7 @@ export interface GitService {
   /** Production Git implementation proves analysis did not change HEAD or any checkout content. */
   verifyAnalysis?(input: GitContext & { run: Run; worktree: Worktree }): Promise<{headCommit:string}>;
   prepareCandidate(input: GitContext & { sourceHead: string; integrationId: string }): Promise<Candidate>;
+  compareCandidates?(input: GitContext & { candidate: Candidate; previousCandidateHead: string }): Promise<{ fromCommit: string; toCommit: string; diff: string; changedPaths: string[]; truncated: boolean }>;
   resumeCandidate?(input: GitContext & { integrationId: string; candidateHead: string; idempotencyKey: string }): Promise<Candidate>;
   reconcileCandidateCleanup?(input: GitContext & { candidate: Candidate; previousBootId: string | null; currentBootId: string | null }): Promise<boolean>;
   reconcileCandidateEvidence?(input: GitContext & { candidate: Candidate; allowEvidenceRefresh: boolean }): Promise<Candidate>;

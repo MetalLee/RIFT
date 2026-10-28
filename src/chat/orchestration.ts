@@ -2,7 +2,7 @@ import { invariant, type TaskEvent } from '../contracts/index.js';
 import { id, now, type RiftStore } from '../storage/database.js';
 import type { AgentTurn } from './contracts.js';
 import { publicError } from '../api/security.js';
-import { coordinationWakes as wakes, coordinationRecoveries as recoveries, coordinationReceipts as receipts, eventFacts, eventPriority, eventBatchContent } from './coordination-policy.js';
+import { coordinationWakes as wakes, coordinationRecoveries as recoveries, coordinationReceipts as receipts, eventFacts, eventPriority, eventBatchContent, needsCoordination } from './coordination-policy.js';
 
 export interface CoordinationOwner { workflowId:string; workspaceId:string; conversationId:string; agentId:string; version:number; automaticTurns:number; blockedReason:string|null; correlationId:string|null; parentMessageId:string|null }
 interface Decision { id:string; workflowId:string; turnId:string; ownerVersion:number; status:string; toolCalls:number; stagnantCalls:number; lastEventSeq:number; error:string|null }
@@ -92,7 +92,7 @@ export class ChatOrchestration {
             // scan() is deliberately bounded globally. Another workspace's
             // backlog must not turn this workflow's unscanned wake into a
             // permanent no-action blocker at the end of its current turn.
-            ??this.store.get(`SELECT event_seq FROM task_events WHERE workflow_id=? AND event_seq>(SELECT event_seq FROM coordination_cursors WHERE consumer='chat') AND type IN (${[...wakes].map(()=>'?').join(',')}) LIMIT 1`,decision.workflowId,...wakes);
+            ??this.store.all<TaskEvent>(`SELECT * FROM task_events WHERE workflow_id=? AND event_seq>(SELECT event_seq FROM coordination_cursors WHERE consumer='chat') AND type IN (${[...wakes].map(()=>'?').join(',')})`,decision.workflowId,...wakes).find(event=>needsCoordination(this.store,event));
           const hasTasks=this.store.get('SELECT id FROM tasks WHERE workflow_id=? LIMIT 1',decision.workflowId);
           if((unfinished||!hasTasks)&&!pendingEvent)this.block(decision.workflowId,'COORDINATION_ACTION_REQUIRED');
           else if(!unfinished&&hasTasks)this.wake(decision.workflowId,`settled:${turn.id}`,'All registered work is settled. Inspect acceptance evidence and finish the Workflow if every gate passes.');
@@ -132,7 +132,9 @@ export class ChatOrchestration {
       const events=this.store.all<TaskEvent>('SELECT * FROM task_events WHERE event_seq>? ORDER BY event_seq LIMIT 100',cursor);
       for(const event of events) {
         const owner=this.owner(event.workflowId);if(!owner||!receipts.has(event.type))continue;
-        if(owner.blockedReason==='COORDINATION_ACTION_REQUIRED'&&recoveries.has(event.type)) {
+        // The receipt also commits the wake/no-wake choice; replay cannot reclassify old progress.
+        if(this.store.get("SELECT id FROM coordination_outbox WHERE event_seq=? AND conversation_id=? AND kind='receipt'",event.eventSeq,owner.conversationId))continue;
+        if(owner.blockedReason==='COORDINATION_ACTION_REQUIRED'&&recoveries.has(event.type)&&needsCoordination(this.store,event)) {
           const blocked=this.store.get<{eventSeq:number}>("SELECT event_seq FROM task_events WHERE workflow_id=? AND type='coordination.blocked' AND json_extract(payload,'$.reason')='COORDINATION_ACTION_REQUIRED' ORDER BY event_seq DESC LIMIT 1",event.workflowId);
           // New ledger evidence may make an earlier business blocker actionable.
           // It never establishes cleanup of an unknown Lead decision and never
@@ -143,7 +145,12 @@ export class ChatOrchestration {
         const source=event.taskId?this.store.get<{id:string;correlationId:string|null;automaticHops:number}>("SELECT id,correlation_id,automatic_hops FROM messages WHERE task_id=? AND kind='delegation' AND created_at<=? ORDER BY rowid DESC LIMIT 1",event.taskId,sourceBoundary):undefined;
         const correlationId=source?.correlationId??owner.correlationId??`workflow:${event.workflowId}`,parentMessageId=source?.id??owner.parentMessageId,automaticHops=(source?.automaticHops??owner.automaticTurns)+1;
         const payload=JSON.stringify({...eventFacts(this.store,event),correlationId,parentMessageId,automaticHops});
-        for(const kind of wakes.has(event.type)?['receipt','wake']:['receipt'])this.store.exec('INSERT OR IGNORE INTO coordination_outbox(id,event_seq,workflow_id,conversation_id,kind,payload,created_at,priority,correlation_id,parent_message_id,automatic_hops) VALUES(?,?,?,?,?,?,?,?,?,?,?)',id('outbox'),event.eventSeq,event.workflowId,owner.conversationId,kind,payload,now(),eventPriority(event.type),correlationId,parentMessageId,automaticHops);
+        for(const kind of needsCoordination(this.store,event)?['receipt','wake']:['receipt'])this.store.exec('INSERT OR IGNORE INTO coordination_outbox(id,event_seq,workflow_id,conversation_id,kind,payload,created_at,priority,correlation_id,parent_message_id,automatic_hops) VALUES(?,?,?,?,?,?,?,?,?,?,?)',id('outbox'),event.eventSeq,event.workflowId,owner.conversationId,kind,payload,now(),eventPriority(event.type),correlationId,parentMessageId,automaticHops);
+      }
+      // Retire superseded, unclaimed intents durably; never touch a running decision.
+      for(const trigger of this.store.all<{id:string;payload:{eventSeq?:number}}>("SELECT id,payload FROM turn_triggers WHERE kind='task_event' AND status='pending' AND turn_id IS NULL")) {
+        const event=trigger.payload.eventSeq?this.store.get<TaskEvent>('SELECT * FROM task_events WHERE event_seq=?',trigger.payload.eventSeq):undefined;
+        if(event&&!needsCoordination(this.store,event))this.store.exec("UPDATE turn_triggers SET status='consumed',ended_at=? WHERE id=?",now(),trigger.id);
       }
       if(events.length)this.store.exec("UPDATE coordination_cursors SET event_seq=? WHERE consumer='chat'",events.at(-1)!.eventSeq);
     });
@@ -161,7 +168,7 @@ export class ChatOrchestration {
         if(row.kind==='receipt') {
           this.store.exec('INSERT OR IGNORE INTO coordination_receipts(id,workspace_id,conversation_id,workflow_id,event_seq,payload,created_at) VALUES(?,?,?,?,?,?,?)',row.id,owner.workspaceId,row.conversationId,row.workflowId,row.eventSeq,JSON.stringify(row.payload),now());
           this.options.projectReceipt?.({workspaceId:owner.workspaceId,conversationId:row.conversationId,workflowId:row.workflowId,eventSeq:row.eventSeq,payload:row.payload,correlationId:row.correlationId,parentMessageId:row.parentMessageId,automaticHops:row.automaticHops});
-        } else this.store.exec("INSERT OR IGNORE INTO turn_triggers(id,workflow_id,workspace_id,conversation_id,agent_id,kind,dedupe_key,payload,created_at,priority,correlation_id,parent_message_id,automatic_hops) VALUES(?,?,?,?,?,'task_event',?,?,?,?,?,?,?)",`trigger-${row.id}`,row.workflowId,owner.workspaceId,row.conversationId,owner.agentId,`event:${row.eventSeq}:${row.conversationId}`,JSON.stringify(row.payload),now(),row.priority,row.correlationId,row.parentMessageId,row.automaticHops);
+        } else if(needsCoordination(this.store,this.store.require<TaskEvent>('SELECT * FROM task_events WHERE event_seq=?',row.eventSeq)))this.store.exec("INSERT OR IGNORE INTO turn_triggers(id,workflow_id,workspace_id,conversation_id,agent_id,kind,dedupe_key,payload,created_at,priority,correlation_id,parent_message_id,automatic_hops) VALUES(?,?,?,?,?,'task_event',?,?,?,?,?,?,?)",`trigger-${row.id}`,row.workflowId,owner.workspaceId,row.conversationId,owner.agentId,`event:${row.eventSeq}:${row.conversationId}`,JSON.stringify(row.payload),now(),row.priority,row.correlationId,row.parentMessageId,row.automaticHops);
         this.store.exec("UPDATE coordination_outbox SET status='delivered',attempt=attempt+1,error=NULL,next_retry_at=NULL WHERE id=?",row.id);
       });}catch(error){this.store.exec('UPDATE coordination_outbox SET attempt=attempt+1,error=?,next_retry_at=? WHERE id=?',publicError(error).message,new Date(Date.now()+Math.min(30000,1000*2**Math.min(row.attempt,5))).toISOString(),row.id);}}
       for(const owner of this.store.all<CoordinationOwner>("SELECT c.* FROM workflow_conversations c JOIN workflows f ON f.id=c.workflow_id WHERE f.status='running' AND c.blocked_reason IS NULL")) {
@@ -176,6 +183,15 @@ export class ChatOrchestration {
             // after it; user input, pause, cancellation or cleanup can race it.
             const current=this.owner(owner.workflowId)!;
             if(this.store.workflow(owner.workflowId).status!=='running'||current.blockedReason||current.version!==owner.version||this.store.get("SELECT id FROM execution_leases WHERE workspace_id=? AND capacity='lead' AND released_at IS NULL",owner.workspaceId)||this.store.get("SELECT id FROM coordination_decisions WHERE workflow_id=? AND status IN ('active','handoff_requested','interrupted')",owner.workflowId))return;
+            for(let index=batch.length-1;index>=0;index--) {
+              const item=batch[index]!;
+              const eventSeq=(item.payload as {eventSeq?:number}).eventSeq;
+              if(item.kind==='task_event'&&eventSeq&&!needsCoordination(this.store,this.store.require<TaskEvent>('SELECT * FROM task_events WHERE event_seq=?',eventSeq))) {
+                this.store.exec("UPDATE turn_triggers SET status='consumed',ended_at=? WHERE id=?",now(),item.id);
+                batch.splice(index,1);
+              }
+            }
+            if(!batch.length)return;
             const trigger=batch[0]!;
             const content=eventBatchContent(owner.workflowId,batch.map(item=>item.payload));
             const turn=this.options.enqueue(owner.workspaceId,owner.conversationId,trigger.id,content);

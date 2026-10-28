@@ -245,7 +245,33 @@ describe('A01/A07/A13-A18 independent fake activation fault acceptance', () => {
     } finally { await h.close(); }
   });
 
-  it('creates a new repair run after review rejection and retains the old report and source evidence', async () => {
+  it('supplies bound prior findings and Host repair differences without carrying approval to a new candidate',async()=>{
+    const h=harness();
+    try {
+      h.git.compareCandidates=vi.fn(async input=>({fromCommit:input.previousCandidateHead,toCommit:input.candidate.candidateHead,diff:'Host repair diff',changedPaths:['one.ts'],truncated:false}));
+      h.plan([{id:'one',kind:'change'}]);h.dispatch('one');await expect.poll(()=>h.starts.length).toBe(1);h.complete(0,{checksClaimed:['developer claims full coverage']});
+      await expect.poll(()=>h.starts.length).toBe(2);
+      const old=JSON.parse(h.starts[1]!.input.prompt).candidate as Candidate;
+      const findings=[{severity:'high',file:'one.ts',line:1,reason:'Boundary defect',suggestion:'Repair boundary'}];
+      h.complete(1,{verdict:'changes_requested',findings});await expect.poll(()=>h.store.task('one').status).toBe('blocked');
+      h.coordinator.retry({taskId:'one',reason:'Fix boundary',expectedVersion:h.store.task('one').version});
+      h.git.collectSource=vi.fn(async()=>({sourceHead:sha('repaired source'),diff:'whole change',changedPaths:['one.ts']}));
+      h.dispatch('one','repair');await expect.poll(()=>h.starts.length).toBe(3);h.complete(2);
+      await expect.poll(()=>h.starts.length).toBe(4);
+      const prompt=JSON.parse(h.starts[3]!.input.prompt),current=prompt.candidate as Candidate;
+      expect(current.candidateHead).not.toBe(old.candidateHead);
+      expect(prompt.reviewContext).toMatchObject({previousVerdict:'changes_requested',previousReviewedCommit:old.candidateHead,findings,
+        checkedScope:{checkIds:old.checkIds,checks:[]},repairDiff:{status:'available',fromCommit:old.candidateHead,toCommit:current.candidateHead,diff:'Host repair diff'},
+        evidenceReferences:{previous:{integrationId:old.integrationId},current:{integrationId:current.integrationId}}});
+      expect(prompt.reviewContext.instructions).toContain('discussion approval is not a formal review');
+      expect(prompt.reviewContext.checkedScope).not.toHaveProperty('checksClaimed');
+      expect(h.store.task('one').acceptedCommit).toBeNull();expect(h.git.publishCandidate).not.toHaveBeenCalled();
+      h.complete(3,{reviewedCommit:old.candidateHead});await expect.poll(()=>h.store.task('one').status).toBe('blocked');
+      expect(h.git.publishCandidate).not.toHaveBeenCalled();expect(h.store.all("SELECT id FROM runs WHERE purpose='review'")).toHaveLength(2);
+    }finally{await h.close();}
+  });
+
+  it.each(['missing','error'])('creates a repair run retaining the old report when comparison is %s', async comparison => {
     const h = harness();
     try {
       h.plan([{ id: 'one', kind: 'change' }]); h.dispatch('one'); await expect.poll(() => h.starts.length).toBe(1); h.complete(0);
@@ -261,6 +287,11 @@ describe('A01/A07/A13-A18 independent fake activation fault acceptance', () => {
       expect(h.starts[2]!.input.prompt).toContain('Incorrect boundary');
       expect(h.starts[2]!.input.prompt).toContain('diff for one');
       expect(h.starts[2]!.input.task.sourceHead).toBe(sha('one'));
+      if(comparison==='error')h.git.compareCandidates=async()=>{throw new Error('comparison unavailable');};
+      h.complete(2);await expect.poll(()=>h.starts.length).toBe(4);
+      const context=JSON.parse(h.starts[3]!.input.prompt).reviewContext;
+      expect(context.repairDiff.status).toBe('unavailable');expect(context.findings[0].reason).toBe('Incorrect boundary');
+      expect(h.git.publishCandidate).not.toHaveBeenCalled();
     } finally { await h.close(); }
   });
 });

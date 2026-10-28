@@ -93,6 +93,13 @@ export class LocalGitService implements GitService {
     if (check.id !== input.checkId || check.host?.executionSource !== 'host' || check.host.schemaVersion !== 1 || fingerprint(bindingOf(check.host)) !== fingerprint(operation.binding) || check.host.logSha256 !== fingerprint({ stdout: check.stdout, stderr: check.stderr })) throw new Error('CANDIDATE_EVIDENCE_MISMATCH');
     return check;
   }
+  async compareCandidates(input: GitContext & { candidate: Candidate; previousCandidateHead: string }) {
+    const from=input.previousCandidateHead,to=input.candidate.candidateHead;
+    if(!/^[a-f0-9]{40,64}$/.test(from)||!/^[a-f0-9]{40,64}$/.test(to))throw new Error('INVALID_COMMIT');
+    const diff=await gitOk(input.workspace.repositoryPath,['diff','--no-ext-diff','--no-textconv',from,to,'--']);
+    const names=await gitOk(input.workspace.repositoryPath,['diff','--no-ext-diff','--no-textconv','--name-only','-z',from,to,'--']);
+    return {fromCommit:from,toCommit:to,diff:redact(diff,24000),changedPaths:names.split('\0').filter(Boolean),truncated:diff.length>24000};
+  }
   private selectedCommands(): CheckCommand[] { return this.checkIds.map(id => this.commands.get(id)!); }
   private candidate(operation: GitOperation): Candidate {
     const checks = operation.checks ?? [];
