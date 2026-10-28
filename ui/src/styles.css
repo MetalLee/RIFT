@@ -66,3 +66,9 @@
 .chat-notices { margin-top:12px; }
 .chat-notices ul { padding-left:20px; }
 .chat-notices li { margin:8px 0; white-space:pre-wrap; }
+.task-evidence .host-evidence { margin:12px; }
+.task-evidence .host-evidence p { margin:10px 0; }
+.task-evidence .check-evidence p { font-size:12px; }
+.task-evidence .readiness-evidence ul { padding-left:20px; }
+.task-evidence .readiness-evidence li { margin:10px 0; }
+@media(max-width:767px){.task-evidence .integration-evidence,.task-evidence .check-evidence p,.task-evidence .check-evidence summary,.task-evidence .check-evidence pre,.task-evidence .review-evidence{font-size:16px}}
