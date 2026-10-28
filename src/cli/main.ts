@@ -4,8 +4,8 @@ import { parseArgs } from 'node:util';
 import { readFile, mkdir, access } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { managementRequest } from './client.js';
 import { publicError } from '../api/security.js';
 import { RiftError } from '../contracts/index.js';
 
@@ -39,14 +39,7 @@ function readArgs() { try { return parseArgs({allowPositionals:true,options:{hom
 const args=readArgs();
 const home=path.resolve(args.values.home??process.env.RIFT_HOME??'.rift');
 const required=(name:keyof typeof args.values):string=>{const value=args.values[name];if(typeof value!=='string'||!value)throw new RiftError('MISSING_ARGUMENT',`--${name} is required.`);return value;};
-async function request(method:string,route:string,body?:unknown):Promise<any>{
-  const endpoint=JSON.parse(await readFile(path.join(home,'endpoint.json'),'utf8')) as {url:string};
-  const url=new URL(endpoint.url);if(url.protocol!=='http:'||url.hostname!=='127.0.0.1')throw new RiftError('INVALID_ENDPOINT','Management endpoint must be HTTP loopback.');
-  const token=(await readFile(path.join(home,'management.token'),'utf8')).trim();
-  const response=await fetch(`${url.origin}${route}`,{method,headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json',...(method!=='GET'?{'Idempotency-Key':args.values.key??randomUUID()}:{})},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(35000)});
-  const value=await response.json() as {error?:{code:string;message:string}};
-  if(!response.ok)throw new RiftError(value.error?.code??'HTTP_ERROR',value.error?.message??`HTTP ${response.status}`);return value;
-}
+const request=(method:string,route:string,body?:unknown)=>managementRequest(home,method,route,body,args.values.key);
 function parseJson(text:string):any {
   try{return JSON.parse(text);}catch{throw new RiftError('INVALID_JSON','Input must be valid JSON.');}
 }

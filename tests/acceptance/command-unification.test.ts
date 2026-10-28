@@ -1,5 +1,7 @@
 import { describe,it,expect,vi } from 'vitest';
 import { mkdtemp,readFile,writeFile,rm } from 'node:fs/promises';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { managementRequest } from '../../src/cli/client.js';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -115,6 +117,60 @@ describe('shared application commands and executable capability coverage',()=>{
       await expect(cli(f.home,'connection','create','--file',config)).rejects.toMatchObject({stderr:expect.stringContaining('INVALID_JSON')});
       try{await cli(f.home,'connection','create','--file',config);}catch(error){expect((error as {stderr:string}).stderr).not.toContain(secret);}
     }finally{await f.close();}
+  });
+  it.each(['slow-success','service-timeout','cleanup-timeout','client-timeout'] as const)('waits for the real verification lifecycle: %s',async mode=>{
+    const f=await fixture(false);
+    const waitUntil=async(predicate:()=>boolean)=>{
+      for(let i=0;i<1000;i++){if(predicate())return;await sleep(2);}
+      throw new Error('HTTP lifecycle did not reach the expected phase');
+    };
+    try{
+      const connection=await f.host.handle('POST','/v1/connections',{name:'Slow verification',protocol:'openai-completions',endpoint:'https://example.invalid/v1',model:'test',apiKey:'test-only-key'},'create-slow') as {id:string};
+      const route=`/v1/connections/${connection.id}/verify`;
+      vi.useFakeTimers({toFake:['setTimeout','clearTimeout']});
+      const dispose=vi.fn(()=>mode==='cleanup-timeout'?new Promise<void>(()=>{}):new Promise<void>(resolve=>setTimeout(resolve,4000)));
+      const activation=vi.spyOn(DshChatRuntime.prototype,'start').mockImplementation(async input=>{
+        await input.tools[0]!.execute({},input.signal);
+        return {result:['service-timeout','cleanup-timeout'].includes(mode)?new Promise<never>(()=>{}):new Promise(resolve=>setTimeout(()=>resolve({text:'Total 30',finalText:'Total 30',stopReason:'completed' as const}),40000)),dispose};
+      });
+      let first:any,second:any,failure:any,firstDone=false,secondDone=false;
+      const firstRequest=managementRequest(f.home,'POST',route,{},'slow-first').then(value=>{first=value;firstDone=true;});
+      await waitUntil(()=>activation.mock.calls.length===1);
+      const secondRequest=mode==='client-timeout'?managementRequest(f.home,'POST',route,{},'slow-second').then(value=>{second=value;secondDone=true;},error=>{failure=error;secondDone=true;}):undefined;
+      if(secondRequest)await waitUntil(()=>!!f.host.store.get("SELECT key FROM management_requests WHERE key='slow-second'"));
+      await vi.advanceTimersByTimeAsync(35001);
+      expect(firstDone).toBe(false);expect(secondDone).toBe(false);expect(dispose).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(['service-timeout','cleanup-timeout'].includes(mode)?24999:4999);
+      await waitUntil(()=>dispose.mock.calls.length===1);
+      expect(firstDone).toBe(false);
+      await vi.advanceTimersByTimeAsync(mode==='cleanup-timeout'?5000:4000);
+      await waitUntil(()=>firstDone);await firstRequest;
+      expect(first.passed).toBe(mode==='slow-success'||mode==='client-timeout');
+      expect(first.connection.verification.cleanupConfirmed).toBe(mode!=='cleanup-timeout');
+      expect(first.connection.verification.toolCalls).toBe(1);
+      if(mode==='service-timeout')expect(first.error).toContain('timed out');
+      if(mode==='cleanup-timeout')expect(first.error).toContain('cleanup');
+      if(secondRequest){
+        await waitUntil(()=>activation.mock.calls.length===2);
+        await vi.advanceTimersByTimeAsync(26000);
+        await waitUntil(()=>secondDone);await secondRequest;
+        expect(second).toBeUndefined();
+        expect(failure).toMatchObject({code:'REQUEST_TIMEOUT',message:expect.stringContaining('outcome is unknown')});
+        expect(failure.message).toContain('--key "slow-second"');
+        expect(f.host.store.get<{status:string}>("SELECT status FROM management_requests WHERE key='slow-second'")?.status).toBe('pending');
+        await expect(managementRequest(f.home,'POST',route,{},'slow-second')).rejects.toMatchObject({code:'OUTCOME_UNKNOWN'});
+        expect(activation).toHaveBeenCalledTimes(2); // No automatic replay or replacement key.
+        await vi.advanceTimersByTimeAsync(14000);
+        await waitUntil(()=>dispose.mock.calls.length===2);
+        await vi.advanceTimersByTimeAsync(4000);
+        await waitUntil(()=>f.host.store.get<{status:string}>("SELECT status FROM management_requests WHERE key='slow-second'")?.status==='completed');
+        expect((await managementRequest(f.home,'POST',route,{},'slow-second')).passed).toBe(true);
+        expect(activation).toHaveBeenCalledTimes(2);
+      }else{
+        expect(await managementRequest(f.home,'POST',route,{},'slow-first')).toEqual(first);
+        expect(activation).toHaveBeenCalledOnce();
+      }
+    }finally{vi.useRealTimers();vi.restoreAllMocks();await f.close();}
   });
   it('denies management without token, cookie writes without CSRF, foreign workspace ids and agent global scope',async()=>{
     const f=await fixture();try{

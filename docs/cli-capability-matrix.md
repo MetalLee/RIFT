@@ -31,7 +31,13 @@ file input; plaintext keys are never printed or stored in business DTOs/receipts
 The configured credential provider owns secret storage. `--api-key-file` reads and
 trims a local secret file; protect/delete that input yourself. Inline `--data` keys
 are rejected to avoid process-list/history exposure. Connections remain immutable;
-create with `parentId` for a new revision. Verification still requires conversation,
+create with `parentId` for a new revision. CLI verification waits up to 70 seconds (60 seconds of verification, 5 seconds of
+cleanup, and 5 seconds of transport margin). Other requests retain a 35-second
+limit. Timeout means **outcome unknown**, not cancellation: Host work may continue
+(including a verification queued behind another operation). Keep the reported
+`--key` and original input; the same-key request returns the saved result or
+`OUTCOME_UNKNOWN` while pending. Never automatically replay with a new key.
+Verification still requires conversation,
 tool execution and confirmed cleanup; failure never changes member model selections.
 
 ## Every business HTTP entry
@@ -166,3 +172,6 @@ remain regression coverage. External model activation is substituted only in the
 new connection transport test; existing connection verification tests exercise DSH.
 Real external provider availability is not claimed by unit tests. Protocol-package
 adoption, UI migration, root build wiring and PR publication belong to later tasks.
+
+Reproduction commands, local output and per-test baseline comparisons for the
+review follow-up are in [CLI validation evidence](evidence/cli-command-unification/README.md).
