@@ -1,3 +1,5 @@
+import type { SkillResource, SkillRequirements, Skill, SkillShared, SkillAssignment, SkillSnapshotVersion, CompiledSkills } from '@rift/protocol';
+export type { SkillResource, SkillRequirements, Skill, SkillShared, SkillAssignment, SkillSnapshotVersion, CompiledSkills } from '@rift/protocol';
 import { createHash, randomUUID } from 'node:crypto';
 import { closeSync, constants, fstatSync, lstatSync, openSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
@@ -8,15 +10,9 @@ const MAX_FILE = 4 * 1024 * 1024;
 const MAX_TOTAL = 32 * 1024 * 1024;
 const MAX_FILES = 512;
 const MAX_PROMPT = 256 * 1024;
-export interface SkillResource { path: string; bytes: number; sha256: string; contentBase64: string }
-export interface SkillRequirements { resources: boolean; scripts: boolean; runtimes: string[] }
-export interface Skill { id: string; workspaceId: string; name: string; description: string; archived: number; revision: number; createdAt: string }
-export interface SkillVersion { id: string; skillId: string; version: number; instructions: string; sourceDirectory: string; digest: string; resources: SkillResource[]; requirements: SkillRequirements; createdAt: string }
+/** Storage/execution includes resource bytes; public versions contain summaries only. */
+export interface SkillVersion extends Omit<import('@rift/protocol').SkillVersion, 'resources'> { resources: SkillResource[] }
 interface RawVersion extends Omit<SkillVersion, 'resources' | 'requirements'> { manifestJson: string; requirementsJson: string }
-export interface SkillShared { workspaceId: string; skillId: string; versionId: string; enabled: number; revision: number }
-export interface SkillAssignment { workspaceId: string; agentId: string; skillId: string; mode: 'include' | 'exclude' | 'inherit'; versionId: string | null; revision: number }
-export interface SkillSnapshotVersion { skillId: string; versionId: string; version: number; name: string; digest: string; source: 'shared' | 'agent' }
-export interface CompiledSkills { instructions: string; versions: SkillSnapshotVersion[]; resources: (SkillResource & { skillId: string; versionId: string })[] }
 export interface SkillRuntime { runtime: string; resources?: boolean; scripts?: boolean }
 export interface SkillImportInput { workspaceId: string; directory: string; name?: string; description?: string; skillId?: string; expectedRevision?: number; runtimes?: string[] }
 interface Preview { id: string; input: SkillImportInput; name: string; description: string; sourceDirectory: string; instructions: string; digest: string; resources: SkillResource[]; requirements: SkillRequirements; createdAt: number; expectedRevision: number }

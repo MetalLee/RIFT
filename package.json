@@ -34,7 +34,8 @@
     "poc": "tsx scripts/runtime-probe.ts",
     "poc:tools": "tsx scripts/lead-tools-probe.ts",
     "build:protocol": "pnpm --filter @rift/protocol build",
-    "test:protocol": "pnpm build:protocol && tsc -p tests/protocol/tsconfig.json && node scripts/check-protocol.mjs && vitest run tests/protocol ui/src/protocol-contract.test.ts"
+    "test:protocol": "pnpm build:protocol && tsc -p tests/protocol/tsconfig.json && node scripts/check-protocol.mjs && vitest run tests/protocol ui/src/protocol-contract.test.ts",
+    "test:built-cli": "node scripts/check-built-cli.mjs"
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.5",

@@ -170,8 +170,11 @@ shared versions/errors/replays, secret omission and scope/permission denial. The
 existing browser, management security, workspace CLI, connection and recovery tests
 remain regression coverage. External model activation is substituted only in the
 new connection transport test; existing connection verification tests exercise DSH.
-Real external provider availability is not claimed by unit tests. Protocol-package
-adoption, UI migration, root build wiring and PR publication belong to later tasks.
+Real external provider availability is not claimed by unit tests. Backend and UI
+now share `@rift/protocol`; public connections explicitly omit `credentialRef` as
+well as secret values. `pnpm build && pnpm test:built-cli` checks the built CLI
+from a temporary non-repository cwd with UI disabled, including SSE and shared
+workspace/plan/task commands. PR publication remains a Lead workflow gate.
 
 Reproduction commands, local output and per-test baseline comparisons for the
 review follow-up are in [CLI validation evidence](evidence/cli-command-unification/README.md).

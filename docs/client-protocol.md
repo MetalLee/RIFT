@@ -3,8 +3,9 @@
 ## Scope and compatibility
 
 `@rift/protocol` is the client-owned, dependency-free type package. This extraction
-changes neither HTTP routes nor JSON serialization. Existing `/ui-api/v1` and
-management API behavior stays authoritative; types are not validation or access
+changes no HTTP routes. Backend adoption also closes an accidental storage-field
+leak: connection responses now explicitly omit Host-only `credentialRef`. Existing
+`/ui-api/v1` and management API behavior stays authoritative; types are not validation or access
 control. The UI now consumes the package entry, never backend `src/` or service
 return types. No style, rendering, endpoint, retry or state-management change is
 part of this migration.
@@ -15,7 +16,7 @@ requirements, not runtime dependencies. Private Host types (`ProviderBinding`,
 `ProviderSnapshot`, `Run`, execution handles/bridges, stores and services) are not
 exported. `UiBinding` exposes connection metadata, not credential references;
 `UiRun` excludes provider snapshots and arbitrary results. `ApiConnectionCreate`
-allows a secret only in the existing authenticated request body; `ApiConnection`
+allows exactly one secret or existing Host reference in an authenticated request body; `ApiConnection`
 contains only public response metadata. Never serialize a DTO by spreading an
 internal record solely because structural typing permits it.
 
@@ -23,8 +24,10 @@ The existing public chat snapshot's `TurnConfiguration` fields are described
 explicitly to retain wire compatibility, including request/context references,
 connection display data, agent configuration and captured context. This does not
 authorize publishing additional execution state or secrets; Host redaction and
-scoping remain required. Backend adoption must preserve its current projections,
-not return raw runtime/provider/session records.
+scoping remain required. Backend compatibility modules re-export the protocol
+declarations rather than redeclaring them. Private storage/execution types extend wire metadata only where
+needed (connection credential references and full Skill resource bytes); responses
+use their public projections, not raw runtime/provider/session records.
 
 - All existing required/optional and nullable fields, numeric flags, versions and
   timestamps are retained. Dates are JSON strings, not `Date` objects.

@@ -31,3 +31,12 @@ const compatible: [
   Compatible<Protocol.CompiledSkills, Skill.CompiledSkills>,
 ] = [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true];
 it('retains all current browser wire shapes', () => { expect(compatible.every(Boolean)).toBe(true); });
+
+const connectionsCompatible: [
+  Compatible<Protocol.ApiConnection, ReturnType<import('../../src/agent/connections.js').ApiConnectionService['get']>>,
+  Compatible<Protocol.ConnectionVerification, import('../../src/agent/connections.js').ConnectionVerification>,
+  Compatible<Protocol.ApiErrorBody['error'], ReturnType<typeof import('../../src/api/security.js').publicError>>,
+] = [true, true, true];
+it('uses public connection and error contracts at backend boundaries', () => {
+  expect(connectionsCompatible.every(Boolean)).toBe(true);
+});
