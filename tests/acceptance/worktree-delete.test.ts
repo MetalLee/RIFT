@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { RiftHostService } from '../../src/api/host-service.js';
 import { gitOk } from '../../src/git/process.js';
+import * as gitProcess from '../../src/git/process.js';
 import { key } from '../../src/git/worktree-binding.js';
 import type { Candidate, GitContext, Run, Worktree } from '../../src/contracts/index.js';
 import { WorktreeRemovalService, type RemovalKind, type WorktreeRemovalTarget } from '../../src/project/worktree-removals.js';
@@ -393,4 +394,14 @@ describe('removed directory presentation', () => {
     await rm(tree.path,{recursive:true});
     expect(await f.target('user',tree.id)).toMatchObject({state:'available',canDelete:false});
   });
+});
+
+// Large historical lists must finish before the UI's periodic refresh cancels them.
+it('uses one Git registration snapshot for multiple missing historical directories', async () => {
+  const f = await fixture(), first = await f.user(), second = await f.user();
+  await gitOk(f.repositoryPath, ['worktree','remove',first.path]);
+  await gitOk(f.repositoryPath, ['worktree','remove',second.path]);
+  const listing = vi.spyOn(gitProcess, 'worktreePorcelain');
+  expect((await f.list()).map(item => item.state)).toEqual(['missing','missing']);
+  expect(listing).toHaveBeenCalledTimes(1);
 });

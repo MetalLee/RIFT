@@ -140,7 +140,7 @@ export class WorktreeRemovalService {
     invariant(!this.store.get(`SELECT d.record_id FROM worktree_removals d JOIN repositories r ON r.id=d.repository_id WHERE r.common_git_dir=? AND d.state IN ('deleting','unknown') AND NOT (d.kind=? AND d.record_id=?)`, repo.commonGitDir, target.kind, target.recordId), 'WORKTREE_IN_USE', '仓库有正在删除或清理未知的目录。');
     invariant(!this.store.get("SELECT id FROM workspace_worktrees WHERE path=? AND status='active' AND NOT (id=? AND ?='user')", tree.path, target.recordId, target.kind), 'WORKTREE_IN_USE', '此目录仍有其他活跃关联。');
   }
-  private async targetView(target: Target, actor?: WorktreeRemovalActor): Promise<WorktreeRemovalTarget> {
+  private async targetView(target: Target, actor?: WorktreeRemovalActor, registrations?: () => Promise<string>): Promise<WorktreeRemovalTarget> {
     const receipt = this.receipt(target.kind, target.recordId);
     let reason: string | null = null;
     let state = receipt?.state ?? (target.user?.status === 'archived' || target.tree.status === 'archived' ? 'deleted' : 'available');
@@ -151,7 +151,7 @@ export class WorktreeRemovalService {
         try { await lstat(target.tree.path); }
         catch (error) {
           if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-          const registered = await worktreePorcelain(target.repo.canonicalPath);
+          const registered = await (registrations ? registrations() : worktreePorcelain(target.repo.canonicalPath));
           const samePath = (value: string) => path.resolve(value) === path.resolve(target.tree.path);
           if (!registered.split('\0').some(field => field.startsWith('worktree ') && samePath(field.slice(9)))) {
             state = 'missing';
@@ -168,7 +168,11 @@ export class WorktreeRemovalService {
       error: receipt?.error ?? null, canReconcile: ['deleting','unknown','failed'].includes(state) };
   }
   async list(workspaceId: string, repositoryId: string, actor?: WorktreeRemovalActor): Promise<WorktreeRemovalTarget[]> {
-    this.store.require('SELECT id FROM repositories WHERE workspace_id=? AND id=?', workspaceId, repositoryId);
+    const repo = this.store.require<Repository>('SELECT * FROM repositories WHERE workspace_id=? AND id=?', workspaceId, repositoryId);
+    // One read-only Git snapshot per listing, not one subprocess per missing
+    // historical checkout; deletion still performs fresh ownership checks.
+    let registered: Promise<string> | undefined;
+    const registrations = () => registered ??= worktreePorcelain(repo.canonicalPath);
     const ids: { kind: RemovalKind; id: string }[] = this.store.all<{id:string}>('SELECT id FROM workspace_worktrees WHERE workspace_id=? AND repository_id=?', workspaceId, repositoryId).map(row => ({ kind: 'user', id: row.id }));
     const tasks = this.store.all<{id:string}>(`SELECT t.id FROM tasks t JOIN workflows f ON f.id=t.workflow_id WHERE f.workspace_id=? AND COALESCE(t.repository_id,(SELECT default_repository_id FROM workspaces WHERE id=?))=?`, workspaceId, workspaceId, repositoryId);
     for (const task of tasks) {
@@ -177,7 +181,7 @@ export class WorktreeRemovalService {
     }
     const result: WorktreeRemovalTarget[] = [];
     for (const item of ids) {
-      try { result.push(await this.targetView(await this.resolve(workspaceId, item.kind, item.id), actor)); }
+      try { result.push(await this.targetView(await this.resolve(workspaceId, item.kind, item.id), actor, registrations)); }
       catch (error) {
         // Missing/corrupt operation evidence is never permission to infer a path.
         result.push({ kind: item.kind, recordId: item.id, repositoryId, path: '', expectedVersion: '', state: 'unavailable', canDelete: false, canReconcile: false, reason: `无法核对目录证据：${String(error)}`, error: null });
