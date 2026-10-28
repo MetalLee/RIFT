@@ -19,6 +19,6 @@ export const WORKSPACE_COMMANDS = {
 } as const;
 export function workspaceCommandHelp() {
   return { usage: 'rift ws <resource> <action> [id] --workspace ID [--data JSON | --file JSON_FILE] [--key KEY]', commands: WORKSPACE_COMMANDS,
-    scope: 'Agent rift_cli uses the same resource/action/id argv and JSON input. Host fixes workspace and execution identity. grant-path/revoke-path are operator-only.',
+    scope: 'Agent rift_cli uses the same resource/action/id argv and JSON input. Host fixes workspace and execution identity. grant-path/revoke-path are operator-only. The live workspace Lead can list/delete all managed worktree kinds in its workspace; only its own turn/lease is exempt, and occupied/dirty/uncertain targets remain protected.',
     concurrency: 'Use expectedVersion / expectedRevision from a fresh read. Retry writes with the SAME --key and input; a different operation needs a new key.' };
 }

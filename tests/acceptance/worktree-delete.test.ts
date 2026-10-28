@@ -287,3 +287,110 @@ describe('safe Worktree deletion: real Git, service and browser Host API', () =>
     expect(await realpath(item.path)).toBe(item.path);
   });
 });
+
+async function liveLead(f: Awaited<ReturnType<typeof fixture>>) {
+  const lead = f.roles.find(role => role.purpose === 'lead')!;
+  const conversation = f.host.chat.createConversation(f.workspace.id);
+  const configuration = { connection: { runtime: 'dsh', provider: 'test', model: 'test' }, agent: { id: lead.id, displayName: 'Lead', prompt: '', version: 1, purpose: 'lead' }, runtimeAccess: { permissionVersion: 'test', cwd: f.repositoryPath, repositoryPaths: [f.repositoryPath] } };
+  f.host.store.exec("INSERT INTO messages(id,workspace_id,conversation_id,role,content,status,created_at) VALUES('cleanup-message',?,?,'user','Clean completed worktrees','completed','now')", f.workspace.id, conversation.id);
+  f.host.store.exec("INSERT INTO agent_turns(id,workspace_id,conversation_id,message_id,agent_id,status,configuration,created_at) VALUES('cleanup-turn',?,?,'cleanup-message',?,'running',?,'now')", f.workspace.id, conversation.id, lead.id, JSON.stringify(configuration));
+  f.host.store.exec("INSERT INTO execution_leases(id,owner_type,owner_id,workspace_id,agent_id,capacity,acquired_at) VALUES('cleanup-lease','turn','cleanup-turn',?,?,'lead','now')", f.workspace.id, lead.id);
+  const actor = f.host.chat.turn(f.workspace.id, 'cleanup-turn');
+  const call = (argv: string[], input: Record<string, unknown> = {}, key: string = crypto.randomUUID()) => f.host.workspaceCli.execute(f.workspace.id, { argv, input }, actor, key);
+  const targets = async () => (await call(['worktree', 'removals', f.repo.id]) as { removals: WorktreeRemovalTarget[] }).removals;
+  return { actor, call, targets, lead };
+}
+
+describe('workspace Lead managed worktree cleanup', () => {
+  it('lets a live workspace Lead list and delete all four managed worktree kinds without blocking on itself', async () => {
+    const f = await fixture(), user = await f.user(), task = await f.task();
+    const candidate = await f.host.git.prepareCandidate({ ...task.context, sourceHead: task.source.sourceHead, integrationId: 'integration' });
+    await f.host.git.publishCandidate({ ...task.context, candidate, review: { schemaVersion: 1, taskId: 'task', runId: 'review', verdict: 'approve', reviewedCommit: candidate.candidateHead, findings: [] } });
+    f.host.store.exec("INSERT INTO integrations(id,task_id,source_head,expected_target_head,candidate_head,status,candidate) VALUES('integration','task',?,?,?,'accepted',?)", candidate.sourceHead, candidate.expectedTargetHead, candidate.candidateHead, JSON.stringify(candidate));
+    f.finish();
+    const lead = await liveLead(f);
+    for (const [kind, id] of [['user',user.id],['candidate','integration'],['review','integration'],['task',task.tree.id]] as const) {
+      const item = (await lead.targets()).find(item => item.kind === kind && item.recordId === id)!;
+      expect(item.canDelete).toBe(true);
+      const input = { kind, expectedVersion: item.expectedVersion, confirmDelete: true }, key = `delete-${kind}`;
+      const result = await lead.call(['worktree','delete',id], input, key);
+      expect(result).toMatchObject({ state: 'deleted' });
+      expect(await lead.call(['worktree','delete',id], input, key)).toEqual(result);
+      await expect(lstat(item.path)).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+    expect(f.host.store.require('SELECT status FROM agent_turns WHERE id=?', lead.actor.id)).toEqual({ status: 'running' });
+    expect(f.host.store.require('SELECT released_at FROM execution_leases WHERE id=?', 'cleanup-lease')).toEqual({ releasedAt: null });
+    expect(f.host.store.all('SELECT * FROM worktree_removals')).toHaveLength(4);
+  });
+});
+
+describe('Lead cleanup scope and lifetime', () => {
+  it('also supports the managed archive command from the live Lead', async () => {
+    const f = await fixture(), tree = await f.user(), lead = await liveLead(f);
+    expect(await lead.call(['worktree','archive',tree.id], { expectedVersion: tree.version })).toMatchObject({ status: 'archived' });
+    await expect(lstat(tree.path)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+  it.each(['other-lease','other-turn','unknown-own-lease','stopped','disabled','non-lead','own-cwd','foreign-workspace'] as const)('does not exempt %s from deletion checks', async mode => {
+    const f = await fixture(), tree = await f.user(), lead = await liveLead(f);
+    const item = (await lead.targets()).find(item => item.recordId === tree.id)!;
+    const s = f.host.store;
+    if (mode === 'other-lease') s.exec("INSERT INTO execution_leases(id,owner_type,owner_id,workspace_id,agent_id,capacity,acquired_at) VALUES('other','turn','other',?,?,'developer','now')", f.workspace.id, f.roles.find(role => role.name === 'developer-b')!.id);
+    if (mode === 'other-turn') {
+      s.exec("INSERT INTO messages(id,workspace_id,conversation_id,role,content,status,created_at) VALUES('other-message',?,?,'user','Other execution','completed','now')",f.workspace.id,lead.actor.conversationId);
+      s.exec("INSERT INTO agent_turns(id,workspace_id,conversation_id,message_id,agent_id,status,configuration,created_at) VALUES('other',?,?,'other-message',?,'queued','{}','now')", f.workspace.id, lead.actor.conversationId, f.roles.find(role => role.name === 'developer-b')!.id);
+    }
+    if (mode === 'unknown-own-lease') s.exec("UPDATE execution_leases SET cleanup_status='unknown' WHERE id='cleanup-lease'");
+    if (mode === 'stopped') s.exec("UPDATE agent_turns SET status='stopping' WHERE id='cleanup-turn'");
+    if (mode === 'disabled') s.exec('UPDATE roles SET enabled=0 WHERE id=?',lead.lead.id);
+    if (mode === 'non-lead') s.exec("UPDATE roles SET purpose='developer',kind='subagent',provider_binding_id=? WHERE id=?",f.roles.find(role => role.name === 'developer-b')!.providerBindingId!,lead.lead.id);
+    if (mode === 'own-cwd') s.exec('UPDATE agent_turns SET configuration=? WHERE id=?',JSON.stringify({...lead.actor.configuration,runtimeAccess:{...lead.actor.configuration.runtimeAccess,cwd:tree.path}}),lead.actor.id);
+    if (mode === 'foreign-workspace') {
+      s.exec("INSERT INTO workspaces(id,name,root_path,status) VALUES('other','Other',?,'active')",path.join(f.home,'other'));
+      s.exec("UPDATE workspace_worktrees SET workspace_id='other' WHERE id=?", tree.id);
+    }
+    await expect(lead.call(['worktree','delete',tree.id],{kind:'user',expectedVersion:item.expectedVersion,confirmDelete:true})).rejects.toThrow();
+    expect(await realpath(tree.path)).toBe(tree.path);
+  });
+  it('rejects untrusted actor overrides and unconfirmed deletion input', async () => {
+    const f = await fixture(), tree = await f.user(), lead = await liveLead(f);
+    const item = (await lead.targets()).find(item => item.recordId === tree.id)!;
+    await expect(lead.call(['worktree','delete',tree.id],{kind:'user',expectedVersion:item.expectedVersion,confirmDelete:true,removalActor:{turnId:'other'}})).rejects.toThrow();
+    await expect(lead.call(['worktree','delete',tree.id],{kind:'user',expectedVersion:item.expectedVersion})).rejects.toThrow();
+    // An HTTP body cannot manufacture the trusted CLI context either.
+    await expect(f.host.handleBrowser('POST', `${f.root}/worktree-removals/user/${tree.id}/delete`, {expectedVersion:item.expectedVersion,confirmDelete:true,removalActor:{turnId:lead.actor.id,agentId:lead.actor.agentId}}, 'forged-actor')).rejects.toThrow();
+    expect(await realpath(tree.path)).toBe(tree.path);
+  });
+  it('revalidates the initiating Lead after awaits and before actual Git deletion', async () => {
+    const f = await fixture(), tree = await f.user(), lead = await liveLead(f);
+    const item = (await lead.targets()).find(item => item.recordId === tree.id)!;
+    const original = f.host.git.archiveWorktree.bind(f.host.git);
+    vi.spyOn(f.host.git,'archiveWorktree').mockImplementationOnce(async input => {
+      f.host.store.exec("UPDATE agent_turns SET status='stopping' WHERE id=?",lead.actor.id);
+      return original(input);
+    });
+    await expect(lead.call(['worktree','delete',tree.id],{kind:'user',expectedVersion:item.expectedVersion,confirmDelete:true})).rejects.toMatchObject({code:'UNAUTHORIZED'});
+    expect(await realpath(tree.path)).toBe(tree.path);
+    expect(f.host.store.require('SELECT state FROM worktree_removals WHERE record_id=?', tree.id)).toEqual({state:'failed'});
+  });
+  it('retains busy task protections for the Lead rather than bypassing every lease', async () => {
+    const f = await fixture(), task = await f.task(), lead = await liveLead(f);
+    const item = (await lead.targets()).find(item => item.kind === 'task' && item.recordId === task.tree.id)!;
+    expect(item.canDelete).toBe(false);
+    await expect(lead.call(['worktree','delete',task.tree.id],{kind:'task',expectedVersion:item.expectedVersion,confirmDelete:true})).rejects.toMatchObject({code:'WORKTREE_IN_USE'});
+  });
+});
+
+describe('removed directory presentation', () => {
+  it('reports manually removed and unregistered worktrees as missing without inventing deletion receipts', async () => {
+    const f = await fixture(), tree = await f.user();
+    await gitOk(f.repositoryPath,['worktree','remove',tree.path]);
+    expect(await f.target('user',tree.id)).toMatchObject({state:'missing',canDelete:false,canReconcile:false,reason:expect.stringContaining('目录已不存在')});
+    expect(f.host.store.all('SELECT * FROM worktree_removals')).toEqual([]);
+    expect(f.host.repositories.worktrees(f.workspace.id,f.repo.id)[0]?.status).toBe('active');
+  });
+  it('keeps missing-but-still-registered worktrees visible instead of claiming confirmed absence', async () => {
+    const f = await fixture(), tree = await f.user();
+    await rm(tree.path,{recursive:true});
+    expect(await f.target('user',tree.id)).toMatchObject({state:'available',canDelete:false});
+  });
+});

@@ -17,7 +17,7 @@ import { installWorkspaceSkill } from '../skill/default.js';
 import { installedSkills } from '../skill/runtime.js';
 import { VERIFIED_NATIVE_CODEX_MODELS } from '../agent/native-codex.js';
 
-export interface ApplicationCommand { name:string; workspaceId?:string; id?:string; agentId?:string; kind?:import('../project/worktree-removals.js').RemovalKind; input?:unknown; query?:URLSearchParams; validateRepository?:Parameters<RiftHostService['repositories']['connect']>[2] }
+export interface ApplicationCommand { name:string; workspaceId?:string; id?:string; agentId?:string; kind?:import('../project/worktree-removals.js').RemovalKind; input?:unknown; query?:URLSearchParams; removalActor?:import('../project/worktree-removals.js').WorktreeRemovalActor; validateRepository?:Parameters<RiftHostService['repositories']['connect']>[2] }
 /** Business execution only: transports supply named commands, never HTTP paths. */
 export class ApplicationCommands {
   constructor(private readonly host:RiftHostService) {}
@@ -70,18 +70,18 @@ export class ApplicationCommands {
       const repositoryId=id;
       if (name==='repository.list') return { repositories: this.host.repositories.list(workspaceId) };
       if (name==='repository.connect') return this.host.repositories.connect(workspaceId, z.object({ repositoryPath: z.string().min(1), baseRef: z.string().min(1).default('HEAD'), expectedVersion: z.number().int().nonnegative() }).strict().parse(body),command.validateRepository);
-      if (name==='worktree.list') return { worktrees: this.host.repositories.worktrees(workspaceId, repositoryId), discovered: await this.host.repositories.discover(workspaceId, repositoryId), removals: await this.host.repositories.removals.list(workspaceId, repositoryId) };
+      if (name==='worktree.list') return { worktrees: this.host.repositories.worktrees(workspaceId, repositoryId), discovered: await this.host.repositories.discover(workspaceId, repositoryId), removals: await this.host.repositories.removals.list(workspaceId, repositoryId, command.removalActor) };
       if (name==='worktree.create') return this.host.repositories.createWorktree(workspaceId, repositoryId, z.object({ origin: z.enum(['managed','external']), path: z.string().min(1).optional(), baseRef: z.string().min(1).optional(), branch: z.string().min(1).max(200).optional() }).strict().parse(body));
     }
     if(name==='worktree.delete'||name==='worktree.reconcile-delete') {
       const kind=command.kind!,recordId=id;
       if (name==='worktree.reconcile-delete') return this.host.repositories.removals.reconcile(workspaceId, kind, recordId, z.object({ expectedVersion: z.string().min(1) }).strict().parse(body).expectedVersion);
-      return this.host.repositories.removals.remove(workspaceId, kind, recordId, z.object({ expectedVersion: z.string().min(1), confirmDelete: z.literal(true) }).strict().parse(body));
+      return this.host.repositories.removals.remove(workspaceId, kind, recordId, z.object({ expectedVersion: z.string().min(1), confirmDelete: z.literal(true) }).strict().parse(body), command.removalActor);
     }
     if(['worktree.archive','worktree.detach','worktree.takeover','worktree.reconcile'].includes(name)) {
       const treeId=id;
       if(name==='worktree.takeover')return this.host.repositories.takeover(workspaceId,treeId,z.object({expectedVersion:z.number().int().nonnegative(),confirmExclusiveOwnership:z.literal(true),destinationPath:z.string().min(1).optional()}).strict().parse(body));
-      const input = z.object({ expectedVersion: z.number().int().nonnegative() }).strict().parse(body); if(name==='worktree.reconcile')return this.host.repositories.reconcile(workspaceId,treeId,input.expectedVersion);return this.host.repositories[name==='worktree.archive' ? 'archive' : 'detach'](workspaceId,treeId,input.expectedVersion);
+      const input = z.object({ expectedVersion: z.number().int().nonnegative() }).strict().parse(body); if(name==='worktree.reconcile')return this.host.repositories.reconcile(workspaceId,treeId,input.expectedVersion);return name==='worktree.archive' ? this.host.repositories.archive(workspaceId,treeId,input.expectedVersion,command.removalActor) : this.host.repositories.detach(workspaceId,treeId,input.expectedVersion);
     }
     if(name==='run.reconcile'){const runId=id,run=this.host.store.run(runId);invariant(this.host.store.workflow(this.host.store.task(run.taskId).workflowId).workspaceId===workspaceId,'NOT_FOUND','Run does not belong to this workspace.');this.host.coordinator.reconcileRun(runId,z.object({expectedVersion:z.number().int().nonnegative()}).strict().parse(body).expectedVersion);return this.host.store.require('SELECT id,task_id,status,version,cleanup_status,slot_released_at FROM runs WHERE id=?',runId);}
     if(name==='integration.reconcile'){const integrationId=id,integration=this.host.store.require<{taskId:string}>('SELECT task_id FROM integrations WHERE id=?',integrationId);invariant(this.host.store.workflow(this.host.store.task(integration.taskId).workflowId).workspaceId===workspaceId,'NOT_FOUND','Integration does not belong to this workspace.');return this.host.coordinator.reconcileIntegration(integrationId,z.object({expectedVersion:z.number().int().nonnegative()}).strict().parse(body).expectedVersion);}

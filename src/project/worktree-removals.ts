@@ -1,5 +1,8 @@
 import type { RemovalKind, WorktreeRemovalTarget } from '@rift/protocol';
 export type { RemovalKind, WorktreeRemovalTarget } from '@rift/protocol';
+import type { AgentTurn } from '../chat/contracts.js';
+import { realpathSync } from 'node:fs';
+import { containsPath } from '../api/workspace-paths.js';
 import { createHash } from 'node:crypto';
 import { lstat } from 'node:fs/promises';
 import path from 'node:path';
@@ -11,6 +14,9 @@ import { provesPreviousBootExited } from '../agent/boot-identity.js';
 import { now, type RiftStore } from '../storage/database.js';
 import { redact } from '../api/security.js';
 import type { Repository, WorkspaceWorktree } from './repositories.js';
+
+/** Host-bound execution identity; never accepted from a command JSON body. */
+export interface WorktreeRemovalActor { turnId: string; agentId: string }
 
 interface Receipt {
   kind: RemovalKind; recordId: string; workspaceId: string; repositoryId: string; path: string;
@@ -89,7 +95,24 @@ export class WorktreeRemovalService {
   async versionFor(workspaceId: string, kind: RemovalKind, recordId: string): Promise<string> {
     return this.version(await this.resolve(workspaceId, kind, recordId));
   }
-  private guard(target: Target): void {
+  private initiatingLead(target: Target, actor?: WorktreeRemovalActor): { turnId: string; leaseId: string } {
+    if (!actor) return { turnId: '', leaseId: '' };
+    const turn = this.store.get<AgentTurn>('SELECT * FROM agent_turns WHERE id=? AND workspace_id=? AND agent_id=?', actor.turnId, target.workspace.id, actor.agentId);
+    invariant(turn?.status === 'running' && turn.configuration.agent.purpose === 'lead' && !turn.configuration.conversationTitle,
+      'UNAUTHORIZED', 'Worktree cleanup requires this workspace’s live Lead execution.');
+    const role = this.store.role(actor.agentId);
+    invariant(role.workspaceId === target.workspace.id && role.purpose === 'lead' && role.enabled !== 0, 'UNAUTHORIZED', 'The current workspace Lead must own this request.');
+    const lease = this.store.get<{id:string}>("SELECT id FROM execution_leases WHERE owner_type='turn' AND owner_id=? AND workspace_id=? AND agent_id=? AND capacity='lead' AND released_at IS NULL AND cleanup_status='pending'", turn.id, target.workspace.id, actor.agentId);
+    invariant(lease, 'UNAUTHORIZED', 'The requesting Lead no longer holds its live execution lease.');
+    const decision = this.store.get<{status:string;ownerVersion:number;currentVersion:number}>(`SELECT d.status,d.owner_version,c.version current_version FROM coordination_decisions d JOIN workflow_conversations c ON c.workflow_id=d.workflow_id WHERE d.turn_id=?`, turn.id);
+    invariant(!decision || decision.status === 'active' && decision.ownerVersion === decision.currentVersion, 'DECISION_EXPIRED', 'The requesting Lead decision has ended or yielded.');
+    const cwd = turn.configuration.runtimeAccess?.cwd;
+    invariant(cwd && path.isAbsolute(cwd), 'UNAUTHORIZED', 'The Lead execution directory must be known before worktree cleanup.');
+    invariant(!containsPath(target.tree.path, realpathSync(cwd)), 'WORKTREE_IN_USE', 'The Lead cannot remove its own execution directory.');
+    return { turnId: turn.id, leaseId: lease.id };
+  }
+  private guard(target: Target, actor?: WorktreeRemovalActor): void {
+    const requester = this.initiatingLead(target, actor);
     const { repo, task, user, tree } = target;
     if (target.operationPhase) invariant(['completed','blocked'].includes(target.operationPhase), 'CLEANUP_UNKNOWN', '候选 Git 操作尚未终结，必须先核对执行清理。');
     if (user) {
@@ -105,8 +128,8 @@ export class WorktreeRemovalService {
     }
     // Conservative repository-wide exclusion includes other workspace aliases,
     // discussion writers, legacy Runs, finalizers and unconfirmed integrations.
-    invariant(!this.store.get(`SELECT l.id FROM execution_leases l JOIN repositories r ON r.workspace_id=l.workspace_id WHERE r.common_git_dir=? AND (l.released_at IS NULL OR l.cleanup_status<>'confirmed')`, repo.commonGitDir), 'WORKTREE_IN_USE', '仓库仍有执行租约或未确认的清理。');
-    invariant(!this.store.get(`SELECT a.id FROM agent_turns a JOIN repositories r ON r.workspace_id=a.workspace_id WHERE r.common_git_dir=? AND a.status IN ('queued','running','stopping')`, repo.commonGitDir), 'WORKTREE_IN_USE', '仓库仍有排队或活跃的讨论执行。');
+    invariant(!this.store.get(`SELECT l.id FROM execution_leases l JOIN repositories r ON r.workspace_id=l.workspace_id WHERE r.common_git_dir=? AND (l.released_at IS NULL OR l.cleanup_status<>'confirmed') AND l.id<>?`, repo.commonGitDir, requester.leaseId), 'WORKTREE_IN_USE', '仓库仍有执行租约或未确认的清理。');
+    invariant(!this.store.get(`SELECT a.id FROM agent_turns a JOIN repositories r ON r.workspace_id=a.workspace_id WHERE r.common_git_dir=? AND a.status IN ('queued','running','stopping') AND a.id<>?`, repo.commonGitDir, requester.turnId), 'WORKTREE_IN_USE', '仓库仍有排队或活跃的讨论执行。');
     invariant(!this.store.get(`SELECT run.id FROM runs run JOIN tasks t ON t.id=run.task_id JOIN workflows f ON f.id=t.workflow_id JOIN repositories r ON r.workspace_id=f.workspace_id WHERE r.common_git_dir=? AND (run.cleanup_status<>'confirmed' OR run.slot_released_at IS NULL OR run.status IN ('preparing','running','cancelling'))`, repo.commonGitDir), 'CLEANUP_UNKNOWN', '仓库执行清理尚未确认。');
     invariant(!this.store.get(`SELECT o.id FROM operations o JOIN tasks t ON t.id=o.entity_id JOIN workflows f ON f.id=t.workflow_id JOIN repositories r ON r.workspace_id=f.workspace_id WHERE r.common_git_dir=? AND o.phase IN ('queued','started')`, repo.commonGitDir), 'WORKTREE_IN_USE', '仓库仍有未完成的任务操作或结果收集。');
     invariant(!this.store.get(`SELECT i.id FROM integrations i JOIN tasks t ON t.id=i.task_id JOIN workflows f ON f.id=t.workflow_id JOIN repositories r ON r.workspace_id=f.workspace_id WHERE r.common_git_dir=? AND i.status NOT IN ('accepted','blocked')`, repo.commonGitDir), 'CLEANUP_UNKNOWN', '仓库仍有未完成或清理未知的集成。');
@@ -117,20 +140,34 @@ export class WorktreeRemovalService {
     invariant(!this.store.get(`SELECT d.record_id FROM worktree_removals d JOIN repositories r ON r.id=d.repository_id WHERE r.common_git_dir=? AND d.state IN ('deleting','unknown') AND NOT (d.kind=? AND d.record_id=?)`, repo.commonGitDir, target.kind, target.recordId), 'WORKTREE_IN_USE', '仓库有正在删除或清理未知的目录。');
     invariant(!this.store.get("SELECT id FROM workspace_worktrees WHERE path=? AND status='active' AND NOT (id=? AND ?='user')", tree.path, target.recordId, target.kind), 'WORKTREE_IN_USE', '此目录仍有其他活跃关联。');
   }
-  private async targetView(target: Target): Promise<WorktreeRemovalTarget> {
+  private async targetView(target: Target, actor?: WorktreeRemovalActor): Promise<WorktreeRemovalTarget> {
     const receipt = this.receipt(target.kind, target.recordId);
     let reason: string | null = null;
-    const state = receipt?.state ?? (target.user?.status === 'archived' || target.tree.status === 'archived' ? 'deleted' : 'available');
+    let state = receipt?.state ?? (target.user?.status === 'archived' || target.tree.status === 'archived' ? 'deleted' : 'available');
     try {
+      // A manual cleanup is not a successful deletion receipt. Report absence
+      // separately, and never hide an uncertain removal that needs reconciliation.
+      if (!receipt && state === 'available') {
+        try { await lstat(target.tree.path); }
+        catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+          const registered = await worktreePorcelain(target.repo.canonicalPath);
+          const samePath = (value: string) => path.resolve(value) === path.resolve(target.tree.path);
+          if (!registered.split('\0').some(field => field.startsWith('worktree ') && samePath(field.slice(9)))) {
+            state = 'missing';
+            invariant(false, 'NOT_FOUND', '目录已不存在；任务和集成历史仍保留。');
+          }
+        }
+      }
       invariant(!['deleting','unknown','deleted'].includes(state), 'WORKTREE_STATE_UNKNOWN', state === 'deleted' ? '磁盘目录已删除；分支、提交与记录已保留。' : '删除操作未完成，必须先核对清理证据。');
-      this.guard(target);
+      this.guard(target, actor);
       await this.git.inspectWorktreeRemoval(target.workspace, target.tree);
     } catch (error) { reason = error instanceof Error ? error.message : String(error); }
     return { kind: target.kind, recordId: target.recordId, repositoryId: target.repo.id, path: target.tree.path,
       expectedVersion: this.version(target, receipt), state, canDelete: reason === null, reason,
       error: receipt?.error ?? null, canReconcile: ['deleting','unknown','failed'].includes(state) };
   }
-  async list(workspaceId: string, repositoryId: string): Promise<WorktreeRemovalTarget[]> {
+  async list(workspaceId: string, repositoryId: string, actor?: WorktreeRemovalActor): Promise<WorktreeRemovalTarget[]> {
     this.store.require('SELECT id FROM repositories WHERE workspace_id=? AND id=?', workspaceId, repositoryId);
     const ids: { kind: RemovalKind; id: string }[] = this.store.all<{id:string}>('SELECT id FROM workspace_worktrees WHERE workspace_id=? AND repository_id=?', workspaceId, repositoryId).map(row => ({ kind: 'user', id: row.id }));
     const tasks = this.store.all<{id:string}>(`SELECT t.id FROM tasks t JOIN workflows f ON f.id=t.workflow_id WHERE f.workspace_id=? AND COALESCE(t.repository_id,(SELECT default_repository_id FROM workspaces WHERE id=?))=?`, workspaceId, workspaceId, repositoryId);
@@ -140,7 +177,7 @@ export class WorktreeRemovalService {
     }
     const result: WorktreeRemovalTarget[] = [];
     for (const item of ids) {
-      try { result.push(await this.targetView(await this.resolve(workspaceId, item.kind, item.id))); }
+      try { result.push(await this.targetView(await this.resolve(workspaceId, item.kind, item.id), actor)); }
       catch (error) {
         // Missing/corrupt operation evidence is never permission to infer a path.
         result.push({ kind: item.kind, recordId: item.id, repositoryId, path: '', expectedVersion: '', state: 'unavailable', canDelete: false, canReconcile: false, reason: `无法核对目录证据：${String(error)}`, error: null });
@@ -148,7 +185,7 @@ export class WorktreeRemovalService {
     }
     return result;
   }
-  async remove(workspaceId: string, kind: RemovalKind, recordId: string, input: { expectedVersion: string; confirmDelete: true }): Promise<WorktreeRemovalTarget> {
+  async remove(workspaceId: string, kind: RemovalKind, recordId: string, input: { expectedVersion: string; confirmDelete: true }, actor?: WorktreeRemovalActor): Promise<WorktreeRemovalTarget> {
     invariant(input.confirmDelete === true, 'CONFIRMATION_REQUIRED', '必须明确确认删除磁盘目录。');
     const target = await this.resolve(workspaceId, kind, recordId);
     this.store.transaction(() => {
@@ -156,7 +193,7 @@ export class WorktreeRemovalService {
       const prior = this.receipt(kind, recordId);
       invariant(this.version(target, prior) === input.expectedVersion, 'VERSION_CONFLICT', '目录状态已变化，请刷新后重新确认。');
       invariant(!prior || prior.state === 'failed', 'WORKTREE_IN_USE', '目录已删除或上次删除尚未确认。');
-      this.guard(target);
+      this.guard(target, actor);
       this.store.exec(`INSERT INTO worktree_removals(kind,record_id,workspace_id,repository_id,task_id,path,state,source_fingerprint,cleanup_status,runtime_boot_id,updated_at) VALUES(?,?,?,?,?,?,'deleting',?,'pending',?,?) ON CONFLICT(kind,record_id) DO UPDATE SET state='deleting',version=version+1,repository_id=excluded.repository_id,task_id=excluded.task_id,path=excluded.path,head_commit=NULL,preservation_ref=NULL,source_fingerprint=excluded.source_fingerprint,cleanup_status='pending',runtime_boot_id=excluded.runtime_boot_id,error=NULL,updated_at=excluded.updated_at`, kind, recordId, workspaceId, target.repo.id, target.task?.id ?? null, target.tree.path, target.fingerprint, this.bootIdentity, now());
     });
     try {
@@ -167,7 +204,7 @@ export class WorktreeRemovalService {
             this.assertCurrent(current);
             invariant(current.fingerprint === target.fingerprint, 'VERSION_CONFLICT', '目录或任务在删除核对期间发生变化。');
             invariant(this.receipt(kind, recordId)?.state === 'deleting', 'WORKTREE_IN_USE', '删除操作已失去所有权。');
-            this.guard(current);
+            this.guard(current, actor);
             this.store.exec('UPDATE worktree_removals SET head_commit=?,preservation_ref=?,updated_at=? WHERE kind=? AND record_id=?', evidence.headCommit, evidence.preservationRef, now(), kind, recordId);
           });
         } });
@@ -177,7 +214,7 @@ export class WorktreeRemovalService {
       this.store.exec('UPDATE worktree_removals SET state=?,cleanup_status=?,error=?,version=version+1,updated_at=? WHERE kind=? AND record_id=?', unknown ? 'unknown' : 'failed', unknown ? 'unknown' : 'confirmed', redact(String(error)), now(), kind, recordId);
       throw error;
     }
-    return this.targetView(await this.resolve(workspaceId, kind, recordId));
+    return this.targetView(await this.resolve(workspaceId, kind, recordId), actor);
   }
   private complete(target: Target): void {
     this.store.transaction(() => {
