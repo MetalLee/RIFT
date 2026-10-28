@@ -48,6 +48,22 @@ export function registerConnectionCredential(raw: unknown): void {
 /** Host-only storage record; never return this from a business command. */
 interface ApiConnectionRecord extends ApiConnection { credentialRef: string }
 
+/** Allowlist shared by live records and historical receipts; never refresh replay state. */
+export function publicApiConnection(row: ApiConnection): ApiConnection {
+  return {
+    id: row.id, name: row.name, protocol: row.protocol, endpoint: row.endpoint, model: row.model,
+    provider: row.provider, revision: row.revision, parentId: row.parentId, createdAt: row.createdAt,
+    verifiedAt: row.verifiedAt, verificationStatus: row.verificationStatus,
+    verificationError: row.verificationError, available: row.available,
+    verification: row.verification ? {
+      method: row.verification.method, conversation: row.verification.conversation,
+      toolCalls: row.verification.toolCalls, reply: row.verification.reply,
+      stopReason: row.verification.stopReason, cleanupConfirmed: row.verification.cleanupConfirmed,
+      error: row.verification.error,
+    } : null,
+  };
+}
+
 /** Saved API routes are immutable. Editing creates another provider identity so
  * an already queued Turn/Run can never silently adopt a different endpoint.
  * Protocol conversion/auth/tool calls stay in the official DSH pi-ai adapter.
@@ -66,19 +82,7 @@ export class ApiConnectionService {
     return this.store.all<ApiConnectionRecord>('SELECT id,name,protocol,endpoint,model,credential_ref,provider,revision,parent_id,created_at,verified_at,verification_status,verification_error FROM api_connections WHERE deleted_at IS NULL ORDER BY created_at,id').map(row => ({ ...row, verification:this.store.get<{result:ConnectionVerification}>('SELECT result FROM api_connection_verifications WHERE connection_id=? ORDER BY rowid DESC LIMIT 1',row.id)?.result??null, endpoint:normalizeApiEndpoint(row.endpoint,row.protocol), available: Boolean(this.ctx.llm?.listProviders().some(provider => provider.id === row.provider)) }));
   }
   list(): ApiConnection[] {
-    // An allowlist, not a spread: future storage fields must stay Host-only too.
-    return this.records().map(row => ({
-      id: row.id, name: row.name, protocol: row.protocol, endpoint: row.endpoint, model: row.model,
-      provider: row.provider, revision: row.revision, parentId: row.parentId, createdAt: row.createdAt,
-      verifiedAt: row.verifiedAt, verificationStatus: row.verificationStatus,
-      verificationError: row.verificationError, available: row.available,
-      verification: row.verification ? {
-        method: row.verification.method, conversation: row.verification.conversation,
-        toolCalls: row.verification.toolCalls, reply: row.verification.reply,
-        stopReason: row.verification.stopReason, cleanupConfirmed: row.verification.cleanupConfirmed,
-        error: row.verification.error,
-      } : null,
-    }));
+    return this.records().map(publicApiConnection);
   }
   get(connectionId: string): ApiConnection {
     const connection = this.list().find(item => item.id === connectionId);

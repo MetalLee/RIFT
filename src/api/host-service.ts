@@ -36,7 +36,7 @@ import { readWorkspaceEvents } from '../events/workspace-events.js';
 import { NativeCodexRuntime, nativeCodexPackage, VERIFIED_NATIVE_CODEX_MODELS } from '../agent/native-codex.js';
 import { RepositoryService } from '../project/repositories.js';
 import { localBootIdentity } from '../agent/boot-identity.js';
-import { ApiConnectionService, registerConnectionCredential } from '../agent/connections.js';
+import { ApiConnectionService, publicApiConnection, registerConnectionCredential } from '../agent/connections.js';
 import type { ActivationBridge } from '../contracts/index.js';
 import { nativeSession, sessionCallbacks } from '../agent/native-sessions.js';
 import { bindingConnection } from '../agent/execution-connection.js';
@@ -316,6 +316,9 @@ export class RiftHostService implements ApiHandler {
       if (prior.status === 'pending') throw new RiftError('OUTCOME_UNKNOWN','Previous request is pending or interrupted; inspect status before retrying with a new key.');
       const value = JSON.parse(prior.response!);
       if (prior.status === 'failed') throw new RiftError(value.code,value.message);
+      const command = resolveHttpCommand(method, pathname, body);
+      if (command.name === 'connection.create') return publicApiConnection(value);
+      if (command.name === 'connection.verify') return { ...value, connection: publicApiConnection(value.connection) };
       return value;
     }
     this.store.exec('INSERT INTO management_requests(key,fingerprint,status) VALUES(?,?,?)',key,fingerprint,'pending');
