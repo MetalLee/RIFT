@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import React, { type ReactElement } from 'react';
-import type { WorktreeRemovalTarget } from '../../src/project/worktree-removals';
+import type { WorktreeRemovalTarget } from '@rift/protocol';
 import { WorktreeDeleteAction, WorktreeDeleteConfirmation } from './WorktreeDeleteAction';
 
 // Exercise the deletion controls without the app-only Tailwind/Radix aliases.

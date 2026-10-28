@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import type { WorktreeRemovalTarget } from '../../src/project/worktree-removals';
+import type { WorktreeRemovalTarget } from '@rift/protocol';
 import { Button } from './components/ui/button';
 import { errorText } from './api';
 import { useMutation } from './useMutation';

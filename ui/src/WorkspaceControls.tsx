@@ -1,7 +1,7 @@
 import { Button } from './components/ui/button';
 import { Input } from './components/ui/input';
 import { useState } from 'react';
-import type { UiWorkspaceDetail } from '../../src/api/ui-contracts';
+import type { UiWorkspaceDetail } from '@rift/protocol';
 import { errorText } from './api';
 import { useMutation } from './useMutation';
 import { Notice } from './App';

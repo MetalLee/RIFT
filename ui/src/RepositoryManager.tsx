@@ -4,15 +4,13 @@ import { Input } from './components/ui/input';
 import { NativeSelect, NativeSelectOption } from './components/ui/native-select';
 import { Checkbox } from './components/ui/checkbox';
 import { useEffect, useRef, useState } from 'react';
-import type { UiRepository, UiWorkspaceDetail } from '../../src/api/ui-contracts';
-import type { WorkspaceWorktree } from '../../src/project/repositories';
+import type { UiRepository, UiWorkspaceDetail, WorkspaceWorktree, WorktreeRemovalTarget } from '@rift/protocol';
 import { errorText, request } from './api';
 import { Copy, Empty, Field, Heading, Icon, Notice, Pill } from './App';
 import { LatestRequest } from './state';
 import { useMutation } from './useMutation';
 import { WorktreeRecovery } from './WorktreeRecovery';
 import { WorktreeDeleteAction } from './WorktreeDeleteAction';
-import type { WorktreeRemovalTarget } from '../../src/project/worktree-removals';
 
 export function RepositoryManager({ data, csrf, onChanged }: { data: UiWorkspaceDetail; csrf: string; onChanged: () => void }) {
   const [connecting, setConnecting] = useState(false); const [expectedVersion, setExpectedVersion] = useState(data.workspace.version); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const write = useMutation(csrf);

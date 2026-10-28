@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { loadPending, mergeChatHistory, persistPending, shouldSendOnKey } from './chat-state';
-import type { ChatMessage, AgentTurn, MessageChunk } from '../../src/chat/contracts';
+import type { ChatMessage, AgentTurn, MessageChunk } from '@rift/protocol';
 describe('conversation continuity', () => {
   it('never sends while an IME composition is active or reports legacy key code 229', () => {
     expect(shouldSendOnKey({ key: 'Enter', ctrlKey: true, metaKey: false, isComposing: true, keyCode: 13 })).toBe(false);

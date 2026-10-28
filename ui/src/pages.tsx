@@ -8,7 +8,7 @@ import { Input } from './components/ui/input';
 import { Card } from './components/ui/card';
 import { NativeSelect, NativeSelectOption } from './components/ui/native-select';
 import { useEffect, useRef, useState } from 'react';
-import type { UiPresence, UiTask, UiWorkspaceDetail } from '../../src/api/ui-contracts';
+import type { UiPresence, UiTask, UiWorkspaceDetail } from '@rift/protocol';
 import { Copy, Empty, Field, Heading, Icon, Notice, Pill, time } from './App';
 import { LatestRequest, routeHref } from './state';
 import { AgentEditor, LeadEditor } from './Configuration';

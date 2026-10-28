@@ -1,4 +1,4 @@
-import type { CoordinationReceipt as Receipt } from '../../src/chat/contracts';
+import type { CoordinationReceipt as Receipt } from '@rift/protocol';
 import { time } from './App';
 import { routeHref } from './state';
 const labels: Record<string,string> = {

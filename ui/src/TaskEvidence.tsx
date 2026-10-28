@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { CheckEvidence, ReviewReport } from '../../src/git/types';
+import type { CheckEvidence, ReviewReport } from '@rift/protocol';
 import { errorText, request } from './api';
 import { Copy, Pill, time } from './App';
 interface Evidence { taskId: string; acceptedCommit: string | null; integrations: { id: string; status: string; candidateHead?: string; checks: CheckEvidence[]; review: ReviewReport | null; evidenceUnavailable: boolean }[] }

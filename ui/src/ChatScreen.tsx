@@ -1,5 +1,5 @@
 import { applyMessageEvent } from './stream-state';
-import type { WorkspaceEvent } from '../../src/events/workspace-events';
+import type { WorkspaceEvent, AgentTurn, ChatMessage, ChatPage, Conversation, ContextRef, UiWorkspaceDetail } from '@rift/protocol';
 import { ChatTimeline } from './ChatTimeline';
 import { subscribeWorkspaceEvents } from './workspace-stream';
 import { randomId } from './browser-platform';
@@ -8,8 +8,6 @@ import { Button } from './components/ui/button';
 import { Checkbox } from './components/ui/checkbox';
 import { Textarea } from './components/ui/textarea';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { AgentTurn, ChatMessage, ChatPage, Conversation, ContextRef } from '../../src/chat/contracts';
-import type { UiWorkspaceDetail } from '../../src/api/ui-contracts';
 import { ApiError, errorText, isDefinitiveRejection, mutate, request } from './api';
 import { Empty, Icon, Notice, Pill, time } from './App';
 import { LatestRequest, readDraft, saveDraft } from './state';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { expect, it } from 'vitest';
-import type { UiTask } from '../../src/api/ui-contracts';
+import type { UiTask } from '@rift/protocol';
 import { TaskDiagnostics, taskIssueSummary } from './TaskDiagnostics';
 
 it('shows the test blocker separately from timeout and subsequent coordination failure', () => {

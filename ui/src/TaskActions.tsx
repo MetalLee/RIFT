@@ -5,7 +5,7 @@ import { NativeSelect, NativeSelectOption } from './components/ui/native-select'
 import { Input } from './components/ui/input';
 import { Checkbox } from './components/ui/checkbox';
 import { useState } from 'react';
-import type { UiTask, UiWorkspaceDetail } from '../../src/api/ui-contracts';
+import type { UiTask, UiWorkspaceDetail } from '@rift/protocol';
 import { errorText } from './api';
 import { useMutation } from './useMutation';
 import { Notice } from './App';

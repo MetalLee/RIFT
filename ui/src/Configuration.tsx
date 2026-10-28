@@ -6,14 +6,12 @@ import { Button } from './components/ui/button';
 import { RadioGroup, RadioGroupItem } from './components/ui/radio-group';
 import { Icon } from './components/Icon';
 import { useEffect, useState, type FormEvent } from 'react';
-import type { ChatConnection } from '../../src/chat/contracts';
-import type { UiWorkspaceDetail } from '../../src/api/ui-contracts';
+import type { ChatConnection, UiWorkspaceDetail, ConnectionChoice } from '@rift/protocol';
 import { errorText, mutate, request } from './api';
 import { Notice } from './App';
 import { useMutation } from './useMutation';
 import type { ApiConnection } from './ConnectionCatalogue';
 
-interface ConnectionChoice { id: string; runtime: 'dsh' | 'codex'; provider?: string; available: boolean; executionAvailable?: boolean; authentication: string; tools: boolean; streaming: boolean; modelSelection: string; models: string[]; disabledReason?: string }
 export function ConnectionFields({ initial, optional = false, runtimeFilter, purpose = 'chat', preserveExisting = false }: { initial?: ChatConnection | null; optional?: boolean; runtimeFilter?: 'dsh' | 'codex'; purpose?: 'chat' | 'execution'; preserveExisting?: boolean }) {
   const [choices, setChoices] = useState<ConnectionChoice[]>([]);
   const [savedConnections, setSavedConnections] = useState<ApiConnection[]>([]); const [model, setModel] = useState(initial?.model ?? '');

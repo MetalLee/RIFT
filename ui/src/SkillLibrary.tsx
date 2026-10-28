@@ -3,8 +3,7 @@ import { Card } from './components/ui/card';
 import { NativeSelect, NativeSelectOption } from './components/ui/native-select';
 import { Input } from './components/ui/input';
 import { useEffect, useReducer, useRef, useState, type ReactNode } from 'react';
-import type { UiWorkspaceDetail } from '../../src/api/ui-contracts';
-import type { CompiledSkills, SkillAssignment, SkillService } from '../../src/skill/service';
+import type { UiWorkspaceDetail, CompiledSkills, SkillAssignment, LibrarySkill, SkillImportPreview as Preview } from '@rift/protocol';
 import { assignmentBody, assignmentReducer, emptyAssignments, isDirty, memberSummary, newer, type AssignmentMode } from './skill-assignment';
 import { ApiError, errorText, request } from './api';
 import { Copy, Empty, Heading, Icon, Notice, Pill } from './App';
@@ -13,8 +12,6 @@ import { useMutation } from './useMutation';
 import { MessageBody } from './MessageBody';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 
-type LibrarySkill = ReturnType<SkillService['list']>[number];
-type Preview = ReturnType<SkillService['previewImport']>;
 export function SkillLibrary({ data, csrf }: { data: UiWorkspaceDetail; csrf: string }) {
   const [skills, setSkills] = useState<LibrarySkill[]>([]); const [selected, setSelected] = useState(''); const [importing, setImporting] = useState(false);
   const [scope, setScope] = useState('shared');

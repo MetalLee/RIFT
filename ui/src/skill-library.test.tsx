@@ -1,8 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-import type { UiWorkspaceDetail } from '../../src/api/ui-contracts';
-import type { SkillAssignment } from '../../src/skill/service';
+import type { UiWorkspaceDetail, SkillAssignment } from '@rift/protocol';
 import { assignmentBody, assignmentReducer, emptyAssignments, initialDraft, isDirty, memberSummary, newer, type AssignmentState } from './skill-assignment';
 
 // Render without the app-only Tailwind/Radix aliases.

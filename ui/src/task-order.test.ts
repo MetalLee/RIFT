@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import type { UiTask } from '../../src/api/ui-contracts';
+import type { UiTask } from '@rift/protocol';
 import { dependencyOrder } from './task-order';
 it('orders prerequisites first without mutating server snapshots or losing unresolved evidence', () => {
   const task = (id: string, dependsOn: string[] = []) => ({ id, dependsOn } as UiTask);

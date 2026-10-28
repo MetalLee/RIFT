@@ -1,4 +1,4 @@
-import type { AgentTurn, TurnPhase } from '../../src/chat/contracts';
+import type { AgentTurn, TurnPhase } from '@rift/protocol';
 import { time } from './App';
 const phases: Record<TurnPhase, string> = { queued: '等待执行', starting: '正在启动', generating: '模型生成中', tool: '工具执行中', handoff: '已登记交接，等待本轮结束', cleanup: '正在清理运行时', cleanup_unknown: '清理待确认，占用已保留', settled: '本轮执行已结束' };
 const statuses: Record<AgentTurn['status'], string> = { queued: '排队中', running: '正在回复', stopping: '正在停止', completed: '回复完成', failed: '回复失败', cancelled: '已停止', interrupted: '执行中断' };

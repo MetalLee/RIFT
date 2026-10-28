@@ -1,4 +1,4 @@
-import type { UiTask } from '../../src/api/ui-contracts';
+import type { UiTask } from '@rift/protocol';
 
 const stopLabels: Record<string,string> = {
   TIMEOUT: '执行超时，任务已停止', CANCELLED: '执行已取消',

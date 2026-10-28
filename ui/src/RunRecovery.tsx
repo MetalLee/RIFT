@@ -1,6 +1,6 @@
 import { Button } from './components/ui/button';
 import { useState } from 'react';
-import type { UiRun } from '../../src/api/ui-contracts';
+import type { UiRun } from '@rift/protocol';
 import { errorText, mutate } from './api';
 export function RunRecovery({ workspaceId, run, csrf, onChanged }: { workspaceId: string; run: UiRun; csrf: string; onChanged: () => void }) {
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
