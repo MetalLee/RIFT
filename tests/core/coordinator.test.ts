@@ -193,3 +193,24 @@ describe('persistent task coordinator',()=>{
     expect(f.store.all('SELECT * FROM runs')).toHaveLength(2);await f.coordinator.shutdown();
   });
 });
+
+describe('cleanup persistence failure recovery',()=>{
+  it('stops and releases a completed runtime after disk-full writes recover',async()=>{
+    const f=fixture();f.plan([{id:'a'}]);f.dispatch('a');await tick();
+    const exec=f.store.exec.bind(f.store);let full=true;
+    f.store.exec=(sql,...args)=>{if(full)throw new Error('database or disk is full');return exec(sql,...args);};
+    try {
+      f.complete(0);await tick();await tick();
+      expect(f.calls[0]!.disposed).toBe(true);
+      const state=f.coordinator as unknown as {active:Map<string,unknown>;background:Set<Promise<void>>};
+      expect(state.background.size).toBe(0);
+      expect(state.active.size).toBe(0);
+      full=false;
+      await f.coordinator.cancelTask('a');
+      const run=f.store.run(f.calls[0]!.run.id);
+      expect(run.status).toBe('cancelled');expect(run.cleanupStatus).toBe('confirmed');expect(run.slotReleasedAt).not.toBeNull();
+      expect(f.store.task('a').status).toBe('cancelled');
+      expect(f.coordinator.status('workflow').slots.total).toBe(0);
+    } finally {full=false;f.store.exec=exec;await f.coordinator.shutdown();}
+  });
+});
