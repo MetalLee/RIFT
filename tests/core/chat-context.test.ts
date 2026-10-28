@@ -29,6 +29,8 @@ describe('frozen collaboration input',()=>{
       expect(input.instructions).toContain('Reply in natural language to the current speaker');
       expect(input.instructions).toContain('applies only inside an actual Task Run and does not apply here');
       expect(input.instructions).toContain('Do not invent a runId');
+      expect(input.instructions).toContain('Do not add a mandatory opening plan');
+      expect(input.instructions).not.toContain('briefly explain your next step before tools');
       expect(input.instructions.indexOf('Host conversation output contract')).toBeGreaterThan(input.instructions.indexOf('Developer role. Return JSON'));
       expect(input.tools.map(tool=>tool.name)).toContain('rift_send_message');
       expect(input.messages.at(-1)?.content).toContain(`Source agent ${lead.id}`);

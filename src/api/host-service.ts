@@ -342,7 +342,7 @@ export class RiftHostService implements ApiHandler {
       return this.connections.remove(connectionId);
     }
     if(method==='POST'&&connectionVerify){z.object({}).strict().parse(body);return this.connections.verify(decodeURIComponent(connectionVerify[1]!));}
-    if (method === 'GET' && pathname === '/ui-api/v1/connections') return { savedConnections: this.connections.list(), configuration: this.connections.configurationCapability(), executionProviders: this.ctx.subagents.list().map(name => ({ name, capabilities: this.ctx.subagents.getProvider(name)?.capabilities ?? {}, authentication: 'not-verified' })), connections: [...(this.ctx.llm?.listProviders() ?? []).map(provider => ({ id: `dsh:${provider.id}`, runtime: 'dsh', provider: provider.id, available: true, authentication: 'not-verified', modelSelection: 'explicit', models: [], executionAvailable: Boolean(this.ctx.subagents.getProvider('spawn')?.capabilities.agentOptions), tools: true, streaming: false, output: 'buffered-for-redaction' })), { id: 'codex', runtime: 'codex', available: this.chatRuntimes.has('codex'), authentication: 'not-verified', modelSelection: 'verified-only', models: this.runtimeModels.get('codex') ?? [], executionAvailable: VERIFIED_NATIVE_CODEX_MODELS.every(model => Boolean(this.ctx.subagents.getProvider(`rift-native-codex-${model}`))), disabledReason: this.chatRuntimes.has('codex') ? null : this.nativeRuntimeUnavailable, tools: true, streaming: false, output: 'buffered-for-redaction' }] };
+    if (method === 'GET' && pathname === '/ui-api/v1/connections') return { savedConnections: this.connections.list(), configuration: this.connections.configurationCapability(), executionProviders: this.ctx.subagents.list().map(name => ({ name, capabilities: this.ctx.subagents.getProvider(name)?.capabilities ?? {}, authentication: 'not-verified' })), connections: [...(this.ctx.llm?.listProviders() ?? []).map(provider => ({ id: `dsh:${provider.id}`, runtime: 'dsh', provider: provider.id, available: true, authentication: 'not-verified', modelSelection: 'explicit', models: [], executionAvailable: Boolean(this.ctx.subagents.getProvider('spawn')?.capabilities.agentOptions), tools: true, streaming: true, output: 'redacted-event-stream' })), { id: 'codex', runtime: 'codex', available: this.chatRuntimes.has('codex'), authentication: 'not-verified', modelSelection: 'verified-only', models: this.runtimeModels.get('codex') ?? [], executionAvailable: VERIFIED_NATIVE_CODEX_MODELS.every(model => Boolean(this.ctx.subagents.getProvider(`rift-native-codex-${model}`))), disabledReason: this.chatRuntimes.has('codex') ? null : this.nativeRuntimeUnavailable, tools: true, streaming: true, output: 'redacted-event-stream' }] };
     if (method === 'GET' && pathname === '/ui-api/v1/workspaces') return workspaceList(this.store);
     const match = /^\/ui-api\/v1\/workspaces\/([^/]+)$/.exec(pathname);
     if (method === 'GET' && match) {
@@ -499,6 +499,17 @@ export class RiftHostService implements ApiHandler {
   }
   private async route(method:string, pathname:string, body:unknown):Promise<unknown> {
     if (pathname.startsWith('/ui-api/')) return this.routeBrowser(method, pathname, body);
+    // Management-token clients can recover a retained-history gap without a
+    // browser cookie. These are read-only projections of the same scoped ledger.
+    const streamSnapshot = /^\/v1\/workspaces\/([^/]+)\/(conversations|turns)\/([^/]+)(\/messages)?$/.exec(new URL(pathname,'http://rift.local').pathname);
+    if (method === 'GET' && streamSnapshot) {
+      const workspaceId=decodeURIComponent(streamSnapshot[1]!),entityId=decodeURIComponent(streamSnapshot[3]!);
+      if (streamSnapshot[2]==='turns' && !streamSnapshot[4]) return this.chat.turn(workspaceId,entityId);
+      if (streamSnapshot[2]==='conversations' && streamSnapshot[4]) {
+        const query=new URL(pathname,'http://rift.local').searchParams;
+        return this.chat.page(workspaceId,entityId,query.get('before')??undefined,Number(query.get('limit')??50));
+      }
+    }
     if (method === 'GET' && pathname === '/v1/doctor') return this.doctor();
     if (method === 'GET' && pathname === '/v1/workspaces') return this.store.all('SELECT * FROM workspaces ORDER BY id');
     if (method === 'POST' && pathname === '/v1/workspaces') {

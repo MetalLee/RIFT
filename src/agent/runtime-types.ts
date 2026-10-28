@@ -25,6 +25,8 @@ export interface RuntimeTurnInput {
   tools: RuntimeTool[];
   signal: AbortSignal;
   onText?: (text: string) => void;
+  /** Preferred stream. Adapters use onText only when this is absent. */
+  onEvent?: (event: RuntimeEvent) => void;
 }
 
 export interface RuntimeSession {
@@ -56,3 +58,11 @@ export interface AgentRuntime {
   readonly persistentSessions?: boolean;
   start(input: RuntimeTurnInput): Promise<RuntimeHandle>;
 }
+
+export type RuntimeMessageKind = 'assistant' | 'commentary' | 'final' | 'reasoning' | 'reasoning_summary';
+export type RuntimeEvent =
+  | { type: 'message.started'; messageId: string; kind: RuntimeMessageKind }
+  | { type: 'message.delta'; messageId: string; text: string }
+  | { type: 'message.completed'; messageId: string; kind?: RuntimeMessageKind; text?: string; interrupted?: boolean }
+  | { type: 'tool.started' | 'tool.completed' | 'tool.failed'; toolCallId: string; toolName: string }
+  | { type: 'status.changed'; status: 'thinking' | 'generating' };

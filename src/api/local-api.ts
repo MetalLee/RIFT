@@ -54,6 +54,39 @@ export async function startLocalApi(handler: ApiHandler, options: { home: string
         if (req.headers.origin && req.headers.origin !== origin) throw new RiftError('FORBIDDEN', 'Origin does not match this Host.');
         await browser.static(req, res); return;
       }
+      const streamEvents = (workspaceId: string, authenticate: () => void): void => {
+        if (eventConnections >= 16) throw new RiftError('CAPACITY', 'Too many event connections.');
+        const rawCursor = req.headers['last-event-id'] ?? requestUrl.searchParams.get('after') ?? '0';
+        if (typeof rawCursor !== 'string' || !/^\d+$/.test(rawCursor)) throw new RiftError('INVALID_CURSOR', 'Use a numeric event cursor.');
+        let cursor = Number(rawCursor), heartbeatAt = Date.now();
+        const initial = handler.browserEvents!(workspaceId, cursor);
+        res.setHeader('Content-Type', 'text/event-stream; charset=utf-8'); res.setHeader('X-Accel-Buffering','no'); res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders(); eventConnections++;
+        const emit = (page: WorkspaceEventPage): void => {
+          if (page.resyncRequired || res.writableLength > 256 * 1024) { res.end(`event: resync_required\ndata: ${JSON.stringify({ cursor: page.cursor })}\n\n`); return; }
+          for (const event of page.events) {
+            if (!res.write(`id: ${event.seq}\nevent: workspace\ndata: ${JSON.stringify(event)}\n\n`)) { res.end('event: resync_required\ndata: {}\n\n'); return; }
+            cursor = event.seq;
+          }
+          // Global gaps are legal; a sparse workspace still advances with
+          // the server cursor once this page has fully drained.
+          cursor = page.nextAfter;
+          if (Date.now() - heartbeatAt >= 15000) { res.write(`id: ${cursor}\nevent: heartbeat\ndata: ${JSON.stringify({ cursor })}\n\n`); heartbeatAt = Date.now(); }
+        };
+        const timer = setInterval(() => {
+          try { authenticate(); emit(handler.browserEvents!(workspaceId, cursor)); }
+          catch { res.end('event: session_expired\ndata: {}\n\n'); }
+        }, 50); timer.unref();
+        res.once('close', () => { clearInterval(timer); eventConnections--; });
+        emit(initial); return;
+      };
+      const managementEvents = /^\/v1\/workspaces\/([^/]+)\/events$/.exec(pathname);
+      if (!isBrowser && req.method === 'GET' && managementEvents && handler.browserEvents) {
+        streamEvents(decodeURIComponent(managementEvents[1]!), () => {
+          if (!tokenMatches(req.headers.authorization, token)) throw new RiftError('UNAUTHORIZED','Management authentication expired.');
+        });
+        return;
+      }
       const key = req.headers['idempotency-key'];
       if (key !== undefined && (typeof key !== 'string' || key.length < 1 || key.length > 160)) throw new RiftError('INVALID_KEY', 'Invalid idempotency key.');
       let value: unknown;
@@ -70,33 +103,7 @@ export async function startLocalApi(handler: ApiHandler, options: { home: string
           const session = browser.authenticate(req, expectedHost, write);
           if (write && !key) throw new RiftError('IDEMPOTENCY_KEY_REQUIRED', 'Write requests require Idempotency-Key.');
           const eventRoute = /^\/ui-api\/v1\/workspaces\/([^/]+)\/events$/.exec(pathname);
-          if (!write && eventRoute && handler.browserEvents) {
-            if (eventConnections >= 16) throw new RiftError('CAPACITY', 'Too many event connections.');
-            const rawCursor = req.headers['last-event-id'] ?? requestUrl.searchParams.get('after') ?? '0';
-            if (typeof rawCursor !== 'string' || !/^\d+$/.test(rawCursor)) throw new RiftError('INVALID_CURSOR', 'Use a numeric event cursor.');
-            let cursor = Number(rawCursor), heartbeatAt = Date.now();
-            const workspaceId = decodeURIComponent(eventRoute[1]!);
-            const initial = handler.browserEvents(workspaceId, cursor);
-            res.setHeader('Content-Type', 'text/event-stream; charset=utf-8'); res.setHeader('Connection', 'keep-alive');
-            res.flushHeaders(); eventConnections++;
-            const emit = (page: WorkspaceEventPage): void => {
-              if (page.resyncRequired || res.writableLength > 256 * 1024) { res.end(`event: resync_required\ndata: ${JSON.stringify({ cursor: page.cursor })}\n\n`); return; }
-              for (const event of page.events) {
-                if (!res.write(`id: ${event.seq}\nevent: workspace\ndata: ${JSON.stringify(event)}\n\n`)) { res.end('event: resync_required\ndata: {}\n\n'); return; }
-                cursor = event.seq;
-              }
-              // Global gaps are legal; a sparse workspace still advances with
-              // the server cursor once this page has fully drained.
-              cursor = page.nextAfter;
-              if (Date.now() - heartbeatAt >= 15000) { res.write(`id: ${cursor}\nevent: heartbeat\ndata: ${JSON.stringify({ cursor })}\n\n`); heartbeatAt = Date.now(); }
-            };
-            const timer = setInterval(() => {
-              try { browser.authenticate(req, expectedHost, false); emit(handler.browserEvents!(workspaceId, cursor)); }
-              catch { res.end('event: session_expired\ndata: {}\n\n'); }
-            }, 250); timer.unref();
-            res.once('close', () => { clearInterval(timer); eventConnections--; });
-            emit(initial); return;
-          }
+          if (!write && eventRoute && handler.browserEvents) { streamEvents(decodeURIComponent(eventRoute[1]!), () => { browser.authenticate(req, expectedHost, false); }); return; }
           if (req.method === 'GET' && pathname === '/ui-api/v1/session') value = session;
           else if (req.method === 'POST' && pathname === '/ui-api/v1/logout') { browser.logout(req, expectedHost, res); value = { loggedOut: true }; }
           else value = await handler.handleBrowser!(req.method ?? 'GET', pathname + requestUrl.search, await readBody(req), key);
@@ -108,10 +115,10 @@ export async function startLocalApi(handler: ApiHandler, options: { home: string
           if (input?.remote && !tailnetAddress) throw new RiftError('INVALID_HOST', 'No Tailscale listener is configured.');
           value = browser.issue(input?.remote ? `http://${tailnetAddress}:${(server.address() as import('node:net').AddressInfo).port}` : origin, key!);
         }
-        else value = await handler.handle(req.method ?? 'GET', pathname, await readBody(req), key);
+        else value = await handler.handle(req.method ?? 'GET', /^\/v1\/workspaces\/[^/]+\/conversations\/[^/]+\/messages$/.test(pathname) ? pathname+requestUrl.search : pathname, await readBody(req), key);
       }
       // Redact scalar values without truncating JSON or corrupting its wire format.
-      res.end(JSON.stringify(value, (_key, item: unknown) => typeof item === 'string' ? redact(item) : item));
+      res.end(JSON.stringify(value, (key, item: unknown) => typeof item === 'string' ? redact(item, key==='text'||key==='content'?256_000:128*1024) : item));
     } catch (error) {
       const detail = publicError(error);
       res.statusCode = detail.code === 'UNAUTHORIZED' ? 401 : detail.code === 'FORBIDDEN' ? 403 : detail.code === 'NOT_FOUND' ? 404 : /STALE|CONFLICT|IN_USE|UNKNOWN|RUNNING/.test(detail.code) ? 409 : 400;

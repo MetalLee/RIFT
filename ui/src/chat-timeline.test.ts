@@ -1,7 +1,7 @@
 import { describe,expect,it } from 'vitest';
-import { buildChatTimeline,messageAuthor,messageSender } from './chat-timeline';
+import { buildChatTimeline,buildConversationTimeline,messageAuthor,messageSender } from './chat-timeline';
 import { taskHref,parseRoute } from './state';
-import type { AgentTurn,ChatMessage,MessageChunk } from '../../src/chat/contracts';
+import type { AgentTurn,ChatMessage,MessageChunk,StreamMessage } from '../../src/chat/contracts';
 const message=(id:string,extra:Partial<ChatMessage>={}):ChatMessage=>({id,workspaceId:'ws',conversationId:'c',clientMessageId:null,recipientAgentId:'lead',role:'user',senderType:'user',content:id,status:'completed',version:0,createdAt:'2026-01-01',...extra});
 const turn={id:'turn',messageId:'input',agentId:'lead',status:'running',createdAt:'2026-01-01',activities:[{payload:{taskId:'task-a'}}]} as unknown as AgentTurn;
 describe('conversation author and attached work',()=>{
@@ -26,4 +26,29 @@ describe('conversation author and attached work',()=>{
     const result=buildChatTimeline([message('input')],[{...turn,status:'cancelled'}],[{seq:1,turnId:'turn',text:'partial'} as MessageChunk]);
     expect(result.items[0]!.drafts[0]?.turn.status).toBe('cancelled');expect(result.items).toHaveLength(1);
   });
+  it('keeps interleaved turns in generation order before and after their final snapshots',()=>{
+    const stream=(id:string,time:string,kind:StreamMessage['kind']='reasoning_summary'):StreamMessage=>({seq:Number(id),turnId:'turn',messageId:id,kind,text:`text-${id}`,status:'completed',version:0,createdAt:time,updatedAt:time});
+    const first=message('input',{createdAt:'2026-01-01T00:00:00Z'});
+    const second=message('second',{createdAt:'2026-01-01T00:00:02Z'});
+    const live={...turn,activities:[],streamMessages:[stream('1','2026-01-01T00:00:01Z'),stream('2','2026-01-01T00:00:03Z','commentary')]};
+    const ongoing=buildConversationTimeline([first,second],[live],[]).items;
+    expect(ongoing.map(row=>row.message.content)).toEqual(['input','text-1','second','text-2']);
+    const final=message('final',{role:'assistant',senderType:'agent',senderAgentId:'lead',recipientAgentId:null,sourceTurnId:'turn',createdAt:'2026-01-01T00:00:05Z',content:'Done'});
+    const settled=buildConversationTimeline([first,second,final],[{...live,status:'completed'}],[]).items;
+    expect(settled.map(row=>row.message.content)).toEqual(['input','text-1','second','text-2','Done']);
+    expect(settled[1]!.message.id).toBe(ongoing[1]!.message.id);
+  });
+
+  it('reconciles the final reply in place and retains an abandoned attempt',()=>{
+    const start='2026-01-01T00:00:01Z',later='2026-01-01T00:00:02Z';
+    const streamed=(id:string,status:StreamMessage['status']):StreamMessage=>({seq:1,turnId:'turn',messageId:id,kind:'final',text:id,status,version:0,createdAt:start,updatedAt:start});
+    const live={...turn,activities:[],streamMessages:[streamed('abandoned','interrupted'),streamed('answer','completed')]};
+    const input=message('input',{createdAt:'2026-01-01T00:00:00Z'}),next=message('next',{createdAt:later});
+    const ongoing=buildConversationTimeline([input,next],[live],[]).items;
+    const final=message('final',{role:'assistant',senderType:'agent',senderAgentId:'lead',recipientAgentId:null,sourceTurnId:'turn',content:'answer',createdAt:'2026-01-01T00:00:03Z'});
+    const settled=buildConversationTimeline([input,next,final],[{...live,status:'completed'}],[]).items;
+    expect(settled.map(row=>[row.message.id,row.message.content])).toEqual(ongoing.map(row=>[row.message.id,row.message.content]));
+    expect(settled[1]!.message.status).toBe('interrupted');
+  });
+
 });

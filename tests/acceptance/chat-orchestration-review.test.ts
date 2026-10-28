@@ -94,7 +94,7 @@ describe('Independent C1 acceptance: factual activities and cleanup',()=>{
       const turn=chat.send(workspace.id,conversation.id,{clientMessageId:'activities',content:'Run the controlled review'}).turn;
       await until(()=>Boolean(input));
       input!.onText?.(`Credential ${secret.slice(0,15)}`); input!.onText?.(secret.slice(15));
-      expect(store.all('SELECT * FROM message_chunks')).toEqual([]);
+      expect(store.all<{text:string}>('SELECT * FROM message_chunks').map(chunk=>chunk.text).join('')).toBe('Credential ');
       const pending=input!.tools[0]!.execute({credential:secret},input!.signal);
       expect(chat.turn(workspace.id,turn.id)).toMatchObject({status:'running',phase:'tool',currentToolName:'rift_task_dispatch'});
       expect(JSON.stringify(chat.turn(workspace.id,turn.id).activities)).not.toContain(secret);

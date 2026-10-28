@@ -54,7 +54,7 @@ export function execute(executable: string, args: readonly string[], cwd: string
 
 export async function git(cwd: string, args: readonly string[]): Promise<CommandResult> {
   // Repository-controlled helpers must never execute in the credential-bearing Host.
-  const env:NodeJS.ProcessEnv={...Object.fromEntries(Object.keys(process.env).filter(name=>/^(?:GIT_|NODE_OPTIONS$|LD_|DYLD_)/.test(name)).map(name=>[name,undefined])),GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:devNull,GIT_TERMINAL_PROMPT:'0',GIT_MERGE_AUTOEDIT:'no'};
+  const env:NodeJS.ProcessEnv={...Object.fromEntries(Object.keys(process.env).filter(name=>/^(?:GIT_|NODE_OPTIONS$|LD_|DYLD_)/.test(name)).map(name=>[name,undefined])),GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:process.platform==='win32'?'NUL':devNull,GIT_TERMINAL_PROMPT:'0',GIT_MERGE_AUTOEDIT:'no'};
   const configuration=await execute('git',['config','--no-includes','--list'],cwd,{env});
   if(configuration.exitCode===0&&configuration.stdout.split('\n').some(line=>/^(?:include(?:if\.[^=]*)?\.|filter\.|credential\.|core\.(?:fsmonitor|sshcommand)|diff\..*\.(?:command|textconv)|merge\..*\.driver|core\.worktree)=?/i.test(line)))throw new Error('UNSAFE_GIT_CONFIG: repository helper/include configuration requires operator removal before Host Git operations.');
   const result = await execute('git', ['-c', `core.hooksPath=${devNull}`, '-c', 'commit.gpgSign=false', '-c', 'tag.gpgSign=false', ...args], cwd, { env, maxOutputBytes: 8_388_608 });

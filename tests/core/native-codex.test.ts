@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { JsonRpcLineTransport } from '@deepseek-ai/dsh-sdk-protocol';
 import type { SubprocessHandle, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess';
 import { NativeCodexRuntime, nativeRepositoryRoots, type NativeCodexOptions } from '../../src/agent/native-codex.js';
-import type { RuntimeHandle, RuntimeTurnInput } from '../../src/agent/runtime-types.js';
+import type { RuntimeEvent, RuntimeHandle, RuntimeTurnInput } from '../../src/agent/runtime-types.js';
 import { mkdtemp,mkdir,rm,writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -56,6 +56,46 @@ function harness(options: { sandbox?: string; cleanup?: boolean; resumeId?:strin
 }
 
 describe('native Codex Host-owned tool gateway', () => {
+  it.each(['我先检查代码。', 'I will inspect the code.'])('streams native commentary, public summaries and tool progress before completion: %s',async text=>{
+    const h=harness();const events:RuntimeEvent[]=[];let legacy='';
+    h.input.onEvent=event=>events.push(event);h.input.onText=chunk=>{legacy+=chunk;};
+    const handle=await h.start();
+    expect(h.requests.find(request=>request.method==='turn/start')?.params.summary).toBe('auto');
+    let done=false;void handle.result.then(()=>{done=true;});
+    const notify=(method:string,extra:Record<string,unknown>)=>h.peer.notify(method,{threadId:'native-thread',turnId:'native-turn',...extra});
+    notify('item/started',{item:{id:'pre',type:'agentMessage',phase:'commentary'}});
+    for(const chunk of text)notify('item/agentMessage/delta',{itemId:'pre',delta:chunk});
+    notify('item/completed',{item:{id:'pre',type:'agentMessage',phase:'commentary',text}});
+    notify('item/started',{item:{id:'reason',type:'reasoning'}});
+    notify('item/reasoning/textDelta',{itemId:'reason',delta:'private data must not be forwarded'});
+    notify('item/reasoning/summaryTextDelta',{itemId:'reason',summaryIndex:0,delta:'Checking the relevant files.'});
+    notify('item/completed',{item:{id:'reason',type:'reasoning'}});
+    expect((await h.toolCall()).success).toBe(true);
+    expect(done).toBe(false);expect(legacy).toBe('');
+    expect(events.filter(event=>event.type==='message.delta'&&event.messageId==='pre').map(event=>'text' in event?event.text:'').join('')).toBe(text);
+    expect(events).toContainEqual({type:'message.completed',messageId:'pre',text,kind:'commentary'});
+    expect(events).toContainEqual({type:'tool.started',toolCallId:'call-one',toolName:'rift_status'});
+    expect(events).toContainEqual({type:'tool.completed',toolCallId:'call-one',toolName:'rift_status'});
+    expect(events).toContainEqual({type:'message.started',messageId:'summary:reason:0',kind:'reasoning_summary'});
+    expect(JSON.stringify(events)).not.toContain('private data');
+    notify('item/started',{item:{id:'answer',type:'agentMessage',phase:'final_answer'}});
+    notify('item/agentMessage/delta',{itemId:'answer',delta:'Done.'});
+    notify('item/completed',{item:{id:'answer',type:'agentMessage',phase:'final_answer',text:'Done.'}});
+    h.peer.notify('turn/completed',{threadId:'native-thread',turn:{id:'native-turn',status:'completed'}});
+    await expect(handle.result).resolves.toMatchObject({text:'Done.',finalText:'Done.'});
+  });
+
+  it('recovers completion-only public summaries without exposing raw content',async()=>{
+    const h=harness(),events:RuntimeEvent[]=[];
+    h.input.onEvent=event=>events.push(event);
+    const handle=await h.start();
+    h.peer.notify('item/completed',{threadId:'native-thread',turnId:'native-turn',item:{id:'reason',type:'reasoning',summary:['核对调用结果。','Checking the results.'],content:['opaque private data']}});
+    h.complete();await handle.result;
+    expect(events).toContainEqual({type:'message.completed',messageId:'summary:reason:0',kind:'reasoning_summary',text:'核对调用结果。'});
+    expect(events).toContainEqual({type:'message.completed',messageId:'summary:reason:1',kind:'reasoning_summary',text:'Checking the results.'});
+    expect(JSON.stringify(events)).not.toContain('opaque private data');
+  });
+
   it('persists the thread before accepting a turn and resumes with fresh tool closures', async () => {
     const recorded:string[]=[];
     const h=harness();

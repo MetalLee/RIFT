@@ -1,0 +1,179 @@
+{
+  "mode": "Windows full regression snapshot; does not mark unsupported tests as passing",
+  "tests": 527,
+  "passed": 488,
+  "failed": 34,
+  "skipped": 5,
+  "failures": [
+    {
+      "file": "tests/api/sandbox-egress.test.ts",
+      "test": "rejects private HTTP and CONNECT through the real Unix capability",
+      "reason": "Error: listen EACCES: permission denied C:\\Users\\李祉延\\AppData\\Local\\Temp\\rift-egress-S0NHGW\\proxy.sock"
+    },
+    {
+      "file": "tests/acceptance/blocked-workflow-recovery-review.test.ts",
+      "test": "preserves a blocked uncommitted attempt and accepts only a fresh completed attempt after Host collection, checks and independent review",
+      "reason": "AssertionError: expected false to be true // Object.is equality"
+    },
+    {
+      "file": "tests/acceptance/git-gates.test.ts",
+      "test": "rebases the second candidate on the accepted first result and preserves the user branch",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/acceptance/git-gates.test.ts",
+      "test": "rejects stale target publication and rejects a modified review checkout",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/acceptance/git-gates.test.ts",
+      "test": "redacts credential values before persisting deterministic check logs",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/acceptance/package-install.test.ts",
+      "test": "does not privatize shared inodes inside read-only metadata nested in a writable root",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/acceptance/package-install.test.ts",
+      "test": "rejects a writable HOME alias of read-only metadata before executing",
+      "reason": "AssertionError: expected RiftError: Repository commands require th… { …(2) } to match object { code: 'FILESYSTEM_SCOPE' }"
+    },
+    {
+      "file": "tests/acceptance/package-install.test.ts",
+      "test": "keeps read-only grants effective under writable parents and over writable children",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/acceptance/package-install.test.ts",
+      "test": "persists a private HOME across commands and keeps project Skill paths usable",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/acceptance/package-install.test.ts",
+      "test": "accepts an explicit long-build timeout instead of a fixed five-minute rejection",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/acceptance/repository-permissions-review.test.ts",
+      "test": "builds an isolated DSH native sandbox profile and rejects outside cwd or late execution",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/acceptance/repository-permissions-review.test.ts",
+      "test": "does not report DSH command cleanup confirmed while its process lease remains unknown",
+      "reason": "AssertionError: expected RiftError: Repository commands require th… { …(2) } to match object { code: 'CLEANUP_UNKNOWN' }"
+    },
+    {
+      "file": "tests/acceptance/repository-permissions-review.test.ts",
+      "test": "gives one legacy Lead a scoped shell and rejects foreign identity, chat takeover and terminal workflow writes",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/acceptance/repository-permissions-review.test.ts",
+      "test": "disposes the underlying legacy agent even if its owned command cleanup is unknown",
+      "reason": "AssertionError: expected RiftError: Repository commands require th… { …(2) } to match object { code: 'CLEANUP_UNKNOWN' }"
+    },
+    {
+      "file": "tests/acceptance/ui-review.test.ts",
+      "test": "requires clean exclusive external worktree ownership before moving into the managed root",
+      "reason": "AssertionError: expected RiftError: Commit or preserve dirty, untr… { …(2) } to match object { code: 'VERSION_CONFLICT' }"
+    },
+    {
+      "file": "tests/acceptance/ui-review.test.ts",
+      "test": "integrates two real repositories through dependency, rejected review, repair and added plan tasks without mixing commits",
+      "reason": "AssertionError: expected 'Repository commands require the verif…' to contain 'Review must approve'"
+    },
+    {
+      "file": "tests/acceptance/workspace-cli.test.ts",
+      "test": "imports large Skill resources, assigns ordinary versions and executes immutable script snapshots",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/acceptance/workspace-cli.test.ts",
+      "test": "offers an isolated installation directory before any repository is registered",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/acceptance/worktree-delete.test.ts",
+      "test": "deletes terminal task, candidate AND reviewer directories while preserving exact integration/run/event/check evidence and detached HEAD reachability",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/acceptance/worktree-delete.test.ts",
+      "test": "does not trust a resolved snapshot if metadata changes before the deletion reservation",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/git/core-integration.test.ts",
+      "test": "reuses a proven collected source after an infrastructure failure without inventing an empty commit or skipping review",
+      "reason": "Error: Timed out waiting for seed review"
+    },
+    {
+      "file": "tests/git/core-integration.test.ts",
+      "test": "collects required helper files beyond legacy path metadata and still requires exact independent review",
+      "reason": "Error: Timed out waiting for wide review"
+    },
+    {
+      "file": "tests/git/core-integration.test.ts",
+      "test": "starts both developers, accepts the second result first and retains both through serial reviews",
+      "reason": "Error: Timed out waiting for b review"
+    },
+    {
+      "file": "tests/git/core-integration.test.ts",
+      "test": "releases a rejected candidate and repairs in a fresh attempt with prior evidence",
+      "reason": "Error: Timed out waiting for a review"
+    },
+    {
+      "file": "tests/git/core-integration.test.ts",
+      "test": "a failed deterministic check does not consume the reviewer or block an independent candidate",
+      "reason": "Error: Timed out waiting for good review"
+    },
+    {
+      "file": "tests/git/core-integration.test.ts",
+      "test": "a conflicting later source preserves accepted changes and lets independent work integrate",
+      "reason": "Error: Timed out waiting for a review"
+    },
+    {
+      "file": "tests/git/integration.test.ts",
+      "test": "runs real Git checks in linked candidates with read-only common metadata",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/git/integration.test.ts",
+      "test": "isolates Chinese/space paths and rebuilds the second candidate on latest accepted HEAD",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/git/integration.test.ts",
+      "test": "rejects mismatched review and releases integration ownership",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/git/integration.test.ts",
+      "test": "uses CAS and rejects review checkout mutations",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/git/integration.test.ts",
+      "test": "preserves accepted work on conflict and allows another candidate afterwards",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/git/integration.test.ts",
+      "test": "accepts ignored build/cache outputs while preserving them against deletion",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    },
+    {
+      "file": "tests/git/integration.test.ts",
+      "test": "persists quarantine after a timed-out check and refuses default archive even after restart",
+      "reason": "AssertionError: expected [Function] to throw error including 'CHECK_FAILED' but got 'Repository commands require the verif…'"
+    },
+    {
+      "file": "tests/core/filesystem-scale.test.ts",
+      "test": "does not turn more than 500000 authorized entries into a whole-workspace permission denial",
+      "reason": "RiftError: Repository commands require the verified Linux mount-namespace sandbox."
+    }
+  ]
+}

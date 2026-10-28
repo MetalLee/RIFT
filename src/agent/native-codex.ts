@@ -155,6 +155,8 @@ export class NativeCodexRuntime implements AgentRuntime {
     let closed = false;
     let partial = '';
     let final = '';
+    const messages = new Map<string, {text:string; completed:boolean}>();
+    const messageId = (value: unknown) => typeof value === 'string' && value ? value : 'native-message';
     let disposePromise: Promise<void> | undefined;
     const early: { method: string; params: unknown }[] = [];
     const calls = new Map<string, { fingerprint: string; result: Promise<unknown> }>();
@@ -170,21 +172,71 @@ export class NativeCodexRuntime implements AgentRuntime {
       if (closed || terminal) return;
       try {
         const params = record(raw);
-        if (!['item/agentMessage/delta', 'item/completed', 'turn/completed'].includes(method)) return;
+        if (!['item/agentMessage/delta', 'item/started', 'item/reasoning/summaryTextDelta', 'item/completed', 'turn/completed'].includes(method)) return;
         if (startingTurn && !turnId) { if (early.length >= 512) throw new RiftError('NATIVE_PROTOCOL_LIMIT', 'Native startup event buffer exceeded its limit.'); early.push({ method, params }); return; }
         // Notifications for unrelated threads cannot affect this turn.
         if (params.threadId !== threadId) return;
         const eventTurn = method === 'turn/completed' ? record(params.turn).id : params.turnId;
         if (eventTurn !== turnId) throw new RiftError('NATIVE_SCOPE_MISMATCH', 'Native event referenced another turn.');
+        if (method === 'item/started' && params.item?.type === 'reasoning') input.onEvent?.({type:'status.changed',status:'thinking'});
+        if ((method === 'item/started' || method === 'item/completed') && ['commandExecution','fileChange'].includes(params.item?.type)) {
+          input.onEvent?.({type:method==='item/started'?'tool.started':params.item.status==='failed'?'tool.failed':'tool.completed',toolCallId:messageId(params.item.id),toolName:params.item.type});
+        }
+        if (method === 'item/started' && params.item?.type === 'agentMessage') {
+          const id = messageId(params.item.id);
+          if (!messages.has(id)) {
+            messages.set(id,{text:'',completed:false});
+            input.onEvent?.({type:'message.started',messageId:id,kind:params.item.phase==='commentary'?'commentary':params.item.phase==='final_answer'?'final':'assistant'});
+          }
+        }
+        // Only the protocol's public summary channel is forwarded, never raw reasoning.
+        if (method === 'item/reasoning/summaryTextDelta' && typeof params.delta === 'string') {
+          const id = `summary:${messageId(params.itemId)}:${params.summaryIndex ?? 0}`;
+          if (!messages.has(id)) {
+            messages.set(id,{text:'',completed:false});
+            input.onEvent?.({type:'message.started',messageId:id,kind:'reasoning_summary'});
+          }
+          messages.get(id)!.text += params.delta;
+          input.onEvent?.({type:'message.delta',messageId:id,text:params.delta});
+        }
+        if (method === 'item/completed' && params.item?.type === 'reasoning') {
+          // Some providers deliver summaries only on completion; reconcile the
+          // public summary array without reading content or encrypted state.
+          if (Array.isArray(params.item.summary)) for (const [index,text] of params.item.summary.entries()) {
+            if (typeof text !== 'string') continue;
+            const id = `summary:${messageId(params.item.id)}:${index}`;
+            if (!messages.has(id)) input.onEvent?.({type:'message.started',messageId:id,kind:'reasoning_summary'});
+            messages.set(id,{text,completed:true});
+            input.onEvent?.({type:'message.completed',messageId:id,kind:'reasoning_summary',text});
+          }
+          for (const [id, message] of messages) if (id.startsWith(`summary:${messageId(params.item.id)}:`) && !message.completed) {
+            message.completed = true;
+            input.onEvent?.({type:'message.completed',messageId:id,kind:'reasoning_summary'});
+          }
+        }
         if (method === 'item/agentMessage/delta') {
           if (typeof params.delta !== 'string') throw new RiftError('NATIVE_PROTOCOL', 'Invalid native text delta.');
           if (partial.length + params.delta.length > 4 * 1024 * 1024) throw new RiftError('NATIVE_OUTPUT_LIMIT', 'Native output exceeded the turn limit.');
           partial += params.delta;
-          input.onText?.(params.delta);
+          const id = messageId(params.itemId);
+          if (!messages.has(id)) {
+            messages.set(id,{text:'',completed:false});
+            input.onEvent?.({type:'message.started',messageId:id,kind:'assistant'});
+          }
+          messages.get(id)!.text += params.delta;
+          if (input.onEvent) input.onEvent({type:'message.delta',messageId:id,text:params.delta});
+          else input.onText?.(params.delta);
         }
         if (method === 'item/completed' && params.item?.type === 'agentMessage') {
           if (typeof params.item.text !== 'string') throw new RiftError('NATIVE_PROTOCOL', 'Invalid native final message.');
           if (params.item.phase === 'final_answer' || params.item.phase == null) final = params.item.text;
+          const id = messageId(params.item.id);
+          const message = messages.get(id);
+          if (!message?.completed) {
+            if (!message) input.onEvent?.({type:'message.started',messageId:id,kind:params.item.phase==='commentary'?'commentary':params.item.phase==='final_answer'?'final':'assistant'});
+            messages.set(id,{text:params.item.text,completed:true});
+            input.onEvent?.({type:'message.completed',messageId:id,text:params.item.text,kind:params.item.phase==='commentary'?'commentary':params.item.phase==='final_answer'?'final':'assistant'});
+          }
         }
         if (method === 'turn/completed') {
           const status = record(params.turn).status;
@@ -192,7 +244,7 @@ export class NativeCodexRuntime implements AgentRuntime {
           input.session?.onSettled(status);
           if (status === 'failed') { terminal = true; completion.reject(new RiftError('NATIVE_TURN_FAILED', redact(typeof params.turn.error?.message === 'string' ? params.turn.error.message : 'Native model turn failed without a diagnostic.'))); return; }
           terminal = true;
-          completion.resolve({ text: final || partial, stopReason: status === 'completed' ? 'completed' : status === 'interrupted' ? 'cancelled' : 'failed', nativeSessionId: threadId });
+          completion.resolve({ text: final || partial, finalText: final || partial, stopReason: status === 'completed' ? 'completed' : status === 'interrupted' ? 'cancelled' : 'failed', nativeSessionId: threadId });
         }
       } catch (error) { fail(error); }
     };
@@ -216,7 +268,18 @@ export class NativeCodexRuntime implements AgentRuntime {
         const fingerprint = JSON.stringify([params.tool, params.arguments]);
         const prior = calls.get(params.callId);
         if (prior && prior.fingerprint !== fingerprint) throw new RiftError('IDEMPOTENCY_CONFLICT', 'Native call identity was reused for another operation.');
-        const result = prior?.result ?? Promise.resolve().then(() => tool.execute(params.arguments, controller.signal, { callId: String(params.callId) }));
+        const result = prior?.result ?? Promise.resolve().then(async () => {
+          const toolCallId = String(params.callId);
+          input.onEvent?.({type:'tool.started',toolCallId,toolName:tool.name});
+          try {
+            const value = await tool.execute(params.arguments, controller.signal, {callId:toolCallId});
+            input.onEvent?.({type:'tool.completed',toolCallId,toolName:tool.name});
+            return value;
+          } catch (error) {
+            input.onEvent?.({type:'tool.failed',toolCallId,toolName:tool.name});
+            throw error;
+          }
+        });
         if (!prior) calls.set(params.callId, { fingerprint, result });
         const value = await result;
         return { contentItems: [{ type: 'inputText', text: redact(JSON.stringify(value ?? null), 256 * 1024) }], success: true };
@@ -281,7 +344,7 @@ export class NativeCodexRuntime implements AgentRuntime {
       input.session?.onThread(threadId);
       const prompt = input.messages.map(message => `${message.role === 'user' ? 'User' : 'Assistant'}:\n${message.content}`).join('\n\n');
       startingTurn = true;
-      const turn = record(record(await request('turn/start', { threadId, cwd: input.cwd, clientUserMessageId: input.turnId, input: [{ type: 'text', text: prompt, text_elements: [] }], sandboxPolicy:{type:'readOnly',networkAccess:false}, ...(restrictedTools?{environments: []}:{}), ...(input.reasoningEffort ? { effort: input.reasoningEffort } : {}) })).turn);
+      const turn = record(record(await request('turn/start', { threadId, cwd: input.cwd, clientUserMessageId: input.turnId, input: [{ type: 'text', text: prompt, text_elements: [] }], summary:'auto', sandboxPolicy:{type:'readOnly',networkAccess:false}, ...(restrictedTools?{environments: []}:{}), ...(input.reasoningEffort ? { effort: input.reasoningEffort } : {}) })).turn);
       if (typeof turn.id !== 'string') throw new RiftError('NATIVE_PROTOCOL', 'Missing native turn identity.');
       turnId = turn.id;
       input.session?.onTurn(turnId);
