@@ -8,7 +8,7 @@ export interface EvidenceBinding { workspaceId: string; repositoryId: string; re
 export interface HostCheckAttachment extends EvidenceBinding {
   schemaVersion: 1; executionSource: 'host'; command: { executable: string; args: string[]; timeoutMs: number };
   configurationFingerprint: string; environmentFingerprint: string;
-  exitStatus: 'passed' | 'failed' | 'environment_unavailable' | 'timed_out';
+  exitStatus: 'passed' | 'failed' | 'environment_unavailable' | 'timed_out' | 'cancelled' | 'skipped';
   logSha256: string; summary: string;
 }
 export interface EvidenceBlocker { classification: BlockerClassification; commandId: string; reason: string }
@@ -17,7 +17,7 @@ export interface EvidenceReadiness {
   cleanupStatus?: 'unknown' | 'confirmed';
   requiredCheckIds: string[]; missingCheckIds: string[]; blockers: EvidenceBlocker[];
 }
-export interface TaskEvidenceIntegration { id: string; status: string; candidateHead?: string; checks: CheckEvidence[]; review: ReviewReport | null; evidenceUnavailable: boolean; readiness: EvidenceReadiness; baselines?: BaselineEvidence[]; timings?: StageTimings }
+export interface TaskEvidenceIntegration { checkPlan?: CheckPlanEvidence; id: string; status: string; candidateHead?: string; checks: CheckEvidence[]; review: ReviewReport | null; evidenceUnavailable: boolean; readiness: EvidenceReadiness; baselines?: BaselineEvidence[]; timings?: StageTimings }
 export interface TaskEvidence { taskId: string; acceptedCommit: string | null; currentCandidate?: { integrationId: string; candidateHead: string; sourceHead: string; taskAttempt: number } | null; integrations: TaskEvidenceIntegration[] }
 export interface SupplementEvidenceInput { integrationId: string; candidateHead: string; expectedVersion: number; idempotencyKey: string }
 
@@ -32,4 +32,8 @@ export interface BaselineEvidence {
   status: 'recorded' | 'reused' | 'unavailable'; cleanupStatus: 'confirmed' | 'unknown';
   lookupMs: number; check?: CheckEvidence; failureFingerprint?: string; reason?: string;
 }
-export interface StageTimings { prepareMs?: number; baselineMs?: number; checksMs?: number }
+export interface CheckPlanEvidence {
+  mode: 'dag' | 'serial'; maxConcurrency: number; resourceSlots: number;
+  nodes: { commandId: string; dependsOn: string[]; mutexGroup?: string; isolation: 'snapshot' | 'read_only' | 'serial'; resourceSlots: number; status: 'pending' | 'running' | HostCheckAttachment['exitStatus']; reason?: string }[];
+}
+export interface StageTimings { checksWallMs?: number; prepareMs?: number; baselineMs?: number; checksMs?: number }

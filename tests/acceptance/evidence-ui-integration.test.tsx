@@ -10,7 +10,7 @@ import type { Context } from '@deepseek-ai/cordis';
 import type { ChatPage, TaskEvidence } from '@rift/protocol';
 import type { RuntimeTurnInput, RuntimeTurnResult } from '../../src/agent/runtime-types.js';
 import type { ActivationBridge, ActivationResult, Candidate } from '../../src/contracts/index.js';
-import type { CheckCommand } from '../../src/git/types.js';
+import type { CheckCommand, CheckPlan } from '../../src/git/types.js';
 import { RiftHostService } from '../../src/api/host-service.js';
 import { startLocalApi } from '../../src/api/local-api.js';
 import { DshActivationBridge } from '../../src/task/activation-bridge.js';
@@ -38,7 +38,7 @@ async function until(predicate: () => boolean) {
 type Call = Parameters<ActivationBridge['start']>[0] & { finish: (result: ActivationResult) => void };
 const passing: CheckCommand[] = [{ id: 'unit', executable: process.execPath, args: ['-e', 'console.log("Host checked")'] }];
 
-async function fixture(checks: CheckCommand[]) {
+async function fixture(checks: CheckCommand[], checkPlan?: CheckPlan) {
   const root = await mkdtemp(path.join(tmpdir(), 'rift-evidence-ui-integration-'));
   cleanups.push(() => rm(root, { recursive: true, force: true }));
   const repo = path.join(root, '真实 仓库'); await mkdir(repo);
@@ -57,7 +57,7 @@ async function fixture(checks: CheckCommand[]) {
   const nativeFetch = globalThis.fetch;
   let host!: RiftHostService, api!: Awaited<ReturnType<typeof startLocalApi>>, csrf: string;
   async function start(commands: CheckCommand[]) {
-    host = new RiftHostService({ subagents: { list: () => [] } } as unknown as Context, { home, port: 0, leadProvider: 'test-adapter', leadModel: 'test-adapter', checks: commands });
+    host = new RiftHostService({ subagents: { list: () => [] } } as unknown as Context, { home, port: 0, leadProvider: 'test-adapter', leadModel: 'test-adapter', checks: commands, checkPlan });
     await host.initialize();
     // No model Lead is needed by the test adapter; retain the real retry route.
     vi.spyOn(host, 'ensureLead').mockResolvedValue({ leadSessionId: 'test-adapter' });
@@ -300,4 +300,26 @@ it('exposes historical baseline and measured timings through real HTTP/CLI evide
   expect(cliEvidence.integrations[0].baselines).toEqual(integration.baselines);
   expect(f.reviewCalls()).toHaveLength(0);
   await expect(f.post('/evidence', { ...logInput, candidateHead: evidence.currentCandidate!.candidateHead, expectedVersion: f.host.store.task('task').version, idempotencyKey: 'baseline-is-not-pass', baseline: { exitCode: 0 } }, 'forged-baseline')).rejects.toThrow();
+});
+
+
+it('reads persisted DAG configuration, timings and skipped evidence over real HTTP and CLI', async () => {
+  const checks: CheckCommand[] = [
+    { id: 'failed', executable: process.execPath, args: ['-e', 'process.exit(1)'] },
+    { id: 'independent', executable: process.execPath, args: ['-e', 'console.log("independent collected")'], isolation: 'read_only' },
+    { id: 'dependent', executable: process.execPath, args: ['-e', 'throw Error("must not execute")'], dependsOn: ['failed'], mutexGroup: 'database' },
+  ];
+  const f = await fixture(checks, { mode: 'dag', maxConcurrency: 2, resourceSlots: 2 });
+  await f.cli('dispatch', { expectedVersion: 0, idempotencyKey: 'dag-dispatch' });
+  await f.develop(await f.started('develop'), 'DAG candidate'); await f.settled('blocked');
+  const evidence = await f.raw(), integration = evidence.integrations[0]!;
+  expect(integration.checkPlan).toMatchObject({ mode: 'dag', maxConcurrency: 2, resourceSlots: 2, nodes: [{ status: 'failed' }, { status: 'passed', isolation: 'read_only' }, { status: 'skipped', dependsOn: ['failed'], mutexGroup: 'database' }] });
+  expect(integration.timings!.checksWallMs).toBeGreaterThan(0);
+  expect(integration.checks.map(check => check.host!.exitStatus)).toEqual(['failed', 'passed', 'skipped']);
+  expect(integration.readiness.status).toBe('failed'); expect(f.reviewCalls()).toHaveLength(0);
+  expect(await f.cli('evidence')).toEqual(evidence);
+  const log = await f.cli('evidence-log', { integrationId: integration.id, checkId: integration.checks[2]!.id });
+  expect(log.host.summary).toContain('Dependency failed is failed');
+  await f.restart(checks);
+  expect(await f.raw()).toEqual(evidence); expect(f.reviewCalls()).toHaveLength(0);
 });
