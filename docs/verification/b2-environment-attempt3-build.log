@@ -1,0 +1,7 @@
++ node_modules/.bin/tsc -p packages/protocol/tsconfig.json
++ node_modules/.bin/tsc --noEmit
++ node_modules/.bin/tsc -p tsconfig.build.json
++ node_modules/.bin/tsc -p ui/tsconfig.json
++ node_modules/.bin/tsc -p tests/protocol/tsconfig.json
++ node scripts/check-protocol.mjs
+Protocol: isolated package consumer, empty runtime, and UI/server boundary passed.

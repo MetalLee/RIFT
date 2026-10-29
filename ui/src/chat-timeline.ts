@@ -64,6 +64,7 @@ export function buildConversationTimeline(messages:ChatMessage[],turns:AgentTurn
   const rows:TimelineItem[] = [];
   for (const item of timeline.items) {
     for (const draft of item.drafts) {
+      if(draft.kind==='reasoning'||draft.kind==='reasoning_summary'&&!draft.messageId?.startsWith('translated-summary:'))continue;
       const streamed = draft.turn.streamMessages?.find(message=>message.messageId===draft.messageId);
       const interrupted = draft.status === 'interrupted' || ['cancelled','failed','interrupted'].includes(draft.turn.status);
       const message:ChatMessage = {
@@ -86,7 +87,7 @@ export function buildConversationTimeline(messages:ChatMessage[],turns:AgentTurn
   for(const item of rows)item.updates=item.updates.filter(update=>!progressIds.has(update.id));
   for(const message of progress)rows.push({message,turns:[],taskIds:message.taskId?[message.taskId]:[],updates:[],drafts:[]});
   for(const stream of runMessages){
-    if(!stream.text)continue;
+    if(!stream.text||stream.kind==='reasoning'||stream.kind==='reasoning_summary'&&!stream.messageId.startsWith('translated-summary:'))continue;
     let content=stream.text;
     // The task's machine result remains authoritative; show its human summary in chat.
     if(stream.kind==='final'&&stream.status==='completed'){

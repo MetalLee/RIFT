@@ -1,3 +1,4 @@
+import { previewBaseline, previewCheck } from '../git/evidence.js';
 import { parseTimelineRefresh } from '../chat/timeline-page.js';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -131,7 +132,7 @@ export class ApplicationCommands {
                 if(operation.binding?.attempt===task.attempt&&operation.sourceHead===task.sourceHead&&operation.binding.candidateHead===record.candidate.candidateHead)current.push({integrationId:record.id,candidateHead:record.candidate.candidateHead,sourceHead:operation.sourceHead,taskAttempt:operation.binding.attempt});
               } catch { readiness={status:'waiting_evidence',requiredCheckIds:[],missingCheckIds:[],blockers:[{classification:'evidence_missing',commandId:'',reason:'Historical or stale candidate binding; attachments remain read-only.'}]}; }
             }
-            return {id:record.id,status:record.status,candidateHead:operation.candidateHead,checks:(operation.checks??[]).map(check=>({...check,stdout:check.stdout.slice(0,8000),stderr:check.stderr.slice(0,8000),truncated:check.truncated||check.stdout.length>8000||check.stderr.length>8000})),review:operation.review??null,evidenceUnavailable:false,readiness};
+            return {id:record.id,status:record.status,candidateHead:operation.candidateHead,checkPlan:operation.checkPlan,timings:operation.timings,baselines:operation.baselines?.map(previewBaseline),checks:(operation.checks??[]).map(previewCheck),review:operation.review??null,evidenceUnavailable:false,readiness};
           } catch {return {id:record.id,status:record.status,checks:[],review:null,evidenceUnavailable:true,readiness:{status:'waiting_evidence' as const,requiredCheckIds:[],missingCheckIds:[],blockers:[{classification:'evidence_missing' as const,commandId:'',reason:'Host evidence is unavailable or its binding could not be verified.'}]}};}
         }));
         return {taskId,acceptedCommit:task.acceptedCommit,currentCandidate:current.length===1?current[0]:null,integrations} satisfies import('@rift/protocol').TaskEvidence;
@@ -169,7 +170,12 @@ export class ApplicationCommands {
       if (section==='agent') {
         if (action==='list') return { agents: this.host.store.all('SELECT * FROM roles WHERE workspace_id=? ORDER BY name', workspaceId) };
         if (action==='create') { const input = createAgentSchema.parse(body); if (input.chatConnection) this.host.validateChatConnection(input.chatConnection); invariant([input.executionConnection, input.executionProviderName, input.providerBindingId].filter(Boolean).length <= 1, 'INVALID_CONFIG', 'Select one execution connection.'); return this.host.store.transaction(() => createBrowserAgent(this.host.store, workspaceId, { ...input, ...(input.executionConnection ? { providerBindingId: this.host.configuredExecutionBinding(workspaceId, input.executionConnection) } : input.executionProviderName ? { providerBindingId: this.host.executionBinding(workspaceId, input.executionProviderName) } : {}) })); }
-        if (action==='update') { const input = updateAgentSchema.parse(body); if (input.chatConnection) this.host.validateChatConnection(input.chatConnection); invariant([input.executionConnection, input.executionProviderName, input.providerBindingId].filter(Boolean).length <= 1, 'INVALID_CONFIG', 'Select one execution connection.'); return this.host.store.transaction(() => updateBrowserAgent(this.host.store, workspaceId, entityId, { ...input, ...(input.executionConnection ? { providerBindingId: this.host.configuredExecutionBinding(workspaceId, input.executionConnection) } : input.executionProviderName ? { providerBindingId: this.host.executionBinding(workspaceId, input.executionProviderName) } : {}) })); }
+        if (action==='update') { const input = updateAgentSchema.parse(body); if(this.host.store.role(entityId).purpose==='lead'){
+          if(input.chatConnection)this.host.validateChatConnection(input.chatConnection);
+          if(input.executionConnection)this.host.validateChatConnection(input.executionConnection);
+          invariant(!input.executionProviderName&&!input.providerBindingId,'INVALID_CONFIG','Use an explicit Lead execution connection.');
+          return updateBrowserAgent(this.host.store,workspaceId,entityId,input);
+        } if (input.chatConnection) this.host.validateChatConnection(input.chatConnection); invariant([input.executionConnection, input.executionProviderName, input.providerBindingId].filter(Boolean).length <= 1, 'INVALID_CONFIG', 'Select one execution connection.'); return this.host.store.transaction(() => updateBrowserAgent(this.host.store, workspaceId, entityId, { ...input, ...(input.executionConnection ? { providerBindingId: this.host.configuredExecutionBinding(workspaceId, input.executionConnection) } : input.executionProviderName ? { providerBindingId: this.host.executionBinding(workspaceId, input.executionProviderName) } : {}) })); }
       }
       if (section==='conversation'||section==='message') {
         if (name==='conversation.list') return { conversations: this.host.chat.list(workspaceId) };

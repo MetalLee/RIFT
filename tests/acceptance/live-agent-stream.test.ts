@@ -80,10 +80,10 @@ describe('runtime → durable stream → authenticated HTTP SSE → chat timelin
       const reasoning=surface==='browser'?'Checking the inputs.':'正在核对输入。';
       emit({type:'message.started',messageId:'thinking',kind:'reasoning'});
       emit({type:'message.delta',messageId:'thinking',text:reasoning});
-      await events.next(event=>event.type==='turn.message'&&event.payload.delta===reasoning);
+
       expect(chat.turn(workspace.id,turn.id).status).toBe('running');
       emit({type:'message.completed',messageId:'thinking',kind:'reasoning'});
-      await events.next(event=>event.type==='turn.message'&&(event.payload.message as {messageId:string;status:string}).messageId==='thinking'&&(event.payload.message as {status:string}).status==='completed');
+      expect(chat.turn(workspace.id,turn.id).streamMessages?.some(message=>message.kind==='reasoning')).toBeFalsy();
       const sentAt=performance.now();
       emit({type:'message.started',messageId:'progress',kind:'commentary'});
       emit({type:'message.delta',messageId:'progress',text:commentary.slice(0,5)});
@@ -113,8 +113,8 @@ describe('runtime → durable stream → authenticated HTTP SSE → chat timelin
       const settled=await events.next(event=>event.type==='turn.message'&&(event.payload.message as {messageId:string;status:string}).messageId==='answer'&&(event.payload.message as {status:string}).status==='completed');
       expect(JSON.stringify(events.seen)).not.toContain(secret);
       const page=chat.page(workspace.id,conversation.id);
-      expect(page.turns[0]!.streamMessages?.map(message=>message.kind)).toEqual(['reasoning','commentary','final']);
-      expect(buildChatTimeline(page.messages,page.turns,page.chunks).items[0]!.drafts.map(message=>message.text)[1]).toBe(commentary);
+      expect(page.turns[0]!.streamMessages?.map(message=>message.kind)).toEqual(['commentary','final']);
+      expect(buildChatTimeline(page.messages,page.turns,page.chunks).items[0]!.drafts.map(message=>message.text)[0]).toBe(commentary);
       expect(page.turns[0]!.firstModelEventAt).toBeTruthy();expect(page.turns[0]!.firstVisibleTextAt).toBeTruthy();
       // Resume from Last-Event-ID: only later events are replayed, with no rerun.
       reconnect=new AbortController();
@@ -128,7 +128,7 @@ describe('runtime → durable stream → authenticated HTTP SSE → chat timelin
       cleanup.resolve();await until(()=>chat.turn(workspace.id,turn.id).status==='completed');
       const finalPage=chat.page(workspace.id,conversation.id);
       expect(finalPage.messages.filter(message=>message.role==='assistant').map(message=>message.content)).toEqual([answer]);
-      expect(buildChatTimeline(finalPage.messages,finalPage.turns,finalPage.chunks).items.flatMap(item=>item.drafts).map(message=>message.text)).toEqual([reasoning,commentary]);
+      expect(buildChatTimeline(finalPage.messages,finalPage.turns,finalPage.chunks).items.flatMap(item=>item.drafts).map(message=>message.text)).toEqual([commentary]);
     } finally {
       abort.abort();reconnect?.abort();tool.resolve({});model.resolve({text:'',stopReason:'cancelled'});cleanup.resolve();
       await api.close();await chat.close();store.close();await rm(home,{recursive:true,force:true});
