@@ -1,3 +1,4 @@
+import { PublicSummaryBuffer, type TranslateSummary } from './summary-translation.js';
 import { createHash } from 'node:crypto';
 import type { RuntimeEvent } from '../agent/runtime-types.js';
 import { redact } from '../api/security.js';
@@ -8,12 +9,19 @@ import { SafeChatStream } from './safe-stream.js';
 type Pending = { stream: SafeChatStream; text: string; raw: string; pending: string; kind: StreamMessage['kind']; status: StreamMessage['status'] };
 /** Per-turn ordered stream. Only redacted text enters SQLite or SSE replay. */
 export class TurnStream {
+  private summary: PublicSummaryBuffer;
   private messages = new Map<string, Pending>();
   private timer?: ReturnType<typeof setTimeout>;
   private size = 0;
-  constructor(private store: RiftStore, private turnId: string, private workspaceId: string, private conversationId: string, private onError: (error:unknown)=>void, private save?: (messageId:string, message:Pick<StreamMessage,'kind'|'text'|'status'>)=>void) {}
+  constructor(private store: RiftStore, private turnId: string, private workspaceId: string, private conversationId: string, private onError: (error:unknown)=>void, private save?: (messageId:string, message:Pick<StreamMessage,'kind'|'text'|'status'>)=>void, translate?:TranslateSummary) {
+    this.summary=new PublicSummaryBuffer(translate,(messageId,text)=>{try{this.acceptVisible({type:'message.started',messageId,kind:'reasoning_summary'});this.acceptVisible({type:'message.completed',messageId,text,kind:'reasoning_summary'});}catch{/* Translation must not change source execution. */}});
+  }
 
   accept(event: Extract<RuntimeEvent, {messageId: string}>): void {
+    if(this.summary.accept(event))return;
+    this.acceptVisible(event);
+  }
+  private acceptVisible(event:Extract<RuntimeEvent,{messageId:string}>):void {
     if (!event.messageId || event.messageId.length > 256) throw new Error('STREAM_MESSAGE_ID');
     if (redact(event.messageId) !== event.messageId) event = {...event,messageId:`message-${createHash('sha256').update(event.messageId).digest('hex')}`};
     let message = this.messages.get(event.messageId);
@@ -80,6 +88,7 @@ export class TurnStream {
   }
 
   finish(interrupted: boolean): void {
+    this.summary.finish(interrupted);
     for (const message of this.messages.values()) if (message.status === 'streaming') {
       this.appendPending(message);
       message.text = message.stream.finish();

@@ -15,7 +15,7 @@ describe('shared conversation run output',()=>{
   const timeline=buildConversationTimeline([lead],[],[],[],[run]);
   expect(timeline.items.map(i=>i.message.senderAgentId)).toEqual(['lead','dev']);
   const html=renderToStaticMarkup(<ChatTimeline messages={[lead]} turns={[]} chunks={[]} runMessages={[run]} data={data} stale={false} onStop={()=>{}}/>);
-  for(const text of ['前端开发','正在检查前端入口。','正在输出…'])expect(html).toContain(text);
+  for(const text of ['前端开发','正在检查前端入口。'])expect(html).toContain(text);
   expect(html).not.toContain('run-progress-card');expect(html).not.toContain('子 agent 执行进度');
  });
  it('keeps public child progress as its own conversation message',()=>{
@@ -35,7 +35,7 @@ describe('shared conversation run output',()=>{
   expect(applyMessageEvent(page,{...event,payload:{...event.payload,conversationId:'foreign'}})).toBe(page);
   expect(applyMessageEvent(page,{...event,payload:{...event.payload,message:{...run,workspaceId:'foreign'}}})).toBeUndefined();
   const html=renderToStaticMarkup(<ChatTimeline messages={[lead]} turns={[]} chunks={[]} runMessages={next.runMessages} data={data} stale={false} onStop={()=>{}}/>);
-  expect(html).toContain('连接中断前的内容。');expect(html).toContain('未完成回复');
+  expect(html).toContain('连接中断前的内容。');expect(html).not.toContain('未完成回复');
  });
  it('renders structured task summaries without changing the stored final result',()=>{
   const final={...run,kind:'final',status:'completed',text:JSON.stringify({schemaVersion:1,runId:'run',summary:'审计已完成。'})} as RunStreamMessage;

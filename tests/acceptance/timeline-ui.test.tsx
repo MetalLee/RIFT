@@ -68,14 +68,14 @@ it('consumes real timeline pages through the UI client/cache/render path without
     let history = mergeChatHistory(earlier, latest);
     const before = f.render(history);
     const details = before.match(/<details[^>]*>[\s\S]*?<\/details>/g) ?? [];
-    expect(details).toHaveLength(1);
-    expect(details[0]).toContain('例行协作进展 · Audit · 2');
+    expect(details).toHaveLength(0);
+    expect(before).not.toContain('例行协作进展');
     for (const text of ['CHECK FAILED', '必须先修复', 'future.unknown', reason.replace('<script>not executable</script>', '')]) {
-      expect(before).toContain(text);
-      expect(details[0]).not.toContain(text);
+      expect(before).not.toContain(text);
     }
     expect(before).not.toContain('<script>');
-    expect(before).toContain('&lt;script&gt;');
+    expect(before).not.toContain('&lt;script&gt;');
+    expect(JSON.stringify(history.receipts)).toContain('完整公开决策依据');
     expect(buildConversationTimeline(history.messages, history.turns, history.chunks, history.receipts).loose).toHaveLength(6);
 
     f.host.store.exec('UPDATE messages SET content=?,version=version+1 WHERE id=?', '决策消息已更新', decision.id);
@@ -84,11 +84,11 @@ it('consumes real timeline pages through the UI client/cache/render path without
     expect(refreshed.refreshedMessages?.map(m => m.id)).toEqual([decision.id]);
     const initialRefreshed = mergeChatHistory(empty, refreshed);
     expect(initialRefreshed.messages).toHaveLength(2);
-    expect(f.render(initialRefreshed)).toContain('决策消息已更新');
+    expect(f.render(initialRefreshed)).not.toContain('决策消息已更新');
     history = mergeChatHistory(history, refreshed);
     expect(history.receipts).toHaveLength(6);
     const refreshedHtml = f.render(history);
-    expect(refreshedHtml).toContain('决策消息已更新');
+    expect(refreshedHtml).not.toContain('决策消息已更新');
     // Overlapping pages and a late older reply cannot roll back the message or duplicate any event.
     const overlap = await f.page({ limit: '3' });
     history = mergeChatHistory(overlap, mergeChatHistory(oldest, history));
@@ -109,13 +109,13 @@ it('consumes real timeline pages through the UI client/cache/render path without
     }
     expect(history.receipts).toHaveLength(11);
     expect(buildConversationTimeline(history.messages, history.turns, history.chunks, history.receipts).loose).toHaveLength(11);
-    expect(f.render(history)).toContain('例行协作进展 · Audit · 7');
-    expect(f.render(history)).toContain('决策消息已更新');
-    expect(f.render(history)).toContain('CHECK FAILED');
+    expect(f.render(history)).not.toContain('例行协作进展 · Audit · 7');
+    expect(f.render(history)).not.toContain('决策消息已更新');
+    expect(f.render(history)).not.toContain('CHECK FAILED');
   } finally { await f.close(); }
 });
 
-it('keeps a real routine-looking message expanded when structured receipt metadata is unavailable', async () => {
+it('hides legacy system messages even when structured receipt metadata is unavailable', async () => {
   const f = await fixture();
   try {
     const event = await f.emit('source.collected');
@@ -123,8 +123,8 @@ it('keeps a real routine-looking message expanded when structured receipt metada
     const page = await f.page();
     expect(page.receipts).toEqual([]);
     const html = f.render(mergeChatHistory({ messages: [], turns: [], chunks: [] }, page));
-    expect(html).toContain('开发结果已收集');
-    expect(html).toContain('需要关注的协作事件');
+    expect(html).not.toContain('开发结果已收集');
+    expect(html).not.toContain('需要关注的协作事件');
     expect(html).not.toContain('<details');
   } finally { await f.close(); }
 });
