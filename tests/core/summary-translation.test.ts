@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { PublicSummaryBuffer, SummaryTranslator } from '../../src/chat/summary-translation.js';
+import { PublicSummaryBuffer, SummaryTranslator, summaryConversationContext } from '../../src/chat/summary-translation.js';
 import type { RuntimeTurnInput, RuntimeTurnResult } from '../../src/agent/runtime-types.js';
 const homes:string[]=[];
 const tick=()=>new Promise<void>(resolve=>setTimeout(resolve,0));
@@ -46,7 +46,7 @@ describe('public summary translation',()=>{
   const home=await mkdtemp(path.join(tmpdir(),'rift-summary-test-'));homes.push(home);
   const inputs:RuntimeTurnInput[]=[],finish:Array<(value:RuntimeTurnResult)=>void>=[];
   const translator=new SummaryTranslator({home,concurrency:1,valid:()=>true,
-    context:owner=>({connection:{runtime:'dsh',provider:owner.agentId,model:owner.agentId+'-chat'},languageSamples:['请使用简体中文','继续']}),
+    context:owner=>({connection:{runtime:'dsh',provider:owner.agentId,model:owner.agentId+'-chat'},languageSamples:['请使用简体中文','继续'],conversationContext:[{role:'assistant',agentId:'b',content:'刚才检查了删除条件'}]}),
     runtime:()=>({start:async input=>{inputs.push(input);return{result:new Promise(r=>finish.push(r)),dispose:async()=>{}};}})});
   const owner={workspaceId:'w',conversationId:'c',ownerType:'run' as const,ownerId:'r'};
   const a=translator.forOwner({...owner,agentId:'a'})('English A'),b=translator.forOwner({...owner,agentId:'b'})('English B');
@@ -54,6 +54,9 @@ describe('public summary translation',()=>{
   expect(inputs[0]).toMatchObject({model:'a-chat',tools:[]});expect(inputs[0]!.session).toBeUndefined();
   expect(inputs[0]!.repositoryAccess).toBeUndefined();expect(inputs[0]!.onEvent).toBeUndefined();
   expect(inputs[0]!.messages[0]!.content).toContain('请使用简体中文');
+  expect(JSON.parse(inputs[0]!.messages[0]!.content)).toMatchObject({currentAgentId:'a',recentConversation:[{role:'assistant',agentId:'b',content:'刚才检查了删除条件'}]});
+  expect(inputs[0]!.instructions).toContain('natural chat message');
+  expect(inputs[0]!.instructions).toContain('Do not invent');
   finish[0]!({text:'partial commentary',finalText:'完整译文 A',stopReason:'completed'});
   expect(await a).toBe('完整译文 A');
   await vi.waitFor(()=>expect(inputs).toHaveLength(2));expect(inputs[1]!.model).toBe('b-chat');
@@ -92,4 +95,19 @@ it('persists a late translated Turn summary without exposing source or delaying 
   expect(store.all<{text:string}>('SELECT text FROM turn_stream_messages ORDER BY seq').map(m=>m.text)).toEqual(['最终答复','完整中文段落']);
   expect(JSON.stringify(store.all('SELECT * FROM workspace_events'))).not.toContain('Original English');
  }finally{store.close();}
+});
+
+it('selects five preceding completed public chat messages in chronological order and isolates conversations',async()=>{
+ const {RiftStore}=await import('../../src/storage/database.js');
+ const {seedWorkspace}=await import('../acceptance/fixtures.js');
+ const store=new RiftStore(),{workspace,roles}=seedWorkspace(store);
+ try {
+  store.exec("INSERT INTO conversations(id,workspace_id,title,created_at) VALUES('c',?,'Chat','now'),('other',?,'Other','now')",workspace.id,workspace.id);
+  for(let n=0;n<7;n++)store.exec("INSERT INTO messages(id,workspace_id,conversation_id,recipient_agent_id,role,content,status,created_at) VALUES(?,?,'c',?,?,?,'completed','now')",'m'+n,workspace.id,roles[0]!.id,n%2?'assistant':'user','内容'+n);
+  for(const [id,conversation,kind,visibility,status] of [['hidden','c','chat','internal','completed'],['receipt','c','receipt','public','completed'],['pending','c','chat','public','running'],['elsewhere','other','chat','public','completed']])
+   store.exec("INSERT INTO messages(id,workspace_id,conversation_id,role,content,status,created_at,kind,visibility) VALUES(?,?,?,'user','excluded',?,'now',?,?)",id!,workspace.id,conversation!,status!,kind!,visibility!);
+  const rows=summaryConversationContext(store,{workspaceId:workspace.id,agentId:roles[0]!.id,conversationId:'c',ownerType:'turn',ownerId:'t'});
+  expect(rows.map(r=>r.content)).toEqual(['内容2','内容3','内容4','内容5','内容6']);
+  expect(rows[1]).toMatchObject({role:'assistant',agentId:roles[0]!.id});
+ } finally {store.close();}
 });

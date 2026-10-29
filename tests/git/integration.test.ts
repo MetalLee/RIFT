@@ -53,7 +53,7 @@ describe('real Git integration', () => {
     expect(source.sourceHead).toBe(head);expect(source.changedPaths).toEqual(['feature.txt']);
     expect(await sourceCheckoutClean(worktree.path)).toBe(true);expect(await checkoutClean(worktree.path)).toBe(false);
     expect(await readFile(path.join(worktree.path,'.pnpm-store/v10/files/cache'),'utf8')).toBe('CACHE_PRESERVED');
-    await expect(f.service.archiveWorktree({workspace:f.workspace,worktree,active:false,cleanupConfirmed:true,artifactsSaved:true})).rejects.toThrow('ARCHIVE_BLOCKED');
+    await expect(f.service.archiveWorktree({workspace:f.workspace,worktree,active:false,cleanupConfirmed:true,artifactsSaved:true})).resolves.toBeUndefined();
   });
   it('still collects tracked cache-name files and detects modifications to them',async()=>{
     const f=await fixture(),ctx=f.context('tracked-cache'),run=f.run('tracked-cache'),worktree=await f.service.prepareTask({...ctx,run});
@@ -130,19 +130,19 @@ describe('real Git integration', () => {
     const third = await f.service.prepareCandidate({ ...c.ctx, sourceHead: c.source.sourceHead, integrationId: 'third' }); await f.service.publishCandidate({ ...c.ctx, candidate: third, review: f.approve(c.ctx, third) });
     expect(await readFile(path.join(third.cwd, 'base.txt'), 'utf8')).toBe('A\n');
   });
-  it('collects unlisted files but protects dirty contents, unknown cleanup and outside paths', async () => {
+  it('collects unlisted files and deletes local contents while protecting unknown cleanup and outside paths', async () => {
     const f = await fixture(); const ctx = f.context('scope', ['allowed']); const run = f.run('scope'); const worktree = await f.service.prepareTask({ ...ctx, run });
     await writeFile(path.join(worktree.path, 'outside.txt'), 'keep');
     await expect(f.service.collectSource({ ...ctx, run:{...run,cleanupStatus:'unknown'}, worktree })).rejects.toThrow('WORKTREE_OWNERSHIP');
     expect((await f.service.collectSource({ ...ctx, run, worktree })).changedPaths).toContain('outside.txt');
     await writeFile(path.join(worktree.path,'pending.txt'),'uncollected');
     const archive = { workspace: f.workspace, worktree, active: false, cleanupConfirmed: true, artifactsSaved: true };
-    await expect(f.service.archiveWorktree(archive)).rejects.toThrow('ARCHIVE_BLOCKED');
+    await expect(f.service.archiveWorktree(archive)).resolves.toBeUndefined();
     const a = await f.develop('a', 'a.txt', 'A'); await writeFile(path.join(a.worktree.path, 'ignored.log'), 'keep ignored');
-    await expect(f.service.archiveWorktree({ ...archive, worktree: a.worktree })).rejects.toThrow('ARCHIVE_BLOCKED');
+    await expect(f.service.archiveWorktree({ ...archive, worktree: a.worktree })).resolves.toBeUndefined();
     await expect(f.service.archiveWorktree({ ...archive, cleanupConfirmed: false })).rejects.toThrow('ARCHIVE_BLOCKED');
     await expect(f.service.archiveWorktree({ ...archive, worktree: { ...worktree, path: f.repositoryPath } })).rejects.toThrow('UNSAFE_PATH');
-    expect(await readFile(path.join(worktree.path, 'outside.txt'), 'utf8')).toBe('keep');
+    await expect(lstat(worktree.path)).rejects.toMatchObject({code:'ENOENT'});
   });
   it('collects the final working tree without applying the legacy planned-file whitelist', async () => {
     const f = await fixture(); const ctx = f.context('staged', ['allowed.txt']); const run = f.run('staged');
@@ -154,7 +154,7 @@ describe('real Git integration', () => {
     expect(await gitOk(worktree.path,['show',`${collected.sourceHead}:base.txt`])).toBe('base');
     expect(await gitOk(worktree.path,['show',`${collected.sourceHead}:allowed.txt`])).toBe('allowed');
   });
-  it('accepts ignored build/cache outputs while preserving them against deletion',async()=>{
+  it('accepts ignored build/cache outputs and deletes them on confirmed removal',async()=>{
     const f=await fixture(),a=await f.develop('cache-build','a.txt','A');
     const service=new LocalGitService({managedRoot:f.service.managedRoot,commands:[{id:'build',executable:process.execPath,args:['-e',"require('fs').writeFileSync('ignored.log','build cache')"]}]});
     const candidate=await service.prepareCandidate({...a.ctx,sourceHead:a.source.sourceHead,integrationId:'cache-build'});
@@ -162,7 +162,7 @@ describe('real Git integration', () => {
     const operation=await service.readOperation(f.workspace,'cache-build');expect(await readFile(path.join(operation.candidatePath,'ignored.log'),'utf8')).toBe('build cache');
     const accepted=await service.publishCandidate({...a.ctx,candidate,review:f.approve(a.ctx,candidate)});expect(accepted.acceptedCommit).toBe(candidate.candidateHead);
     expect((await gitOk(f.repositoryPath,['ls-tree','--name-only',accepted.acceptedCommit])).split('\n')).not.toContain('ignored.log');
-    await expect(service.archiveWorktree({workspace:f.workspace,worktree:{...a.worktree,kind:'candidate',path:operation.candidatePath},active:false,cleanupConfirmed:true,artifactsSaved:true})).rejects.toThrow('ARCHIVE_BLOCKED');
+    await expect(service.archiveWorktree({workspace:f.workspace,worktree:{...a.worktree,kind:'candidate',path:operation.candidatePath},active:false,cleanupConfirmed:true,artifactsSaved:true})).resolves.toBeUndefined();
   });
   it('persists quarantine after a timed-out check and refuses default archive even after restart', async () => {
     const f = await fixture(); const a = await f.develop('timeout', 'a.txt', 'A');

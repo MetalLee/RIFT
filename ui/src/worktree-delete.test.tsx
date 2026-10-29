@@ -18,7 +18,8 @@ describe('Worktree deletion confirmation UI (server rendering)', () => {
     expect(html).toContain('删除 Worktree 磁盘目录？');
     expect(html).toContain('D:\\RIFT\\工作目录 &lt;exact&gt;\\task');
     expect(html).toContain('保留分支、提交、任务、运行、集成与审查记录');
-    expect(html).toContain('dirty / untracked / ignored');
+    expect(html).toContain('未提交修改、未跟踪文件和忽略文件');
+    expect(html).toContain('不会保存这些本地内容');
     expect(html).toContain('取消'); expect(html).toContain('确认删除磁盘目录');
     const buttons = (element.props.children as ReactElement<{ onClick?: () => void; children?: string }>[]).filter(child => child.props?.onClick);
     buttons.find(button => button.props.children === '取消')!.props.onClick!();

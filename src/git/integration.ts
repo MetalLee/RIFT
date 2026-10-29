@@ -727,18 +727,6 @@ export class LocalGitService implements GitService {
       return 'unknown';
     } catch { return 'unknown'; }
   }
-  // Only these explicitly approved, ignored directories are disposable.
-  // Do not generalize this to arbitrary ignored files (for example .env).
-  private readonly removableBuildDirectories = ['dist/', 'node_modules/', 'packages/protocol/dist/', 'packages/protocol/node_modules/'];
-  private async removalContentsAllowed(cwd: string): Promise<boolean> {
-    const status = await gitOk(cwd, ['status', '--porcelain=v1', '-z', '--untracked-files=normal', '--ignored=matching']);
-    for (const entry of status.split('\0').filter(Boolean)) {
-      if (!entry.startsWith('!! ') || !this.removableBuildDirectories.includes(entry.slice(3))) return false;
-      const info = await lstat(path.join(cwd, entry.slice(3)));
-      if (!info.isDirectory() || info.isSymbolicLink()) return false;
-    }
-    return true;
-  }
   /** Validation is also used to explain disabled deletion actions in the UI. */
   async inspectWorktreeRemoval(workspace: Workspace, worktree: Worktree): Promise<{ cwd: string; commonGitDir: string; rootPath: string; headCommit: string }> {
     const cwd = await managedPath(this.managedRoot, worktree.path);
@@ -755,9 +743,6 @@ export class LocalGitService implements GitService {
     const entry = registered.split('\0\0').find(block => block.split('\0').some(field => field.startsWith('worktree ') && normalize(field.slice(9)) === normalize(cwd)));
     if (!entry) throw new Error('ARCHIVE_BLOCKED: unregistered worktree');
     if (entry.split('\0').some(field => field === 'locked' || field.startsWith('locked '))) throw new Error('ARCHIVE_BLOCKED: locked worktree');
-    // status alone can hide modified tracked files with index trust flags.
-    const index = await gitOk(cwd, ['ls-files', '-v', '-z']);
-    if (index.split('\0').some(field => field && (field[0] === 'S' || /^[a-z]/.test(field)))) throw new Error('ARCHIVE_BLOCKED: assume-unchanged or skip-worktree index entries');
     for (const marker of ['MERGE_HEAD','CHERRY_PICK_HEAD','REVERT_HEAD','rebase-merge','rebase-apply','sequencer','BISECT_LOG']) {
       const file = path.join(gitDir, marker);
       try { await lstat(file); throw new Error('ARCHIVE_BLOCKED: unfinished Git operation'); }
@@ -765,7 +750,6 @@ export class LocalGitService implements GitService {
     }
     try { await readFile(await this.quarantinePath(cwd)); throw new Error('ARCHIVE_BLOCKED: prior check timed out; descendant cleanup is unconfirmed'); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
-    if (!(await this.removalContentsAllowed(cwd))) throw new Error('ARCHIVE_BLOCKED: dirty, untracked or ignored content');
     return { cwd, commonGitDir: repository.commonGitDir, rootPath: repository.rootPath, headCommit: await gitOk(cwd, ['rev-parse', 'HEAD']) };
   }
   async archiveWorktree(input: { workspace: Workspace; worktree: Worktree; active: boolean; cleanupConfirmed: boolean; artifactsSaved: boolean; beforeRemove?: (evidence: { headCommit: string; preservationRef: string }) => Promise<void> | void }): Promise<void> {
@@ -780,11 +764,9 @@ export class LocalGitService implements GitService {
       await input.beforeRemove?.({ headCommit: target.headCommit, preservationRef });
       const final = await this.inspectWorktreeRemoval(input.workspace, input.worktree);
       if (final.cwd !== target.cwd || final.headCommit !== target.headCommit || final.commonGitDir !== target.commonGitDir) throw new Error('ARCHIVE_BLOCKED: worktree changed during deletion verification');
-      // Clean only ignored files in the approved directories, never tracked or
-      // ordinary untracked content. A fresh strict check catches late changes.
-      await gitOk(final.cwd, ['clean', '-fdX', '--', ...this.removableBuildDirectories]);
-      if (!(await checkoutClean(final.cwd))) throw new Error('ARCHIVE_BLOCKED: dirty, untracked or ignored content');
-      await gitOk(target.rootPath, ['worktree', 'remove', '--', target.cwd]);
+      // Confirmed deletion discards all local contents; keep ownership, lease,
+      // lock and metadata checks above. One --force never overrides a Git lock.
+      await gitOk(target.rootPath, ['worktree', 'remove', '--force', '--', target.cwd]);
     });
   }
 }

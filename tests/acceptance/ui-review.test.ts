@@ -205,7 +205,7 @@ describe('Independent real-Git multi-repository boundaries', () => {
     } finally { await coordinator.shutdown(); store.close(); await rm(home, { recursive: true, force: true }); }
   }, 40000);
 
-  it('preserves repository ownership and refuses dirty or external worktree deletion', async () => {
+  it('preserves repository ownership, deletes local contents and refuses external worktree deletion', async () => {
     const home = await mkdtemp(path.join(tmpdir(), 'rift-repository-review-'));
     const store = new RiftStore();
     const git = new LocalGitService({ managedRoot: path.join(home, 'managed'), commands: [] });
@@ -232,10 +232,8 @@ describe('Independent real-Git multi-repository boundaries', () => {
       const managed = await service.createWorktree(workspace.id, second.id, { origin: 'managed', baseRef: 'main' });
       expect((await git.inspectRepository(managed.path, 'HEAD')).commonGitDir).toBe(second.commonGitDir);
       await writeFile(path.join(managed.path, 'untracked.txt'), 'Must preserve');
-      await expect(service.archive(workspace.id, managed.id, managed.version)).rejects.toThrow(/dirty|untracked|ignored/);
-      expect(await readFile(path.join(managed.path, 'untracked.txt'), 'utf8')).toBe('Must preserve');
-      await rm(path.join(managed.path, 'untracked.txt'));
       await expect(service.archive(workspace.id, managed.id, managed.version)).resolves.toMatchObject({ status: 'archived' });
+      await expect(readFile(path.join(managed.path, 'untracked.txt'), 'utf8')).rejects.toMatchObject({code:'ENOENT'});
       const externalPath = path.join(home, 'external-checkout');
       await exec('git', ['-C', paths[0]!, 'worktree', 'add', '--detach', externalPath, 'HEAD']);
       const external = await service.createWorktree(workspace.id, first.id, { origin: 'external', path: externalPath });

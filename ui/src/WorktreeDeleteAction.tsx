@@ -10,7 +10,7 @@ export function WorktreeDeleteConfirmation({ target, busy, onCancel, onDelete }:
   return <div className="cancel-confirm" role="group" aria-label="确认删除 Worktree" aria-busy={busy}>
     <h4>删除 Worktree 磁盘目录？</h4><code>{target.path}</code>
     <p>仅删除以上 RIFT 受管目录。保留分支、提交、任务、运行、集成与审查记录；此操作不会删除主仓库或外部目录。</p>
-    <p>Host 将重新检查归属、版本、执行清理以及 dirty / untracked / ignored 内容。任何检查失败都会保留现场，不使用强制删除。</p>
+    <p>确认后将删除目录内所有内容，包括未提交修改、未跟踪文件和忽略文件，且不会保存这些本地内容。Host 仍会检查归属、版本、执行清理和锁定状态。</p>
     <Button variant="secondary" disabled={busy} onClick={onCancel}>取消</Button>
     <Button variant="destructive" disabled={busy} onClick={onDelete}>{busy ? '正在安全删除…' : '确认删除磁盘目录'}</Button>
   </div>;

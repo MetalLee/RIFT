@@ -77,19 +77,14 @@ describe('safe Worktree deletion: real Git, service and browser Host API', () =>
     expect(f.host.store.require('SELECT * FROM worktree_removals WHERE record_id=?', tree.id)).toMatchObject({ state: 'deleted', cleanupStatus: 'confirmed', headCommit: f.base, preservationRef: expect.stringContaining('refs/rift/deleted-worktrees/') });
   });
 
-  it.each(['dirty','untracked','ignored'] as const)('refuses %s data, retains a retryable error and succeeds only after it is saved', async mode => {
-    const f = await fixture(), tree = await f.user(), old = await f.target('user', tree.id);
+  it.each(['dirty','untracked','ignored'] as const)('deletes confirmed %s contents and preserves committed HEAD', async mode => {
+    const f = await fixture(), tree = await f.user();
     const file = path.join(tree.path, mode === 'dirty' ? 'base.txt' : mode === 'ignored' ? 'ignored.log' : 'untracked.txt');
-    await writeFile(file, 'must preserve');
-    expect(await f.target('user', tree.id)).toMatchObject({ canDelete: false, reason: expect.stringContaining('dirty, untracked or ignored') });
-    await expect(f.remove(old)).rejects.toThrow('ARCHIVE_BLOCKED');
-    expect(await readFile(file, 'utf8')).toBe('must preserve');
-    expect(await f.target('user', tree.id)).toMatchObject({ state: 'failed', error: expect.stringContaining('ARCHIVE_BLOCKED'), canReconcile: true });
-    await expect(f.remove(old)).rejects.toMatchObject({ code: 'VERSION_CONFLICT' });
-    await gitOk(tree.path, ['add', '-f', '.']); await gitOk(tree.path, ['commit', '-m', 'save local content']);
-    const head = await gitOk(tree.path, ['rev-parse', 'HEAD']);
-    await f.remove(await f.target('user', tree.id));
-    expect(await gitOk(f.repositoryPath, ['rev-parse', tree.branch!])).toBe(head);
+    await writeFile(file, 'discard on confirmed deletion');
+    const item=await f.target('user',tree.id);expect(item.canDelete).toBe(true);
+    await f.remove(item);
+    await expect(lstat(tree.path)).rejects.toMatchObject({code:'ENOENT'});
+    expect(await gitOk(f.repositoryPath,['rev-parse',tree.branch!])).toBe(f.base);
   });
 
   it('rejects external paths and main checkout, including a primary checkout inside managedRoot', async () => {
@@ -114,7 +109,7 @@ describe('safe Worktree deletion: real Git, service and browser Host API', () =>
     expect(await realpath(tree.path)).toBe(tree.path);
   });
 
-  it.each(['assume-unchanged','skip-worktree','git-operation','locked'] as const)('preserves hidden contents and resumable Git state: %s', async mode => {
+  it.each(['assume-unchanged','skip-worktree','git-operation','locked'] as const)('handles index flags while preserving resumable or locked Git state: %s', async mode => {
     const f = await fixture(), tree = await f.user(), item = await f.target('user',tree.id);
     if (mode === 'assume-unchanged' || mode === 'skip-worktree') {
       await gitOk(tree.path,['update-index',`--${mode}`,'base.txt']);
@@ -123,9 +118,15 @@ describe('safe Worktree deletion: real Git, service and browser Host API', () =>
       const marker = await gitOk(tree.path,['rev-parse','--path-format=absolute','--git-path','CHERRY_PICK_HEAD']);
       await writeFile(marker,f.base);
     } else await gitOk(f.repositoryPath,['worktree','lock','--',tree.path]);
+    if (mode === 'assume-unchanged' || mode === 'skip-worktree') {
+      expect(await f.target('user',tree.id)).toMatchObject({canDelete:true});
+      await f.remove(item);
+      await expect(lstat(tree.path)).rejects.toMatchObject({code:'ENOENT'});
+      return;
+    }
     expect(await f.target('user',tree.id)).toMatchObject({canDelete:false});
     await expect(f.remove(item)).rejects.toThrow('ARCHIVE_BLOCKED');
-    expect(await readFile(path.join(tree.path,'base.txt'),'utf8')).toBe(mode === 'assume-unchanged' || mode === 'skip-worktree' ? 'hidden local data' : 'base\n');
+    expect(await readFile(path.join(tree.path,'base.txt'),'utf8')).toBe('base\n');
   });
 
   it('checks managed containment, symlink escapes and Git repository ownership without removing anything', async () => {
@@ -239,14 +240,14 @@ describe('safe Worktree deletion: real Git, service and browser Host API', () =>
     expect(await readFile(path.join(user.path,'base.txt'),'utf8')).toBe('base\n');
   });
 
-  it('revalidates contents after the final service callback, preserving newly introduced ignored data', async () => {
+  it('deletes late ignored content after the final service callback', async () => {
     const f = await fixture(), tree = await f.user();
     await expect(f.host.git.archiveWorktree({ workspace: f.host.store.workspace(f.workspace.id),
       worktree: { id: tree.id, taskId: '', attempt: 0, kind: 'task', path: tree.path, baseCommit: tree.baseCommit },
       active: false, cleanupConfirmed: true, artifactsSaved: true,
       beforeRemove: () => writeFile(path.join(tree.path,'ignored.log'),'late data'),
-    })).rejects.toThrow('dirty, untracked or ignored');
-    expect(await readFile(path.join(tree.path,'ignored.log'),'utf8')).toBe('late data');
+    })).resolves.toBeUndefined();
+    await expect(lstat(tree.path)).rejects.toMatchObject({code:'ENOENT'});
   });
 
   it('fences task/workflow/repository metadata and late associations while a terminal task deletion is running', async () => {
@@ -425,7 +426,7 @@ it.each(['dist','node_modules','packages/protocol/dist','packages/protocol/node_
   await f.remove(item);await expect(lstat(tree.path)).rejects.toMatchObject({code:'ENOENT'});
 });
 
-it.each(['untracked','tracked'])('retains %s source content inside a build-named directory',async mode=>{
+it.each(['untracked','tracked'])('deletes confirmed %s source content inside a build-named directory',async mode=>{
   const f=await fixture(),tree=await f.user();
   await mkdir(path.join(tree.path,'dist'));
   const file=path.join(tree.path,'dist','source.txt');await writeFile(file,'source');
@@ -435,7 +436,7 @@ it.each(['untracked','tracked'])('retains %s source content inside a build-named
     await gitOk(tree.path,['add','.gitignore']);await gitOk(tree.path,['commit','-m','ignore output']);
     await writeFile(file,'modified source');
   }
-  const item=await f.target('user',tree.id);expect(item.canDelete).toBe(false);
-  await expect(f.remove(item)).rejects.toThrow('ARCHIVE_BLOCKED');
-  expect(await readFile(file,'utf8')).toBe(mode==='tracked'?'modified source':'source');
+  const item=await f.target('user',tree.id);expect(item.canDelete).toBe(true);
+  await f.remove(item);
+  await expect(lstat(tree.path)).rejects.toMatchObject({code:'ENOENT'});
 });
