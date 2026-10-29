@@ -6,13 +6,13 @@ import type { CheckCommand, CheckPlan, GitOperation } from './types.js';
 
 export const fingerprint = (value: unknown): string => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export const commandConfiguration = (command: CheckCommand) => ({ executable: command.executable, args: [...command.args], timeoutMs: command.timeoutMs ?? 120_000 });
-const checkConfiguration = (command: CheckCommand) => ({ ...commandConfiguration(command), required: command.required !== false, ...(command.baseline ? { baseline: command.baseline } : {}), ...(command.dependsOn ? { dependsOn: command.dependsOn } : {}), ...(command.mutexGroup ? { mutexGroup: command.mutexGroup } : {}), ...(command.isolation ? { isolation: command.isolation } : {}), ...(command.resourceSlots !== undefined ? { resourceSlots: command.resourceSlots } : {}) });
-export const configurationFingerprint = (command: CheckCommand, plan?: CheckPlan, commands: readonly CheckCommand[] = []): string => fingerprint({ ...checkConfiguration(command), ...(plan ? { plan, commands: commands.map(item => ({ id: item.id, ...checkConfiguration(item) })) } : {}) });
+const checkConfiguration = (command: CheckCommand) => ({ ...commandConfiguration(command), required: command.required !== false, ...(command.environment ? { environment: command.environment } : {}), ...(command.baseline ? { baseline: command.baseline } : {}), ...(command.dependsOn ? { dependsOn: command.dependsOn } : {}), ...(command.mutexGroup ? { mutexGroup: command.mutexGroup } : {}), ...(command.isolation ? { isolation: command.isolation } : {}), ...(command.resourceSlots !== undefined ? { resourceSlots: command.resourceSlots } : {}) });
+export const configurationFingerprint = (command: CheckCommand, plan?: CheckPlan, commands: readonly CheckCommand[] = [], environmentCache?: import('./dependency-environment.js').EnvironmentCacheOptions): string => fingerprint({ ...(environmentCache ? { environmentCache } : {}), ...checkConfiguration(command), ...(plan ? { plan, commands: commands.map(item => ({ id: item.id, ...checkConfiguration(item) })) } : {}) });
 // Sandbox policy is versioned explicitly; never fingerprint credential-bearing Host environment values.
 export const environmentFingerprint = (): string => fingerprint({ sandbox: 'rift-bwrap-v1', platform: process.platform, arch: process.arch, release: release(), node: process.version });
 export const previewCheck = (check: CheckEvidence): CheckEvidence => ({ ...check, stdout: check.stdout.slice(0, 8000), stderr: check.stderr.slice(0, 8000), truncated: check.truncated || check.stdout.length > 8000 || check.stderr.length > 8000 });
 export const previewBaseline = (baseline: BaselineEvidence): BaselineEvidence => ({ ...baseline, ...(baseline.check ? { check: previewCheck(baseline.check) } : {}) });
-export function evidenceReadiness(operation: GitOperation, commands: readonly CheckCommand[], plan?: CheckPlan): EvidenceReadiness {
+export function evidenceReadiness(operation: GitOperation, commands: readonly CheckCommand[], plan?: CheckPlan, environmentCache?: import('./dependency-environment.js').EnvironmentCacheOptions): EvidenceReadiness {
   const required = commands.filter(command => command.required !== false);
   const blockers: EvidenceReadiness['blockers'] = [], missingCheckIds: string[] = [];
   if (candidateCleanupUnknown(operation)) blockers.push({ classification: 'environment_unavailable', commandId: '', reason: 'CLEANUP_UNKNOWN: Host check descendants have no cleanup proof.' });
@@ -20,7 +20,7 @@ export function evidenceReadiness(operation: GitOperation, commands: readonly Ch
   for (const command of commands) {
     const check = operation.checks?.findLast(check => check.commandId === command.id);
     const node = operation.checkPlan?.nodes.find(node => node.commandId === command.id);
-    const valid = (!node || !['pending', 'running'].includes(node.status)) && check?.host?.executionSource === 'host' && check.host.schemaVersion === 1 && operation.binding && fingerprint(bindingOf(check.host)) === fingerprint(operation.binding) && check.candidateHead === operation.candidateHead && check.host.configurationFingerprint === configurationFingerprint(command, plan, commands) && check.host.environmentFingerprint === environmentFingerprint();
+    const valid = (!node || !['pending', 'running'].includes(node.status)) && check?.host?.executionSource === 'host' && check.host.schemaVersion === 1 && operation.binding && fingerprint(bindingOf(check.host)) === fingerprint(operation.binding) && check.candidateHead === operation.candidateHead && check.host.configurationFingerprint === configurationFingerprint(command, plan, commands, environmentCache) && check.host.environmentFingerprint === environmentFingerprint();
     if (!valid) {
       if (command.required !== false) { missingCheckIds.push(command.id); blockers.push({ classification: 'evidence_missing', commandId: command.id, reason: 'Missing or stale Host attachment for this candidate/configuration/environment.' }); }
     } else if (check!.exitCode !== 0 || check!.host!.exitStatus !== 'passed') {

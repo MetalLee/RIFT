@@ -1,0 +1,40 @@
+
+ RUN  v4.0.18 /data/projects/RIFT/.rift/workspaces/e168007d2bbb66742fc6990a/worktrees/b476c07078232c515f3f86cc
+
+stdout | tests/git/dependency-environment.test.ts > runs real offline npm ci cold/warm, copies private writable inodes, and always executes exact candidate checks across tasks/restart
+dependency npm-ci actual offline performance ms {"cold":{"status":"miss","prepareMs":1727.87808,"installMs":562.6633129999998,"restoreMs":0,"key":"5803dd4166df9b16501d2633981dc639751458878ce15c2657d3b6443bfc96d5"},"warm":{"status":"hit","prepareMs":1120.0861240000004,"installMs":0,"restoreMs":4.465511999999762,"key":"5803dd4166df9b16501d2633981dc639751458878ce15c2657d3b6443bfc96d5"},"coldCheck":1863.000873,"warmCheck":1267.7000590000002}
+
+ ✓ tests/git/dependency-environment.test.ts (28 tests) 73839ms
+   ✓ runs real offline npm ci cold/warm, copies private writable inodes, and always executes exact candidate checks across tasks/restart  6102ms
+   ✓ single-flights concurrent real DAG installs and restores each node before allowing writes  2840ms
+   ✓ disabled snapshots still perform npm installation and real checks without creating cache state  1399ms
+   ✓ falls back to a real private install for repository npm configuration rather than ignoring it or caching credentials  1558ms
+   ✓ preserves only bounded relative dependency links and executable modes during private restore  2281ms
+   ✓ a cache hit never suppresses a failing current candidate or supplies an independent approval  4310ms
+   ✓ keys bind complete source, manifests, lock/config, template/args and repository/workspace trust; restoration config changes evidence fingerprints  8567ms
+   ✓ queues same-key builders but never merges their private writable destinations or HOME  2077ms
+   ✓ failed installation publishes nothing and releases a proven-finished build lease  1844ms
+   ✓ retains persistent lease after interrupted installation 124 and requires bound reconciliation  3813ms
+   ✓ retains persistent lease after interrupted installation 130 and requires bound reconciliation  3752ms
+   ✓ retains persistent lease after interrupted installation lost-result and requires bound reconciliation  3672ms
+   ✓ never duplicates a builder in another Host process or steals its lease after SIGKILL  5068ms
+   ✓ cold-falls back on a completed corrupt snapshot (bytes), never uses its contents  2095ms
+   ✓ cold-falls back on a completed corrupt snapshot (missing-file), never uses its contents  2227ms
+   ✓ cold-falls back on a completed corrupt snapshot (escaping-link), never uses its contents  2207ms
+   ✓ cold-falls back on a completed corrupt snapshot (metadata), never uses its contents  1957ms
+   ✓ excludes credentials/config/unsafe links from published snapshots (.npmrc)  993ms
+   ✓ excludes credentials/config/unsafe links from published snapshots (.env)  941ms
+   ✓ excludes credentials/config/unsafe links from published snapshots (.netrc)  945ms
+   ✓ excludes credentials/config/unsafe links from published snapshots (credentials.json)  927ms
+   ✓ excludes credentials/config/unsafe links from published snapshots (secret.key)  947ms
+   ✓ excludes credentials/config/unsafe links from published snapshots (registered-secret)  1162ms
+   ✓ excludes credentials/config/unsafe links from published snapshots (escaping-link)  1229ms
+   ✓ keeps reclaimable published capacity bounded, never evicts an entry with a persistent use lease  2983ms
+   ✓ does not treat orphan staging or malformed leases as ordinary completed corruption  3611ms
+   ✓ reconciles environment leases through existing reboot proof, with downgrade-to-legacy still protected  4323ms
+
+ Test Files  1 passed (1)
+      Tests  28 passed (28)
+   Start at  14:09:48
+   Duration  74.28s (transform 232ms, setup 0ms, import 278ms, tests 73.84s, environment 0ms)
+
