@@ -89,7 +89,7 @@ HTTP：`GET /ui-api/v1/workspaces/:workspaceId/tasks/:taskId/evidence` 及 `/evi
 显式补证为同路径 POST（`integrationId/candidateHead/expectedVersion/idempotencyKey`），只允许 Host 重新执行配置命令，不接受上传 stdout/exitCode。
 审核与发布必须继续绑定新的精确候选及 check IDs；开发者本地通过不替代独立审查。
 
-## 本轮真实本地验证（不是当前 workspace 的 Host 验收）
+## 前置任务真实本地验证（不是当前 workspace 的 Host 验收）
 
 2026-10-29，Linux / Node 24.18.0，基线 `2f9840378f80208ac4119f0698cf17c12ba8dbbb`。
 安装中断后，本地检查显式使用已有 `/data/projects/RIFT/node_modules` 工具链链接，`@rift/protocol` 指向本任务 checkout 并重新构建；未把主检出的旧协议产物当本任务输入。
@@ -103,3 +103,18 @@ HTTP：`GET /ui-api/v1/workspaces/:workspaceId/tasks/:taskId/evidence` 及 `/evi
 - 未成功项：早期 `pnpm exec tsc --version` 超过 10 秒工具上限；完整安装超过 240 秒并有下载错误；首个 Playwright 1.58.2 因 Chromium 1208 缺失退出 1。未自动重复这些命令；改用已安装工具和匹配的 1.61.1/1228 后才取得上述通过结果。
 
 本地原日志在 `.runtime-evidence/frontend-checks/`，不入 Git、不冒充 Host 附件。当前运行 workspace **未启用**此 profile，冷安装/沙箱浏览器部署尚未完成，最终组合候选仍须操作员采用此 profile 后由 Host 实际执行、保存附件并独立审查。没有 push/PR、管理配置修改、缓存重建或 UI/P2 改动。
+
+
+## 组合任务复验（2026-10-29）
+
+基于集成提交 `44b0bd6f18fc8a5d7cdadbdbcc8bba425583d388`，本轮任务 checkout 的 `node_modules` 与私有 `.pnpm-store` 初始不存在。
+相同 profile 安装命令本次成功（80.4 秒），没有链接主检出依赖；这更新了上节历史冷安装失败的本地结论，**仍不证明运行 Host 沙箱安装链已通过**。
+
+- 新增 `tests/acceptance/combined-recovery.test.ts`：真实 Host 管理 API / workspace CLI、Git、租约、不可变结果 artifact 与检查附件，仅外部 provider 受控替代。删除/重命名已提交源码从格式补交、收集失败、幂等恢复，到缺证补证、serial 全链重跑、未变通过附件复用、审查基础设施恢复及精确提交发布，均保持同一开发 Run/attempt；旧失败事实不改写。
+- 失败反例：diff-check 真实退出 0，required 源码断言退出 1，仍拒绝审查/发布及基础设施恢复（`CODE_REPAIR_REQUIRED`）。组合 fixture 的小型源码断言不是实际前端检查，真实 UI/profile 测试另行执行。
+- 受影响测试：31 文件、382 项通过，涵盖组合/恢复 API、源码收集、coordinator、baseline、安全补证、check-plan，以及全部 `ui/src` 与 profile 加载回归。`pnpm typecheck` 与 `pnpm build` 成功；构建保留既有 >500 kB chunk 警告。
+- profile 浏览器命令实际报 `MODULE_NOT_FOUND`：`/usr/local/lib/node_modules/playwright` 不存在；`/usr/local/share/ms-playwright` 也未预置。本轮不宣称浏览器通过，不使用旧截图/旧开发日志替代。
+
+本轮日志在任务 checkout 的 `.runtime-evidence/p1-combined/`（`cold-install.log`、`protocol.log`、`combined-tests.log`、`affected-tests.log`、`typecheck.log`、`build.log`、`profile-browser.log`），不是生产 Host 的候选附件。
+本轮未启用运行 Host 的前端 profile，未重启 Host、改模型/连接、预置系统依赖或新增缓存；第四项 P1 的**部署门禁仍待操作员落实**。
+操作员仍须按上文预置只读 Playwright/Chromium 与系统库，安全切换 `--patch profiles/rift.codex.frontend.patch.yml`，在不可变工具环境中对精确候选生成真实 Host 附件并独立审查。仅本地冷安装成功、提交本测试或替换工具而不版本化命令，都不能解除此门禁。
