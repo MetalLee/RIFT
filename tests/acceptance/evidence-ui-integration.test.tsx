@@ -21,6 +21,8 @@ import { registerCredentialRedaction } from '../../src/api/security.js';
 import { mutate, request } from '../../ui/src/api';
 import { readTaskEvidence } from '../../ui/src/task-evidence';
 import { EvidenceContent } from '../../ui/src/TaskEvidence';
+import { writeOfflineNpmFixture } from '../git/npm-fixture.js';
+import type { EnvironmentCacheOptions } from '../../src/git/dependency-environment.js';
 
 const exec = promisify(execFile);
 const cleanups: (() => Promise<void>)[] = [];
@@ -38,12 +40,14 @@ async function until(predicate: () => boolean) {
 type Call = Parameters<ActivationBridge['start']>[0] & { finish: (result: ActivationResult) => void };
 const passing: CheckCommand[] = [{ id: 'unit', executable: process.execPath, args: ['-e', 'console.log("Host checked")'] }];
 
-async function fixture(checks: CheckCommand[], checkPlan?: CheckPlan) {
+async function fixture(checks: CheckCommand[], checkPlan?: CheckPlan, npm = false) {
+  let environmentCache: EnvironmentCacheOptions | undefined = npm ? { enabled: true, maxBytes: 1_000_000 } : undefined;
   const root = await mkdtemp(path.join(tmpdir(), 'rift-evidence-ui-integration-'));
   cleanups.push(() => rm(root, { recursive: true, force: true }));
   const repo = path.join(root, '真实 仓库'); await mkdir(repo);
   await gitOk(repo, ['init', '-b', 'main']);
   await gitOk(repo, ['config', 'user.name', 'Test']); await gitOk(repo, ['config', 'user.email', 'test@localhost']);
+  if (npm) await writeOfflineNpmFixture(root, repo);
   await writeFile(path.join(repo, 'base.txt'), 'base\n'); await gitOk(repo, ['add', '.']); await gitOk(repo, ['commit', '-m', 'base']);
   const base = await gitOk(repo, ['rev-parse', 'HEAD']), home = path.join(root, 'host');
   const calls: Call[] = [];
@@ -57,7 +61,7 @@ async function fixture(checks: CheckCommand[], checkPlan?: CheckPlan) {
   const nativeFetch = globalThis.fetch;
   let host!: RiftHostService, api!: Awaited<ReturnType<typeof startLocalApi>>, csrf: string;
   async function start(commands: CheckCommand[]) {
-    host = new RiftHostService({ subagents: { list: () => [] } } as unknown as Context, { home, port: 0, leadProvider: 'test-adapter', leadModel: 'test-adapter', checks: commands, checkPlan });
+    host = new RiftHostService({ subagents: { list: () => [] } } as unknown as Context, { home, port: 0, leadProvider: 'test-adapter', leadModel: 'test-adapter', checks: commands, checkPlan, environmentCache });
     await host.initialize();
     // No model Lead is needed by the test adapter; retain the real retry route.
     vi.spyOn(host, 'ensureLead').mockResolvedValue({ leadSessionId: 'test-adapter' });
@@ -95,7 +99,7 @@ async function fixture(checks: CheckCommand[], checkPlan?: CheckPlan) {
   const candidate = (call: Call) => (JSON.parse(call.prompt) as { candidate: Candidate }).candidate;
   const approve = (call: Call, head = candidate(call).candidateHead) => call.finish({ stopReason: 'completed', text: JSON.stringify({ schemaVersion: 1, taskId: 'task', runId: call.run.id, verdict: 'approve', reviewedCommit: head, findings: [] }) });
   const settled = (status: string) => until(() => host.store.task('task').status === status);
-  const restart = async (commands: CheckCommand[]) => { await api.close(); await host.close(); await start(commands); };
+  const restart = async (commands: CheckCommand[], cache = environmentCache) => { await api.close(); await host.close(); environmentCache = cache; await start(commands); };
   return { get host() { return host; }, repo, workflow, calls, cli, post, view, raw, reviewCalls, started, develop, candidate, approve, settled, restart };
 }
 
@@ -317,9 +321,109 @@ it('reads persisted DAG configuration, timings and skipped evidence over real HT
   expect(integration.timings!.checksWallMs).toBeGreaterThan(0);
   expect(integration.checks.map(check => check.host!.exitStatus)).toEqual(['failed', 'passed', 'skipped']);
   expect(integration.readiness.status).toBe('failed'); expect(f.reviewCalls()).toHaveLength(0);
+  const projected = await f.view();
+  expect(projected.integrations[0]).toMatchObject({ readyConfirmed: false, checks: [{ passed: false }, { passed: true }, { passed: false, currentHost: true, host: { exitStatus: 'skipped' } }] });
+  const html = renderToStaticMarkup(<EvidenceContent state={{ status: 'loaded', evidence: projected }} onRetry={() => {}} />);
+  expect(html).toContain('当前 Host 已跳过'); expect(html).toContain('审核前证据就绪：检查失败');
   expect(await f.cli('evidence')).toEqual(evidence);
   const log = await f.cli('evidence-log', { integrationId: integration.id, checkId: integration.checks[2]!.id });
   expect(log.host.summary).toContain('Dependency failed is failed');
+  await f.restart(checks);
+  expect(await f.raw()).toEqual(evidence); expect(f.reviewCalls()).toHaveLength(0);
+});
+
+it('joins historical reuse, private npm snapshots and DAG checks through persisted HTTP/CLI evidence and fresh exact review', async () => {
+  const environment = { kind: 'npm-ci', templateVersion: 'npm-script-free-v1', offline: true } as const;
+  const script = `const fs=require('fs'),assert=require('assert');
+    assert.equal(require('offline-dependency'),'installed');
+    assert(!fs.existsSync(process.env.HOME+'/marker'));fs.writeFileSync(process.env.HOME+'/marker','private');
+    fs.writeFileSync(require.resolve('offline-dependency'),'module.exports="private write";');
+    console.log('current real check '+(fs.existsSync('task.txt')?'candidate':'baseline'));
+    process.exit(fs.existsSync('task.txt')?0:1);`;
+  const checks: CheckCommand[] = [
+    { id: 'unit', executable: process.execPath, args: ['-e', script], environment, baseline: { environmentId: 'offline-tarball-node24-v1' } },
+    { id: 'dependent', executable: process.execPath, args: ['-e', script], environment, dependsOn: ['unit'] },
+  ];
+  const f = await fixture(checks, { mode: 'dag', maxConcurrency: 2, resourceSlots: 2 }, true);
+  await f.cli('dispatch', { expectedVersion: 0, idempotencyKey: 'combined-dispatch' });
+  await f.develop(await f.started('develop'), 'candidate\n');
+  const firstReview = await f.started('review');
+  const cold = (await f.raw()).integrations[0]!;
+  expect(cold.baselines![0]).toMatchObject({ status: 'recorded', check: { host: { taskId: '$baseline', exitStatus: 'failed' }, dependencyEnvironment: { status: 'miss' } } });
+  expect(cold.checks.map(check => check.dependencyEnvironment!.status)).toEqual(['miss', 'hit']);
+  const block = async (call: Call) => {
+    call.finish({ stopReason: 'completed', text: JSON.stringify({ schemaVersion: 1, taskId: 'task', runId: call.run.id, verdict: 'blocked', reviewedCommit: f.candidate(call).candidateHead, findings: [] }) });
+    await f.settled('blocked');
+  };
+  const retry = () => f.cli(['integration', 'request'], { sourceHead: f.candidate(firstReview).sourceHead, expectedVersion: f.host.store.task('task').version, idempotencyKey: `combined-${f.reviewCalls().length}` }, `combined-${f.reviewCalls().length}`);
+  await block(firstReview);
+  expect(f.host.store.task('task').acceptedCommit).toBeNull();
+  await f.restart(checks);
+  f.host.coordinator.resume(f.workflow.id);
+  await retry(); await until(() => f.reviewCalls().length === 2);
+  const warmReview = f.reviewCalls()[1]!, warmId = f.candidate(warmReview).integrationId;
+  const warm = (await f.raw()).integrations.find(item => item.id === warmId)!;
+  expect(warm.baselines![0]).toMatchObject({ status: 'reused', key: cold.baselines![0]!.key, check: { id: cold.baselines![0]!.check!.id } });
+  expect(warm.checks.map(check => check.dependencyEnvironment)).toEqual([expect.objectContaining({ status: 'hit', installMs: 0 }), expect.objectContaining({ status: 'hit', installMs: 0 })]);
+  expect(warm.checks.map(check => check.id)).not.toEqual(cold.checks.map(check => check.id));
+  expect(f.host.store.task('task').acceptedCommit).toBeNull();
+  await block(warmReview);
+  await f.restart(checks, { enabled: false, maxBytes: 1_000_000 });
+  f.host.coordinator.resume(f.workflow.id);
+  await retry(); await until(() => f.reviewCalls().length === 3);
+  const finalReview = f.reviewCalls()[2]!, finalId = f.candidate(finalReview).integrationId;
+  const evidence = await f.raw(), disabled = evidence.integrations.find(item => item.id === finalId)!;
+  expect(await f.cli('evidence')).toEqual(evidence);
+  expect(disabled.baselines![0]!.status).toBe('recorded');
+  expect(disabled.baselines![0]!.key).not.toBe(cold.baselines![0]!.key);
+  expect(disabled.checks.every(check => check.dependencyEnvironment!.status === 'fallback' && check.dependencyEnvironment!.installMs > 0)).toBe(true);
+  for (const integration of [cold, warm, disabled]) {
+    expect(integration.readiness.status).toBe('ready');
+    expect(integration.checkPlan).toMatchObject({ nodes: [{ status: 'passed' }, { status: 'passed', dependsOn: ['unit'] }] });
+    expect(integration.checks.every(check => check.stdout.includes('current real check candidate') && check.host!.candidateHead === integration.candidateHead)).toBe(true);
+    expect(integration.checks.map(check => check.id)).not.toContain(integration.baselines![0]!.check!.id);
+    const log = await f.cli('evidence-log', { integrationId: integration.id, checkId: integration.checks[0]!.id }, `log-${integration.id}`);
+    expect(log.dependencyEnvironment).toEqual(integration.checks[0]!.dependencyEnvironment);
+  }
+  const finalView = await f.view();
+  // Multiple verified integrations for the same source/attempt are deliberately ambiguous to the reader.
+  expect(finalView.currentCandidate).toBeNull();
+  expect(finalView.integrations.find(item => item.id === finalId)!.readyConfirmed).toBe(false);
+  expect(f.host.store.task('task').attempt).toBe(1);
+  f.approve(finalReview); await f.settled('succeeded');
+  expect(await gitOk(f.repo, ['rev-parse', f.workflow.integrationRef])).toBe(disabled.candidateHead);
+  expect(f.host.store.task('task').acceptedCommit).toBe(disabled.candidateHead);
+  expect(f.candidate(finalReview).checkIds).toEqual(disabled.checks.map(check => check.id));
+  console.log('combined real HTTP/CLI baseline/npm/DAG ms', JSON.stringify([cold, warm, disabled].map(item => ({ id: item.id, timings: item.timings, baseline: item.baselines![0]!.status, environments: item.checks.map(check => check.dependencyEnvironment) }))));
+});
+
+it('renders real cancelled and unstarted DAG receipts from HTTP as not passed, durably after restart', async () => {
+  const checks: CheckCommand[] = [
+    { id: 'active', executable: process.execPath, args: ['-e', 'setTimeout(()=>{},10000)'] },
+    { id: 'unstarted', executable: process.execPath, args: ['-e', 'throw Error("must not execute")'], dependsOn: ['active'] },
+  ];
+  const f = await fixture(checks, { mode: 'dag' });
+  await f.cli('dispatch', { expectedVersion: 0, idempotencyKey: 'cancel-check-dispatch' });
+  await f.develop(await f.started('develop'), 'candidate\n');
+  await until(() => !!f.host.store.get("SELECT id FROM integrations WHERE status='preparing'"));
+  const integration = f.host.store.require<{ id: string }>("SELECT id FROM integrations WHERE task_id='task'");
+  let running = false;
+  for (let i = 0; i < 300; i++) {
+    const operation = await f.host.git.readOperation(f.host.store.workspace('own'), integration.id).catch(() => null);
+    if (operation?.checkPlan?.nodes[0]?.status === 'running') { running = true; break; }
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  expect(running).toBe(true);
+  await f.cli('cancel');
+  await until(() => f.host.store.require<{ status: string }>('SELECT status FROM integrations WHERE id=?', integration.id).status === 'cleanup_unknown');
+  const evidence = await f.raw(), projected = await f.view();
+  expect(evidence.integrations[0]!.checks.map(check => check.host!.exitStatus)).toEqual(['cancelled', 'skipped']);
+  expect(projected.integrations[0]).toMatchObject({ readyConfirmed: false, checks: [{ passed: false }, { passed: false }] });
+  const html = renderToStaticMarkup(<EvidenceContent state={{ status: 'loaded', evidence: projected }} onRetry={() => {}} />);
+  expect(html).toContain('已取消'); expect(html).toContain('已跳过'); expect(html).not.toContain('当前 Host 检查通过');
+  expect(await f.cli('evidence')).toEqual(evidence);
+  expect(f.reviewCalls()).toHaveLength(0);
+  expect(f.host.store.task('task').acceptedCommit).toBeNull();
   await f.restart(checks);
   expect(await f.raw()).toEqual(evidence); expect(f.reviewCalls()).toHaveLength(0);
 });
