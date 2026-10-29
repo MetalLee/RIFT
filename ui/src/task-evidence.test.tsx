@@ -117,15 +117,18 @@ describe('Host evidence projection and current-candidate safety',()=>{
     fixture.integrations=[];expect(render(fixture)).toContain('没有唯一匹配的集成记录');
   });
   it.each([
-    {executionSource:'agent'}, {schemaVersion:2}, {logSha256:'bad-hash'}, {command:{executable:'pnpm',args:[null],timeoutMs:1000}}, {environmentFingerprint:null}, {attempt:null}, {exitStatus:'unknown'},
+    {executionSource:'agent'}, {schemaVersion:2}, {logSha256:'bad-hash'}, {command:{executable:'pnpm',args:[null],timeoutMs:1000}}, {environmentFingerprint:null}, {attempt:null}, {exitStatus:'unknown'}, {exitStatus:null}, {exitStatus:''},
   ])('does not upgrade malformed or non-Host provenance to Host success (%j)',patch=>{
     const fixture=hostFixture();Object.assign(fixture.integrations[0]!.checks[0]!.host,patch);
     const html=render(fixture);expect(html).toContain('Host 来源未确认');expect(html).not.toContain('当前 Host 检查通过');
     expect(adaptTaskEvidence(fixture,'task','ws').integrations[0]?.readyConfirmed).toBe(false);
   });
-  it.each(['failed','environment_unavailable','timed_out'])('does not interpret %s and exit zero as passed',exitStatus=>{
+  it.each([['failed','执行失败'],['environment_unavailable','环境不可用'],['timed_out','执行超时'],['skipped','已跳过'],['cancelled','已取消']])('does not interpret %s and exit zero as passed',(exitStatus,label)=>{
     const fixture=hostFixture();fixture.integrations[0]!.checks[0]!.host.exitStatus=exitStatus;
-    expect(adaptTaskEvidence(fixture,'task','ws').integrations[0]?.readyConfirmed).toBe(false);expect(render(fixture)).not.toContain('当前 Host 检查通过');
+    const integration=adaptTaskEvidence(fixture,'task','ws').integrations[0];
+    expect(integration).toMatchObject({readyConfirmed:false,checks:[{bindingMatches:true,currentHost:true,passed:false,host:{exitStatus}}]});
+    const html=render(fixture);expect(html).toContain(`当前 Host ${label}`);expect(html).toContain(`执行结果：${label}`);
+    expect(html).not.toContain('当前 Host 检查通过');expect(html).not.toContain('审核前证据就绪：检查就绪');
   });
   it('rejects inconsistent passed/exit-code records and incomplete evidence files as ready',()=>{
     const fixture=hostFixture();fixture.integrations[0]!.checks[0]!.exitCode=1;
@@ -183,4 +186,33 @@ it('keeps an optional failed command visible without turning configured-check re
   fixture.integrations[0]!.readiness.blockers.push({classification:'optional',commandId:'lint',reason:'可选检查失败，不阻断'});
   expect(adaptTaskEvidence(fixture,'task','ws').integrations[0]?.readyConfirmed).toBe(true);
   const html=render(fixture);expect(html).toContain('当前 Host 执行失败');expect(html).toContain('审核前证据就绪：检查就绪');expect(html).toContain('可选建议 · 不阻断');
+});
+
+
+describe.each(['skipped','cancelled'])('%s Host check compatibility',exitStatus=>{
+  it.each([
+    {executionSource:'agent'}, {schemaVersion:2}, {workspaceId:'foreign'}, {taskId:'foreign'},
+    {integrationId:'foreign'}, {candidateHead:'foreign'}, {attempt:1},
+  ])('preserves provenance and current-candidate checks (%j)',patch=>{
+    const fixture=hostFixture();Object.assign(fixture.integrations[0]!.checks[0]!.host,{exitStatus},patch);
+    const integration=adaptTaskEvidence(fixture,'task','ws').integrations[0];
+    expect(integration?.checks[0]?.currentHost).toBe(false);expect(integration?.checks[0]?.passed).toBe(false);expect(integration?.readyConfirmed).toBe(false);
+    const html=render(fixture);expect(html).not.toContain('当前 Host 已跳过');expect(html).not.toContain('当前 Host 已取消');
+    expect(html).not.toContain('当前 Host 检查通过');expect(html).not.toContain('审核前证据就绪：检查就绪');
+  });
+  it('consumes the extended status through GET while safely ignoring extra plan and timing fields',async()=>{
+    const fixture=hostFixture();fixture.integrations[0]!.checks[0]!.host.exitStatus=exitStatus;
+    Object.assign(fixture.integrations[0]!,{
+      checkPlan:{mode:'parallel',maxConcurrency:2,resourceSlots:2,nodes:[{commandId:'test:ui',dependsOn:[],isolation:'snapshot',resourceSlots:1,status:exitStatus,reason:'未完成执行'}]},
+      timings:{checksWallMs:0},
+    });
+    vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify(fixture))));
+    try {
+      const view=await readTaskEvidence('ws','task',new AbortController().signal);
+      expect(view.integrations[0]).toMatchObject({readyConfirmed:false,checks:[{currentHost:true,passed:false,host:{exitStatus}}]});
+      const html=renderToStaticMarkup(<EvidenceContent state={{status:'loaded',evidence:view}} onRetry={()=>{}}/>);
+      expect(html).toContain(exitStatus==='skipped'?'当前 Host 已跳过':'当前 Host 已取消');
+      expect(html).not.toContain('当前 Host 检查通过');expect(html).not.toContain('审核前证据就绪：检查就绪');
+    } finally {vi.unstubAllGlobals();}
+  });
 });
