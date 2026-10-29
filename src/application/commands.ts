@@ -107,8 +107,16 @@ export class ApplicationCommands {
 
       if(name==='task.retry-dispatch'){
         this.host.coordinator.assertDevelopmentRetry(taskId);
-        const workflow=this.host.store.workflow(task.workflowId);if(workflow.baseCommit)await this.host.ensureLead(workflow.id);
+        const workflow=this.host.store.workflow(task.workflowId);
         const latest=this.host.store.get<import('../contracts/index.js').Run>('SELECT * FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1',taskId);
+        const lastIntegration=this.host.store.get<{candidate:import('../contracts/index.js').Candidate|null}>('SELECT candidate FROM integrations WHERE task_id=? ORDER BY rowid DESC LIMIT 1',taskId);
+        const formatFailed=latest?.stopReason==='INVALID_RESULT';
+        const completedDevelopment=latest?.status==='succeeded'&&(latest.result as Partial<import('../contracts/index.js').DevelopmentResult>|null)?.outcome==='completed';
+        if(task.kind==='change'&&task.status==='blocked'&&latest?.purpose!=='review'&&(formatFailed||completedDevelopment&&lastIntegration?.candidate?.readiness?.status!=='failed'))
+          throw new RiftError(formatFailed?'RESULT_SUPPLEMENT_REQUIRED':'STAGE_RECOVERY_REQUIRED','Use supplement-result / recover for infrastructure recovery; use explicit task retry only for a code repair.');
+        if(task.kind==='change'&&task.status==='blocked'&&latest?.purpose!=='review'&&['failed','interrupted'].includes(latest?.status??''))
+          throw new RiftError('CONTINUATION_REQUIRED','Provider interruption requires explicit task retry with a continuation reason and preserved-checkout inspection, not automatic development replay.');
+        if(workflow.baseCommit)await this.host.ensureLead(workflow.id);
         if(task.status==='blocked'&&task.sourceHead&&latest?.purpose==='review'&&latest.taskAttempt===task.attempt&&(['failed','interrupted'].includes(latest.status)||(latest.status==='succeeded'&&(latest.result as Partial<import('../contracts/index.js').ReviewResult>|null)?.verdict==='blocked'))){
           const input=z.object({expectedVersion:z.number().int().nonnegative(),reason:z.string().min(1)}).strict().parse(body);
           const request=this.host.coordinator.requestIntegration({taskId,sourceHead:task.sourceHead,expectedVersion:input.expectedVersion,idempotencyKey:`browser-review-retry:${taskId}:${input.expectedVersion}`});
@@ -240,6 +248,8 @@ export class ApplicationCommands {
       if (action === 'dispatch') return this.host.coordinator.dispatch(schemas.dispatchSchema.parse({...body as object,taskId:id}));
       if (action === 'integration') return this.host.coordinator.requestIntegration(schemas.integrationSchema.parse({...body as object,taskId:id}));
       if (action === 'retry') return this.host.coordinator.retry(schemas.retrySchema.parse({...body as object,taskId:id}));
+      if (action === 'supplement-result') return this.host.coordinator.supplementResult(schemas.supplementResultSchema.parse({...body as object,taskId:id}));
+      if (action === 'recover') return this.host.coordinator.recoverTask(schemas.recoverTaskSchema.parse({...body as object,taskId:id}));
       if (action === 'recover-source') return this.host.coordinator.recoverSource(schemas.recoverSourceSchema.parse({...body as object,taskId:id}));
       if (action === 'cancel') return this.host.coordinator.cancelTask(id);
     }

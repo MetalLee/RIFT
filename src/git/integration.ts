@@ -577,7 +577,14 @@ export class LocalGitService implements GitService {
     // expectedPaths is legacy planning metadata, never a file allowlist.
     if (!changedPaths.length) throw new Error('EMPTY_CHANGE: change task has no actual diff');
     if (!reusedSource) {
-      await stageSourcePaths(cwd,changedPaths);
+      // Only index-relative dirty paths need staging; base-relative paths also
+      // include already committed deletions which no longer exist in the index.
+      const stagePaths = [...new Set([
+        ...split((await git(cwd, ['diff', '--name-only', '-z', '--no-renames', '--'])).stdout),
+        ...await sourceUntrackedFiles(cwd),
+      ])];
+      await assertSafeFiles(cwd,stagePaths);
+      await stageSourcePaths(cwd,stagePaths);
       const staged = await git(cwd, ['diff', '--cached', '--quiet']);
       if (staged.exitCode === 1) await gitOk(cwd, ['-c', 'user.name=RIFT', '-c', 'user.email=rift@localhost', 'commit', '-m', `RIFT task ${task.id} attempt ${task.attempt}`]);
       else if (staged.exitCode !== 0) throw new Error('SOURCE_INDEX_INVALID');
@@ -585,6 +592,7 @@ export class LocalGitService implements GitService {
     const sourceHead = await gitOk(cwd, ['rev-parse', 'HEAD']);
     const diff = await gitOk(cwd, ['diff', '--no-ext-diff', '--no-textconv', comparisonBase, sourceHead, '--']);
     if (!diff) throw new Error('EMPTY_CHANGE: final source has no actual diff from its attempt base');
+    changedPaths = split((await git(cwd, ['diff', '--name-only', '-z', '--no-renames', comparisonBase, sourceHead, '--'])).stdout).sort();
     return { sourceHead, diff, changedPaths };
   }
   async verifyAnalysis(input:GitContext & {run:Run;worktree:Worktree}):Promise<{headCommit:string}> {

@@ -20,7 +20,7 @@ route('PUT','/v1/workspaces/:id/roles','workspace.roles');
 route('POST','/v1/workflows','workflow.start');
 for(const [entity,actions] of Object.entries({
   workflow:['plan','replan','wait','finish','cancel','pause','resume','lead'],
-  task:['dispatch','integration','retry','recover-source','cancel'],run:['cancel'],
+  task:['dispatch','integration','retry','recover-source','supplement-result','recover','cancel'],run:['cancel'],
 })) {
   route('GET',`/v1/${entity}s/:id`,`${entity}.raw-show`);
   for(const action of actions)route('POST',`/v1/${entity}s/:id/${action}`,`${entity}.${action}`);

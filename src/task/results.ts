@@ -15,3 +15,14 @@ export function parseResult(text:string,expected:{taskId:string;runId:string;pur
   invariant(['completed','blocked'].includes(String(value.outcome)) && typeof value.summary==='string' && ['changedPaths','checksClaimed','blockingReasons'].every(key=>Array.isArray(value[key])&&(value[key] as unknown[]).every(item=>typeof item==='string')),'INVALID_RESULT','Development result is invalid.');
   return value as unknown as DevelopmentResult;
 }
+
+/** An operator may remove a wrapper, never invent or merge provider results. */
+export function parseSupplement(text:string,output:string,expected:{taskId:string;runId:string;purpose:string}):DevelopmentResult {
+  let value:unknown;
+  try { value=JSON.parse(text); } catch { throw new RiftError('INVALID_RESULT','Supplement must be one bare JSON object.'); }
+  const result=parseResult(JSON.stringify(value),expected) as DevelopmentResult;
+  const start=output.indexOf(text);
+  invariant(start>=0&&output.indexOf(text,start+text.length)===-1&&!/[{}\[\]]/.test(output.slice(0,start)+output.slice(start+text.length)),
+    'RESULT_SOURCE_MISMATCH','Supplement must be the unique unchanged JSON object in the original output; ambiguous output is not recoverable.');
+  return result;
+}

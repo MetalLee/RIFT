@@ -91,7 +91,10 @@ describe('persistent task coordinator',()=>{
     f.store.exec("UPDATE runs SET cleanup_status='unknown' WHERE id=?",f.calls[1]!.run.id);
     expect(()=>f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:task.version,idempotencyKey:'unknown-cleanup'})).toThrow(/cleanup/i);
     f.store.exec("UPDATE runs SET cleanup_status='confirmed' WHERE id=?",f.calls[1]!.run.id);
-    const request=f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:task.version,idempotencyKey:'review-retry'});
+    const recovery={taskId:'a',expectedVersion:task.version,idempotencyKey:'review-retry'};
+    const recovered=await f.coordinator.recoverTask(recovery) as {stage:string;operation:import('../../src/contracts/index.js').Operation};
+    expect(recovered.stage).toBe('review');expect(await f.coordinator.recoverTask(recovery)).toEqual(recovered);
+    const request=recovered.operation;
     expect(f.coordinator.requestIntegration({taskId:'a',sourceHead:sha,expectedVersion:task.version,idempotencyKey:'review-retry'}).id).toBe(request.id);
     await tick();expect(f.calls).toHaveLength(3);expect(f.calls[2]!.run.purpose).toBe('review');expect(f.store.task('a').attempt).toBe(task.attempt);
     expect(f.store.task('a').acceptedCommit).toBeNull();f.complete(2);await tick();expect(f.store.task('a').status).toBe('succeeded');

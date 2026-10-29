@@ -7,7 +7,7 @@ import type { RepositoryAccess } from '../agent/repository-access.js';
 import { invariant, RiftError, type ActivationBridge, type ActivationHandle, type Candidate, type DevelopmentResult, type GitService, type Operation, type PlanTask, type ReviewResult, type Role, type Run, type Task, type TaskEvent, type Workflow, type Worktree } from '../contracts/index.js';
 import { id, now, RiftStore } from '../storage/database.js';
 import { dependencyStatus, validateDag, schedulerLimits, schedulingOrder, validatePriority, type SchedulerLimits } from './scheduler.js';
-import { parseResult } from './results.js';
+import { parseResult, parseSupplement } from './results.js';
 import { redact } from '../api/security.js';
 import { saveResultArtifact } from '../storage/artifacts.js';
 import { createHash } from 'node:crypto';
@@ -250,6 +250,83 @@ export class TaskCoordinator {
     const prior=records.find(record=>record.payload.sourceHead===task.sourceHead&&record.baseCommit!==task.sourceHead&&/^[a-f0-9]{40,64}$/.test(record.baseCommit));
     return prior?{sourceHead:task.sourceHead,baseCommit:prior.baseCommit}:undefined;
   }
+  private supplementedResult(run:Run):DevelopmentResult|undefined {
+    if(run.status!=='failed'||run.stopReason!=='INVALID_RESULT'||run.purpose==='review')return;
+    const record=this.store.get<{payload:{resultText:string;outputSha256:string;worktreeId:string}}>("SELECT payload FROM task_events WHERE run_id=? AND type='result.supplemented' ORDER BY event_seq DESC LIMIT 1",run.id);
+    if(!record)return;
+    invariant(this.store.get<Worktree>("SELECT * FROM worktrees WHERE id=? AND task_id=? AND attempt=? AND kind='task'",record.payload.worktreeId,run.taskId,run.taskAttempt),'WORKTREE_OWNERSHIP','Supplement belongs to a different source checkout.');
+    const output=(run.result as {output?:unknown}|null)?.output;
+    invariant(typeof output==='string'&&createHash('sha256').update(output).digest('hex')===record.payload.outputSha256,'RESULT_SOURCE_MISMATCH','Original output no longer matches its supplement.');
+    return parseSupplement(record.payload.resultText,output,{taskId:run.taskId,runId:run.id,purpose:run.purpose});
+  }
+  private developmentResult(run:Run):DevelopmentResult {
+    return this.supplementedResult(run)??parseResult(JSON.stringify(run.result),{taskId:run.taskId,runId:run.id,purpose:run.purpose}) as DevelopmentResult;
+  }
+  private assertRecoveryCleanup(task:Task,run:Run):void {
+    const workflow=this.store.workflow(task.workflowId);
+    invariant(run.cleanupStatus==='confirmed'&&run.slotReleasedAt&&this.store.get("SELECT id FROM execution_leases WHERE owner_type='run' AND owner_id=? AND agent_id=? AND workspace_id=? AND cleanup_status='confirmed' AND released_at IS NOT NULL",run.id,run.roleId,workflow.workspaceId),'CLEANUP_UNKNOWN','Run and owned lease cleanup must be confirmed.');
+    invariant(!this.active.has(run.id)&&!this.store.get("SELECT id FROM runs WHERE task_id=? AND (slot_released_at IS NULL OR cleanup_status<>'confirmed')",task.id),'CLEANUP_UNKNOWN','Execution cleanup is still uncertain.');
+    invariant(!this.store.get("SELECT l.id FROM execution_leases l JOIN runs r ON l.owner_type='run' AND l.owner_id=r.id WHERE r.task_id=? AND (l.released_at IS NULL OR l.cleanup_status<>'confirmed')",task.id),'CLEANUP_UNKNOWN','A prior owned execution lease still has uncertain cleanup.');
+    invariant(!this.store.get("SELECT id FROM operations WHERE entity_id=? AND phase IN ('queued','started')",task.id),'FINALIZATION_PENDING','Wait for task finalization.');
+    invariant(!this.store.get("SELECT id FROM integrations WHERE task_id=? AND status IN ('preparing','reviewing','publishing','cleanup_unknown')",task.id),'CLEANUP_UNKNOWN','Integration cleanup or publication is uncertain.');
+  }
+  supplementResult(input:{taskId:string;runId:string;expectedVersion:number;outputSha256:string;resultText:string}) {
+    invariant(!this.stopping,'HOST_STOPPING','Host is shutting down.');
+    return this.store.transaction(()=>{
+      const task=this.store.task(input.taskId),run=this.store.run(input.runId);
+      invariant(run.taskId===task.id&&run.taskAttempt===task.attempt&&run.purpose!=='review'&&run.status==='failed'&&run.stopReason==='INVALID_RESULT','INVALID_STATE','Only the current format-failed developer Run can supplement its result.');
+      invariant(task.kind==='change'&&task.status==='blocked'&&['running','paused'].includes(this.store.workflow(task.workflowId).status)&&!task.acceptedCommit,'INVALID_STATE','Task is not recoverable.');
+      invariant(this.store.get<{id:string}>('SELECT id FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1',task.id)?.id===run.id,'INVALID_STATE','A newer Run already exists.');
+      this.assertRecoveryCleanup(task,run);
+      const raw=run.result as {output?:unknown;outputComplete?:boolean}|null;
+      invariant(typeof raw?.output==='string'&&raw.outputComplete!==false&&Buffer.byteLength(raw.output)<128*1024&&!raw.output.includes('[TRUNCATED]'),'RESULT_SOURCE_MISMATCH','Complete original output is required.');
+      invariant(createHash('sha256').update(raw.output).digest('hex')===input.outputSha256,'RESULT_SOURCE_MISMATCH','Output hash does not match the original Run.');
+      const result=parseSupplement(input.resultText,raw.output,{taskId:task.id,runId:run.id,purpose:run.purpose});
+      const prior=this.store.get<{payload:{resultText:string;outputSha256:string;expectedVersion:number}}>("SELECT payload FROM task_events WHERE run_id=? AND type='result.supplemented'",run.id);
+      if(prior){invariant(prior.payload.resultText===input.resultText&&prior.payload.outputSha256===input.outputSha256&&prior.payload.expectedVersion===input.expectedVersion,'IDEMPOTENCY_CONFLICT','Run already has a different supplement.');return{runId:run.id,result};}
+      invariant(task.version===input.expectedVersion,'VERSION_CONFLICT','Task changed; reload before supplementing.');
+      const tree=this.store.get<Worktree>("SELECT * FROM worktrees WHERE task_id=? AND attempt=? AND kind='task'",task.id,task.attempt);
+      invariant(tree&&tree.writerRunId===null&&tree.status==='active','WORKTREE_OWNERSHIP','Original checkout must be quiescent and active.');
+      this.store.event(task.workflowId,'result.supplemented',{resultText:input.resultText,outputSha256:input.outputSha256,expectedVersion:input.expectedVersion,worktreeId:tree.id},{taskId:task.id,runId:run.id});
+      this.store.exec('UPDATE tasks SET version=version+1 WHERE id=?',task.id);
+      return{runId:run.id,result};
+    });
+  }
+  /** Resume only the failed infrastructure stage; never launch development. */
+  async recoverTask(input:{taskId:string;expectedVersion:number;idempotencyKey:string}):Promise<unknown> {
+    invariant(!this.stopping,'HOST_STOPPING','Host is shutting down.');
+    invariant(input.idempotencyKey.trim()&&input.idempotencyKey.length<=160,'INVALID_DEDUPE_KEY','A bounded recovery key is required.');
+    const task=this.store.task(input.taskId);
+    const prior=this.store.all<{payload:{key:string;expectedVersion:number;response?:unknown;error?:{code:string;message:string}}}>("SELECT payload FROM task_events WHERE task_id=? AND type='task.recovery_receipt' ORDER BY event_seq DESC",task.id).find(event=>event.payload.key===input.idempotencyKey);
+    if(prior){
+      invariant(prior.payload.expectedVersion===input.expectedVersion,'IDEMPOTENCY_CONFLICT','Recovery key was used for different input.');
+      if(prior.payload.error)throw new RiftError(prior.payload.error.code,prior.payload.error.message);
+      invariant('response' in prior.payload,'REQUEST_PENDING','Recovery was interrupted or is in progress; inspect its stage before a new explicit request.');
+      return prior.payload.response;
+    }
+    this.store.event(task.workflowId,'task.recovery_receipt',{key:input.idempotencyKey,expectedVersion:input.expectedVersion},{taskId:task.id});
+    try {
+      const response=await this.recoverTaskStage(input);
+      this.store.event(task.workflowId,'task.recovery_receipt',{key:input.idempotencyKey,expectedVersion:input.expectedVersion,response},{taskId:task.id});return response;
+    }catch(error){
+      this.store.event(task.workflowId,'task.recovery_receipt',{key:input.idempotencyKey,expectedVersion:input.expectedVersion,error:{code:error instanceof RiftError?error.code:'RECOVERY_FAILED',message:errorMessage(error)}},{taskId:task.id});throw error;
+    }
+  }
+  private async recoverTaskStage(input:{taskId:string;expectedVersion:number;idempotencyKey:string}) {
+    const task=this.store.task(input.taskId),workflow=this.store.workflow(task.workflowId);
+    invariant(task.status==='blocked'&&['running','paused'].includes(workflow.status),'INVALID_STATE','Only a blocked task in an active workflow can recover.');
+    invariant(task.version===input.expectedVersion,'VERSION_CONFLICT','Task changed; reload before recovery.');
+    const run=this.store.require<Run>('SELECT * FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1',task.id);
+    invariant(run.taskAttempt===task.attempt,'INVALID_STATE','Latest Run does not belong to this attempt.');
+    this.assertRecoveryCleanup(task,run);
+    const waiting=this.store.get<IntegrationRecord>("SELECT * FROM integrations WHERE task_id=? AND status='evidence_waiting' ORDER BY rowid DESC LIMIT 1",task.id);
+    const failed=this.store.get<IntegrationRecord>("SELECT * FROM integrations WHERE task_id=? ORDER BY rowid DESC LIMIT 1",task.id);
+    invariant(!candidateMatchesTask(failed?.candidate??null,task)||failed?.candidate?.readiness?.status!=='failed','CODE_REPAIR_REQUIRED','An actual check failed; repair code explicitly rather than recovering infrastructure.');
+    if(waiting?.candidate&&candidateMatchesTask(waiting.candidate,task))return{stage:'checks',...await this.supplementEvidence({taskId:task.id,expectedVersion:task.version,idempotencyKey:input.idempotencyKey,integrationId:waiting.id,candidateHead:waiting.candidate.candidateHead})};
+    if(run.purpose==='review')return{stage:'review',operation:this.requestIntegration({taskId:task.id,expectedVersion:task.version,idempotencyKey:input.idempotencyKey,sourceHead:task.sourceHead!})};
+    invariant(run.status==='succeeded'||this.supplementedResult(run),run.stopReason==='INVALID_RESULT'?'RESULT_SUPPLEMENT_REQUIRED':'CONTINUATION_REQUIRED',run.stopReason==='INVALID_RESULT'?'Use supplement-result with the original output, then recover.':'Provider interruption is not completion. Use explicit retry with a continuation reason; inspect and reapply the preserved attempt checkout. No provider or model is switched automatically.');
+    return{stage:'source',...await this.recoverSource({taskId:task.id,expectedVersion:task.version})};
+  }
   /** Recollect a completed, quiescent developer attempt without running a model
    * or spending another repair. Actual Git checks and normal integration remain mandatory. */
   async recoverSource(input:{taskId:string;expectedVersion:number}):Promise<{task:Task;operation:Operation;runId:string;sourceHead:string}> {
@@ -263,13 +340,10 @@ export class TaskCoordinator {
         invariant(task.version===input.expectedVersion,'VERSION_CONFLICT','Task changed; reload before recovering source.');
         invariant(task.kind==='change'&&task.status==='blocked'&&!task.acceptedCommit&&['running','paused'].includes(workflow.status),'INVALID_STATE','Only a blocked change task in an active workflow may recover source.');
         const run=this.store.get<Run & {version:number}>('SELECT * FROM runs WHERE task_id=? ORDER BY rowid DESC LIMIT 1',task.id);
-        invariant(run&&run.taskAttempt===task.attempt&&run.purpose!=='review'&&run.status==='succeeded','INVALID_STATE','The current attempt must end with a successful developer Run, not a review or failed execution.');
-        const result=parseResult(JSON.stringify(run.result),{taskId:task.id,runId:run.id,purpose:run.purpose}) as DevelopmentResult;
+        invariant(run&&run.taskAttempt===task.attempt&&run.purpose!=='review'&&(run.status==='succeeded'||this.supplementedResult(run)),'INVALID_STATE','The current attempt must end with a successful developer Run, not a review or failed execution.');
+        this.assertRecoveryCleanup(task,run);
+        const result=this.developmentResult(run);
         invariant(result.outcome==='completed','INVALID_STATE','A blocked model result cannot be recovered as completed source.');
-        invariant(run.cleanupStatus==='confirmed'&&run.slotReleasedAt&&this.store.get("SELECT id FROM execution_leases WHERE owner_type='run' AND owner_id=? AND agent_id=? AND workspace_id=? AND cleanup_status='confirmed' AND released_at IS NOT NULL",run.id,run.roleId,workflow.workspaceId),'CLEANUP_UNKNOWN','The completed Run and its execution lease must both have confirmed cleanup.');
-        invariant(!this.active.has(run.id)&&!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',task.id),'CLEANUP_UNKNOWN','Task still owns execution or unconfirmed cleanup.');
-        invariant(!this.store.get("SELECT id FROM operations WHERE entity_id=? AND phase IN ('queued','started')",task.id),'FINALIZATION_PENDING','Task still owns unfinished dispatch or integration requests.');
-        invariant(!this.store.get("SELECT id FROM integrations WHERE task_id=? AND status IN ('preparing','reviewing','publishing','cleanup_unknown')",task.id),'INTEGRATION_ACTIVE','Task still owns an integration operation.');
         const worktree=this.store.get<Worktree>("SELECT * FROM worktrees WHERE task_id=? AND attempt=? AND kind='task'",task.id,task.attempt);
         invariant(worktree&&worktree.writerRunId===null&&worktree.status==='active','WORKTREE_OWNERSHIP','Recovery requires this attempt\'s active worktree with no writer.');
         return{task,run,worktree};
@@ -531,7 +605,7 @@ export class TaskCoordinator {
       invariant(['completed','end_turn','stop','success'].includes(result.stopReason),'PROVIDER_STOP',`Provider stopped with ${result.stopReason}.${result.diagnostic?` ${redact(result.diagnostic,4096)}`:''}`);
       const parsed=parseResult(result.text,{taskId:task.id,runId:run.id,purpose:run.purpose});
       this.store.transaction(()=>this.recordResult(run.id,'succeeded',result.stopReason,parsed));return parsed;
-    }catch(error){this.store.transaction(()=>{this.recordResult(run.id,state.cancelled?'cancelled':'failed',state.cancelled?(state.cancelReason??'CANCELLED'):error instanceof RiftError?error.code:'EXECUTION_FAILED',{error:errorMessage(error),...(rawText===undefined?{}:{output:redact(rawText)})});if(!state.handle){if(!startAttempted||(error instanceof RiftError&&(['START_NOT_PUBLISHED','LIVE_LEAD_REQUIRED','PROVIDER_UNAVAILABLE','ABORTED_BEFORE_START'].includes(error.code)||(error.details as {cleanupConfirmed?:boolean}|undefined)?.cleanupConfirmed)))this.confirmCleanup(run.id);else this.store.exec('UPDATE runs SET cleanup_status=? WHERE id=?','unknown',run.id);}});return;}
+    }catch(error){this.store.transaction(()=>{this.recordResult(run.id,state.cancelled?'cancelled':'failed',state.cancelled?(state.cancelReason??'CANCELLED'):error instanceof RiftError?error.code:'EXECUTION_FAILED',{error:errorMessage(error),...(rawText===undefined?{}:{output:redact(rawText),outputComplete:Buffer.byteLength(rawText)<128*1024})});if(!state.handle){if(!startAttempted||(error instanceof RiftError&&(['START_NOT_PUBLISHED','LIVE_LEAD_REQUIRED','PROVIDER_UNAVAILABLE','ABORTED_BEFORE_START'].includes(error.code)||(error.details as {cleanupConfirmed?:boolean}|undefined)?.cleanupConfirmed)))this.confirmCleanup(run.id);else this.store.exec('UPDATE runs SET cleanup_status=? WHERE id=?','unknown',run.id);}});return;}
     finally {clearTimeout(timeout);if(abortListener)state.controller.signal.removeEventListener('abort',abortListener);try {try {stream.finish(this.store.run(run.id).status!=='succeeded');} finally {if(state.handle)await this.cleanup(run.id,state);}} finally {this.active.delete(run.id);}}
   }
   private blockTask(taskId:string,reason:string):void {const task=this.store.task(taskId);if(['succeeded','cancelled'].includes(task.status))return;this.store.exec('UPDATE tasks SET status=?,blocking_reason=?,version=version+1 WHERE id=?','blocked',reason,taskId);this.store.event(task.workflowId,'task.blocked',{reason},{taskId});}

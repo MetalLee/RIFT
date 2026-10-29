@@ -150,6 +150,7 @@ export class WorkspaceCommands {
       if(a==='delegate'){noId();invariant(chatActor(actor),'EXECUTION_REQUIRED','Delegation requires a live member execution; operators use plan + dispatch.');return this.agentCommand(actor,'rift_delegate',b);}
       const item=task();
       if(a==='evidence-log'){const input=z.object({integrationId:objectId,checkId:z.string().uuid()}).strict().parse(b);return execute('task.evidence-log',{},item.id,{query:new URLSearchParams(input)});}
+      if(['supplement-result','recover','recover-source'].includes(a!)){if(actor)invariant(role(actor.agentId).purpose==='lead','UNAUTHORIZED','Only the Lead or Host operator may recover tasks.');return execute(`task.${a}`,b,item.id);}
       if(a==='supplement-evidence'){if(actor)invariant(role(actor.agentId).purpose==='lead','UNAUTHORIZED','Only the Lead or Host operator may request checks.');return execute('task.supplement-evidence',b,item.id);}
       if(a==='show'||a==='evidence'){empty.parse(b);return execute(`task.${a}`,{},item.id);}
       if(a==='update'){
