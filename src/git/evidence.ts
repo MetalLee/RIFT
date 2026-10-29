@@ -1,14 +1,16 @@
 import { createHash } from 'node:crypto';
 import { release } from 'node:os';
-import type { EvidenceBinding, EvidenceReadiness } from '@rift/protocol';
+import type { BaselineEvidence, CheckEvidence, EvidenceBinding, EvidenceReadiness } from '@rift/protocol';
 import type { Candidate, Task } from '../contracts/index.js';
 import type { CheckCommand, GitOperation } from './types.js';
 
 export const fingerprint = (value: unknown): string => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 export const commandConfiguration = (command: CheckCommand) => ({ executable: command.executable, args: [...command.args], timeoutMs: command.timeoutMs ?? 120_000 });
-export const configurationFingerprint = (command: CheckCommand): string => fingerprint({ ...commandConfiguration(command), required: command.required !== false });
+export const configurationFingerprint = (command: CheckCommand): string => fingerprint({ ...commandConfiguration(command), required: command.required !== false, ...(command.baseline ? { baseline: command.baseline } : {}) });
 // Sandbox policy is versioned explicitly; never fingerprint credential-bearing Host environment values.
 export const environmentFingerprint = (): string => fingerprint({ sandbox: 'rift-bwrap-v1', platform: process.platform, arch: process.arch, release: release(), node: process.version });
+export const previewCheck = (check: CheckEvidence): CheckEvidence => ({ ...check, stdout: check.stdout.slice(0, 8000), stderr: check.stderr.slice(0, 8000), truncated: check.truncated || check.stdout.length > 8000 || check.stderr.length > 8000 });
+export const previewBaseline = (baseline: BaselineEvidence): BaselineEvidence => ({ ...baseline, ...(baseline.check ? { check: previewCheck(baseline.check) } : {}) });
 export function evidenceReadiness(operation: GitOperation, commands: readonly CheckCommand[]): EvidenceReadiness {
   const required = commands.filter(command => command.required !== false);
   const blockers: EvidenceReadiness['blockers'] = [], missingCheckIds: string[] = [];

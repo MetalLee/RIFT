@@ -1,3 +1,4 @@
+import { previewBaseline, previewCheck } from '../git/evidence.js';
 import { parseTimelineRefresh } from '../chat/timeline-page.js';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -131,7 +132,7 @@ export class ApplicationCommands {
                 if(operation.binding?.attempt===task.attempt&&operation.sourceHead===task.sourceHead&&operation.binding.candidateHead===record.candidate.candidateHead)current.push({integrationId:record.id,candidateHead:record.candidate.candidateHead,sourceHead:operation.sourceHead,taskAttempt:operation.binding.attempt});
               } catch { readiness={status:'waiting_evidence',requiredCheckIds:[],missingCheckIds:[],blockers:[{classification:'evidence_missing',commandId:'',reason:'Historical or stale candidate binding; attachments remain read-only.'}]}; }
             }
-            return {id:record.id,status:record.status,candidateHead:operation.candidateHead,checks:(operation.checks??[]).map(check=>({...check,stdout:check.stdout.slice(0,8000),stderr:check.stderr.slice(0,8000),truncated:check.truncated||check.stdout.length>8000||check.stderr.length>8000})),review:operation.review??null,evidenceUnavailable:false,readiness};
+            return {id:record.id,status:record.status,candidateHead:operation.candidateHead,timings:operation.timings,baselines:operation.baselines?.map(previewBaseline),checks:(operation.checks??[]).map(previewCheck),review:operation.review??null,evidenceUnavailable:false,readiness};
           } catch {return {id:record.id,status:record.status,checks:[],review:null,evidenceUnavailable:true,readiness:{status:'waiting_evidence' as const,requiredCheckIds:[],missingCheckIds:[],blockers:[{classification:'evidence_missing' as const,commandId:'',reason:'Host evidence is unavailable or its binding could not be verified.'}]}};}
         }));
         return {taskId,acceptedCommit:task.acceptedCommit,currentCandidate:current.length===1?current[0]:null,integrations} satisfies import('@rift/protocol').TaskEvidence;
