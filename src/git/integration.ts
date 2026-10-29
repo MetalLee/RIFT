@@ -140,7 +140,7 @@ export class LocalGitService implements GitService {
       if (operation.taskId !== input.task.id || operation.candidateHead !== input.candidate.candidateHead) throw new Error('CANDIDATE_EVIDENCE_MISMATCH');
     } else await this.assertBinding(input, operation, input.candidate.candidateHead);
     const readiness = await this.operationReadiness(operation);
-    try { await this.assertPlanLeaseAvailable(input.workspace, operation); }
+    try { await this.assertPlanLeaseAvailable(input.workspace, operation, true); }
     catch (error) { return { ...readiness, status: 'environment_unavailable', cleanupStatus: 'unknown', blockers: [...readiness.blockers, { classification: 'environment_unavailable', commandId: '', reason: String(error) }] }; }
     return readiness;
   }
@@ -166,6 +166,10 @@ export class LocalGitService implements GitService {
         await lstat(path.join(this.managedRoot, 'check-plan-lease'));
         if (!provesPreviousBootExited(input.previousBootId, input.currentBootId)) throw new Error('CLEANUP_UNKNOWN: retained lease requires same-machine OS reboot proof');
       } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+      if (provesPreviousBootExited(input.previousBootId, input.currentBootId)) {
+        operation.cleanupRebootProof = { previousBootId: input.previousBootId!, currentBootId: input.currentBootId! };
+        await this.record(input.workspace, operation);
+      }
       await this.planLease(input.workspace, operation, true);
       return !!operation.cleanupRebootProof;
     }
@@ -283,6 +287,9 @@ export class LocalGitService implements GitService {
     try { await file.writeFile(JSON.stringify(check)); await file.sync(); } finally { await file.close(); }
     return check;
   }
+  private leaseOwner(operation: GitOperation) {
+    return { ...operation.binding, sourceHead: operation.sourceHead, expectedTargetHead: operation.expectedTargetHead, integrationRef: operation.integrationRef };
+  }
   private async assertLeaseOwner(workspace: Workspace, operation: GitOperation): Promise<void> {
     const directory = path.join(this.managedRoot, 'check-plan-lease');
     const name = `${key(JSON.stringify([workspace.id, operation.integrationId]))}.json`;
@@ -290,35 +297,44 @@ export class LocalGitService implements GitService {
       const entries = await readdir(directory);
       const owner = path.join(directory, name);
       const directoryStat = await lstat(directory), ownerStat = await lstat(owner);
-      if (!directoryStat.isDirectory() || directoryStat.isSymbolicLink() || entries.length !== 1 || entries[0] !== name || !ownerStat.isFile() || ownerStat.isSymbolicLink() || fingerprint(JSON.parse(await readFile(owner, 'utf8'))) !== fingerprint(operation.binding)) throw new Error('Invalid owner');
+      if (!operation.binding || !directoryStat.isDirectory() || directoryStat.isSymbolicLink() || entries.length !== 1 || entries[0] !== name || !ownerStat.isFile() || ownerStat.isSymbolicLink()) throw new Error('Invalid owner');
+      const saved = fingerprint(JSON.parse(await readFile(owner, 'utf8')));
+      // Legacy owners bind via the integration journal, checked against the saved DB candidate on recovery.
+      if (saved !== fingerprint(this.leaseOwner(operation)) && saved !== fingerprint(operation.binding)) throw new Error('Invalid owner');
     } catch { throw new Error('CHECK_PLAN_LEASE_HELD: missing or corrupt owner; cleanup proof and operator repair required'); }
   }
-  private async assertPlanLeaseAvailable(workspace: Workspace, operation: GitOperation): Promise<void> {
+  private async assertPlanLeaseAvailable(workspace: Workspace, operation: GitOperation, requireReleased = false): Promise<void> {
     try { await lstat(path.join(this.managedRoot, 'check-plan-lease')); }
     catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return; throw error; }
-    if (!this.heldPlanLeases.has(key(JSON.stringify([workspace.id, operation.integrationId])))) throw new Error('CHECK_PLAN_LEASE_HELD: active or interrupted plan requires cleanup proof');
+    if (requireReleased || !this.heldPlanLeases.has(key(JSON.stringify([workspace.id, operation.integrationId])))) throw new Error('CHECK_PLAN_LEASE_HELD: active or interrupted plan requires cleanup proof');
     await this.assertLeaseOwner(workspace, operation);
   }
   /** All check modes hold this lease, including while executing historical baselines. */
   private async planLease(workspace: Workspace, operation: GitOperation, release = false): Promise<void> {
-    const directory = path.join(await realpath(this.managedRoot), 'check-plan-lease');
-    const leaseId = key(JSON.stringify([workspace.id, operation.integrationId]));
-    const owner = path.join(directory, `${leaseId}.json`);
-    if (release) {
-      try { await lstat(directory); }
-      catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') { this.heldPlanLeases.delete(leaseId); return; } throw error; }
-      // Never delete an unknown/corrupt lease to manufacture cleanup confirmation.
-      await this.assertLeaseOwner(workspace, operation);
-      await unlink(owner); await rmdir(directory);
-      this.heldPlanLeases.delete(leaseId);
-      return;
-    }
-    if (this.heldPlanLeases.has(leaseId)) { await this.assertLeaseOwner(workspace, operation); return; }
-    try { await mkdir(directory, { mode: 0o700 }); }
-    catch (error) { if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error('CHECK_PLAN_LEASE_HELD: active or interrupted plan requires cleanup proof'); throw error; }
-    const file = await open(owner, 'wx', 0o600);
-    try { await file.writeFile(JSON.stringify(operation.binding)); await file.sync(); } finally { await file.close(); }
-    this.heldPlanLeases.add(leaseId);
+    const root = await realpath(this.managedRoot);
+    // Serialize mutation across Hosts; retirement is atomic, unlike unlink(owner) then rmdir.
+    await withMetadataLock(root, async () => {
+      const directory = path.join(root, 'check-plan-lease');
+      const leaseId = key(JSON.stringify([workspace.id, operation.integrationId]));
+      const owner = path.join(directory, `${leaseId}.json`);
+      if (release) {
+        try { await lstat(directory); }
+        catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') { this.heldPlanLeases.delete(leaseId); return; } throw error; }
+        // Never delete an unknown/corrupt lease to manufacture cleanup confirmation.
+        await this.assertLeaseOwner(workspace, operation);
+        const retired = path.join(root, `check-plan-released-${randomUUID()}`);
+        await rename(directory, retired);
+        this.heldPlanLeases.delete(leaseId);
+        await unlink(path.join(retired, `${leaseId}.json`)); await rmdir(retired);
+        return;
+      }
+      if (this.heldPlanLeases.has(leaseId)) { await this.assertLeaseOwner(workspace, operation); return; }
+      try { await mkdir(directory, { mode: 0o700 }); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error('CHECK_PLAN_LEASE_HELD: active or interrupted plan requires cleanup proof'); throw error; }
+      const file = await open(owner, 'wx', 0o600);
+      try { await file.writeFile(JSON.stringify(this.leaseOwner(operation))); await file.sync(); } finally { await file.close(); }
+      this.heldPlanLeases.add(leaseId);
+    });
   }
   private async executePlan(input: GitContext, operation: GitOperation): Promise<void> {
     const plan = this.checkPlan!, commands = this.selectedCommands();
@@ -677,9 +693,14 @@ export class LocalGitService implements GitService {
   async recoverPublication(input: GitContext & { candidate: Candidate }): Promise<'published' | 'not-published' | 'unknown'> {
     try {
       const operation = await this.readOperation(input.workspace, input.candidate.integrationId);
+      await this.assertRecoveryBinding(input, operation);
       this.verifyCandidate(operation, input.candidate, input.task.id, input.workflow.integrationRef);
       const head = await gitOk(input.workspace.repositoryPath, ['rev-parse', '--verify', this.ref(input.workflow)]);
-      if (head === input.candidate.candidateHead && ['publish_planned', 'ref_published', 'completed'].includes(operation.phase)) return (await this.operationReadiness(operation)).status === 'ready' ? 'published' : 'unknown';
+      if (head === input.candidate.candidateHead && ['publish_planned', 'ref_published', 'completed'].includes(operation.phase)) {
+        if (!operation.review || parseReviewReport(JSON.stringify(operation.review), { taskId: input.task.id, runId: operation.review.runId, candidateHead: input.candidate.candidateHead }).verdict !== 'approve') return 'unknown';
+        // Publication fact is independent of retained process/resource cleanup.
+        return (await this.operationReadiness(operation)).status === 'ready' ? 'published' : 'unknown';
+      }
       if (head === input.candidate.expectedTargetHead) return 'not-published';
       return 'unknown';
     } catch { return 'unknown'; }

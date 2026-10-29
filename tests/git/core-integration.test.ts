@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
@@ -109,6 +109,164 @@ async function interruptedSupplement(checkPlan?: CheckPlan) {
   f.coordinator.setBootIdentity(beforeBoot); await f.coordinator.recover();
   return { f, record, original, operation, input, directory: path.join(f.git.managedRoot, key(f.workspace.id), 'operations', key(original.id)) };
 }
+
+type PublicationWindow = 'lease-acquired' | 'publish_planned' | 'ref-before-journal' | 'ref_published' | 'lease-released' | 'lease-retired' | 'accepted-legacy';
+async function interruptedPublication(window: PublicationWindow = 'ref_published') {
+  const check = 'console.log("real publication recovery check")', f = await fixture(check);
+  f.plan([{ id: 'a', expectedPaths: ['a.txt'] }, { id: 'b', expectedPaths: ['b.txt'] }]);
+  await f.restart(check, databasePath => {
+    const moduleUrl = (name: string) => JSON.stringify(pathToFileURL(path.resolve(name)).href);
+    const script = `
+      import fs, { writeFile } from 'node:fs/promises';
+      import { syncBuiltinESMExports } from 'node:module';
+      import path from 'node:path';
+      import { RiftStore } from ${moduleUrl('src/storage/database.ts')};
+      import { LocalGitService } from ${moduleUrl('src/git/integration.ts')};
+      import { TaskCoordinator } from ${moduleUrl('src/task/coordinator.ts')};
+      import { key } from ${moduleUrl('src/git/worktree-binding.ts')};
+      const store = new RiftStore(${JSON.stringify(databasePath)}), window = ${JSON.stringify(window)};
+      const git = new LocalGitService(${JSON.stringify({ managedRoot: f.git.managedRoot, commands: [{ id: 'unit', executable: process.execPath, args: ['-e', check] }] })});
+      const rename = fs.rename.bind(fs);
+      fs.rename = async (from, to) => {
+        await rename(from, to);
+        if (window === 'lease-retired' && path.basename(from) === 'check-plan-lease' && store.get("SELECT id FROM integrations WHERE status='publishing'")) process.exit(73);
+      };
+      syncBuiltinESMExports();
+      const record = git.record.bind(git), lease = git.planLease.bind(git);
+      git.record = async (workspace, operation) => {
+        if (operation.phase === 'ref_published' && window === 'ref-before-journal') process.exit(73);
+        await record(workspace, operation);
+        if (operation.phase === window || operation.phase === 'ref_published' && window === 'accepted-legacy') {
+          if (window === 'accepted-legacy') {
+            // Exact persisted layout left by the previous Host recovery implementation.
+            await writeFile(path.join(git.managedRoot,'check-plan-lease',key(JSON.stringify([workspace.id,operation.integrationId]))+'.json'), JSON.stringify(operation.binding));
+            store.exec("UPDATE integrations SET status='accepted' WHERE id=?", operation.integrationId);
+            store.exec("UPDATE tasks SET status='succeeded',accepted_commit=? WHERE id=?", operation.candidateHead, operation.taskId);
+          }
+          process.exit(73);
+        }
+      };
+      git.planLease = async (workspace, operation, release = false) => {
+        await lease(workspace, operation, release);
+        if (store.get("SELECT id FROM integrations WHERE id=? AND status='publishing'",operation.integrationId)
+          && (window === 'lease-acquired' && !release || window === 'lease-released' && release)) process.exit(73);
+      };
+      const bridge = { start: async input => {
+        let result;
+        if (input.run.purpose === 'review') {
+          const candidate = JSON.parse(input.prompt).candidate;
+          result = { schemaVersion:1,taskId:input.task.id,runId:input.run.id,verdict:'approve',reviewedCommit:candidate.candidateHead,findings:[] };
+        } else {
+          await writeFile(path.join(input.cwd,'a.txt'),'durable child source');
+          result = { schemaVersion:1,taskId:input.task.id,runId:input.run.id,outcome:'completed',summary:'done',changedPaths:['a.txt'],checksClaimed:[],blockingReasons:[] };
+        }
+        return { childId:input.run.id,result:Promise.resolve({stopReason:'completed',text:JSON.stringify(result)}),dispose:async()=>{} };
+      }};
+      const coordinator = new TaskCoordinator({store,git,bridge});
+      coordinator.setBootIdentity(${JSON.stringify(beforeBoot)});
+      coordinator.dispatch({taskId:'a',expectedVersion:store.task('a').version,idempotencyKey:'child-publish'});
+      setTimeout(()=>process.exit(74),20000);
+    `;
+    const child = spawnSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', script], { encoding: 'utf8', timeout: 25_000 });
+    expect(child.error, child.stderr).toBeUndefined(); expect(child.status, child.stderr).toBe(73);
+  });
+  const record = () => f.store.require<{ id: string; version: number; status: string; candidate: Candidate; checkIds: string[] }>("SELECT * FROM integrations WHERE task_id='a'");
+  const directory = path.join(f.git.managedRoot, 'check-plan-lease');
+  const owner = path.join(directory, `${key(JSON.stringify([f.workspace.id, record().id]))}.json`);
+  const context = () => ({ workspace: f.workspace, workflow: f.store.workflow(f.workflow.id), task: f.store.task('a') });
+  return { f, record, directory, owner, context };
+}
+
+it.each<PublicationWindow>(['lease-acquired', 'publish_planned', 'ref-before-journal', 'ref_published', 'lease-released', 'lease-retired', 'accepted-legacy'])(
+  'recovers real subprocess publication window %s and actually executes the next candidate', async window => {
+    const { f, record, owner, directory, context } = await interruptedPublication(window);
+    const published = !['lease-acquired', 'publish_planned'].includes(window), candidate = record().candidate;
+    expect(await gitOk(f.repo, ['rev-parse', f.workflow.integrationRef])).toBe(published ? candidate.candidateHead : candidate.expectedTargetHead);
+    f.coordinator.setBootIdentity(beforeBoot); await f.coordinator.recover(); await f.coordinator.recover();
+    if (!['lease-released', 'lease-retired'].includes(window)) {
+      expect(record().status).toBe(window === 'accepted-legacy' ? 'accepted' : 'cleanup_unknown');
+      const savedOwner = await readFile(owner, 'utf8');
+      await expect(f.coordinator.reconcileIntegration(record().id, record().version)).rejects.toMatchObject({ code: 'CLEANUP_UNKNOWN' });
+      // The legacy configuration also obeys the retained global lease before executing checks.
+      await expect(f.git.prepareCandidate({ ...context(), sourceHead: candidate.sourceHead, integrationId: 'blocked-probe' })).rejects.toThrow();
+      expect(await f.git.readOperation(f.workspace, 'blocked-probe')).toMatchObject({ reason: expect.stringContaining('CHECK_PLAN_LEASE_HELD') });
+      expect((await f.git.readOperation(f.workspace, 'blocked-probe')).checks ?? []).toEqual([]);
+      expect(await readFile(owner, 'utf8')).toBe(savedOwner);
+      f.coordinator.setBootIdentity(afterBoot);
+      if (window === 'ref_published') {
+        const event = f.store.event.bind(f.store);
+        f.store.event = (...args: Parameters<typeof event>) => { if (args[1] === 'integration.reconciled') throw new Error('publication cleanup DB interruption'); return event(...args); };
+        await expect(f.coordinator.reconcileIntegration(record().id, record().version)).rejects.toThrow('publication cleanup DB interruption');
+        f.store.event = event; expect(record().status).toBe('cleanup_unknown');
+      }
+      await f.coordinator.reconcileIntegration(record().id, record().version);
+      await expect(readdir(directory)).rejects.toMatchObject({ code: 'ENOENT' });
+      expect(record().status).toBe(published ? 'accepted' : 'blocked');
+      if (published) { const saved = record(); await f.coordinator.reconcileIntegration(saved.id, saved.version); expect(record()).toEqual(saved); }
+    } else {
+      expect(record().status).toBe('accepted');
+      if (window === 'lease-retired') expect((await readdir(f.git.managedRoot)).filter(name => name.startsWith('check-plan-released-'))).toHaveLength(1);
+    }
+    const saved = record(); await f.coordinator.recover(); await f.coordinator.recover(); expect(record()).toEqual(saved);
+    expect(f.store.task('a').acceptedCommit).toBe(published ? candidate.candidateHead : null);
+    expect(await gitOk(f.repo, ['rev-parse', f.workflow.integrationRef])).toBe(published ? candidate.candidateHead : candidate.expectedTargetHead);
+    f.coordinator.resume(f.workflow.id); f.dispatch('b');
+    await f.develop(await f.started('b', 'develop'), { 'b.txt': 'next candidate' });
+    const next = f.review(await f.started('b', 'review')); await f.settled('b', 'succeeded');
+    expect(next.checks![0]!.stdout).toContain('real publication recovery check');
+    expect(next.expectedTargetHead).toBe(published ? candidate.candidateHead : candidate.expectedTargetHead);
+  },
+);
+
+it('does not accept a retained publication lease even in the original owning service after release failure', async () => {
+  const f = await fixture(); f.coordinator.setBootIdentity(beforeBoot);
+  f.plan([{ id: 'a', expectedPaths: ['a.txt'] }]); f.dispatch('a');
+  await f.develop(await f.started('a', 'develop'), { 'a.txt': 'same-process release window' });
+  const reviewer = await f.started('a', 'review');
+  const internal = f.git as unknown as { planLease(workspace: unknown, operation: { integrationId: string }, release?: boolean): Promise<void> };
+  const release = internal.planLease.bind(internal);
+  internal.planLease = async (...args) => {
+    if (args[2] && f.store.get("SELECT id FROM integrations WHERE id=? AND status='publishing'", args[1].integrationId)) throw new Error('injected release failure');
+    return release(...args);
+  };
+  const candidate = f.review(reviewer); await f.settled('a', 'blocked'); internal.planLease = release;
+  const record = () => f.store.require<{ id: string; status: string; version: number }>("SELECT * FROM integrations WHERE task_id='a'");
+  const context = { workspace: f.workspace, workflow: f.store.workflow(f.workflow.id), task: f.store.task('a'), candidate };
+  expect(await f.git.recoverPublication(context)).toBe('published');
+  expect(await f.git.candidateReadiness(context)).toMatchObject({ cleanupStatus: 'unknown' });
+  await f.coordinator.recover(); expect(record().status).toBe('cleanup_unknown');
+  await expect(f.coordinator.reconcileIntegration(record().id, record().version)).rejects.toMatchObject({ code: 'CLEANUP_UNKNOWN' });
+  f.coordinator.setBootIdentity(afterBoot); await f.coordinator.reconcileIntegration(record().id, record().version);
+  expect(record().status).toBe('accepted'); expect(f.store.task('a').acceptedCommit).toBe(candidate.candidateHead);
+});
+
+it.each((['ref_published', 'accepted-legacy'] as const).flatMap(window => ['no-proof', 'foreign-machine', 'no-owner', 'corrupt-owner', 'extra-owner', 'workspace', 'repositoryId', 'repositoryFingerprint', 'taskId', 'attempt', 'integrationId', 'candidateHead', 'sourceHead', 'expectedTargetHead', 'integrationRef', 'changed-ref', 'review', 'check-ids'].map(fault => ({ window, fault }))))(
+  'keeps $window publication resources blocked for $fault', async ({ window, fault }) => {
+    const { f, record, owner, directory, context } = await interruptedPublication(window);
+    f.coordinator.setBootIdentity(fault === 'no-proof' ? beforeBoot : fault === 'foreign-machine' ? afterBoot.replace('a'.repeat(64), 'b'.repeat(64)) : afterBoot);
+    if (fault === 'no-owner') await rm(owner);
+    else if (fault === 'corrupt-owner') await writeFile(owner, '{broken');
+    else if (fault === 'extra-owner') await writeFile(path.join(directory, 'foreign.json'), '{}');
+    else if (['workspace', 'repositoryId', 'repositoryFingerprint', 'taskId', 'attempt', 'integrationId', 'candidateHead', 'sourceHead', 'expectedTargetHead', 'integrationRef'].includes(fault)) {
+      const saved = JSON.parse(await readFile(owner, 'utf8')); saved[fault === 'workspace' ? 'workspaceId' : fault] = fault === 'attempt' ? 2 : 'foreign';
+      await writeFile(owner, JSON.stringify(saved));
+    } else if (fault === 'changed-ref') await gitOk(f.repo, ['update-ref', f.workflow.integrationRef, record().candidate.sourceHead]);
+    else if (fault === 'review') {
+      const operation = await f.git.readOperation(f.workspace, record().id); operation.review!.reviewedCommit = f.baseCommit;
+      await writeFile(path.join(f.git.managedRoot, key(f.workspace.id), 'operations', key(record().id), 'operation.json'), JSON.stringify(operation));
+    } else if (fault === 'check-ids') f.store.exec("UPDATE integrations SET check_ids='[]' WHERE id=?", record().id);
+    const before = await readdir(directory), bytes = await Promise.all(before.map(name => readFile(path.join(directory, name), 'utf8')));
+    await f.coordinator.recover(); await f.coordinator.recover();
+    expect(record().status).toBe(window === 'accepted-legacy' ? 'accepted' : 'cleanup_unknown');
+    await expect(f.coordinator.reconcileIntegration(record().id, record().version)).rejects.toThrow();
+    expect(await readdir(directory)).toEqual(before);
+    expect(await Promise.all(before.map(name => readFile(path.join(directory, name), 'utf8')))).toEqual(bytes);
+    await expect(f.git.prepareCandidate({ ...context(), sourceHead: record().candidate.sourceHead, integrationId: 'must-not-execute' })).rejects.toThrow();
+    expect(await f.git.readOperation(f.workspace, 'must-not-execute')).toMatchObject({ reason: expect.stringContaining('CHECK_PLAN_LEASE_HELD') });
+    expect((await f.git.readOperation(f.workspace, 'must-not-execute')).checks ?? []).toEqual([]);
+    expect(f.store.task('a').acceptedCommit).toBe(window === 'accepted-legacy' ? record().candidate.candidateHead : null);
+  },
+);
 
 describe('real Git with persistent coordinator and controlled fake activations', () => {
   it('recovers an attachment/DB crash window without rerunning checks or carrying approval forward', async () => {

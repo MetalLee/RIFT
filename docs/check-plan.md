@@ -71,6 +71,17 @@ serial 显式补证只要有一项需重跑，就在新私有 HOME 中重跑整�
 - 重启保留 pending/running，不把它们升级成通过；重启证明只确认旧进程已退出，不补造检查证据。同候选显式补证不增加 attempt；DAG 和旧串行保留仍匹配配置/环境的通过项，显式 serial 按上文重建完整前置并生成新证据。旧代次附件只读保留，旧 check IDs 的批准不能发布新代次。任意有序计划、依赖、互斥、隔离或额度变化保守使整个计划附件失效，也进入历史基线 `configurationFingerprint` 和 `planFingerprint`。
 - 快照、HOME、ignored 输出和日志保留用于排查，不自动删除/GC；实际项目需预算磁盘开销。绝不自动清除未知清理的目录。
 
+### 发布租约的持久恢复顺序
+
+发布事实不等于进程清理完成。发布仍按以下顺序执行，恢复不会重发 Git 更新、回滚合法发布或换用另一代检查的批准：
+
+1. Coordinator 保存 `publishing`，Git 取得同一全局租约；owner 除 workspace/repository/task/attempt/integration/精确候选外，新增 source、expected target 和 integration ref 绑定。
+2. 保存精确审核与 `publish_planned`，再对目标 ref 做 CAS。`ref_published` 日志写入失败不撤销已经成功的 CAS。
+3. 正常关闭 Git 子进程后，在 managedRoot 的跨 Host OS-backed 元数据锁内校验 owner，原子 rename 租约目录为唯一 `check-plan-released-*`，再删除退役 owner/目录。退役中断仅留下无资源占用的诊断残留，不会留下“owner 已删但全局锁还在”的空锁；新获取与释放使用同一锁串行化。创建 owner 前中断留下的未知锁仍不可自动修复。
+4. Git 方法完成释放后才返回，Coordinator 最后提交 `accepted`/任务成功。若在 CAS 后、租约退役前退出，`recover()` 不会仅凭已发布 ref 把记录终结；保留 `cleanup_unknown` 与全局门禁。若已退役但业务数据库未提交，恢复可核验精确发布与清理后补齐业务状态。
+5. 操作员确认同机 OS 已重启后，通过已有 `integration.reconcile`（HTTP `POST /ui-api/v1/workspaces/:workspaceId/integrations/:id/reconcile`，请求体 `{ "expectedVersion": N }`）显式恢复。证明来自 Host boot identity，不接受请求自报；仅重启 Host 不够。先核验数据库候选/检查 IDs、仓库/attempt、日志、精确批准及目标 ref，再验证 owner 与清理证明，持久保存证明，原子退役租约，最后提交业务数据库。后一步中断可重复协调，不重跑检查。
+6. 前版遗留的 `accepted + lease` 也可调用同一入口；额外核对任务的 accepted commit，清理不会重写历史成功任务或完成后继操作。旧 owner 的原完整 binding 仍须精确匹配，source/target/ref 由其绑定的 integration 日志与数据库候选交叉核验。重复恢复不改变已验收记录；无证明、外部/活动、无 owner、多 owner、损坏或绑定错误的租约一律保留阻断，发布结果未知也不释放。
+
 ## 读取契约
 
 沿用 `GET /ui-api/v1/workspaces/:workspaceId/tasks/:taskId/evidence`、`rift ws task evidence TASK --workspace WORKSPACE` 和现有按 check ID 读取日志的 API/CLI；不增加命令执行或上传证据接口。
@@ -112,3 +123,11 @@ node node_modules/typescript/bin/tsc --noEmit
 - serial 的真实 `$HOME/tool` 安装与调用覆盖同进程补证、独立 Host 子进程消费持久记录、旧 HOME 保留/缺失/损坏、跨任务/候选隔离、新前置附件、旧代次批准失效和 attempt 不增加。
 - 最新真实命令对照：串行 2501.52 ms、DAG 并行 1318.42 ms（约 1.90×）。后端/测试、UI、协议消费者类型检查、协议边界检查及后端编译通过；协议先在当前工作树构建，不使用主检出的旧构建。
 - 未实际重启宿主 OS，恢复使用合成 boot identity；未做全量测试、生产依赖安装或浏览器探针。serial 重建会增加补证耗时且要求脚本可重跑；不自动删除 ignored 产物、恢复旧 HOME 或增加缓存功能。未修改前端，新状态契约不变，前端修复由 Host 合入。
+
+### 第三轮修复验证（2026-10-29）
+
+- 上述组合命令首轮通过 27 文件 / 331 项（167.28 s）；收紧同进程对外 readiness 后最终复验 27 文件 / 332 项通过（221.86 s）。新增 43 项使用真实 Host 子进程、Git、沙箱检查与持久 SQLite：发布租约取得后、发布意图后、CAS 后日志前、`ref_published` 后、原子退役后、释放后业务提交前，以及旧版 accepted+lease。每个子进程合法恢复路径均实际执行并审核发布下一候选，覆盖重复恢复及释放后数据库事务失败；另增同进程释放失败测试，持有者内存状态不能被当成对外已释放证明。
+- 新旧记录均覆盖无重启证明/异机证明、无 owner/损坏/多 owner、各绑定字段错配、目标 ref 异常、精确批准/检查 IDs 错配；验证未知租约内容保留、新检查未执行。保留前两轮配置降级、serial HOME 补证/重启、取消/超时及附件/数据库中断回归。
+- 后端/测试、UI、独立协议消费者类型检查、协议边界检查及后端编译通过；协议包在当前工作树构建。另跑 `tests/acceptance/git-gates.test.ts tests/acceptance/coordinator-faults.test.ts tests/git/check-plan.test.ts`，3 文件 / 51 项通过（70.00 s）。
+- 最新真实命令样本：串行 2516.14 ms、DAG 并行 1293.17 ms（约 1.95×）。工具生命周期中断的早期试跑不计通过；首轮新测试修正了“未执行检查在日志中可省略数组”的断言后才通过。
+- 本轮仍未实际重启 OS、模拟断电、运行全量测试、生产依赖安装或浏览器探针；OS 证明使用合成 boot identity。未知/损坏 owner 仍需人工核查修复，退役后的诊断残留不做自动 GC。不扩展缓存、跨引用调度或 UI 契约。
