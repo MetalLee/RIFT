@@ -34,3 +34,14 @@ it('treats a non-discussion-only binding without a model name as the default mod
   expect([withChat.model, withChat.configured]).toEqual(['默认模型', true]);
   expect(html([exec])).not.toContain('仅对话');
 });
+
+it('shows the Lead discussion connection independently, falling back to the execution connection only when unset', () => {
+  const leadRole = (chatConnection: object | null) => role({ kind: 'dsh-lead', chatConnection });
+  const [chat, exec] = modelLines(leadRole({ runtime: 'codex', model: 'discussion-model' }), undefined, { ...lead, source: 'workspace', model: 'execution-model' });
+  expect([chat.model, chat.source, chat.runtime]).toEqual(['discussion-model', 'Codex 原生运行时', 'codex']);
+  expect([exec.model, exec.source, exec.runtime]).toEqual(['execution-model', '主 Agent 编排通道', 'dsh']);
+  expect(html([chat, exec])).toContain('discussion-model');
+  const [fallback] = modelLines(leadRole(null), undefined, { ...lead, source: 'workspace', model: 'execution-model' });
+  expect([fallback.model, fallback.source, fallback.runtime]).toEqual(['execution-model', '模型 API', 'dsh']);
+  expect(modelLines(leadRole(null), undefined, lead)[0].source).toBe('继承本机配置');
+});

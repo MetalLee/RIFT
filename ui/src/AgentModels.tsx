@@ -10,7 +10,7 @@ const runtimeLabel = (connection: ChatConnection) => connection.runtime === 'cod
 export function modelLines(role: Role, binding: UiBinding | undefined, lead: UiWorkspaceDetail['leadConfiguration']): ModelLine[] {
   const line = (key: ModelLine['key'], label: string, model: string, source: string, runtime?: 'dsh' | 'codex'): ModelLine => ({ key, label, model: model || '未配置', source, configured: Boolean(model), runtime });
   if (role.kind === 'dsh-lead') return [
-    line('chat', '对话', lead.model, lead.source === 'host' ? '继承本机配置' : runtimeLabel(lead), lead.runtime),
+    role.chatConnection ? line('chat', '对话', role.chatConnection.model, runtimeLabel(role.chatConnection), role.chatConnection.runtime) : line('chat', '对话', lead.model, lead.source === 'host' ? '继承本机配置' : runtimeLabel(lead), lead.runtime),
     line('execution', '执行', lead.model, '主 Agent 编排通道', lead.runtime),
   ];
   const execution = binding?.executionConnection ?? null;
