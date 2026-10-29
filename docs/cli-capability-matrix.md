@@ -109,6 +109,11 @@ Raw legacy task reads differ intentionally from the scoped diagnostic projection
 | `GET /ui-api/v1/workspaces/:workspaceId/tasks` | `task.list` | `ws task list` |
 | `GET /ui-api/v1/workspaces/:workspaceId/tasks/:id` | `task.show` | `ws task show ID` |
 | `GET /ui-api/v1/workspaces/:workspaceId/tasks/:id/evidence` | `task.evidence` | `ws task evidence ID` |
+| `POST /ui-api/v1/workspaces/:workspaceId/tasks/:id/evidence` | `task.supplement-evidence` | `ws task supplement-evidence ID` |
+| `GET /ui-api/v1/workspaces/:workspaceId/tasks/:id/evidence/log` | `task.evidence-log` | `ws task evidence-log ID` |
+| `GET /v1/workspaces/:workspaceId/tasks/:id/evidence` | `task.evidence` | `ws task evidence ID` |
+| `POST /v1/workspaces/:workspaceId/tasks/:id/evidence` | `task.supplement-evidence` | `ws task supplement-evidence ID` |
+| `GET /v1/workspaces/:workspaceId/tasks/:id/evidence/log` | `task.evidence-log` | `ws task evidence-log ID` |
 | `POST /ui-api/v1/workspaces/:workspaceId/tasks/:id/retry` | `task.retry-dispatch` | `ws task retry-dispatch ID` |
 | `POST /ui-api/v1/workspaces/:workspaceId/runs/:id/reconcile` | `run.reconcile` | `ws run reconcile ID` |
 | `POST /ui-api/v1/workspaces/:workspaceId/integrations/:id/reconcile` | `integration.reconcile` | `ws integration reconcile ID` |

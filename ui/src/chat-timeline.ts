@@ -1,5 +1,5 @@
 import type { AgentTurn, ChatMessage, CoordinationReceipt, MessageChunk, RunStreamMessage } from '@rift/protocol';
-export interface TimelineUpdate { id:string; content:string; taskId?:string|null; senderAgentId?:string|null; type?:string }
+export interface TimelineUpdate { id:string; content:string; taskId?:string|null; senderAgentId?:string|null; type?:string; reason?:string; collapsible?:boolean; createdAt?:string }
 export interface TimelineItem { message:ChatMessage; turns:AgentTurn[]; taskIds:string[]; updates:TimelineUpdate[]; drafts:{turn:AgentTurn;text:string;messageId?:string;kind?:import('@rift/protocol').StreamMessage['kind'];status?:string}[] }
 export function messageSender(message:ChatMessage): 'user'|'agent'|'system' { return message.senderType ?? (message.role==='user'?'user':message.role==='system'?'system':'agent'); }
 export function messageAuthor(message:ChatMessage):string|null { return messageSender(message)==='agent' ? message.senderAgentId ?? message.recipientAgentId : null; }
@@ -7,7 +7,17 @@ function finalStream(turn:AgentTurn,final:ChatMessage) {
   return [...(turn.streamMessages??[])].reverse().find(message=>message.status==='completed' &&
     !['commentary','reasoning','reasoning_summary'].includes(message.kind) && (message.kind==='final'||message.text===final.content));
 }
+// Snapshot and replay may overlap; keep the newest version of each identity.
+function canonicalMessages(messages:ChatMessage[]) {
+  return [...new Map([...messages].sort((a,b)=>a.version-b.version).map(message=>[message.id,message])).values()]
+    .sort((a,b)=>a.createdAt.localeCompare(b.createdAt) || Number(messageSender(b)==='user')-Number(messageSender(a)==='user') || a.id.localeCompare(b.id));
+}
 export function buildChatTimeline(messages:ChatMessage[],turns:AgentTurn[],chunks:MessageChunk[],receipts:CoordinationReceipt[] = []) {
+  messages=canonicalMessages(messages);
+  receipts=[...new Map(receipts.map(receipt=>[`${receipt.workspaceId}:${receipt.conversationId}:${receipt.eventSeq}`,receipt])).values()]
+    .sort((a,b)=>a.eventSeq-b.eventSeq || a.id.localeCompare(b.id));
+  const receiptFor=(message:ChatMessage)=>messageSender(message)==='system' && message.kind==='receipt' ? receipts.find(receipt=>message.workspaceId===receipt.workspaceId && message.conversationId===receipt.conversationId && message.dedupeKey===`event:${receipt.eventSeq}:${receipt.conversationId}`) : undefined;
+  const routine=(type:string,reason?:string)=>!reason && ['dispatch.queued','activation_accepted','source.collected','cleanup.confirmed','workflow.running'].includes(type);
   const main=messages.filter(message=>messageSender(message)!=='system' && !['progress','receipt'].includes(message.kind??''));
   const items:TimelineItem[]=main.map(message=>({message,turns:[],taskIds:message.taskId?[message.taskId]:[],updates:[],drafts:[]}));
   const loose:TimelineUpdate[]=[]; const looseTurns:AgentTurn[]=[];
@@ -34,19 +44,22 @@ export function buildChatTimeline(messages:ChatMessage[],turns:AgentTurn[],chunk
     } else looseTurns.push(turn);
   }
   for(const message of messages.filter(message=>!main.includes(message))) {
-    const update:TimelineUpdate={id:message.id,content:message.content,taskId:message.taskId,senderAgentId:message.senderAgentId};
+    const receipt=receiptFor(message);
+    const update:TimelineUpdate={id:message.id,content:message.content,taskId:message.taskId,senderAgentId:message.senderAgentId,type:receipt?.payload.type,reason:receipt?.payload.reason,collapsible:!!receipt&&routine(receipt.payload.type,receipt.payload.reason),createdAt:message.createdAt};
     const anchor=find(message); if(anchor){anchor.updates.push(update);if(message.taskId&&!anchor.taskIds.includes(message.taskId))anchor.taskIds.push(message.taskId);}else loose.push(update);
   }
   for(const receipt of receipts) {
-    if(messages.some(message=>message.dedupeKey===`event:${receipt.eventSeq}:${receipt.conversationId}`))continue;
-    const update:TimelineUpdate={id:receipt.id,content:receipt.payload.reason??'',type:receipt.payload.type,taskId:receipt.payload.taskId};
+    if(messages.some(message=>receiptFor(message)===receipt))continue;
+    const update:TimelineUpdate={id:receipt.id,content:receipt.payload.reason??'',type:receipt.payload.type,taskId:receipt.payload.taskId,collapsible:routine(receipt.payload.type,receipt.payload.reason),createdAt:receipt.createdAt};
     const anchor=find({taskId:receipt.payload.taskId,createdAt:receipt.createdAt});if(anchor){anchor.updates.push(update);if(receipt.payload.taskId&&!anchor.taskIds.includes(receipt.payload.taskId))anchor.taskIds.push(receipt.payload.taskId);}else loose.push(update);
   }
+  for(const values of [loose,...items.map(item=>item.updates)])values.sort((a,b)=>(a.createdAt??'').localeCompare(b.createdAt??'') || a.id.localeCompare(b.id));
   return {items,loose,looseTurns};
 }
 
 /** Each model message is a peer in the conversation, never a draft inside a user message. */
 export function buildConversationTimeline(messages:ChatMessage[],turns:AgentTurn[],chunks:MessageChunk[],receipts:CoordinationReceipt[] = [],runMessages:RunStreamMessage[] = []) {
+  messages=canonicalMessages(messages);
   const timeline = buildChatTimeline(messages,turns,chunks,receipts);
   const rows:TimelineItem[] = [];
   for (const item of timeline.items) {

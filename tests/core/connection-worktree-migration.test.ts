@@ -61,7 +61,7 @@ function fixture(run: (filename: string) => void): void {
 }
 
 function assertCombinedSchema(store: RiftStore): void {
-  expect(store.all('SELECT version FROM schema_migrations ORDER BY version')).toEqual(Array.from({ length: 25 }, (_, i) => ({ version: i + 1 })));
+  expect(store.all('SELECT version FROM schema_migrations ORDER BY version')).toEqual(Array.from({ length: 26 }, (_, i) => ({ version: i + 1 })));
   expect(store.all<{name:string}>('PRAGMA table_info(api_connections)').map(column => column.name)).toEqual(expect.arrayContaining(['deleted_at', 'credential_deleted_at', 'credential_owned']));
   expect(store.get("SELECT name FROM sqlite_master WHERE type='index' AND name='connection_verifications_latest'")).toBeDefined();
   expect(() => store.exec("INSERT INTO api_connection_verifications VALUES('invalid','missing','now','{}')")).toThrow(/FOREIGN KEY/);

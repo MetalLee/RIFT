@@ -1,4 +1,5 @@
-import type { AgentTurn, ChatMessage, ChatPage, Conversation, RunStreamMessage, StreamMessage } from './contracts.js';
+import type { AgentTurn, ChatMessage, ChatPage, Conversation, CoordinationReceipt, RunStreamMessage, StreamMessage } from './contracts.js';
+import { redact } from '../api/security.js';
 import { invariant } from '../contracts/index.js';
 import type { RiftStore } from '../storage/database.js';
 
@@ -67,8 +68,27 @@ export function timelinePage(store:RiftStore,conversation:Conversation,before?:s
         'request',json_object('contextRefs',json_extract(configuration,'$.request.contextRefs'))) configuration
       FROM agent_turns WHERE workspace_id=? AND conversation_id=? AND json_extract(configuration,'$.conversationTitle') IS NULL
       AND (status IN ('queued','running','stopping') ${turnIds.length?'OR id IN ('+turnIds.map(()=>'?').join(',')+')':''} ${messageIds.length?'OR message_id IN ('+messageIds.map(()=>'?').join(',')+')':''}) ORDER BY created_at`,conversation.workspaceId,conversation.id,...turnIds,...messageIds);
+    const receiptMessageIds=[...new Set([...messages,...refreshedMessages]
+      .filter(m=>m.kind==='receipt'&&m.senderType==='system'&&m.origin==='host').map(m=>m.id))];
+    // Probe the unique (event_seq,conversation_id) index only for selected messages; never load receipt history.
+    const receipts:CoordinationReceipt[]=receiptMessageIds.length?store.all<Omit<CoordinationReceipt,'payload'>&{type:string;taskId:string|null;runId:string|null;requestId:string|null;reason:string|null}>(`
+      SELECT r.id,r.workspace_id,r.conversation_id,r.workflow_id,r.event_seq,r.created_at,e.type,e.task_id,e.run_id,e.request_id,
+        CASE WHEN json_valid(r.payload) THEN COALESCE(
+          CASE WHEN json_type(r.payload,'$.reason')='text' THEN json_extract(r.payload,'$.reason') END,
+          CASE WHEN json_type(r.payload,'$.error')='text' THEN json_extract(r.payload,'$.error') END) END reason
+      FROM messages m JOIN coordination_receipts r ON r.event_seq=CAST(substr(m.dedupe_key,7) AS INTEGER)
+        AND r.workspace_id=m.workspace_id AND r.conversation_id=m.conversation_id AND r.workflow_id=m.workflow_id
+        AND m.dedupe_key='event:'||r.event_seq||':'||r.conversation_id
+      JOIN task_events e ON e.event_seq=r.event_seq AND e.workflow_id=r.workflow_id
+        AND e.task_id IS m.task_id AND e.run_id IS m.run_id AND e.request_id IS m.request_id
+      JOIN workflows w ON w.id=r.workflow_id AND w.workspace_id=r.workspace_id
+      JOIN conversations c ON c.id=r.conversation_id AND c.workspace_id=r.workspace_id
+      WHERE m.workspace_id=? AND m.conversation_id=? AND m.id IN (${receiptMessageIds.map(()=>'?').join(',')})
+      ORDER BY r.event_seq LIMIT ?`,conversation.workspaceId,conversation.id,...receiptMessageIds,receiptMessageIds.length)
+      .map(({type,taskId,runId,requestId,reason,...receipt})=>({...receipt,payload:{eventSeq:receipt.eventSeq,
+        workflowId:receipt.workflowId,type:redact(type,200),taskId,runId,requestId,...(reason!==null?{reason:redact(reason,1500)}:{})}})):[];
     const oldest=selected[0];
-    return {conversation,messages,turns,chunks:[],receipts:[],runMessages:[],timeline:true,refreshedMessages,
+    return {conversation,messages,turns,chunks:[],receipts,runMessages:[],timeline:true,refreshedMessages,
       nextBefore:more&&oldest?JSON.stringify({version:1,conversationId:conversation.id,at:oldest.at,key:oldest.key} satisfies Cursor):null,
       snapshotCursor:store.require<{cursor:number}>('SELECT COALESCE(MAX(seq),0) cursor FROM workspace_events').cursor};
   });

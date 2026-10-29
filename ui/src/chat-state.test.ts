@@ -34,3 +34,18 @@ describe('conversation continuity', () => {
     expect(result.turns[0]).toEqual(completed);
   });
 });
+
+it('retains paged receipts and refreshed messages across snapshots, overlap and out-of-order replay', () => {
+  const receipt = (eventSeq: number, conversationId = 'c') => ({ id: `r${eventSeq}:${conversationId}`, workspaceId: 'ws', conversationId, workflowId: 'wf', eventSeq, createdAt: 'now', payload: { eventSeq, workflowId: 'wf', type: 'source.collected', taskId: 'task' } });
+  const empty = { messages: [], turns: [], chunks: [] };
+  const old = { ...empty, messages: [{ id: 'old', version: 0, content: 'original' } as ChatMessage], receipts: [receipt(1)] };
+  const next = { ...empty, messages: [{ id: 'new', version: 0 } as ChatMessage], refreshedMessages: [{ ...old.messages[0]!, version: 2, content: 'refreshed' }], receipts: [receipt(2), receipt(1)] };
+  const current = mergeChatHistory(old, next);
+  const replay = mergeChatHistory(old, mergeChatHistory(next, current));
+  expect(replay).toEqual(current);
+  expect(replay.messages.find(m => m.id === 'old')).toMatchObject({ version: 2, content: 'refreshed' });
+  expect(replay.receipts.map(r => r.eventSeq)).toEqual([1, 2]);
+  expect(mergeChatHistory(current, empty).receipts).toEqual(current.receipts);
+  // An event sequence is global, but conversation identity must still stay distinct.
+  expect(mergeChatHistory(current, { ...empty, receipts: [receipt(1, 'other')] }).receipts).toHaveLength(3);
+});

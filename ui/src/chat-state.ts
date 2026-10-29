@@ -10,10 +10,14 @@ export function loadPending(workspaceId: string, conversationId: string): Pendin
 export function persistPending(workspaceId: string, conversationId: string, value: PendingMessage | null) {
   try { if (value) sessionStorage.setItem(pendingKey(workspaceId, conversationId), JSON.stringify(value)); else sessionStorage.removeItem(pendingKey(workspaceId, conversationId)); return true; } catch { return false; }
 }
-export function mergeChatHistory(older: Pick<ChatPage, 'messages' | 'turns' | 'chunks'>, newer: Pick<ChatPage, 'messages' | 'turns' | 'chunks'>) {
+export type ChatHistory = Pick<ChatPage, 'messages' | 'turns' | 'chunks' | 'receipts' | 'refreshedMessages'>;
+export function mergeChatHistory(older: ChatHistory, newer: ChatHistory) {
   function latest<T extends { id: string; version: number }>(records: T[]) { const result = new Map<string, T>(); for (const record of records) { const existing = result.get(record.id); if (!existing || (record.version ?? 0) >= (existing.version ?? 0)) result.set(record.id, record); } return [...result.values()]; }
   return {
-    messages: latest([...older.messages, ...newer.messages]),
+    messages: latest([...older.messages, ...(older.refreshedMessages ?? []), ...newer.messages, ...(newer.refreshedMessages ?? [])]),
+    receipts: [...new Map([...(older.receipts ?? []), ...(newer.receipts ?? [])].map(receipt =>
+      [JSON.stringify([receipt.workspaceId, receipt.conversationId, receipt.eventSeq]), receipt])).values()]
+      .sort((a, b) => a.eventSeq - b.eventSeq || a.id.localeCompare(b.id)),
     turns: latest([...older.turns, ...newer.turns]),
     chunks: [...new Map([...older.chunks, ...newer.chunks].map(value => [value.seq, value])).values()].sort((a, b) => a.seq - b.seq),
   };
