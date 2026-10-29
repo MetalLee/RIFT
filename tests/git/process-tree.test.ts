@@ -44,3 +44,11 @@ it('streams large binary stdin without argv limits and retains early-exit diagno
   await expect(execute('rift-nonexistent-command-987654',[],process.cwd(),{input})).rejects.toThrow();
   const timeout=await execute(process.execPath,['-e','setInterval(()=>{},1000)'],process.cwd(),{input,timeoutMs:150});expect(timeout.exitCode).toBe(124);
 });
+
+it('cancels an owned process group and does not spawn for an already-aborted request', async () => {
+  const controller = new AbortController();
+  const pending = execute(process.execPath, ['-e', 'setTimeout(()=>{},10000)'], process.cwd(), { signal: controller.signal });
+  setTimeout(() => controller.abort(), 100);
+  expect(await pending).toMatchObject({ exitCode: 130, stderr: expect.stringContaining('cancelled') });
+  expect(await execute('rift-must-not-spawn', [], process.cwd(), { signal: controller.signal })).toMatchObject({ exitCode: 130 });
+});

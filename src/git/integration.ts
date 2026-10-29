@@ -1,8 +1,9 @@
 import { provesPreviousBootExited } from '../agent/boot-identity.js';
 import { sandboxCommand } from '../agent/filesystem-sandbox.js';
-import { mkdir, readFile, open, rename, realpath, lstat, unlink } from 'node:fs/promises';
+import { mkdir, readFile, open, rename, realpath, lstat, unlink, rmdir } from 'node:fs/promises';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { validateCheckPlan } from './check-plan.js';
 import { baselineIdentity, baselineFailureFingerprint } from './baseline.js';
 import type { BaselineEvidence } from '@rift/protocol';
 import { randomUUID } from 'node:crypto';
@@ -14,26 +15,32 @@ import { execute, git, gitOk, stageSourcePaths, worktreePorcelain } from './proc
 import { assertSafeFiles, checkoutClean, sourceCheckoutClean, sourceUntrackedFiles, inspectRepository, key, managedPath, withMetadataLock } from './worktree-binding.js';
 import { parseReviewReport } from './quality-gate.js';
 import { redact, redactionTailLength } from '../api/security.js';
-import type { CheckCommand, CheckEvidence, GitOperation } from './types.js';
+import type { CheckCommand, CheckPlan, CheckEvidence, GitOperation } from './types.js';
 
-export interface LocalGitOptions { managedRoot: string; commands?: readonly CheckCommand[]; checkIds?: readonly string[] }
+export interface LocalGitOptions { managedRoot: string; commands?: readonly CheckCommand[]; checkIds?: readonly string[]; checkPlan?: CheckPlan }
 /** Logical integration ownership lives until publish or explicit, cleanup-confirmed abandon. */
 const integrationOwners = new Map<string, string>();
 export class LocalGitService implements GitService {
   readonly managedRoot: string;
   private readonly commands = new Map<string, CheckCommand>();
+  private readonly checkPlan?: CheckPlan;
+  private readonly heldPlanLeases = new Set<string>();
   private readonly checkIds: readonly string[];
   constructor(options: LocalGitOptions) {
+    if (options.checkPlan !== undefined && (!options.checkPlan || typeof options.checkPlan !== 'object' || Array.isArray(options.checkPlan))) throw new Error('INVALID_CHECK_CONFIG');
+    this.checkPlan = options.checkPlan ? { ...options.checkPlan } : undefined;
     this.managedRoot = path.resolve(options.managedRoot);
     if ((options.commands?.length ?? 0) > 64) throw new Error('INVALID_CHECK_CONFIG: maximum 64 commands');
+    validateCheckPlan(options.commands ?? [], this.checkPlan);
     for (const command of options.commands ?? []) {
       if (command.baseline !== undefined && (!command.baseline || typeof command.baseline.environmentId !== 'string' || !command.baseline.environmentId.trim() || command.baseline.environmentId.length > 256 || Object.keys(command.baseline).some(key => key !== 'environmentId'))) throw new Error('INVALID_CHECK_CONFIG');
-      if (!command.id || command.id.length > 160 || this.commands.has(command.id) || !command.executable || command.executable.length > 4096 || !Array.isArray(command.args) || command.args.length > 64 || command.args.some(arg => typeof arg !== 'string' || arg.length > 4096) || Buffer.byteLength(JSON.stringify(command.args)) > 65_536 || command.required !== undefined && typeof command.required !== 'boolean' || (command.timeoutMs !== undefined && (!Number.isSafeInteger(command.timeoutMs) || command.timeoutMs < 1 || command.timeoutMs > 3_600_000))) throw new Error('INVALID_CHECK_CONFIG');
-      this.commands.set(command.id, { ...command, args: [...command.args], ...(command.baseline ? { baseline: { ...command.baseline } } : {}) });
+      if (typeof command.id !== 'string' || !command.id || command.id.length > 160 || this.commands.has(command.id) || typeof command.executable !== 'string' || !command.executable || command.executable.length > 4096 || !Array.isArray(command.args) || command.args.length > 64 || command.args.some(arg => typeof arg !== 'string' || arg.length > 4096) || Buffer.byteLength(JSON.stringify(command.args)) > 65_536 || command.required !== undefined && typeof command.required !== 'boolean' || (command.timeoutMs !== undefined && (!Number.isSafeInteger(command.timeoutMs) || command.timeoutMs < 1 || command.timeoutMs > 3_600_000))) throw new Error('INVALID_CHECK_CONFIG');
+      this.commands.set(command.id, { ...command, args: [...command.args], ...(command.dependsOn ? { dependsOn: [...command.dependsOn] } : {}), ...(command.baseline ? { baseline: { ...command.baseline } } : {}) });
     }
     this.checkIds = options.checkIds ? [...options.checkIds] : [...this.commands.keys()];
     if (this.checkIds.length > 64 || new Set(this.checkIds).size !== this.checkIds.length) throw new Error('INVALID_CHECK_CONFIG');
     for (const id of this.checkIds) if (!this.commands.has(id)) throw new Error(`UNKNOWN_CHECK: ${id}`);
+    validateCheckPlan(this.selectedCommands(), this.checkPlan);
   }
   async inspectRepository(repositoryPath: string, baseRef: string) { return inspectRepository(repositoryPath, baseRef); }
   private ref(workflow: Workflow): string {
@@ -113,10 +120,11 @@ export class LocalGitService implements GitService {
     const names=await gitOk(input.workspace.repositoryPath,['diff','--no-ext-diff','--no-textconv','--name-only','-z',from,to,'--']);
     return {fromCommit:from,toCommit:to,diff:redact(diff,24000),changedPaths:names.split('\0').filter(Boolean),truncated:diff.length>24000};
   }
+  private checkFingerprint(command: CheckCommand): string { return configurationFingerprint(command, this.checkPlan, this.selectedCommands()); }
   private selectedCommands(): CheckCommand[] { return this.checkIds.map(id => this.commands.get(id)!); }
   private candidate(operation: GitOperation): Candidate {
     const checks = operation.checks ?? [];
-    return { baselines: operation.baselines?.map(previewBaseline), timings: operation.timings, taskAttempt: operation.binding?.attempt, integrationId: operation.integrationId, sourceHead: operation.sourceHead, candidateHead: operation.candidateHead!, expectedTargetHead: operation.expectedTargetHead, cwd: operation.reviewPath, checkIds: checks.map(check => check.id), readiness: evidenceReadiness(operation, this.selectedCommands()), checks: checks.map(previewCheck) };
+    return { checkPlan: operation.checkPlan, baselines: operation.baselines?.map(previewBaseline), timings: operation.timings, taskAttempt: operation.binding?.attempt, integrationId: operation.integrationId, sourceHead: operation.sourceHead, candidateHead: operation.candidateHead!, expectedTargetHead: operation.expectedTargetHead, cwd: operation.reviewPath, checkIds: checks.map(check => check.id), readiness: evidenceReadiness(operation, this.selectedCommands(), this.checkPlan), checks: checks.map(previewCheck) };
   }
   private async assertBinding(input: GitContext, operation: GitOperation, candidateHead: string): Promise<void> {
     const repository = await inspectRepository(input.workspace.repositoryPath, input.workflow.baseCommit);
@@ -140,7 +148,7 @@ export class LocalGitService implements GitService {
       await readFile(await this.quarantinePath(operation.candidatePath));
       operation.checkCleanup = 'unknown';
     } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
-    return evidenceReadiness(operation, this.selectedCommands());
+    return evidenceReadiness(operation, this.selectedCommands(), this.checkPlan);
   }
   private async assertCheckCleanup(workspace: Workspace, operation: GitOperation): Promise<void> {
     const readiness = await this.operationReadiness(operation);
@@ -150,12 +158,17 @@ export class LocalGitService implements GitService {
     const operation = await this.readOperation(input.workspace, input.candidate.integrationId);
     await this.assertRecoveryBinding(input, operation);
     await this.operationReadiness(operation);
-    if (!candidateCleanupUnknown(operation)) return !!operation.cleanupRebootProof;
+    if (!candidateCleanupUnknown(operation)) {
+      await this.planLease(input.workspace, operation, true);
+      return !!operation.cleanupRebootProof;
+    }
     if (!provesPreviousBootExited(input.previousBootId, input.currentBootId)) throw new Error('CLEANUP_UNKNOWN: same-machine OS reboot proof required');
     await unlink(await this.quarantinePath(operation.candidatePath)).catch(error => { if (error.code !== 'ENOENT') throw error; });
     operation.checkCleanup = 'confirmed';
+    for (const node of operation.checkPlan?.nodes ?? []) if (node.status === 'running') { node.status = 'environment_unavailable'; node.reason = 'Host interrupted; reboot cleanup proof is not execution evidence.'; }
     operation.cleanupRebootProof = { previousBootId: input.previousBootId!, currentBootId: input.currentBootId! };
     await this.record(input.workspace, operation);
+    await this.planLease(input.workspace, operation, true);
     return true;
   }
   private async assertRecoveryBinding(input: GitContext & { candidate: Candidate }, operation: GitOperation): Promise<void> {
@@ -185,7 +198,7 @@ export class LocalGitService implements GitService {
     let identity: import('@rift/protocol').BaselineIdentity;
     try {
       const repository = await inspectRepository(input.workspace.repositoryPath, baselineCommit);
-      identity = await baselineIdentity({ workspaceId: input.workspace.id, repositoryId: input.task.repositoryId ?? fingerprint(repository.commonGitDir), commonGitDir: repository.commonGitDir, repositoryPath: repository.rootPath, baselineCommit, planFingerprint: fingerprint(this.selectedCommands().map(item => ({ id: item.id, configurationFingerprint: configurationFingerprint(item) }))), command });
+      identity = await baselineIdentity({ workspaceId: input.workspace.id, repositoryId: input.task.repositoryId ?? fingerprint(repository.commonGitDir), commonGitDir: repository.commonGitDir, repositoryPath: repository.rootPath, baselineCommit, planFingerprint: fingerprint(this.selectedCommands().map(item => ({ id: item.id, configurationFingerprint: this.checkFingerprint(item) }))), command, checkPlan: this.checkPlan, commands: this.selectedCommands() });
     } catch { return { key: '', status: 'unavailable', cleanupStatus: 'confirmed', lookupMs: performance.now() - started, reason: 'Baseline identity could not be verified; current candidate checks still required.' }; }
     const baselineKey = fingerprint(identity), integrationId = `baseline-${baselineKey}`;
     const reference = { key: baselineKey, identity, integrationId };
@@ -220,18 +233,30 @@ export class LocalGitService implements GitService {
     }
   }
   private async executeCheck(input: GitContext, operation: GitOperation, command: CheckCommand): Promise<CheckEvidence> {
-    const repository = await inspectRepository(input.workspace.repositoryPath, input.workflow.baseCommit);
-    const candidatePath = await managedPath(this.managedRoot, operation.candidatePath);
-    // Persist before spawning: interruption is not proof that descendants exited.
     operation.checkCleanup = 'unknown';
     await this.record(input.workspace, operation);
+    const check = await this.runCheck(input, operation, command);
+    operation.checks = [...(operation.checks ?? []).filter(item => item.commandId !== command.id), check];
+    operation.checkCleanup = ['timed_out', 'cancelled'].includes(check.host!.exitStatus) ? 'unknown' : 'confirmed';
+    operation.timings ??= {};
+    operation.timings.checksMs = (operation.timings.checksMs ?? 0) + check.durationMs!;
+    operation.phase = 'checks_recorded';
+    await this.record(input.workspace, operation);
+    if (operation.checkCleanup === 'unknown') await this.quarantine(operation.candidatePath, 'CHECK_CLEANUP_UNKNOWN');
+    if (operation.checkCleanup === 'confirmed' && (await gitOk(operation.candidatePath, ['rev-parse', 'HEAD']) !== operation.candidateHead || !(await sourceCheckoutClean(operation.candidatePath)))) throw new Error('CHECK_MODIFIED_CANDIDATE: changes preserved');
+    return check;
+  }
+  private async runCheck(input: GitContext, operation: GitOperation, command: CheckCommand, options: { cwd?: string; home?: string; readOnly?: boolean; skipped?: string } = {}): Promise<CheckEvidence> {
+    const repository = await inspectRepository(input.workspace.repositoryPath, input.workflow.baseCommit);
+    const candidatePath = await managedPath(this.managedRoot, options.cwd ?? operation.candidatePath);
     const started = performance.now();
     const startedAt = new Date().toISOString();
     let result: import('./process.js').CommandResult, unavailable = false;
     try {
       const quote = (value: string) => "'" + value.replaceAll("'", "'\"'\"'") + "'";
-      const sandbox = await sandboxCommand([await realpath(candidatePath)], candidatePath, [command.executable, ...command.args].map(quote).join(' '), [], { signal: AbortSignal.timeout(command.timeoutMs ?? 120_000), readOnlyRoots: [repository.commonGitDir] });
-      result = await execute(sandbox[0]!, sandbox.slice(1), candidatePath, { timeoutMs: command.timeoutMs ?? 120_000, maxOutputBytes: 65_536, env: Object.fromEntries(Object.keys(process.env).map(name => [name, undefined])) });
+      if (options.skipped || input.signal?.aborted) throw new Error(options.skipped ?? 'CHECK_CANCELLED');
+      const sandbox = await sandboxCommand(options.readOnly ? [options.home!] : [await realpath(candidatePath)], candidatePath, [command.executable, ...command.args].map(quote).join(' '), [], { home: options.home, signal: input.signal ? AbortSignal.any([input.signal, AbortSignal.timeout(command.timeoutMs ?? 120_000)]) : AbortSignal.timeout(command.timeoutMs ?? 120_000), readOnlyRoots: [repository.commonGitDir, ...(options.readOnly ? [candidatePath] : [])] });
+      result = await execute(sandbox[0]!, sandbox.slice(1), candidatePath, { timeoutMs: command.timeoutMs ?? 120_000, maxOutputBytes: 65_536, signal: input.signal, env: Object.fromEntries(Object.keys(process.env).map(name => [name, undefined])) });
       unavailable = result.exitCode === 126 || result.exitCode === 127 || result.exitCode !== 0 && result.stderr.startsWith('bwrap:');
     } catch (error) {
       unavailable = true;
@@ -240,33 +265,141 @@ export class LocalGitService implements GitService {
     // A capture boundary can split a registered credential: omit the unverified tail after redaction.
     const safeLog = (raw: string) => { const safe = redact(raw, 1_048_576); return result.truncated ? safe.slice(0, Math.max(0, safe.length - redactionTailLength())) + '\n[TRUNCATED]' : safe; };
     const stdout = safeLog(result.stdout), stderr = safeLog(result.stderr);
-    const exitStatus = result.exitCode === 124 ? 'timed_out' : unavailable ? 'environment_unavailable' : result.exitCode === 0 ? 'passed' : 'failed';
-    const check: CheckEvidence = { id: randomUUID(), commandId: command.id, candidateHead: operation.candidateHead!, ...result, stdout, stderr, startedAt, finishedAt: new Date().toISOString(), durationMs: performance.now() - started, host: { ...operation.binding!, schemaVersion: 1, executionSource: 'host', command: { executable: redact(command.executable, 8000), args: command.args.map(arg => redact(arg, 8000)), timeoutMs: command.timeoutMs ?? 120_000 }, configurationFingerprint: configurationFingerprint(command), environmentFingerprint: environmentFingerprint(), exitStatus, logSha256: fingerprint({ stdout, stderr }), summary: `${command.id}: ${exitStatus} (exit ${result.exitCode})` } };
+    const exitStatus = options.skipped ? 'skipped' : input.signal?.aborted || result.exitCode === 130 ? 'cancelled' : result.exitCode === 124 ? 'timed_out' : unavailable ? 'environment_unavailable' : result.exitCode === 0 ? 'passed' : 'failed';
+    const check: CheckEvidence = { id: randomUUID(), commandId: command.id, candidateHead: operation.candidateHead!, ...result, stdout, stderr, startedAt, finishedAt: new Date().toISOString(), durationMs: options.skipped ? 0 : performance.now() - started, host: { ...operation.binding!, schemaVersion: 1, executionSource: 'host', command: { executable: redact(command.executable, 8000), args: command.args.map(arg => redact(arg, 8000)), timeoutMs: command.timeoutMs ?? 120_000 }, configurationFingerprint: this.checkFingerprint(command), environmentFingerprint: environmentFingerprint(), exitStatus, logSha256: fingerprint({ stdout, stderr }), summary: `${command.id}: ${exitStatus} (exit ${result.exitCode})${options.skipped ? `: ${options.skipped}` : ''}` } };
     const directory = await this.directory(input.workspace, 'operations', operation.integrationId);
     const file = await open(path.join(directory, `${check.id}.json`), 'wx', 0o600);
     try { await file.writeFile(JSON.stringify(check)); await file.sync(); } finally { await file.close(); }
-    // Latest result for each command; previous immutable attachments remain available by ID.
-    operation.checks = [...(operation.checks ?? []).filter(item => item.commandId !== command.id), check];
-    operation.checkCleanup = result.exitCode === 124 ? 'unknown' : 'confirmed';
-    operation.timings ??= {};
-    operation.timings.checksMs = (operation.timings.checksMs ?? 0) + check.durationMs!;
-    operation.phase = 'checks_recorded'; operation.readiness = evidenceReadiness(operation, this.selectedCommands());
-    await this.record(input.workspace, operation);
-    if (result.exitCode === 124) await this.quarantine(candidatePath, 'CHECK_TIMEOUT_CLEANUP_UNKNOWN: inspect descendant processes before archive');
-    if (result.exitCode !== 124 && (await gitOk(candidatePath, ['rev-parse', 'HEAD']) !== operation.candidateHead || !(await sourceCheckoutClean(candidatePath)))) throw new Error('CHECK_MODIFIED_CANDIDATE: changes preserved');
     return check;
+  }
+  /** One Host plan at a time; an interrupted lease survives restart until reboot proof. */
+  private async planLease(workspace: Workspace, operation: GitOperation, release = false): Promise<void> {
+    const directory = path.join(await realpath(this.managedRoot), 'check-plan-lease');
+    const leaseId = key(JSON.stringify([workspace.id, operation.integrationId]));
+    const owner = path.join(directory, `${leaseId}.json`);
+    if (release) {
+      try { await unlink(owner); await rmdir(directory); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+      this.heldPlanLeases.delete(leaseId);
+      return;
+    }
+    if (this.heldPlanLeases.has(leaseId)) return;
+    try { await mkdir(directory, { mode: 0o700 }); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error('CHECK_PLAN_LEASE_HELD: active or interrupted plan requires cleanup proof'); throw error; }
+    const file = await open(owner, 'wx', 0o600);
+    try { await file.writeFile(JSON.stringify(operation.binding)); await file.sync(); } finally { await file.close(); }
+    this.heldPlanLeases.add(leaseId);
+  }
+  private async executePlan(input: GitContext, operation: GitOperation): Promise<void> {
+    const plan = this.checkPlan!, commands = this.selectedCommands();
+    const maxConcurrency = plan.mode === 'serial' ? 1 : plan.maxConcurrency ?? 2, capacity = plan.resourceSlots ?? 2;
+    const repository = await inspectRepository(input.workspace.repositoryPath, input.workflow.baseCommit);
+    // Flush uncertainty before claiming resources: a crash must never imply cleanup.
+    operation.checkCleanup = 'unknown';
+    await this.record(input.workspace, operation);
+    await this.planLease(input.workspace, operation);
+    const nodes: import('@rift/protocol').CheckPlanEvidence['nodes'] = commands.map(command => {
+      const prior = operation.checks?.findLast(check => check.commandId === command.id);
+      const passed = prior?.host?.exitStatus === 'passed' && prior.exitCode === 0 && prior.host.configurationFingerprint === this.checkFingerprint(command) && prior.host.environmentFingerprint === environmentFingerprint();
+      return { commandId: command.id, dependsOn: [...command.dependsOn ?? []], mutexGroup: command.mutexGroup, resourceSlots: command.resourceSlots ?? 1, isolation: command.isolation === 'read_only' ? 'read_only' as const : plan.mode === 'serial' ? 'serial' as const : 'snapshot' as const, status: passed ? 'passed' as const : 'pending' as const };
+    });
+    operation.checkPlan = { mode: plan.mode, maxConcurrency, resourceSlots: capacity, nodes };
+    type Node = import('@rift/protocol').CheckPlanEvidence['nodes'][number];
+    const active = new Map<string, Promise<{ node: Node; check?: CheckEvidence; error?: unknown }>>();
+    const mutexes = new Set<string>();
+    let used = 0, unknown = false, finished = false;
+    const executionId = randomUUID();
+    const saveCheck = (node: Node, check: CheckEvidence): void => {
+      node.status = check.host!.exitStatus;
+      operation.checks = [...(operation.checks ?? []).filter(item => item.commandId !== node.commandId), check];
+      // Stable configuration order, independent of completion order.
+      operation.checks.sort((a, b) => this.checkIds.indexOf(a.commandId) - this.checkIds.indexOf(b.commandId));
+      operation.timings ??= {};
+      operation.timings.checksMs = (operation.timings.checksMs ?? 0) + check.durationMs!;
+      operation.phase = 'checks_recorded';
+    };
+    const executions = new Map<string, { cwd: string; home: string; readOnly: boolean }>();
+    const prepareNode = async (node: Node, command: CheckCommand): Promise<void> => {
+      const home = await this.directory(input.workspace, 'check-homes', `${operation.integrationId}:${executionId}:${plan.mode === 'serial' ? 'serial' : command.id}`);
+      await mkdir(home, { recursive: true, mode: 0o700 });
+      let cwd = operation.candidatePath;
+      if (node.isolation === 'snapshot') {
+        cwd = await this.directory(input.workspace, 'check-inputs', `${operation.integrationId}:${executionId}:${command.id}`);
+        await withMetadataLock(repository.commonGitDir, async () => {
+          await mkdir(path.dirname(cwd), { recursive: true });
+          await gitOk(repository.rootPath, ['worktree', 'add', '--detach', '--', cwd, operation.candidateHead!]);
+        });
+      }
+      executions.set(command.id, { cwd, home, readOnly: node.isolation === 'read_only' });
+    };
+    const runNode = async (node: Node, command: CheckCommand): Promise<CheckEvidence> => {
+      const { cwd } = executions.get(command.id)!;
+      const check = await this.runCheck(input, operation, command, executions.get(command.id)!);
+      if (node.isolation === 'serial' && !['timed_out', 'cancelled'].includes(check.host!.exitStatus) && (await gitOk(cwd, ['rev-parse', 'HEAD']) !== operation.candidateHead || !(await sourceCheckoutClean(cwd)))) throw new Error('CHECK_MODIFIED_CANDIDATE: changes preserved');
+      return check;
+    };
+    try {
+      await this.record(input.workspace, operation);
+      // Do not mutate common Git metadata while another sandbox enumerates its read-only grant.
+      for (const node of nodes) if (node.status === 'pending' && !input.signal?.aborted) await prepareNode(node, commands.find(command => command.id === node.commandId)!);
+      while (nodes.some(node => node.status === 'pending') || active.size) {
+        for (const node of nodes) {
+          if (node.status !== 'pending') continue;
+          const dependencies = node.dependsOn.map(id => nodes.find(item => item.commandId === id)!);
+          const failed = dependencies.find(item => !['passed', 'pending', 'running'].includes(item.status));
+          if (unknown || input.signal?.aborted || failed) {
+            const reason = unknown ? 'Plan stopped: execution cleanup unknown.' : input.signal?.aborted ? 'Plan cancelled before execution.' : `Dependency ${failed!.commandId} is ${failed!.status}.`;
+            node.reason = reason;
+            saveCheck(node, await this.runCheck(input, operation, commands.find(item => item.id === node.commandId)!, { skipped: reason }));
+            await this.record(input.workspace, operation);
+            continue;
+          }
+          if (dependencies.some(item => item.status !== 'passed') || active.size >= maxConcurrency || used + node.resourceSlots > capacity || node.mutexGroup && mutexes.has(node.mutexGroup)) continue;
+          node.status = 'running'; used += node.resourceSlots;
+          if (node.mutexGroup) mutexes.add(node.mutexGroup);
+          await this.record(input.workspace, operation);
+          const command = commands.find(item => item.id === node.commandId)!;
+          active.set(node.commandId, runNode(node, command).then(check => ({ node, check }), error => ({ node, error })));
+        }
+        if (!active.size) {
+          if (nodes.some(node => node.status === 'pending')) continue;
+          break;
+        }
+        const { node, check, error } = await Promise.race(active.values());
+        active.delete(node.commandId);
+        if (check) saveCheck(node, check);
+        else { node.status = 'environment_unavailable'; node.reason = redact(String(error)); }
+        // Never recycle slots/mutexes on a timeout, cancellation or lost result.
+        if (!check || ['timed_out', 'cancelled'].includes(node.status)) unknown = true;
+        else { used -= node.resourceSlots; if (node.mutexGroup) mutexes.delete(node.mutexGroup); }
+        await this.record(input.workspace, operation);
+      }
+      if (input.signal?.aborted) unknown = true;
+      operation.checkCleanup = unknown ? 'unknown' : 'confirmed';
+      if (unknown) await this.quarantine(operation.candidatePath, 'CHECK_PLAN_CLEANUP_UNKNOWN');
+      await this.record(input.workspace, operation);
+      finished = true;
+    } finally {
+      // Even a journal error cannot abandon already started independent checks.
+      await Promise.allSettled(active.values());
+      if (finished && !unknown) await this.planLease(input.workspace, operation, true);
+    }
   }
   private async checkCandidate(input: GitContext, operation: GitOperation): Promise<Candidate> {
     const repository = await inspectRepository(input.workspace.repositoryPath, input.workflow.baseCommit);
     const candidatePath = await managedPath(this.managedRoot, operation.candidatePath);
     await this.assertCheckCleanup(input.workspace, operation);
     if (await gitOk(candidatePath, ['rev-parse', 'HEAD']) !== operation.candidateHead || !(await sourceCheckoutClean(candidatePath))) throw new Error('CHECK_MODIFIED_CANDIDATE: changes preserved');
-    for (const command of this.selectedCommands()) {
+    const checksStarted = performance.now();
+    if (this.checkPlan) await this.executePlan(input, operation);
+    else for (const command of this.selectedCommands()) {
       const prior = operation.checks?.findLast(check => check.commandId === command.id);
-      if (prior?.host?.exitStatus === 'passed' && prior.exitCode === 0 && prior.host.configurationFingerprint === configurationFingerprint(command) && prior.host.environmentFingerprint === environmentFingerprint()) continue;
+      if (prior?.host?.exitStatus === 'passed' && prior.exitCode === 0 && prior.host.configurationFingerprint === this.checkFingerprint(command) && prior.host.environmentFingerprint === environmentFingerprint()) continue;
       const check = await this.executeCheck(input, operation, command);
-      if (check.exitCode === 124) break;
+      if (['timed_out', 'cancelled'].includes(check.host!.exitStatus)) break;
     }
+    operation.timings ??= {}; operation.timings.checksWallMs = performance.now() - checksStarted;
+    await this.record(input.workspace, operation);
     await this.assertCheckCleanup(input.workspace, operation);
     const candidate = this.candidate(operation);
     if (candidate.readiness!.status !== 'ready') throw new CandidateEvidenceError(candidate, candidate.readiness!);
@@ -306,7 +439,7 @@ export class LocalGitService implements GitService {
       await this.record(input.workspace, operation);
       try { return await this.checkCandidate(input, operation); }
       catch (error) {
-        if (candidateCleanupUnknown(operation)) throw new CandidateEvidenceError(this.candidate(operation), evidenceReadiness(operation, this.selectedCommands()), true);
+        if (candidateCleanupUnknown(operation)) throw new CandidateEvidenceError(this.candidate(operation), evidenceReadiness(operation, this.selectedCommands(), this.checkPlan), true);
         throw error;
       }
       finally { requests[requestKey]!.complete = true; await this.record(input.workspace, operation); }
@@ -414,6 +547,11 @@ export class LocalGitService implements GitService {
       const candidateHead = await gitOk(candidatePath, ['rev-parse', 'HEAD']);
       operation = { ...operation, candidateHead, binding: { workspaceId: workspace.id, repositoryId: task.repositoryId ?? fingerprint(repository.commonGitDir), repositoryFingerprint: fingerprint(repository.commonGitDir), taskId: task.id, attempt: task.attempt, integrationId, candidateHead }, phase: 'candidate_created' }; await this.record(workspace, operation);
       operation.timings = { prepareMs: performance.now() - started };
+      if (this.checkPlan) {
+        operation.checkCleanup = 'unknown'; await this.record(workspace, operation);
+        await this.planLease(workspace, operation);
+        operation.checkCleanup = 'confirmed'; await this.record(workspace, operation);
+      }
       const baselineStarted = performance.now();
       operation.baselines = [];
       for (const command of this.selectedCommands().filter(command => command.baseline)) {
@@ -431,8 +569,9 @@ export class LocalGitService implements GitService {
       return await this.checkCandidate(input, operation);
     } catch (error) {
       if (operation) await this.record(workspace, { ...operation, phase: 'blocked', reason: String(error) });
+      if (operation?.binding && !candidateCleanupUnknown(operation)) await this.planLease(workspace, operation, true);
       integrationOwners.delete(ownerKey);
-      if (operation && candidateCleanupUnknown(operation)) throw new CandidateEvidenceError(this.candidate(operation), evidenceReadiness(operation, this.selectedCommands()), true);
+      if (operation && candidateCleanupUnknown(operation)) throw new CandidateEvidenceError(this.candidate(operation), evidenceReadiness(operation, this.selectedCommands(), this.checkPlan), true);
       throw error;
     }
   }
@@ -444,7 +583,7 @@ export class LocalGitService implements GitService {
     let operation = await this.readOperation(workspace, candidate.integrationId);
     await this.assertBinding(input, operation, candidate.candidateHead);
     await this.assertCheckCleanup(workspace, operation);
-    if (evidenceReadiness(operation, this.selectedCommands()).status !== 'ready') throw new Error('EVIDENCE_NOT_READY');
+    if (evidenceReadiness(operation, this.selectedCommands(), this.checkPlan).status !== 'ready') throw new Error('EVIDENCE_NOT_READY');
     integrationOwners.set(ownerKey, candidate.integrationId);
     let published = false;
     try {

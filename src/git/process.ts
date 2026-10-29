@@ -3,11 +3,12 @@ import { devNull } from 'node:os';
 
 export interface CommandResult { exitCode: number; stdout: string; stderr: string; truncated: boolean }
 /** No shell is involved; even spaces, quotes and metacharacters remain one argument. */
-export function execute(executable: string, args: readonly string[], cwd: string, options: { timeoutMs?: number; maxOutputBytes?: number; env?: NodeJS.ProcessEnv; input?: string|Buffer } = {}): Promise<CommandResult> {
+export function execute(executable: string, args: readonly string[], cwd: string, options: { timeoutMs?: number; maxOutputBytes?: number; env?: NodeJS.ProcessEnv; input?: string|Buffer; signal?: AbortSignal } = {}): Promise<CommandResult> {
+  if (options.signal?.aborted) return Promise.resolve({ exitCode: 130, stdout: '', stderr: 'Command cancelled before spawn.', truncated: false });
   return new Promise((resolve, reject) => {
     const child = spawn(executable, [...args], { cwd, shell: false, windowsHide: true, detached: process.platform !== 'win32', env: { ...process.env, ...options.env }, stdio: [options.input===undefined?'ignore':'pipe', 'pipe', 'pipe'] });
     const limit = options.maxOutputBytes ?? 1_048_576;
-    let stdout = '', stderr = '', bytes = 0, truncated = false, timedOut = false;
+    let stdout = '', stderr = '', bytes = 0, truncated = false, timedOut = false, cancelled = false;
     const capture = (chunk: Buffer, stream: 'stdout' | 'stderr'): void => {
       const remaining = Math.max(0, limit - bytes);
       const part = chunk.subarray(0, remaining).toString('utf8');
@@ -23,12 +24,14 @@ export function execute(executable: string, args: readonly string[], cwd: string
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      options.signal?.removeEventListener('abort', cancel);
       if(inputError&&!timedOut&&code===0){reject(inputError);return;}
-      resolve({ exitCode: timedOut ? 124 : code ?? 1, stdout, stderr: stderr + (timedOut ? '\nCommand timed out; execution cleanup requires verification.' : ''), truncated });
+      resolve({ exitCode: cancelled ? 130 : timedOut ? 124 : code ?? 1, stdout, stderr: stderr + (cancelled ? '\nCommand cancelled; execution cleanup requires verification.' : timedOut ? '\nCommand timed out; execution cleanup requires verification.' : ''), truncated });
     };
     const stopWaiting = (): void => { child.stdin?.destroy(); child.stdout!.destroy(); child.stderr!.destroy(); finish(124); };
-    const timer = setTimeout(() => {
-      timedOut = true;
+    const stop = (aborted = false): void => {
+      if (settled) return;
+      cancelled = aborted; timedOut = !aborted;
       if (child.pid !== undefined) {
         if (process.platform === 'win32') {
           // Kill descendants before the parent disappears from the Windows tree.
@@ -50,8 +53,12 @@ export function execute(executable: string, args: readonly string[], cwd: string
       child.stdout!.destroy();
       child.stderr!.destroy();
       finish(124);
-    }, options.timeoutMs ?? 120_000);
-    child.on('error', error => { if (!settled) { settled = true; clearTimeout(timer); reject(error); } });
+    };
+    const cancel = () => stop(true);
+    const timer = setTimeout(stop, options.timeoutMs ?? 120_000);
+    options.signal?.addEventListener('abort', cancel, { once: true });
+    if (options.signal?.aborted) cancel();
+    child.on('error', error => { if (!settled) { settled = true; clearTimeout(timer); options.signal?.removeEventListener('abort', cancel); reject(error); } });
     child.on('close', code => finish(code));
     if(options.input!==undefined)child.stdin!.end(options.input);
   });

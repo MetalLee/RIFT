@@ -33,6 +33,7 @@ export class TaskCoordinator {
   private readonly runTimeoutMs:number;
   private readonly cleanupTimeoutMs:number;
   private readonly active=new Map<string,Active>();
+  private readonly checkControllers=new Map<string,{taskId:string;workflowId:string;controller:AbortController}>();
   private readonly background=new Set<Promise<void>>();
   private pumping=false;
   private stopping=false;
@@ -287,9 +288,11 @@ export class TaskCoordinator {
     invariant(this.git.resumeCandidate, 'EVIDENCE_UNAVAILABLE', 'Host supplementation is unavailable.');
     this.integrationBusy = true;
     this.store.exec("UPDATE integrations SET status='preparing',runtime_boot_id=? WHERE id=?", this.bootIdentity, integration.id);
+    const checkController = new AbortController();
+    this.checkControllers.set(integration.id, { taskId: task.id, workflowId: task.workflowId, controller: checkController });
     const work = (async () => {
       try {
-        const candidate = await this.git.resumeCandidate!({ ...this.context(task), integrationId: integration.id, candidateHead: input.candidateHead, idempotencyKey: input.idempotencyKey });
+        const candidate = await this.git.resumeCandidate!({ ...this.context(task), integrationId: integration.id, candidateHead: input.candidateHead, idempotencyKey: input.idempotencyKey, signal: checkController.signal });
         return this.store.transaction(() => {
           const latest = this.store.task(task.id);
           invariant(latest.version === input.expectedVersion && latest.status === 'blocked' && !terminalWorkflows.has(this.store.workflow(task.workflowId).status), 'CANCELLED', 'Task changed while checks were running.');
@@ -311,7 +314,7 @@ export class TaskCoordinator {
       }
     })();
     this.track(work.then(() => {}, () => {}));
-    try { return await work; } finally { this.integrationBusy = false; this.pump(); }
+    try { return await work; } finally { this.checkControllers.delete(integration.id); this.integrationBusy = false; this.pump(); }
   }
   private enqueue(kind:'dispatch'|'integration',taskId:string,key:string,expectedVersion:number,sourceHead?:string,roleName?:string):Operation {
     invariant(!this.stopping,'HOST_STOPPING','Host is shutting down and cannot accept queue requests.');
@@ -553,9 +556,11 @@ export class TaskCoordinator {
   private async executeIntegration(operation:Operation):Promise<void> {
     let task=this.store.task(operation.entityId);const resuming=!!operation.payload.integrationId;const integrationId=operation.payload.integrationId??id('integration');let candidate:Candidate|undefined;let reviewRun:Run|undefined;
     this.store.transaction(()=>{if(!resuming)this.store.exec('INSERT INTO integrations(id,task_id,source_head,status,runtime_boot_id) VALUES(?,?,?,?,?)',integrationId,task.id,operation.payload.sourceHead!,'preparing',this.bootIdentity);else this.store.exec("UPDATE integrations SET status='preparing',runtime_boot_id=? WHERE id=?",this.bootIdentity,integrationId);operation.payload.integrationId=integrationId;this.operationPhase(operation,'started');this.store.exec('UPDATE tasks SET status=?,version=version+1 WHERE id=?','integrating',task.id);});
+    const checkController = new AbortController();
+    this.checkControllers.set(integrationId, { taskId: task.id, workflowId: task.workflowId, controller: checkController });
     try {
-      if(resuming){const saved=this.store.require<IntegrationRecord>('SELECT * FROM integrations WHERE id=? AND task_id=?',integrationId,task.id);invariant(this.git.resumeCandidate&&saved.candidate,'EVIDENCE_UNAVAILABLE','Stored candidate cannot be resumed.');candidate=await this.git.resumeCandidate({...this.context(task),integrationId,candidateHead:saved.candidate.candidateHead,idempotencyKey:`review:${operation.id}`});}
-      else candidate=await this.git.prepareCandidate({...this.context(task),sourceHead:operation.payload.sourceHead!,integrationId});
+      if(resuming){const saved=this.store.require<IntegrationRecord>('SELECT * FROM integrations WHERE id=? AND task_id=?',integrationId,task.id);invariant(this.git.resumeCandidate&&saved.candidate,'EVIDENCE_UNAVAILABLE','Stored candidate cannot be resumed.');candidate=await this.git.resumeCandidate({...this.context(task),integrationId,candidateHead:saved.candidate.candidateHead,idempotencyKey:`review:${operation.id}`,signal:checkController.signal});}
+      else candidate=await this.git.prepareCandidate({...this.context(task),sourceHead:operation.payload.sourceHead!,integrationId,signal:checkController.signal});
       if(this.git.candidateReadiness){const readiness=await this.git.candidateReadiness({...this.context(task),candidate});if(readiness.status!=='ready')throw new CandidateEvidenceError(candidate,readiness);}
       this.store.transaction(()=>{this.store.exec('UPDATE integrations SET expected_target_head=?,candidate_head=?,check_ids=?,candidate=? WHERE id=?',candidate!.expectedTargetHead,candidate!.candidateHead,JSON.stringify(candidate!.checkIds),JSON.stringify(candidate),integrationId);this.store.event(task.workflowId,'candidate.prepared',candidate,{taskId:task.id,requestId:operation.id});});
       while((this.store.workflow(task.workflowId).status==='paused'||!this.availableReviewer(this.store.workflow(task.workflowId).workspaceId))&&!terminalWorkflows.has(this.store.workflow(task.workflowId).status)&&this.store.task(task.id).status!=='cancelled'&&!this.stopping)await new Promise(resolve=>setTimeout(resolve,25));
@@ -590,7 +595,7 @@ export class TaskCoordinator {
       }
       if(candidate&&!unknown&&this.git.abandonCandidate)await this.git.abandonCandidate({...this.context(task),candidate,reason:errorMessage(error)}).catch(()=>{});
       this.store.transaction(()=>{this.store.exec('UPDATE integrations SET status=?,error=? WHERE id=?',unknown?'cleanup_unknown':'blocked',errorMessage(error),integrationId);this.blockTask(task.id,errorMessage(error));const cancelled=this.store.task(task.id).status==='cancelled'||this.store.workflow(task.workflowId).status==='cancelled';this.operationPhase(this.store.operation(operation.id),cancelled?'cancelled':'blocked',errorMessage(error));});
-    }
+    } finally { this.checkControllers.delete(integrationId); }
   }
   private unexpected(run:Run,error:unknown):void {this.store.transaction(()=>{this.recordResult(run.id,'interrupted','INTERNAL_ERROR',{error:errorMessage(error)});this.store.exec('UPDATE runs SET cleanup_status=? WHERE id=? AND slot_released_at IS NULL','unknown',run.id);this.blockTask(run.taskId,errorMessage(error));});}
 
@@ -646,12 +651,14 @@ export class TaskCoordinator {
   }
   async cancelTask(taskId:string):Promise<Task> {
     this.store.transaction(()=>{const task=this.store.task(taskId);invariant(task.status!=='succeeded','INVALID_STATE','Accepted tasks cannot be cancelled.');this.store.exec('UPDATE tasks SET status=?,version=version+1,blocking_reason=? WHERE id=?','cancelled','CANCELLED',taskId);for(const operation of this.store.all<Operation>('SELECT * FROM operations WHERE entity_id=? AND phase=\'queued\'',taskId))this.operationPhase(operation,'cancelled');this.store.event(task.workflowId,'task.cancel_requested',{}, {taskId});});
+    for (const check of this.checkControllers.values()) if (check.taskId === taskId) check.controller.abort();
     await Promise.allSettled(this.store.all<Run>('SELECT * FROM runs WHERE task_id=? AND slot_released_at IS NULL',taskId).map(run=>this.cancelRun(run.id)));
     if(this.background.size===0&&!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',taskId))this.store.transaction(()=>{for(const operation of this.store.all<Operation>("SELECT * FROM operations WHERE entity_id=? AND kind='dispatch' AND phase='started'",taskId))this.operationPhase(operation,'cancelled');});
     this.pump();return this.store.task(taskId);
   }
   async cancelWorkflow(workflowId:string):Promise<ReturnType<TaskCoordinator['status']>> {
     this.store.transaction(()=>{const workflow=this.store.workflow(workflowId);invariant(workflow.status!=='completed','INVALID_STATE','Completed workflow cannot be cancelled.');this.store.exec('UPDATE workflows SET status=?,version=version+1 WHERE id=?','cancelled',workflowId);for(const operation of this.store.all<Operation>('SELECT o.* FROM operations o JOIN tasks t ON t.id=o.entity_id WHERE t.workflow_id=? AND o.phase=\'queued\'',workflowId))this.operationPhase(operation,'cancelled');this.store.exec('UPDATE tasks SET status=?,version=version+1 WHERE workflow_id=? AND status<>?','cancelled',workflowId,'succeeded');this.store.event(workflowId,'workflow.cancel_requested');});
+    for (const check of this.checkControllers.values()) if (check.workflowId === workflowId) check.controller.abort();
     await Promise.allSettled(this.store.all<Run>('SELECT r.* FROM runs r JOIN tasks t ON t.id=r.task_id WHERE t.workflow_id=? AND r.slot_released_at IS NULL',workflowId).map(run=>this.cancelRun(run.id)));this.pump();return this.status(workflowId);
   }
   finish(input:{workflowId:string;summary:string;expectedVersion?:number}):Workflow {
@@ -672,6 +679,6 @@ export class TaskCoordinator {
     this.store.transaction(()=>{this.store.exec('UPDATE workflows SET status=?,version=version+1 WHERE status IN (\'running\',\'planning\',\'blocked\')','paused');});
     return{interruptedRunIds,recoveredIntegrationIds};
   }
-  async shutdown():Promise<void> {this.stopping=true;await Promise.allSettled([...this.active.keys()].map(runId=>this.cancelRun(runId,'HOST_SHUTDOWN')));await Promise.allSettled([...this.background]);this.closed=true;}
+  async shutdown():Promise<void> {this.stopping=true;for(const check of this.checkControllers.values())check.controller.abort();await Promise.allSettled([...this.active.keys()].map(runId=>this.cancelRun(runId,'HOST_SHUTDOWN')));await Promise.allSettled([...this.background]);this.closed=true;}
 }
 

@@ -9,6 +9,7 @@ import { RiftStore } from '../../src/storage/database.js';
 import { createWorkspace } from '../../src/project/workspace.js';
 import { configureRoles } from '../../src/project/agent-roles.js';
 import { TaskCoordinator } from '../../src/task/coordinator.js';
+import type { CheckPlan, CheckCommand } from '../../src/git/types.js';
 import { LocalGitService } from '../../src/git/integration.js';
 import { gitOk } from '../../src/git/process.js';
 import type { ActivationBridge, ActivationResult, Candidate, PlanTask, Run } from '../../src/contracts/index.js';
@@ -29,7 +30,7 @@ async function eventually(predicate: () => boolean, label = 'condition'): Promis
 }
 const cleanups: (() => Promise<void>)[] = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0)) await cleanup(); });
-async function fixture(check = 'process.exit(0)') {
+async function fixture(check = 'process.exit(0)', options: { checkPlan?: CheckPlan; commands?: CheckCommand[] } = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'rift-core-git-'));
   const repo = path.join(root, '协作 仓库'); await mkdir(repo);
   await gitOk(repo, ['init', '-b', 'main']); await gitOk(repo, ['config', 'core.autocrlf', 'false']);
@@ -49,7 +50,7 @@ async function fixture(check = 'process.exit(0)') {
     { name: 'reviewer', kind: 'subagent', providerBindingId: 'review', prompt: 'Review', revision: 1 },
   ], new Set(['fake-dev', 'fake-review']));
   const bridge = new ControlledBridge();
-  let git = new LocalGitService({ managedRoot: path.join(root, '受管 目录'), commands: [{ id: 'unit', executable: process.execPath, args: ['-e', check] }] });
+  let git = new LocalGitService({ managedRoot: path.join(root, '受管 目录'), checkPlan: options.checkPlan, commands: options.commands ?? [{ id: 'unit', executable: process.execPath, args: ['-e', check] }] });
   let coordinator = new TaskCoordinator({ store, bridge, git });
   const workflow = coordinator.createWorkflow({ id: 'workflow', workspaceId: workspace.id, goal: 'Integration proof', integrationRef: 'refs/heads/rift/integration/core', baseCommit });
   cleanups.push(async () => { await coordinator.shutdown(); store.close(); if (!path.basename(root).startsWith('rift-core-git-') || path.dirname(root) !== path.resolve(os.tmpdir())) throw new Error('Unsafe test cleanup'); await rm(root, { recursive: true, force: true }); });
@@ -64,7 +65,7 @@ async function fixture(check = 'process.exit(0)') {
     try { whileClosed(path.join(root, 'rift.db')); }
     finally {
       store = new RiftStore(path.join(root, 'rift.db'));
-      git = new LocalGitService({ managedRoot: git.managedRoot, commands: [{ id: 'unit', executable: process.execPath, args: ['-e', check] }] });
+      git = new LocalGitService({ managedRoot: git.managedRoot, checkPlan: options.checkPlan, commands: options.commands ?? [{ id: 'unit', executable: process.execPath, args: ['-e', check] }] });
       coordinator = new TaskCoordinator({ store, bridge, git });
     }
   };
@@ -72,8 +73,8 @@ async function fixture(check = 'process.exit(0)') {
 }
 
 const beforeBoot = `v1:${'a'.repeat(64)}:${'1'.repeat(64)}`, afterBoot = `v1:${'a'.repeat(64)}:${'2'.repeat(64)}`;
-async function interruptedSupplement() {
-  const f = await fixture('process.exit(127)');
+async function interruptedSupplement(checkPlan?: CheckPlan) {
+  const f = await fixture('process.exit(127)', { checkPlan });
   f.coordinator.setBootIdentity(beforeBoot); f.plan([{ id: 'a', expectedPaths: ['a.txt'] }]); f.dispatch('a');
   await f.develop(await f.started('a', 'develop'), { 'a.txt': 'complete' }); await f.settled('a', 'blocked');
   f.coordinator.pause(f.workflow.id);
@@ -87,7 +88,7 @@ async function interruptedSupplement() {
       import { LocalGitService } from ${moduleUrl('src/git/integration.ts')};
       import { TaskCoordinator } from ${moduleUrl('src/task/coordinator.ts')};
       const store = new RiftStore(${JSON.stringify(databasePath)});
-      const git = new LocalGitService(${JSON.stringify({ managedRoot: f.git.managedRoot, commands: [{ id: 'unit', executable: process.execPath, args: ['-e', check] }] })});
+      const git = new LocalGitService(${JSON.stringify({ managedRoot: f.git.managedRoot, checkPlan, commands: [{ id: 'unit', executable: process.execPath, args: ['-e', check] }] })});
       const coordinator = new TaskCoordinator({store, git, bridge: {start: async () => {throw new Error('unexpected review');}}});
       coordinator.setBootIdentity(${JSON.stringify(beforeBoot)});
       const exec = store.exec.bind(store);
@@ -316,4 +317,46 @@ describe('real Git with persistent coordinator and controlled fake activations',
     expect(await gitOk(f.repo, ['show', `${f.workflow.integrationRef}:base.txt`])).toBe('A');
     expect(await gitOk(f.repo, ['show', `${f.workflow.integrationRef}:c.txt`])).toBe('C');
   });
+});
+
+it('recovers the DAG attachment/DB crash window on the same candidate without an extra attempt or prior approval', async () => {
+  const { f, record, original, operation, input } = await interruptedSupplement({ mode: 'dag' });
+  expect(operation.checkPlan!.nodes[0]!.status).toBe('passed');
+  f.coordinator.setBootIdentity(afterBoot);
+  await f.coordinator.reconcileIntegration(record().id, record().version);
+  expect(record().candidate.checkIds).toEqual(operation.checks!.map(check => check.id));
+  const supplemented = await f.coordinator.supplementEvidence({ ...input, expectedVersion: f.store.task('a').version });
+  expect('readiness' in supplemented && supplemented.readiness!.status).toBe('ready');
+  expect(record().candidate.checkIds).toEqual(operation.checks!.map(check => check.id));
+  expect(record().candidate.candidateHead).toBe(original.candidate.candidateHead);
+  expect(f.store.task('a').attempt).toBe(1); expect(f.bridge.starts).toHaveLength(1);
+  f.coordinator.resume(f.workflow.id);
+  const reviewed = f.review(await f.started('a', 'review'));
+  expect(reviewed.checkIds).toEqual(operation.checks!.map(check => check.id));
+  await f.settled('a', 'succeeded');
+});
+
+for (const action of ['task', 'workflow', 'shutdown'] as const) it(`propagates ${action} cancellation to actual DAG checks without review/publication or lease release`, async () => {
+  const f = await fixture('', { checkPlan: { mode: 'dag' }, commands: ['a', 'b'].map(id => ({ id, executable: process.execPath, args: ['-e', 'setTimeout(()=>{},10000)'] })) });
+  f.plan([{ id: 'a', expectedPaths: ['a.txt'] }]); f.dispatch('a');
+  await f.develop(await f.started('a', 'develop'), { 'a.txt': 'change' });
+  await eventually(() => !!f.store.get("SELECT id FROM integrations WHERE status='preparing'"));
+  const integration = f.store.require<{ id: string }>('SELECT id FROM integrations WHERE task_id=?', 'a');
+  for (let i = 0; i < 300; i++) {
+    const saved = await f.git.readOperation(f.workspace, integration.id).catch(() => null);
+    if (saved?.checkPlan?.nodes.filter(node => node.status === 'running').length === 2) break;
+    await new Promise(resolve => setTimeout(resolve, 10));
+    if (i === 299) throw new Error('Checks never started');
+  }
+  await new Promise(resolve => setTimeout(resolve, 200));
+  if (action === 'task') await f.coordinator.cancelTask('a');
+  else if (action === 'workflow') await f.coordinator.cancelWorkflow(f.workflow.id);
+  else await f.coordinator.shutdown();
+  await eventually(() => f.store.require<{ status: string }>('SELECT status FROM integrations WHERE id=?', integration.id).status === 'cleanup_unknown');
+  const operation = await f.git.readOperation(f.workspace, integration.id);
+  expect(operation.checkCleanup).toBe('unknown');
+  expect(operation.checks!.map(check => check.host!.exitStatus)).toEqual(['cancelled', 'cancelled']);
+  expect(f.bridge.starts.filter(start => start.run.purpose === 'review')).toHaveLength(0);
+  expect(f.store.task('a').acceptedCommit).toBeNull();
+  expect(await readFile(path.join(f.git.managedRoot, 'check-plan-lease', `${key(JSON.stringify([f.workspace.id, integration.id]))}.json`), 'utf8')).toContain(integration.id);
 });
