@@ -7,6 +7,8 @@ export interface ChatMessage {
   id: string; workspaceId: string; conversationId: string; clientMessageId: string | null; recipientAgentId: string | null;
   role: 'user' | 'assistant' | 'system'; senderType?: 'user'|'agent'|'system'; senderAgentId?: string|null;
   kind?: 'chat'|'conversation_title'|'discussion'|'delegation'|'receipt'|'progress'|'result'|'blocker'; origin?: 'user'|'model'|'host'; visibility?: 'public'|'internal';
+  /** Original Run stream kind; content stays raw for SSE offset reconciliation. */
+  runtimeMessageKind?: RuntimeMessageKind;
   content: string; status: string; version: number; createdAt: string; replyToMessageId?: string | null;
   workflowId?: string|null; taskId?: string|null; runId?: string|null; sourceTurnId?: string|null; requestId?: string|null; correlationId?: string|null; dedupeKey?: string|null; automaticHops?: number; deliveryStatus?: 'pending'|'delivered'|'consumed'|'failed'|'interrupted'|null; deliveryScope?: 'task'|'discussion'|null; deliveryReason?: string|null;
 }

@@ -112,7 +112,7 @@ export class NativeCodexRuntime implements AgentRuntime {
   async start(input: RuntimeTurnInput): Promise<RuntimeHandle> {
     const discussion = !this.options.mode || this.options.mode === 'discussion';
     const formalReadOnly=this.options.mode==='review'||this.options.mode==='analysis';
-    const unrestricted=input.repositoryAccess?.sandboxMode==='unrestricted';
+    const unrestricted=this.options.mode!=='analysis'&&input.repositoryAccess?.sandboxMode==='unrestricted';
     const repositoryWrite=(!formalReadOnly||unrestricted)&&!!(input.repositoryAccess?.repositoryPaths.length||input.repositoryAccess?.workspaceDirectory);
     const restrictedDiscussion=discussion&&!repositoryWrite;
     const restrictedTools=true; // Native file/shell tools are never an authority boundary.

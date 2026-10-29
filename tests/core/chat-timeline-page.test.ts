@@ -1,3 +1,4 @@
+import {buildConversationTimeline} from '../../ui/src/chat-timeline.js';
 import {describe,it,expect} from 'vitest';
 import {RiftStore} from '../../src/storage/database.js';
 import {seedWorkspace} from '../acceptance/fixtures.js';
@@ -81,4 +82,24 @@ describe('bounded chronological chat pages',()=>{
    expect(()=>timelinePage(f.store,f.c,'broken')).toThrow(/cursor/i);expect(()=>timelinePage(f.store,f.c,undefined,0)).toThrow(/limit/i);
   }finally{f.store.close();}
  });
+});
+
+it('renders reviewer results through actual timeline pages, older pages and retained refreshes',()=>{
+ const f=fixture();try{
+  const result={schemaVersion:1,taskId:'task',runId:'run',verdict:'approve',reviewedCommit:'cc195cf050b5d0af7b3f42e6e1dcbbf8f0c0f1aa',findings:[]};
+  const raw=JSON.stringify(result,null,2);
+  f.store.exec("INSERT INTO run_stream_messages(run_id,message_id,kind,text,status,created_at,updated_at) VALUES('run','review','final',?,'completed','2026-01-02','2026-01-02')",raw);
+  const initial=timelinePage(f.store,f.c),id='run-stream:run:review';
+  const row=initial.messages.find(m=>m.id===id)!;
+  expect(row).toMatchObject({runtimeMessageKind:'final',content:raw});
+  const display=(messages:typeof initial.messages)=>buildConversationTimeline(messages,[],[]).items.find(i=>i.message.id===id)!.message.content;
+  expect(display(initial.messages)).toContain('审查通过');expect(display(initial.messages)).not.toContain('schemaVersion');
+  for(let i=1;i<70;i+=2)f.add(i);
+  const latest=timelinePage(f.store,f.c,undefined,30,[id]);
+  expect(latest.messages.some(m=>m.id===id)).toBe(false);
+  expect(display(latest.refreshedMessages!)).toBe(display(initial.messages));
+  const older=timelinePage(f.store,f.c,latest.nextBefore!);
+  expect(display(older.messages)).toBe(display(initial.messages));
+  expect(f.store.require<{text:string}>("SELECT text FROM run_stream_messages WHERE message_id='review'").text).toBe(raw);
+ }finally{f.store.close();}
 });

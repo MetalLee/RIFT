@@ -23,7 +23,7 @@ export function applyMessageEvent(page: ChatPage, event: WorkspaceEvent): ChatPa
     }
     const message:ChatMessage={id,workspaceId:page.conversation.workspaceId,conversationId:page.conversation.id,clientMessageId:null,recipientAgentId:null,
       senderType:'agent',senderAgentId:agentId,role:'assistant',kind:'chat',content:(payload.replace?'':previous?.content??'')+payload.delta,
-      status:row.status,version:row.version,createdAt:row.createdAt,...isRun?{runId:event.entityId,taskId}:{sourceTurnId:event.entityId}};
+      status:row.status,version:row.version,createdAt:row.createdAt,...isRun?{runId:event.entityId,taskId,runtimeMessageKind:row.kind}:{sourceTurnId:event.entityId}};
     return {...page,snapshotCursor:event.seq,messages:[...page.messages.filter(item=>item.id!==id),message],turns:page.turns.map(turn=>turn.id===event.entityId?{...turn,version:Math.max(turn.version,payload.turnVersion??0)}:turn)};
   }
   if(page.timeline&&event.type==='turn.activity')return {...page,snapshotCursor:event.seq};

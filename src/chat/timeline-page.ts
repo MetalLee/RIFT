@@ -42,6 +42,7 @@ export function timelinePage(store:RiftStore,conversation:Conversation,before?:s
     const more=candidates.length>limit,selected=candidates.slice(0,limit).reverse();
     const hydrate=(entry:Entry):ChatMessage=>{
       if(entry.source==='message')return store.require<ChatMessage>(`SELECT m.*,i.status delivery_status,i.scope delivery_scope,i.error delivery_reason FROM messages m LEFT JOIN agent_inbox i ON i.message_id=m.id WHERE m.id=?`,entry.ref);
+      let runtimeMessageKind:ChatMessage['runtimeMessageKind'];
       let owner:string,content:string,status:string,version:number,sourceTurnId:string|undefined,runId:string|undefined,taskId:string|undefined;
       if(entry.source==='turn'){
         const s=store.require<StreamMessage&{agentId:string;turnStatus:string}>('SELECT s.*,t.agent_id,t.status turn_status FROM turn_stream_messages s JOIN agent_turns t ON t.id=s.turn_id WHERE s.seq=?',entry.ref);
@@ -49,13 +50,14 @@ export function timelinePage(store:RiftStore,conversation:Conversation,before?:s
       }else if(entry.source==='run'){
         const s=store.require<RunStreamMessage&{runStatus:string}>('SELECT s.*,r.role_id,r.task_id,r.status run_status FROM run_stream_messages s JOIN runs r ON r.id=s.run_id WHERE s.seq=?',entry.ref);
         owner=s.roleId;content=s.text;status=s.status==='streaming'&&!['preparing','running'].includes(s.runStatus)?'interrupted':s.status;version=s.version;runId=s.runId;taskId=s.taskId;
-        if(s.kind==='final'&&s.status==='completed'){try{const result=JSON.parse(content);if(result?.schemaVersion===1&&result.runId===runId&&typeof result.summary==='string')content=result.summary;}catch{/* Plain text remains unchanged. */}}
+        // Preserve raw content and stream kind; clients format only at render time.
+        runtimeMessageKind=s.kind;
       }else{
         const t=store.require<AgentTurn>('SELECT id,agent_id,status,version FROM agent_turns WHERE id=?',entry.ref);
         owner=t.agentId;content=store.all<{text:string}>('SELECT text FROM message_chunks WHERE turn_id=? ORDER BY seq',t.id).map(c=>c.text).join('');status=['queued','running','stopping'].includes(t.status)?'streaming':'interrupted';version=t.version;sourceTurnId=t.id;
       }
       return {id:entry.key,workspaceId:conversation.workspaceId,conversationId:conversation.id,clientMessageId:null,recipientAgentId:null,
-        role:'assistant',senderType:'agent',senderAgentId:owner,kind:'chat',content,status,version,createdAt:entry.at,sourceTurnId,runId,taskId};
+        role:'assistant',senderType:'agent',senderAgentId:owner,kind:'chat',content,status,version,createdAt:entry.at,sourceTurnId,runId,taskId,...runtimeMessageKind?{runtimeMessageKind}:{}};
     };
     const messages=selected.map(hydrate),refreshedMessages=refreshEntries.map(hydrate);
     const ids=[...new Set([...messages,...refreshedMessages].flatMap(m=>m.sourceTurnId?[m.sourceTurnId]:[]))];
