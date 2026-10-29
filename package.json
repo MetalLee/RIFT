@@ -20,11 +20,11 @@
   },
   "scripts": {
     "build": "pnpm build:protocol && tsc -p tsconfig.build.json && pnpm build:ui",
-    "build:ui": "pnpm build:protocol && vite build --config ui/vite.config.ts ui",
+    "build:ui": "pnpm build:protocol && pnpm build:ui:prepared",
     "dev:ui": "pnpm build:protocol && vite --config ui/vite.config.ts ui",
     "typecheck": "pnpm build:protocol && tsc --noEmit && pnpm typecheck:ui",
-    "typecheck:ui": "pnpm build:protocol && tsc -p ui/tsconfig.json",
-    "test:ui": "pnpm build:protocol && vitest run ui/src/protocol-contract.test.ts ui/src/state.test.ts ui/src/api.test.ts ui/src/chat-state.test.ts ui/src/task-order.test.ts ui/src/stream-state.test.tsx ui/src/workspace-stream.test.ts ui/src/chat-timeline.test.ts ui/src/skill-library.test.tsx ui/src/task-evidence.test.tsx ui/src/decision-events.test.tsx ui/src/agent-model-settings.test.tsx ui/src/secondary-buttons.test.tsx",
+    "typecheck:ui": "pnpm build:protocol && pnpm typecheck:ui:prepared",
+    "test:ui": "pnpm build:protocol && pnpm test:ui:prepared",
     "test": "pnpm build:protocol && vitest run",
     "test:stream": "vitest run tests/core/safe-stream.test.ts tests/core/native-codex.test.ts tests/core/dsh-chat-injection.test.ts tests/acceptance/live-agent-stream.test.ts tests/acceptance/live-dsh-stream.test.ts tests/acceptance/collaboration-review.test.ts tests/acceptance/chat-orchestration-review.test.ts tests/acceptance/browser-service.test.ts tests/acceptance/management-security.test.ts tests/acceptance/conversation-titles.test.ts tests/core/connection-worktree-migration.test.ts tests/core/native-sessions.test.ts tests/core/chat-context.test.ts tests/core/chat-connection-recovery.test.ts tests/core/chat-repository-access.test.ts ui/src/stream-state.test.tsx ui/src/workspace-stream.test.ts ui/src/chat-timeline.test.ts ui/src/chat-state.test.ts ui/src/api.test.ts",
     "probe:stream": "tsx scripts/live-stream-probe.ts",
@@ -35,7 +35,11 @@
     "poc:tools": "tsx scripts/lead-tools-probe.ts",
     "build:protocol": "pnpm --filter @rift/protocol build",
     "test:protocol": "pnpm build:protocol && tsc -p tests/protocol/tsconfig.json && node scripts/check-protocol.mjs && vitest run tests/protocol ui/src/protocol-contract.test.ts",
-    "test:built-cli": "node scripts/check-built-cli.mjs"
+    "test:built-cli": "node scripts/check-built-cli.mjs",
+    "build:ui:prepared": "vite build --config ui/vite.config.ts ui",
+    "typecheck:ui:prepared": "tsc -p ui/tsconfig.json",
+    "test:ui:prepared": "vitest run ui/src tests/scripts/frontend-check-profile.test.ts",
+    "test:ui:browser": "node scripts/check-ui-browser.mjs"
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.5",

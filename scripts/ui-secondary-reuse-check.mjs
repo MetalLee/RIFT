@@ -26,6 +26,7 @@ const saved = [{ id: 'conn-1', name: '示例连接', protocol: 'openai-responses
 let verifyDelay = false;
 
 const browser = await chromium.launch({ headless: true });
+try {
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
 const page = await context.newPage();
 const errors = []; page.on('pageerror', e => errors.push(e.message));
@@ -157,4 +158,4 @@ await open('tasks'); await byName('准备重试').click(); await page.screenshot
 assert.deepEqual(errors, []);
 assert.deepEqual(writes, ['/connections/conn-1/verify'], 'only the verify click should write');
 console.log(JSON.stringify({ checked: report.length, report, writes }, null, 1));
-await browser.close();
+} finally { await browser.close(); }
