@@ -7,6 +7,7 @@ import { installedSkills } from '../skill/runtime.js';
 import { WorkspaceCommands, cliEnvelope } from '../application/workspace-commands.js';
 import { installWorkspaceSkill } from '../skill/default.js';
 import { workspaceRepositoryAccess } from '../agent/repository-access.js';
+import { createWorkspaceRepositoryReadTools } from '../agent/repository-read.js';
 import { createRepositoryShell } from '../agent/repository-shell.js';
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools';
 import type { Context } from '@deepseek-ai/cordis';
@@ -184,8 +185,15 @@ export class RiftHostService implements ApiHandler {
     invariant(connection,'START_NOT_PUBLISHED','Configure a supported execution connection for this text-analysis Agent.');
     this.validateChatConnection(connection);
     const runtime:AgentRuntime=connection.runtime==='dsh'?new DshChatRuntime(this.ctx,connection.provider!):this.chatRuntimes.get(connection.runtime)!;
-    const session=runtime.persistentSessions?nativeSession(this.store,{workspaceId:role.workspaceId,scope:'task',scopeId:input.task.id,agentId:role.id,cwd:input.cwd,configuration:{connection,mode:'text-analysis',prompt:role.prompt,skills:input.run.providerSnapshot.skillInstructions??'',tools:(input.tools??[]).map(({name,description,inputSchema})=>({name,description,inputSchema}))}}):undefined;
-    const handle=await runtime.start({onEvent:observeNativeRun(input.onProgress,input.onEvent),workspaceId:role.workspaceId,agentId:role.id,turnId:input.run.id,cwd:input.cwd,model:connection.model,reasoningEffort:connection.reasoningEffort,...session?{session:sessionCallbacks(this.store,session,input.run.id,input.cwd,input.onAccepted)}:{},instructions:`You are executing a registered text-only analysis task. Analyze only the supplied text, do not access files or delegate. The latest task envelope and runId supersede previous execution details.\n${role.prompt}\n${input.run.providerSnapshot.skillInstructions??''}`,messages:[{role:'user',content:input.prompt}],tools:input.tools??[],signal:input.signal});
+    // Resolve current workspace associations even for repository-free workflows.
+    // Never pass writable repositoryAccess to this analysis runtime.
+    const access=await workspaceRepositoryAccess(this.store,role.workspaceId);
+    const repositories=this.repositories.list(role.workspaceId).filter(repo=>access?.repositoryPaths.includes(repo.canonicalPath))
+      .sort((a,b)=>Number(b.id===this.store.workspace(role.workspaceId).defaultRepositoryId)-Number(a.id===this.store.workspace(role.workspaceId).defaultRepositoryId))
+      .map(repo=>({id:repo.id,name:path.basename(repo.canonicalPath),path:repo.canonicalPath}));
+    const tools=[...(input.tools??[]),...createWorkspaceRepositoryReadTools(repositories)];
+    const session=runtime.persistentSessions?nativeSession(this.store,{workspaceId:role.workspaceId,scope:'task',scopeId:input.task.id,agentId:role.id,cwd:input.cwd,configuration:{connection,mode:'workspace-read-only-analysis-v1',repositories,prompt:role.prompt,skills:input.run.providerSnapshot.skillInstructions??'',tools:tools.map(({name,description,inputSchema})=>({name,description,inputSchema}))}}):undefined;
+    const handle=await runtime.start({onEvent:observeNativeRun(input.onProgress,input.onEvent),workspaceId:role.workspaceId,agentId:role.id,turnId:input.run.id,cwd:input.cwd,model:connection.model,reasoningEffort:connection.reasoningEffort,...session?{session:sessionCallbacks(this.store,session,input.run.id,input.cwd,input.onAccepted)}:{},instructions:`${role.prompt}\n${input.run.providerSnapshot.skillInstructions??''}\nYou are executing a registered read-only analysis task. Analyze the supplied material and inspect the current workspace repositories with rift_list_files and rift_read_file when evidence is needed. Paths are relative to the selected repositoryId. ${repositories.length?'The workspace default repository is selected when repositoryId is omitted.':'No repositories are registered; analyze the supplied material and report missing evidence.'} Do not modify files or Git metadata, execute shell commands, commit, push, create a PR, or delegate. The latest task envelope and runId supersede previous execution details. Return findings as natural language with file references; distinguish inspected evidence from assumptions.`,messages:[{role:'user',content:input.prompt}],tools,signal:input.signal});
     return{childId:`text-${input.run.id}`,dispose:()=>handle.dispose(),result:handle.result.then(result=>({stopReason:result.stopReason,text:JSON.stringify({schemaVersion:1,taskId:input.task.id,runId:input.run.id,outcome:'completed',summary:result.text,changedPaths:[],checksClaimed:[],blockingReasons:[]})}))};
   }
   private chatTools(turn: AgentTurn): RuntimeTool[] {
@@ -234,7 +242,7 @@ export class RiftHostService implements ApiHandler {
       return tools;
     }
     register('rift_delegate','Atomically assign an existing task or task draft to one developer, save its collaboration message, and persist dispatch. Returns task/request/message receipts. Do not wait for task completion here.',delegateSchema,input=>this.collaboration.delegate(turn,input));
-    register('rift_workflow_start', 'Start or attach this workspace workflow. Use mode analysis for registered text-only tasks without Git; code mode selects repositoryIds explicitly when more than one is connected.', z.object({ goal: z.string().min(1).max(32000), mode:z.enum(['code','analysis']).default('code'), repositoryIds: z.array(z.string().min(1)).min(1).optional() }).strict(), input => startWorkflow(input.goal, input.repositoryIds,input.mode));
+    register('rift_workflow_start', 'Start or attach this workspace workflow. Use mode analysis for read-only tasks that can inspect registered workspace repositories without Git integration; code mode selects repositoryIds explicitly when more than one is connected.', z.object({ goal: z.string().min(1).max(32000), mode:z.enum(['code','analysis']).default('code'), repositoryIds: z.array(z.string().min(1)).min(1).optional() }).strict(), input => startWorkflow(input.goal, input.repositoryIds,input.mode));
     const taskOwned = (taskId: string, workflowId: string) => invariant(this.store.task(taskId).workflowId === workflowId, 'CROSS_WORKFLOW', 'Task does not belong to this workspace workflow.');
     register('rift_plan_submit', 'Submit a durable dependency plan to the current workflow.', schemas.planSchema, input => this.collaboration.plan(turn,{ workflowId: activeWorkflow().id, ...schemas.planForCoordinator(input) }));
     register('rift_plan_replan', 'Update unstarted tasks using current versions.', schemas.replanSchema, input => { const workflowId = activeWorkflow().id; for (const update of input.updates) taskOwned(update.taskId, workflowId); return this.coordinator.replan({ workflowId, ...input }); });

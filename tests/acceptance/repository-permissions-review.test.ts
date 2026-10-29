@@ -244,7 +244,7 @@ describe('explicit unrestricted Agent execution',()=>{
     }finally{vi.unstubAllEnvs();await f.close();}
   });
 
-  it.each(['discussion','develop','review','analysis'] as const)('confirms full-access native policy and exposes the Host shell for %s',async mode=>{
+  it.each(['discussion','develop','review'] as const)('confirms full-access native policy and exposes the Host shell for %s',async mode=>{
     const f=await fixture(),p=protocol(mode);
     try {
       const input=nativeInput(f.repositories[0]!,[f.repositories[0]!]);(input.repositoryAccess as any).sandboxMode='unrestricted';
@@ -253,6 +253,17 @@ describe('explicit unrestricted Agent execution',()=>{
       expect(request.sandbox).toBe('danger-full-access');expect(request.approvalPolicy).toBe('never');
       expect((request.dynamicTools as {name:string}[]).some(t=>t.name==='rift_exec_command')).toBe(true);
       expect(p.requests.find(r=>r.method==='turn/start')!.params.sandboxPolicy).toEqual({type:'dangerFullAccess'});
+      await handle.dispose();
+    }finally{p.close();await f.close();}
+  });
+  it('keeps analysis read-only even with operator unrestricted mode',async()=>{
+    const f=await fixture(),p=protocol('analysis');
+    try{
+      const input=nativeInput(f.repositories[0]!,[f.repositories[0]!]);input.repositoryAccess!.sandboxMode='unrestricted';
+      const handle=await p.runtime.start(input);const request=p.requests.find(r=>r.method==='thread/start')!.params;
+      expect(request.sandbox).toBe('read-only');
+      const names=(request.dynamicTools as {name:string}[]).map(t=>t.name);
+      expect(names).toContain('rift_read_file');expect(names).toContain('rift_list_files');expect(names).not.toContain('rift_exec_command');
       await handle.dispose();
     }finally{p.close();await f.close();}
   });
