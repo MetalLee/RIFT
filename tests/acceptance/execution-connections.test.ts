@@ -1,3 +1,4 @@
+import { DshChatRuntime } from '../../src/chat/dsh-runtime.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -127,4 +128,29 @@ describe('Agent execution connections without preconfigured instances', () => {
       expect(start).toHaveBeenCalledWith(expect.objectContaining({ model: 'gpt-6-astra', reasoningEffort: 'high', tools: [expect.objectContaining({name:'rift_send_message'})] }));
     } finally { await f.host.close(); await rm(home, { recursive: true, force: true }); }
   });
+});
+
+it('configures Lead execution and discussion independently with atomic version checks',async()=>{
+ const home=await mkdtemp(path.join(tmpdir(),'rift-lead-connections-')),f=fixture(home);
+ try{
+  const workspace=await f.call('POST','/workspaces',{name:'Lead split'}) as {id:string;version:number};
+  const data=await f.call('GET','/workspaces/'+workspace.id) as UiWorkspaceDetail;
+  const lead=data.roles.find(role=>role.purpose==='lead')!;
+  const execution={runtime:'dsh',provider:'test-api',model:'lead-execution'};
+  const chat={runtime:'dsh',provider:'test-api',model:'lead-discussion'};
+  const updated=await f.call('PATCH',`/workspaces/${workspace.id}/agents/${lead.id}`,{expectedVersion:lead.version,expectedWorkspaceVersion:data.workspace.version,executionConnection:execution,chatConnection:chat}) as BrowserAgent;
+  expect(updated.chatConnection).toEqual(chat);
+  expect((await f.call('GET','/workspaces/'+workspace.id) as UiWorkspaceDetail).workspace.leadConnection).toEqual(execution);
+  expect(f.host.chat.validateAgentConnection(workspace.id,lead.id)).toEqual(execution);
+  await expect(f.call('PATCH',`/workspaces/${workspace.id}/agents/${lead.id}`,{expectedVersion:updated.version,expectedWorkspaceVersion:data.workspace.version,executionConnection:{...execution,model:'stale'},chatConnection:{...chat,model:'stale'}})).rejects.toMatchObject({code:'VERSION_CONFLICT'});
+  expect((f.host.store.role(lead.id) as BrowserAgent).chatConnection).toEqual(chat);
+  const conversation=f.host.chat.createConversation(workspace.id,'Language routing');
+  f.host.store.exec("INSERT INTO messages(id,workspace_id,conversation_id,role,sender_type,kind,visibility,content,status,created_at) VALUES('language-input',?,?,'user','user','chat','public','请用简体中文分析','completed','now')",workspace.id,conversation.id);
+  f.host.store.exec("INSERT INTO agent_turns(id,workspace_id,conversation_id,message_id,agent_id,status,configuration,created_at) VALUES('translation-source',?,?,'language-input',?,'completed','{}','now')",workspace.id,conversation.id,lead.id);
+  const translationStart=vi.spyOn(DshChatRuntime.prototype,'start').mockResolvedValue({result:Promise.resolve({text:'完整中文译文',stopReason:'completed'}),dispose:async()=>{}});
+  const translated=await f.host.summaryTranslator.forOwner({workspaceId:workspace.id,agentId:lead.id,conversationId:conversation.id,ownerType:'turn',ownerId:'translation-source'})('Public English summary');
+  expect(translated).toBe('完整中文译文');
+  expect(translationStart).toHaveBeenCalledWith(expect.objectContaining({model:'lead-discussion',tools:[],messages:[expect.objectContaining({content:expect.stringContaining('请用简体中文分析')})]}));
+
+ }finally{await f.host.close();await rm(home,{recursive:true,force:true});}
 });

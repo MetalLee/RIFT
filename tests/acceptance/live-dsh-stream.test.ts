@@ -58,10 +58,10 @@ describe('real DSH provider streaming and tool loop',()=>{
         gate=deferred<void>();reasoningGate=deferred<void>();tool=deferred<unknown>();
         const conversation=chat.createConversation(workspace.id,`Real DSH ${language}`);
         const turn=chat.send(workspace.id,conversation.id,{clientMessageId:`real-${language}`,content:`Inspect the repository (${language})`}).turn;
-        await until(()=>!!chat!.turn(workspace.id,turn.id).streamMessages?.some(message=>message.kind==='reasoning'&&message.text===reasoning));
+        await until(()=>!!chat!.turn(workspace.id,turn.id).firstModelEventAt);
         const thinking=chat.turn(workspace.id,turn.id);
         expect(thinking.status).toBe('running');
-        expect(thinking.streamMessages?.filter(message=>message.text).map(message=>message.kind)).toEqual(['reasoning']);
+        expect(thinking.streamMessages?.some(message=>message.kind==='reasoning')).toBeFalsy();
         reasoningGate.resolve();
         await until(()=>chat!.turn(workspace.id,turn.id).phase==='tool');
         const inTool=chat.turn(workspace.id,turn.id);
