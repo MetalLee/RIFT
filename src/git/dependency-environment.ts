@@ -75,7 +75,7 @@ async function tree(directory: string, options: { copyTo?: string; immutable?: b
   return { digest: hash.digest('hex'), bytes };
 }
 
-/** Fixed script-free npm template. Full source tree binds workspaces/local package inputs too. */
+/** Fixed script-free npm template; only proven, bounded dependency sources may be restored. */
 export async function npmEnvironmentKey(input: { cwd: string; binding: EvidenceBinding; environment: DependencyEnvironment }): Promise<string> {
   const files = (await gitOk(input.cwd, ['ls-files', '-z'])).split('\0').filter(Boolean);
   if (!files.includes('package.json') || !files.includes('package-lock.json') || files.some(file => file.split('/').some(sensitive) || file.split('/').includes('node_modules'))) throw new Error('Uncacheable manifest, credential configuration or tracked dependency output');
@@ -85,26 +85,78 @@ export async function npmEnvironmentKey(input: { cwd: string; binding: EvidenceB
     if (!stat.isFile()) throw new Error('Source links/submodules require a fresh install');
     inputs.push([file, await hashFile(source)]);
   }
+  // npm-shrinkwrap takes precedence over package-lock; never validate the unused lock.
+  if (files.some(file => path.basename(file) === 'npm-shrinkwrap.json')) throw new Error('Unsupported shrinkwrap input');
+  const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
+  const source = (value: unknown, relativeTo = ''): void => {
+    if (typeof value !== 'string' || !value.trim()) throw new Error('Missing dependency source');
+    if (value.startsWith('file:')) {
+      // shortcut: only tracked, plain relative tarballs, extend only with complete input proofs.
+      const local = value.slice(5);
+      if (!/^[a-zA-Z0-9_./-]+\.tgz$/.test(local) || path.isAbsolute(local) || local.split('/').includes('..') || !files.includes(path.normalize(path.join(relativeTo, local)))) throw new Error('External/mutable local dependency requires fresh install');
+    } else {
+      const remote = new URL(value);
+      if (remote.protocol !== 'https:' || remote.username || remote.password || remote.search || remote.hash) throw new Error('Unbounded or authenticated dependency source');
+    }
+  };
+  const manifest = (value: Record<string, unknown>, relativeTo = ''): void => {
+    if (['workspaces', 'overrides', 'bundleDependencies', 'bundledDependencies'].some(key => key in value)) throw new Error('Unsupported dependency inputs');
+    for (const field of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies', 'requires']) {
+      if (!(field in value)) continue;
+      const dependencies = value[field];
+      if (!object(dependencies)) throw new Error('Unsupported dependency declarations');
+      for (const spec of Object.values(dependencies)) {
+        if (typeof spec !== 'string' || !spec.trim()) throw new Error('Missing dependency source');
+        // Registry versions/ranges/tags resolve only through the separately validated lock entries.
+        if (!/^(?:[v\d~^<>=*][v\d\s.xX*~^<>=|+-]*|[a-zA-Z][a-zA-Z0-9_-]*)$/.test(spec)) source(spec, relativeTo);
+      }
+    }
+  };
+  for (const file of files.filter(file => path.basename(file) === 'package.json')) {
+    const value: unknown = JSON.parse(await readFile(path.join(input.cwd, file), 'utf8'));
+    if (!object(value)) throw new Error('Unsupported manifest');
+    manifest(value, path.dirname(file));
+  }
   const lock = await readFile(path.join(input.cwd, 'package-lock.json'), 'utf8');
   // npm can embed credentials in URLs; do not persist a snapshot from such an installation.
   if (/(?:https?:\/\/[^\s"/]*@|_auth|token|password)/i.test(lock)) throw new Error('Credential-bearing lockfile excluded');
-  const packages = JSON.parse(lock).packages;
-  if (!packages || typeof packages !== 'object') throw new Error('Unsupported lockfile');
-  for (const item of Object.values(packages) as { resolved?: string; integrity?: string; link?: boolean }[]) {
-    if (item.link) throw new Error('Linked dependencies require fresh install');
-    if (!item.resolved) continue;
-    if (item.resolved.startsWith('file:')) {
-      const local = path.relative(input.cwd, path.resolve(input.cwd, item.resolved.slice(5)));
-      if (!files.includes(local) || !local.endsWith('.tgz')) throw new Error('External/mutable local dependency requires fresh install');
+  const parsed = JSON.parse(lock), packages: unknown = parsed.packages;
+  if (![2, 3].includes(parsed.lockfileVersion) || !object(packages) || !object(packages[''])) throw new Error('Unsupported lockfile');
+  const dependency = (item: unknown): void => {
+    if (!object(item) || item.link || item.inBundle || typeof item.version !== 'string' || !/^\d+\.\d+\.\d+(?:-[\w.-]+)?(?:\+[\w.-]+)?$/.test(item.version)) throw new Error('Unbounded dependency entry');
+    source(item.resolved);
+    if (!(typeof item.resolved === 'string' && item.resolved.startsWith('file:'))) {
+      const integrity = typeof item.integrity === 'string' ? /^(sha256|sha384|sha512)-([A-Za-z0-9+/]+={0,2})$/.exec(item.integrity) : null;
+      if (!integrity || Buffer.from(integrity[2]!, 'base64').toString('base64') !== integrity[2] || Buffer.from(integrity[2]!, 'base64').length !== Number(integrity[1]!.slice(3)) / 8) throw new Error('Unverifiable dependency integrity');
+    }
+  };
+  for (const [name, item] of Object.entries(packages)) {
+    if (!object(item)) throw new Error('Unsupported dependency entry');
+    manifest(item, name);
+    if (name === '') {
+      if ('resolved' in item) source(item.resolved);
     } else {
-      const remote = new URL(item.resolved);
-      if (remote.protocol !== 'https:' || remote.username || remote.password || remote.search || remote.hash || !item.integrity) throw new Error('Unbounded or authenticated dependency source');
+      if (!/^(?:node_modules\/(?:@[\w.-]+\/)?[\w.-]+\/)*node_modules\/(?:@[\w.-]+\/)?[\w.-]+$/.test(name) || name.split('/').some(part => part === '.' || part === '..')) throw new Error('Workspace/unsupported dependency path requires fresh install');
+      dependency(item);
     }
   }
+  // v2 also carries a legacy dependency graph consumed by older npm versions.
+  const legacy = (items: unknown): void => {
+    if (!object(items)) throw new Error('Unsupported legacy dependency graph');
+    for (const item of Object.values(items)) {
+      dependency(item);
+      if (object(item)) {
+        if ('requires' in item) manifest({ requires: item.requires }, 'node_modules');
+        if ('dependencies' in item) legacy(item.dependencies);
+      }
+    }
+  };
+  if ('dependencies' in parsed) legacy(parsed.dependencies);
   const npm = await realpath('/usr/local/bin/npm'), npmRoot = path.resolve(path.dirname(npm), '..');
   const version = JSON.parse(await readFile(path.join(npmRoot, 'package.json'), 'utf8')).version;
   const report = process.report.getReport() as { header?: { glibcVersionRuntime?: string; glibcVersionCompiler?: string } };
-  return fingerprint({ schema: 1, trust: [input.binding.workspaceId, input.binding.repositoryId, input.binding.repositoryFingerprint], inputs,
+  // v2 retires snapshots published before complete dependency source validation.
+  return fingerprint({ schema: 2, trust: [input.binding.workspaceId, input.binding.repositoryId, input.binding.repositoryFingerprint], inputs,
     tree: await gitOk(input.cwd, ['rev-parse', 'HEAD^{tree}']), environment: input.environment, args: npmInstallArgs(input.environment),
     sandbox: environmentFingerprint(), abi: process.versions.modules, libc: report.header?.glibcVersionRuntime, node: await hashFile(await realpath('/usr/local/bin/node')),
     npm: { path: npm, version, tree: await tree(npmRoot) } });

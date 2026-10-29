@@ -34,7 +34,8 @@ checks:
 
 - 键覆盖 workspace ID、repository ID/真实 Git 元数据目录指纹；平台、架构、内核、Node 版本/ABI、运行时 libc、实际沙箱 Node 二进制内容；npm 版本及整个 npm 工具目录内容。
 - 覆盖完整 Git 树及所有跟踪文件实际内容、manifest/lockfile、模板版本与固定安装参数（包括 offline）。保守绑定整个源码树，不只检查 lockfile。恢复配置也进入候选/基线证据配置指纹。
-- 不缓存带 `.npmrc` 等敏感配置的树、源码符号链接/子模块、已跟踪 `node_modules`、外部/可变本地依赖、无 integrity 的远程依赖、含认证信息的 lockfile。支持有 integrity 且无认证/查询参数的 HTTPS 锁定包及跟踪在仓库内的 `.tgz`。其他输入不能被界定时，仍在原私有 HOME 的 npm 下载缓存配置下重新安装，不发布依赖快照。
+- 读取快照前统一验证跟踪的 manifest、lock packages 及 v2 legacy 图的来源；只有实际根条目 `packages[""]` 可以没有 `resolved`。非根缺失/空来源、缺根/不支持 lock 版本、links/workspaces、overrides/bundled、shrinkwrap、不能证明输入的格式均只做真实安装，不发布也不消费快照。键 schema 从 1 升至 2，旧键不再命中；旧条目仍受既有容量回收/租约保护，不绕过未知清理。
+- 不缓存带 `.npmrc` 等敏感配置的树、源码符号链接/子模块、已跟踪 `node_modules`、外部/可变本地依赖、无有效 SHA-256/384/512 integrity 的远程依赖、含认证信息的 lockfile。支持有 integrity 且无认证/查询参数的 HTTPS 锁定包及来源明确且路径为普通相对路径、跟踪在仓库内的 `.tgz`（不接受绝对路径、`..`、URL 编码等路径形式）。其他输入不能被界定时，仍在原私有 HOME 的 npm 下载缓存配置下重新安装，不发布依赖快照。
 - 只保存 npm ci 产生的 `node_modules`，不保存 HOME、认证配置、构建输出或开发者后续改动。检测到敏感文件名、注册凭据/凭据模式、设备等特殊文件、绝对/越界/悬空/循环链接时，放弃发布，保留本次成功安装供当前真实检查使用。凭据检测保守，普通包源码也可能触发回退。
 - 完成项位于 `<managedRoot>/dependency-environments/ready/<key>`。成功安装后复制到 staging，校验内容和可执行位，设只读，再原子改名发布。缓存根从不挂进检查沙箱。
 - 暖恢复先校验快照，再复制到每项检查自己的新 `node_modules`；无硬链接、无共享可写依赖、无跨候选 HOME。允许的相对链接必须完全落在依赖树内。检查随后的写入不会回写快照。
@@ -62,6 +63,6 @@ checks:
 
 ## 验证与限制
 
-确定性 fixture 在本地生成 `.tgz` 并以 `npm ci --offline` 在真实沙箱安装，项目和依赖的 `postinstall: exit ...` 均不运行；不依赖 npm 网络可达。覆盖冷暖、真实检查失败仍阻断、按任务 inode/HOME 隔离、同键 DAG 排队、跨 Host/SIGKILL、租约回收、失败/取消、腐坏、越界链接、凭据、配置失效及关闭。日志与实测见 [验证记录](verification/b2-environment.md)。
+确定性 fixture 在本地生成 `.tgz` 并以 `npm ci --offline` 在真实沙箱安装，项目和依赖的 `postinstall: exit ...` 均不运行；不依赖 npm 网络可达。覆盖冷暖、真实检查失败仍阻断、按任务 inode/HOME 隔离、同键 DAG 排队、跨 Host/SIGKILL、租约回收、失败/取消、腐坏、越界链接、凭据、配置失效及关闭。另有同 commit/lock 不变、Git 元数据目录外部 tarball 变化的真实冷暖/禁用对照，均真实安装并检查新内容；HTTPS 来源以本地内容寻址下载缓存种子完成真实离线安装及暖命中（未测线上 registry）。保守语法白名单也可能使合法复杂版本表达式回退。日志与实测见 [验证记录](verification/b2-environment.md)。
 
 不提供 pnpm/yarn/Python、任意安装脚本模板、共享下载目录、跨引用调度、CoW 或全项目性能保证。完整输入/工具链哈希和复制有成本，小项目可能无收益。未实测真实断电、另一 OS/ABI/工具链升级、在线 registry、生产大型依赖树；这些不被离线 fixture 通过所替代。Host 精确候选检查与独立审核仍是后续验收门禁。

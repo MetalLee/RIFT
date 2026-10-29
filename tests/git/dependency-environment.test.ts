@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Candidate, GitContext } from '../../src/contracts/index.js';
 import { DependencyEnvironmentCache, npmEnvironmentKey, type DependencyEnvironment } from '../../src/git/dependency-environment.js';
+import { sandboxCommand } from '../../src/agent/filesystem-sandbox.js';
 import { LocalGitService } from '../../src/git/integration.js';
 import { CandidateEvidenceError, configurationFingerprint } from '../../src/git/evidence.js';
 import { key } from '../../src/git/worktree-binding.js';
@@ -93,6 +94,69 @@ it('runs real offline npm ci cold/warm, copies private writable inodes, and alwa
   console.log('dependency npm-ci actual offline performance ms', JSON.stringify({ cold: cold.checks![0]!.dependencyEnvironment, warm: warm.checks![0]!.dependencyEnvironment, coldCheck: cold.checks![0]!.durationMs, warmCheck: warm.checks![0]!.durationMs }));
 });
 
+it('rejects uncertain sources before reading old snapshots and real offline npm sees external tarball changes with the same commit/lock', async () => {
+  const f = await fixture();
+  const external = path.join(f.repo, '.git', 'external.tgz');
+  await writeFile(external, await readFile(path.join(f.repo, 'dependency.tgz')));
+  const manifestPath = path.join(f.repo, 'package.json'), lockPath = path.join(f.repo, 'package-lock.json');
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  manifest.dependencies['offline-dependency'] = 'file:' + external;
+  const lock = JSON.parse(await readFile(lockPath, 'utf8'));
+  lock.packages[''] = manifest;
+  lock.packages['node_modules/offline-dependency'] = { version: '1.0.0' };
+  await writeFile(manifestPath, JSON.stringify(manifest)); await writeFile(lockPath, JSON.stringify(lock));
+  await gitOk(f.repo, ['add', '.']); await gitOk(f.repo, ['commit', '-m', 'external input without resolved']);
+  const head = await gitOk(f.repo, ['rev-parse', 'HEAD']), savedLock = await readFile(lockPath, 'utf8');
+  const context = { ...f.ctx, workflow: { ...f.ctx.workflow, baseCommit: head }, task: { ...f.ctx.task, sourceHead: head } };
+  const run = (enabled: boolean, id: string, expected: string) => f.candidate(f.service(enabled, [f.command('check', `require('assert').equal(require('offline-dependency'),${JSON.stringify(expected)});console.log('real check executed: '+require('offline-dependency'));`)]), id, context);
+  const cold = await run(true, 'external-cold', 'installed');
+  await writeFile(path.join(f.root, 'pack/package/index.js'), 'module.exports="changed-external";\n');
+  expect((await execute('tar', ['-czf', external, '-C', path.join(f.root, 'pack'), 'package'], f.root)).exitCode).toBe(0);
+  const warm = await run(true, 'external-warm', 'changed-external');
+  const disabled = await run(false, 'external-disabled', 'changed-external');
+  for (const candidate of [cold, warm, disabled]) {
+    expect(candidate.candidateHead).toBe(head);
+    expect(candidate.readiness!.status).toBe('ready');
+    expect(candidate.checks![0]!.dependencyEnvironment).toMatchObject({ status: 'fallback', restoreMs: 0 });
+    expect(candidate.checks![0]!.dependencyEnvironment!.key).toBeUndefined();
+    expect(candidate.checks![0]!.dependencyEnvironment!.installMs).toBeGreaterThan(0);
+    expect(candidate.checks![0]!.stdout).toContain('added 1 package');
+    expect(candidate.checks![0]!.stdout).toContain('real check executed');
+  }
+  expect(await gitOk(f.repo, ['rev-parse', 'HEAD'])).toBe(head);
+  expect(await readFile(lockPath, 'utf8')).toBe(savedLock);
+  await expect(lstat(path.join(f.managedRoot, 'dependency-environments'))).rejects.toMatchObject({ code: 'ENOENT' });
+  console.log('external tarball same-commit/lock real offline fallback', JSON.stringify([cold, warm, disabled].map(candidate => ({ head: candidate.candidateHead, environment: candidate.checks![0]!.dependencyEnvironment, stdout: candidate.checks![0]!.stdout }))));
+});
+
+it('keeps a real HTTPS integrity-verified remote source eligible for cold/warm reuse offline', async () => {
+  const f = await fixture(), home = path.join(f.root, 'remote-home');
+  const invoke = async (cwd: string, command: string) => {
+    const sandbox = await sandboxCommand([cwd], cwd, command, [], { home });
+    return execute(sandbox[0]!, sandbox.slice(1), cwd);
+  };
+  // Populate npm's content-addressed download cache locally; no network or registry substitute.
+  const seeded = await invoke(f.repo, 'npm cache add ./dependency.tgz --ignore-scripts --offline');
+  expect(seeded.exitCode, seeded.stderr).toBe(0);
+  const manifestPath = path.join(f.repo, 'package.json'), lockPath = path.join(f.repo, 'package-lock.json');
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8')), lock = JSON.parse(await readFile(lockPath, 'utf8'));
+  manifest.dependencies['offline-dependency'] = '^1.0.0'; lock.packages[''] = manifest;
+  lock.packages['node_modules/offline-dependency'].resolved = 'https://registry.npmjs.org/offline-dependency/-/offline-dependency-1.0.0.tgz';
+  await writeFile(manifestPath, JSON.stringify(manifest)); await writeFile(lockPath, JSON.stringify(lock));
+  await gitOk(f.repo, ['add', '.']); await gitOk(f.repo, ['commit', '-m', 'verified remote source']);
+  const input = { cwd: f.repo, binding: f.binding, environment, install: () => invoke(f.repo, 'npm ci --ignore-scripts --no-audit --no-fund --offline') };
+  const cold = await f.cache.prepare(input);
+  expect(cold.failure, cold.installation?.stderr).toBeUndefined(); expect(cold.evidence.status).toBe('miss');
+  expect(cold.installation!.stdout).toContain('added 1 package');
+  await rm(path.join(f.repo, 'node_modules'), { recursive: true });
+  let installs = 0;
+  const warm = await f.cache.prepare({ ...input, install: async () => { installs++; return input.install(); } });
+  expect(warm.evidence).toMatchObject({ status: 'hit', installMs: 0 }); expect(installs).toBe(0);
+  const check = await invoke(f.repo, `node -e "require('assert').equal(require('offline-dependency'),'installed');console.log('real remote-source check executed')"`);
+  expect(check.exitCode, check.stderr).toBe(0); expect(check.stdout).toContain('real remote-source check executed');
+  console.log('HTTPS locked source offline cold/warm', JSON.stringify({ cold: cold.evidence, warm: warm.evidence, check: check.stdout }));
+});
+
 it('single-flights concurrent real DAG installs and restores each node before allowing writes', async () => {
   const f = await fixture();
   const git = f.service(true, [f.command('a'), f.command('b')]);
@@ -174,6 +238,64 @@ it('keys bind complete source, manifests, lock/config, template/args and reposit
   const cmd = f.command();
   expect(configurationFingerprint(cmd, { mode: 'dag' }, [cmd], { enabled: true, maxBytes: 100 })).not.toBe(configurationFingerprint(cmd, { mode: 'dag' }, [cmd], { enabled: false, maxBytes: 100 }));
   expect(configurationFingerprint(cmd)).not.toBe(configurationFingerprint({ ...cmd, environment: { ...environment, templateVersion: 'v2' } }));
+});
+
+it('allows only the actual root to omit resolved and validates manifest plus both lock graphs before any cache access', async () => {
+  const f = await fixture();
+  const manifestPath = path.join(f.repo, 'package.json'), lockPath = path.join(f.repo, 'package-lock.json');
+  const originalManifest = await readFile(manifestPath, 'utf8'), originalLock = await readFile(lockPath, 'utf8');
+  const input = { cwd: f.repo, binding: f.binding, environment };
+  expect(JSON.parse(originalLock).packages[''].resolved).toBeUndefined();
+  // A pre-existing safe snapshot must not be consumed after inputs become unprovable.
+  expect((await f.prepare()).evidence.status).toBe('miss');
+  const cases: [string, (manifest: any, lock: any) => void][] = [
+    ['non-root missing resolved', (_m, l) => { delete l.packages['node_modules/offline-dependency'].resolved; }],
+    ['non-root empty resolved', (_m, l) => { l.packages['node_modules/offline-dependency'].resolved = ''; }],
+    ['root empty resolved', (_m, l) => { l.packages[''].resolved = ''; }],
+    ['unsupported lock version', (_m, l) => { l.lockfileVersion = 1; }],
+    ['missing root', (_m, l) => { delete l.packages['']; }],
+    ['workspace entry', (_m, l) => { l.packages.workspace = l.packages['node_modules/offline-dependency']; }],
+    ['traversing dependency path', (_m, l) => { l.packages['node_modules/../outside'] = l.packages['node_modules/offline-dependency']; }],
+    ['unsupported dependency path', (_m, l) => { l.packages['node_modules/pkg/lib/other'] = l.packages['node_modules/offline-dependency']; }],
+    ['linked entry', (_m, l) => { l.packages['node_modules/offline-dependency'].link = true; }],
+    ['manifest external file with safe lock', m => { m.dependencies['offline-dependency'] = 'file:../outside.tgz'; }],
+    ['manifest bare tarball', m => { m.dependencies['offline-dependency'] = 'outside.tgz'; }],
+    ['manifest empty source', m => { m.dependencies['offline-dependency'] = ''; }],
+    ['manifest missing source', m => { m.dependencies['offline-dependency'] = null; }],
+    ['manifest link', m => { m.dependencies['offline-dependency'] = 'link:../outside'; }],
+    ['manifest unsupported alias', m => { m.dependencies['offline-dependency'] = 'npm:other@1.0.0'; }],
+    ['manifest workspaces', m => { m.workspaces = ['../outside']; }],
+    ['manifest overrides', m => { m.overrides = { other: 'file:../outside.tgz' }; }],
+    ['lock root external source', (_m, l) => { l.packages[''].dependencies['offline-dependency'] = 'file:../outside.tgz'; }],
+    ['lock transitive unsupported source', (_m, l) => { l.packages['node_modules/offline-dependency'].optionalDependencies = { other: 'workspace:*' }; }],
+    ['lock external source', (_m, l) => { l.packages['node_modules/offline-dependency'].resolved = 'file:../outside.tgz'; }],
+    ['lock unsupported source', (_m, l) => { l.packages['node_modules/offline-dependency'].resolved = 'git+https://registry.example/pkg'; }],
+    ['lock missing integrity', (_m, l) => { l.packages['node_modules/offline-dependency'].resolved = 'HTTPS://registry.example/pkg.tgz'; delete l.packages['node_modules/offline-dependency'].integrity; }],
+    ['lock malformed integrity', (_m, l) => { Object.assign(l.packages['node_modules/offline-dependency'], { resolved: 'https://registry.example/pkg.tgz', integrity: 'sha512-AAAA' }); }],
+    ['legacy graph missing source', (_m, l) => { l.lockfileVersion = 2; l.dependencies = { other: { version: '1.0.0' } }; }],
+    ['legacy nested external source', (_m, l) => { l.lockfileVersion = 2; l.dependencies = { other: { ...l.packages['node_modules/offline-dependency'], dependencies: { nested: { version: '1.0.0', resolved: 'file:../outside.tgz' } } } }; }],
+  ];
+  for (const [name, mutate] of cases) {
+    const manifest = JSON.parse(originalManifest), lock = JSON.parse(originalLock); mutate(manifest, lock);
+    await writeFile(manifestPath, JSON.stringify(manifest)); await writeFile(lockPath, JSON.stringify(lock));
+    await expect(npmEnvironmentKey(input), name).rejects.toThrow();
+    const before = f.installs(), result = await f.prepare();
+    expect(result.evidence.status, name).toBe('fallback'); expect(result.evidence.key, name).toBeUndefined();
+    expect(f.installs(), name).toBe(before + 1);
+    expect(await readdir(path.join(f.cacheRoot, 'ready')), name).toHaveLength(1);
+  }
+  await writeFile(manifestPath, originalManifest); await writeFile(lockPath, originalLock);
+  const v2 = JSON.parse(originalLock); v2.lockfileVersion = 2;
+  v2.dependencies = { 'offline-dependency': v2.packages['node_modules/offline-dependency'] };
+  await writeFile(lockPath, JSON.stringify(v2));
+  expect(await npmEnvironmentKey(input)).toMatch(/^[a-f0-9]{64}$/);
+  await writeFile(lockPath, originalLock);
+  await mkdir(path.join(f.repo, 'nested'));
+  await writeFile(path.join(f.repo, 'nested/package.json'), originalManifest); await gitOk(f.repo, ['add', 'nested/package.json']);
+  await expect(npmEnvironmentKey(input)).rejects.toThrow('External/mutable');
+  await gitOk(f.repo, ['rm', '-f', 'nested/package.json']);
+  await writeFile(path.join(f.repo, 'npm-shrinkwrap.json'), originalLock); await gitOk(f.repo, ['add', 'npm-shrinkwrap.json']);
+  await expect(npmEnvironmentKey(input)).rejects.toThrow('shrinkwrap');
 });
 
 it('queues same-key builders but never merges their private writable destinations or HOME', async () => {
