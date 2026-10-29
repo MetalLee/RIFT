@@ -249,3 +249,102 @@ it('does not bypass retained resource ownership by starting a new candidate hist
   expect(next.checks).toEqual([]); expect(next.baselines).toBeUndefined();
   expect(await readdir(path.join(f.managedRoot, 'check-plan-lease'))).toHaveLength(1);
 });
+
+for (const holderPlan of [undefined, { mode: 'serial' }, { mode: 'dag' }] as const) for (const required of [true, false]) it(`blocks every check mode and baseline behind ${holderPlan?.mode ?? 'legacy'} timeout leases (required=${required})`, async () => {
+  const f = await fixture();
+  const commands = [node('required'), node('timeout', 'setTimeout(()=>{},10000)', { timeoutMs: 300, required })];
+  const holder = await f.prepare(f.service(commands, holderPlan), 'mode-holder');
+  expect(holder.readiness!.cleanupStatus).toBe('unknown');
+  const leaseDirectory = path.join(f.managedRoot, 'check-plan-lease');
+  const [owner] = await readdir(leaseDirectory), saved = await readFile(path.join(leaseDirectory, owner!), 'utf8');
+  for (const [i, nextPlan] of [undefined, { mode: 'serial' }, { mode: 'dag' }].entries()) {
+    const next = await f.prepare(f.service([node('probe', 'throw Error("must not execute")', { baseline: { environmentId: 'lease-probe' } })], nextPlan as CheckPlan | undefined), `blocked-mode-${i}`);
+    expect(next.readiness!.cleanupStatus).toBe('unknown');
+    expect(next.checks).toEqual([]); expect(next.baselines).toBeUndefined();
+  }
+  expect(await readFile(path.join(leaseDirectory, owner!), 'utf8')).toBe(saved);
+  const restarted = f.service(commands); // Removing checkPlan cannot bypass cleanup, including recovery.
+  await expect(restarted.resumeCandidate({ ...f.ctx, integrationId: holder.integrationId, candidateHead: holder.candidateHead, idempotencyKey: 'unknown' })).rejects.toThrow('CLEANUP_UNKNOWN');
+  await expect(restarted.publishCandidate({ ...f.ctx, candidate: holder, review: f.approve(holder) })).rejects.toThrow('CLEANUP_UNKNOWN');
+  await expect(restarted.reconcileCandidateCleanup({ ...f.ctx, candidate: holder, previousBootId: beforeBoot, currentBootId: beforeBoot })).rejects.toThrow('CLEANUP_UNKNOWN');
+  expect(await readFile(path.join(leaseDirectory, owner!), 'utf8')).toBe(saved);
+  await restarted.reconcileCandidateCleanup({ ...f.ctx, candidate: holder, previousBootId: beforeBoot, currentBootId: afterBoot });
+  expect((await restarted.candidateReadiness({ ...f.ctx, candidate: holder })).status).not.toBe('ready');
+  const recovered = await f.prepare(f.service([node('probe', 'console.log("actually executed")', { baseline: { environmentId: 'lease-probe' } })]), 'after-cleanup');
+  expect(recovered.readiness!.status).toBe('ready');
+  expect(recovered.baselines![0]!.status).toBe('recorded');
+  expect(recovered.checks![0]!.stdout).toContain('actually executed');
+});
+
+for (const damage of ['no-owner', 'corrupt-owner', 'wrong-binding'] as const) it(`never executes, supplements, publishes or deletes a ${damage} lease`, async () => {
+  const f = await fixture(), commands = [node('probe')];
+  const ready = await f.prepare(f.service(commands), 'ready-before-damage');
+  const directory = path.join(f.managedRoot, 'check-plan-lease'); await mkdir(directory);
+  const owner = path.join(directory, `${key(JSON.stringify([f.ctx.workspace.id, ready.integrationId]))}.json`);
+  if (damage !== 'no-owner') await writeFile(owner, damage === 'corrupt-owner' ? '{broken' : JSON.stringify({ candidateHead: 'wrong' }));
+  const restarted = f.service(commands);
+  expect(await restarted.candidateReadiness({ ...f.ctx, candidate: ready })).toMatchObject({ status: 'environment_unavailable', cleanupStatus: 'unknown' });
+  await expect(restarted.resumeCandidate({ ...f.ctx, integrationId: ready.integrationId, candidateHead: ready.candidateHead, idempotencyKey: 'must-not-run' })).rejects.toThrow('CHECK_PLAN_LEASE_HELD');
+  await expect(restarted.publishCandidate({ ...f.ctx, candidate: ready, review: f.approve(ready) })).rejects.toThrow('CHECK_PLAN_LEASE_HELD');
+  await expect(restarted.reconcileCandidateCleanup({ ...f.ctx, candidate: ready, previousBootId: beforeBoot, currentBootId: afterBoot })).rejects.toThrow('CHECK_PLAN_LEASE_HELD');
+  for (const [i, plan] of [undefined, { mode: 'serial' }, { mode: 'dag' }].entries()) {
+    const blocked = await f.prepare(f.service([node('probe', 'throw Error("must not execute")', { baseline: { environmentId: 'damaged-lease' } })], plan as CheckPlan | undefined), `damaged-${i}`);
+    expect(blocked.checks).toEqual([]); expect(blocked.baselines).toBeUndefined();
+  }
+  expect(await readdir(directory)).toEqual(damage === 'no-owner' ? [] : [path.basename(owner)]);
+  if (damage !== 'no-owner') expect(await readFile(owner, 'utf8')).toBe(damage === 'corrupt-owner' ? '{broken' : JSON.stringify({ candidateHead: 'wrong' }));
+  expect((await restarted.readOperation(f.ctx.workspace, ready.integrationId)).checks![0]!.id).toBe(ready.checks![0]!.id);
+});
+
+for (const oldEnvironment of ['same-process', 'retained', 'missing', 'corrupt'] as const) it(`rebuilds serial HOME prerequisites with fresh evidence after persistent restart (${oldEnvironment})`, async () => {
+  const f = await fixture();
+  const commands = [
+    node('setup', `const fs=require('fs'),p=require('path');fs.writeFileSync(p.join(process.env.HOME,'tool'),'#!/bin/sh\\necho installed\\n',{mode:0o700});console.log('installed this generation');`),
+    node('use-tool', `const fs=require('fs'),p=require('path');fs.mkdirSync('dist',{recursive:true});if(!fs.existsSync('dist/retry')){fs.writeFileSync('dist/retry','retry');process.exit(127);}const result=require('child_process').spawnSync(p.join(process.env.HOME,'tool'),[],{encoding:'utf8'});console.log(result.stdout);process.exit(result.status??127);`, { dependsOn: ['setup'] }),
+  ];
+  const original = f.service(commands, { mode: 'serial' });
+  const first = await f.prepare(original, 'serial-home');
+  expect(first.checks!.map(check => check.host!.exitStatus)).toEqual(['passed', 'environment_unavailable']);
+  const homes = path.join(f.managedRoot, key(f.ctx.workspace.id), 'check-homes');
+  const [firstHome] = await readdir(homes);
+  if (oldEnvironment === 'missing') await rm(path.join(homes, firstHome!), { recursive: true });
+  if (oldEnvironment === 'corrupt') await writeFile(path.join(homes, firstHome!, 'tool'), 'corrupt');
+  // A separate Host process consumes the persisted operation and executes real sandboxes.
+  const script = `import {LocalGitService} from ${JSON.stringify(pathToFileURL(path.resolve('src/git/integration.ts')).href)};const git=new LocalGitService(${JSON.stringify({ managedRoot: f.managedRoot, commands, checkPlan: { mode: 'serial' } })});await git.resumeCandidate(${JSON.stringify({ ...f.ctx, integrationId: first.integrationId, candidateHead: first.candidateHead, idempotencyKey: 'restart-home' })});`;
+  if (oldEnvironment === 'same-process') await original.resumeCandidate({ ...f.ctx, integrationId: first.integrationId, candidateHead: first.candidateHead, idempotencyKey: 'same-process-home' });
+  else {
+    const child = spawnSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', script], { encoding: 'utf8', timeout: 15000 });
+    expect(child.status, child.stderr).toBe(0);
+  }
+  const restarted = f.service(commands, { mode: 'serial' }), operation = await restarted.readOperation(f.ctx.workspace, first.integrationId);
+  expect(operation.checks!.map(check => check.host!.exitStatus)).toEqual(['passed', 'passed']);
+  expect(operation.checks![0]!.id).not.toBe(first.checks![0]!.id);
+  expect(operation.checks![0]!.stdout).toContain('installed this generation'); expect(operation.checks![1]!.stdout).toContain('installed');
+  expect(operation.binding!.attempt).toBe(1); expect(operation.candidateHead).toBe(first.candidateHead); expect(operation.review).toBeUndefined();
+  expect((await restarted.readCheckEvidence({ ...f.ctx, integrationId: first.integrationId, checkId: first.checks![0]!.id })).id).toBe(first.checks![0]!.id);
+  // An approval carrying the old generation cannot publish this new evidence.
+  await expect(restarted.publishCandidate({ ...f.ctx, candidate: first, review: f.approve(first) })).rejects.toThrow('CANDIDATE_EVIDENCE_MISMATCH');
+});
+
+it('does not share serial HOME products across tasks or candidate integrations', async () => {
+  const f = await fixture();
+  const commands = [node('setup', `const fs=require('fs'),p=require('path'),assert=require('assert');assert(!fs.existsSync(p.join(process.env.HOME,'tool')));fs.writeFileSync(p.join(process.env.HOME,'tool'),'private');`), node('use', `require('assert').equal(require('fs').readFileSync(require('path').join(process.env.HOME,'tool'),'utf8'),'private');`, { dependsOn: ['setup'] })];
+  for (const [i, taskId] of ['task', 'task', 'other-task'].entries()) {
+    const candidate = await f.prepare(f.service(commands, { mode: 'serial' }), `private-${i}`, { ...f.ctx, task: { ...f.ctx.task, id: taskId } });
+    expect(candidate.readiness!.status).toBe('ready'); expect(candidate.checks![0]!.host!.taskId).toBe(taskId);
+  }
+});
+
+it('does not release a retained bound lease using a transient confirmed journal as cleanup proof', async () => {
+  const f = await fixture(), commands = [node('probe')];
+  const ready = await f.prepare(f.service(commands), 'confirmed-before-release');
+  const operation = await f.service(commands).readOperation(f.ctx.workspace, ready.integrationId);
+  const directory = path.join(f.managedRoot, 'check-plan-lease'); await mkdir(directory);
+  const owner = path.join(directory, `${key(JSON.stringify([f.ctx.workspace.id, ready.integrationId]))}.json`);
+  await writeFile(owner, JSON.stringify(operation.binding));
+  const restarted = f.service(commands);
+  await expect(restarted.reconcileCandidateCleanup({ ...f.ctx, candidate: ready, previousBootId: beforeBoot, currentBootId: beforeBoot })).rejects.toThrow('CLEANUP_UNKNOWN');
+  expect(JSON.parse(await readFile(owner, 'utf8'))).toEqual(operation.binding);
+  await restarted.reconcileCandidateCleanup({ ...f.ctx, candidate: ready, previousBootId: beforeBoot, currentBootId: afterBoot });
+  expect(await restarted.candidateReadiness({ ...f.ctx, candidate: ready })).toMatchObject({ status: 'ready', cleanupStatus: 'confirmed' });
+});

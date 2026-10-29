@@ -119,12 +119,14 @@ it.each(['corrupt', 'interrupted'])('fails closed on %s persistent evidence and 
   expect(await readFile(file, 'utf8')).toBe(before);
 });
 
-it('retains timeout cleanup gates for optional baseline commands across restart', async () => {
-  const f = await fixture(), commands = [{ ...f.command, required: false, args: ['-e', 'setInterval(()=>{},1000)'], timeoutMs: 100 }];
+it.each([true, false])('retains timeout cleanup gates for baseline commands across restart (required=%s)', async required => {
+  const f = await fixture(), commands = [{ ...f.command, required, args: ['-e', 'setInterval(()=>{},1000)'], timeoutMs: 100 }];
   const first = await f.prepare(f.service(commands), 'first');
   expect(first.baselines![0]).toMatchObject({ status: 'unavailable', cleanupStatus: 'unknown', check: { exitCode: 124 } });
   const second = await f.prepare(f.service(commands), 'second');
-  expect(second.baselines![0]).toMatchObject({ status: 'unavailable', cleanupStatus: 'unknown' });
+  // The durable lease now blocks before even looking up another baseline.
+  expect(second.baselines).toBeUndefined();
+  expect(second.readiness).toMatchObject({ status: 'environment_unavailable', cleanupStatus: 'unknown' });
   expect(second.checkIds).toEqual([]);
 });
 

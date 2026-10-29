@@ -1,6 +1,6 @@
 import { provesPreviousBootExited } from '../agent/boot-identity.js';
 import { sandboxCommand } from '../agent/filesystem-sandbox.js';
-import { mkdir, readFile, open, rename, realpath, lstat, unlink, rmdir } from 'node:fs/promises';
+import { mkdir, readFile, open, rename, realpath, lstat, unlink, rmdir, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { validateCheckPlan } from './check-plan.js';
@@ -138,10 +138,11 @@ export class LocalGitService implements GitService {
     const operation = await this.readOperation(input.workspace, input.candidate.integrationId);
     if (!operation.binding) {
       if (operation.taskId !== input.task.id || operation.candidateHead !== input.candidate.candidateHead) throw new Error('CANDIDATE_EVIDENCE_MISMATCH');
-      return this.operationReadiness(operation);
-    }
-    await this.assertBinding(input, operation, input.candidate.candidateHead);
-    return this.operationReadiness(operation);
+    } else await this.assertBinding(input, operation, input.candidate.candidateHead);
+    const readiness = await this.operationReadiness(operation);
+    try { await this.assertPlanLeaseAvailable(input.workspace, operation); }
+    catch (error) { return { ...readiness, status: 'environment_unavailable', cleanupStatus: 'unknown', blockers: [...readiness.blockers, { classification: 'environment_unavailable', commandId: '', reason: String(error) }] }; }
+    return readiness;
   }
   private async operationReadiness(operation: GitOperation): Promise<EvidenceReadiness> {
     try {
@@ -153,16 +154,26 @@ export class LocalGitService implements GitService {
   private async assertCheckCleanup(workspace: Workspace, operation: GitOperation): Promise<void> {
     const readiness = await this.operationReadiness(operation);
     if (candidateCleanupUnknown(operation)) throw new CandidateEvidenceError(this.candidate(operation), readiness, true);
+    await this.assertPlanLeaseAvailable(workspace, operation);
   }
   async reconcileCandidateCleanup(input: GitContext & { candidate: Candidate; previousBootId: string | null; currentBootId: string | null }): Promise<boolean> {
     const operation = await this.readOperation(input.workspace, input.candidate.integrationId);
     await this.assertRecoveryBinding(input, operation);
     await this.operationReadiness(operation);
     if (!candidateCleanupUnknown(operation)) {
+      // A confirmed journal can be observed between serial checks while its owner is still active.
+      try {
+        await lstat(path.join(this.managedRoot, 'check-plan-lease'));
+        if (!provesPreviousBootExited(input.previousBootId, input.currentBootId)) throw new Error('CLEANUP_UNKNOWN: retained lease requires same-machine OS reboot proof');
+      } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
       await this.planLease(input.workspace, operation, true);
       return !!operation.cleanupRebootProof;
     }
     if (!provesPreviousBootExited(input.previousBootId, input.currentBootId)) throw new Error('CLEANUP_UNKNOWN: same-machine OS reboot proof required');
+    try {
+      await lstat(path.join(this.managedRoot, 'check-plan-lease'));
+      await this.assertLeaseOwner(input.workspace, operation);
+    } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
     await unlink(await this.quarantinePath(operation.candidatePath)).catch(error => { if (error.code !== 'ENOENT') throw error; });
     operation.checkCleanup = 'confirmed';
     for (const node of operation.checkPlan?.nodes ?? []) if (node.status === 'running') { node.status = 'environment_unavailable'; node.reason = 'Host interrupted; reboot cleanup proof is not execution evidence.'; }
@@ -272,18 +283,37 @@ export class LocalGitService implements GitService {
     try { await file.writeFile(JSON.stringify(check)); await file.sync(); } finally { await file.close(); }
     return check;
   }
-  /** One Host plan at a time; an interrupted lease survives restart until reboot proof. */
+  private async assertLeaseOwner(workspace: Workspace, operation: GitOperation): Promise<void> {
+    const directory = path.join(this.managedRoot, 'check-plan-lease');
+    const name = `${key(JSON.stringify([workspace.id, operation.integrationId]))}.json`;
+    try {
+      const entries = await readdir(directory);
+      const owner = path.join(directory, name);
+      const directoryStat = await lstat(directory), ownerStat = await lstat(owner);
+      if (!directoryStat.isDirectory() || directoryStat.isSymbolicLink() || entries.length !== 1 || entries[0] !== name || !ownerStat.isFile() || ownerStat.isSymbolicLink() || fingerprint(JSON.parse(await readFile(owner, 'utf8'))) !== fingerprint(operation.binding)) throw new Error('Invalid owner');
+    } catch { throw new Error('CHECK_PLAN_LEASE_HELD: missing or corrupt owner; cleanup proof and operator repair required'); }
+  }
+  private async assertPlanLeaseAvailable(workspace: Workspace, operation: GitOperation): Promise<void> {
+    try { await lstat(path.join(this.managedRoot, 'check-plan-lease')); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return; throw error; }
+    if (!this.heldPlanLeases.has(key(JSON.stringify([workspace.id, operation.integrationId])))) throw new Error('CHECK_PLAN_LEASE_HELD: active or interrupted plan requires cleanup proof');
+    await this.assertLeaseOwner(workspace, operation);
+  }
+  /** All check modes hold this lease, including while executing historical baselines. */
   private async planLease(workspace: Workspace, operation: GitOperation, release = false): Promise<void> {
     const directory = path.join(await realpath(this.managedRoot), 'check-plan-lease');
     const leaseId = key(JSON.stringify([workspace.id, operation.integrationId]));
     const owner = path.join(directory, `${leaseId}.json`);
     if (release) {
-      try { await unlink(owner); await rmdir(directory); }
-      catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+      try { await lstat(directory); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') { this.heldPlanLeases.delete(leaseId); return; } throw error; }
+      // Never delete an unknown/corrupt lease to manufacture cleanup confirmation.
+      await this.assertLeaseOwner(workspace, operation);
+      await unlink(owner); await rmdir(directory);
       this.heldPlanLeases.delete(leaseId);
       return;
     }
-    if (this.heldPlanLeases.has(leaseId)) return;
+    if (this.heldPlanLeases.has(leaseId)) { await this.assertLeaseOwner(workspace, operation); return; }
     try { await mkdir(directory, { mode: 0o700 }); }
     catch (error) { if ((error as NodeJS.ErrnoException).code === 'EEXIST') throw new Error('CHECK_PLAN_LEASE_HELD: active or interrupted plan requires cleanup proof'); throw error; }
     const file = await open(owner, 'wx', 0o600);
@@ -297,17 +327,18 @@ export class LocalGitService implements GitService {
     // Flush uncertainty before claiming resources: a crash must never imply cleanup.
     operation.checkCleanup = 'unknown';
     await this.record(input.workspace, operation);
-    await this.planLease(input.workspace, operation);
     const nodes: import('@rift/protocol').CheckPlanEvidence['nodes'] = commands.map(command => {
       const prior = operation.checks?.findLast(check => check.commandId === command.id);
       const passed = prior?.host?.exitStatus === 'passed' && prior.exitCode === 0 && prior.host.configurationFingerprint === this.checkFingerprint(command) && prior.host.environmentFingerprint === environmentFingerprint();
       return { commandId: command.id, dependsOn: [...command.dependsOn ?? []], mutexGroup: command.mutexGroup, resourceSlots: command.resourceSlots ?? 1, isolation: command.isolation === 'read_only' ? 'read_only' as const : plan.mode === 'serial' ? 'serial' as const : 'snapshot' as const, status: passed ? 'passed' as const : 'pending' as const };
     });
+    // A passed attachment does not prove that a fresh HOME contains producer artifacts.
+    if (plan.mode === 'serial' && nodes.some(node => node.status === 'pending')) for (const node of nodes) node.status = 'pending';
     operation.checkPlan = { mode: plan.mode, maxConcurrency, resourceSlots: capacity, nodes };
     type Node = import('@rift/protocol').CheckPlanEvidence['nodes'][number];
     const active = new Map<string, Promise<{ node: Node; check?: CheckEvidence; error?: unknown }>>();
     const mutexes = new Set<string>();
-    let used = 0, unknown = false, finished = false;
+    let used = 0, unknown = false;
     const executionId = randomUUID();
     const saveCheck = (node: Node, check: CheckEvidence): void => {
       node.status = check.host!.exitStatus;
@@ -378,11 +409,9 @@ export class LocalGitService implements GitService {
       operation.checkCleanup = unknown ? 'unknown' : 'confirmed';
       if (unknown) await this.quarantine(operation.candidatePath, 'CHECK_PLAN_CLEANUP_UNKNOWN');
       await this.record(input.workspace, operation);
-      finished = true;
     } finally {
       // Even a journal error cannot abandon already started independent checks.
       await Promise.allSettled(active.values());
-      if (finished && !unknown) await this.planLease(input.workspace, operation, true);
     }
   }
   private async checkCandidate(input: GitContext, operation: GitOperation): Promise<Candidate> {
@@ -390,19 +419,28 @@ export class LocalGitService implements GitService {
     const candidatePath = await managedPath(this.managedRoot, operation.candidatePath);
     await this.assertCheckCleanup(input.workspace, operation);
     if (await gitOk(candidatePath, ['rev-parse', 'HEAD']) !== operation.candidateHead || !(await sourceCheckoutClean(candidatePath))) throw new Error('CHECK_MODIFIED_CANDIDATE: changes preserved');
-    const checksStarted = performance.now();
-    if (this.checkPlan) await this.executePlan(input, operation);
-    else for (const command of this.selectedCommands()) {
-      const prior = operation.checks?.findLast(check => check.commandId === command.id);
-      if (prior?.host?.exitStatus === 'passed' && prior.exitCode === 0 && prior.host.configurationFingerprint === this.checkFingerprint(command) && prior.host.environmentFingerprint === environmentFingerprint()) continue;
-      const check = await this.executeCheck(input, operation, command);
-      if (['timed_out', 'cancelled'].includes(check.host!.exitStatus)) break;
+    // Persist uncertainty before acquisition, even when configuration was downgraded to legacy.
+    operation.checkCleanup = 'unknown'; await this.record(input.workspace, operation);
+    await this.planLease(input.workspace, operation);
+    operation.checkCleanup = 'confirmed'; await this.record(input.workspace, operation);
+    try {
+      const checksStarted = performance.now();
+      if (this.checkPlan) await this.executePlan(input, operation);
+      else for (const command of this.selectedCommands()) {
+        const prior = operation.checks?.findLast(check => check.commandId === command.id);
+        if (prior?.host?.exitStatus === 'passed' && prior.exitCode === 0 && prior.host.configurationFingerprint === this.checkFingerprint(command) && prior.host.environmentFingerprint === environmentFingerprint()) continue;
+        const check = await this.executeCheck(input, operation, command);
+        if (['timed_out', 'cancelled'].includes(check.host!.exitStatus)) break;
+      }
+      operation.timings ??= {}; operation.timings.checksWallMs = performance.now() - checksStarted;
+      await this.record(input.workspace, operation);
+      await this.assertCheckCleanup(input.workspace, operation);
+      const readiness = evidenceReadiness(operation, this.selectedCommands(), this.checkPlan);
+      if (readiness.status !== 'ready') throw new CandidateEvidenceError(this.candidate(operation), readiness);
+    } finally {
+      if (!candidateCleanupUnknown(operation)) await this.planLease(input.workspace, operation, true);
     }
-    operation.timings ??= {}; operation.timings.checksWallMs = performance.now() - checksStarted;
-    await this.record(input.workspace, operation);
-    await this.assertCheckCleanup(input.workspace, operation);
     const candidate = this.candidate(operation);
-    if (candidate.readiness!.status !== 'ready') throw new CandidateEvidenceError(candidate, candidate.readiness!);
     try { await lstat(operation.reviewPath); }
     catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
@@ -547,11 +585,9 @@ export class LocalGitService implements GitService {
       const candidateHead = await gitOk(candidatePath, ['rev-parse', 'HEAD']);
       operation = { ...operation, candidateHead, binding: { workspaceId: workspace.id, repositoryId: task.repositoryId ?? fingerprint(repository.commonGitDir), repositoryFingerprint: fingerprint(repository.commonGitDir), taskId: task.id, attempt: task.attempt, integrationId, candidateHead }, phase: 'candidate_created' }; await this.record(workspace, operation);
       operation.timings = { prepareMs: performance.now() - started };
-      if (this.checkPlan) {
-        operation.checkCleanup = 'unknown'; await this.record(workspace, operation);
-        await this.planLease(workspace, operation);
-        operation.checkCleanup = 'confirmed'; await this.record(workspace, operation);
-      }
+      operation.checkCleanup = 'unknown'; await this.record(workspace, operation);
+      await this.planLease(workspace, operation);
+      operation.checkCleanup = 'confirmed'; await this.record(workspace, operation);
       const baselineStarted = performance.now();
       operation.baselines = [];
       for (const command of this.selectedCommands().filter(command => command.baseline)) {
@@ -569,7 +605,7 @@ export class LocalGitService implements GitService {
       return await this.checkCandidate(input, operation);
     } catch (error) {
       if (operation) await this.record(workspace, { ...operation, phase: 'blocked', reason: String(error) });
-      if (operation?.binding && !candidateCleanupUnknown(operation)) await this.planLease(workspace, operation, true);
+      if (operation?.binding && this.heldPlanLeases.has(key(JSON.stringify([workspace.id, operation.integrationId]))) && !candidateCleanupUnknown(operation)) await this.planLease(workspace, operation, true);
       integrationOwners.delete(ownerKey);
       if (operation && candidateCleanupUnknown(operation)) throw new CandidateEvidenceError(this.candidate(operation), evidenceReadiness(operation, this.selectedCommands(), this.checkPlan), true);
       throw error;
@@ -584,6 +620,7 @@ export class LocalGitService implements GitService {
     await this.assertBinding(input, operation, candidate.candidateHead);
     await this.assertCheckCleanup(workspace, operation);
     if (evidenceReadiness(operation, this.selectedCommands(), this.checkPlan).status !== 'ready') throw new Error('EVIDENCE_NOT_READY');
+    await this.planLease(workspace, operation);
     integrationOwners.set(ownerKey, candidate.integrationId);
     let published = false;
     try {
@@ -610,7 +647,7 @@ export class LocalGitService implements GitService {
       // The coordinator persists business acceptance; recovery can complete that gap.
       return { acceptedCommit: candidate.candidateHead };
     } catch (error) { if (!published) await this.record(workspace, { ...operation, phase: 'blocked', reason: String(error) }); throw error; }
-    finally { integrationOwners.delete(ownerKey); }
+    finally { integrationOwners.delete(ownerKey); await this.planLease(workspace, operation, true); }
   }
   private verifyCandidateIdentity(operation: GitOperation, candidate: Candidate, taskId: string, integrationRef: string): void {
     if (operation.integrationId !== candidate.integrationId || operation.taskId !== taskId || operation.integrationRef !== integrationRef || operation.sourceHead !== candidate.sourceHead || operation.candidateHead !== candidate.candidateHead || operation.expectedTargetHead !== candidate.expectedTargetHead || operation.reviewPath !== candidate.cwd || (operation.checks??[]).some(check => check.candidateHead !== candidate.candidateHead)) throw new Error('CANDIDATE_EVIDENCE_MISMATCH');
