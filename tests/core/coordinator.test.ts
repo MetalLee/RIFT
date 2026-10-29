@@ -272,3 +272,32 @@ describe('cleanup persistence failure recovery',()=>{
     } finally {full=false;f.store.exec=exec;await f.coordinator.shutdown();}
   });
 });
+
+describe('reconcile released historical Runs',()=>{
+  function historical(){
+    const f=fixture();f.plan([{id:'history'}]);
+    const role=f.store.require<{id:string}>("SELECT id FROM roles WHERE name='developer-a'");
+    f.store.exec("UPDATE tasks SET status='succeeded' WHERE id='history'");
+    f.store.exec("UPDATE workflows SET status='completed' WHERE id='workflow'");
+    f.store.exec("INSERT INTO runs(id,task_id,role_id,purpose,task_attempt,status,provider_snapshot,deadline,created_at,cleanup_status,slot_released_at,version) VALUES('historical','history',?,'develop',1,'running','{}','past','past','confirmed','released',2)",role.id);
+    return f;
+  }
+  it('repairs a released running Run without rewriting accepted task evidence or launching work',()=>{
+    const f=historical(),task=f.store.task('history');
+    const run=f.coordinator.reconcileRun('historical',2);
+    expect(run).toMatchObject({status:'interrupted',cleanupStatus:'confirmed',slotReleasedAt:'released',endedAt:'released',version:3,result:null});
+    expect(f.store.task('history')).toEqual(task);expect(f.calls).toHaveLength(0);
+    expect(f.coordinator.reconcileRun('historical',3)).toEqual(run);
+    expect(()=>f.coordinator.reconcileRun('historical',2)).toThrow('Run changed');
+  });
+  it.each(['slot','task','workflow','lease','writer'] as const)('preserves inconsistent or active %s evidence',mode=>{
+    const f=historical();
+    if(mode==='slot')f.store.exec("UPDATE runs SET slot_released_at=NULL WHERE id='historical'");
+    if(mode==='task')f.store.exec("UPDATE tasks SET status='running' WHERE id='history'");
+    if(mode==='workflow')f.store.exec("UPDATE workflows SET status='running' WHERE id='workflow'");
+    if(mode==='lease')f.store.exec("UPDATE execution_leases SET released_at=NULL,cleanup_status='unknown' WHERE owner_type='run' AND owner_id='historical'");
+    if(mode==='writer')f.store.exec("INSERT INTO worktrees(id,task_id,attempt,kind,path,base_commit,writer_run_id) VALUES('held','history',1,'task','held','base','historical')");
+    expect(()=>f.coordinator.reconcileRun('historical',2)).toThrow();
+    expect(f.store.run('historical').status).toBe('running');
+  });
+});

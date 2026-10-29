@@ -727,6 +727,18 @@ export class LocalGitService implements GitService {
       return 'unknown';
     } catch { return 'unknown'; }
   }
+  // Only these explicitly approved, ignored directories are disposable.
+  // Do not generalize this to arbitrary ignored files (for example .env).
+  private readonly removableBuildDirectories = ['dist/', 'node_modules/', 'packages/protocol/dist/', 'packages/protocol/node_modules/'];
+  private async removalContentsAllowed(cwd: string): Promise<boolean> {
+    const status = await gitOk(cwd, ['status', '--porcelain=v1', '-z', '--untracked-files=normal', '--ignored=matching']);
+    for (const entry of status.split('\0').filter(Boolean)) {
+      if (!entry.startsWith('!! ') || !this.removableBuildDirectories.includes(entry.slice(3))) return false;
+      const info = await lstat(path.join(cwd, entry.slice(3)));
+      if (!info.isDirectory() || info.isSymbolicLink()) return false;
+    }
+    return true;
+  }
   /** Validation is also used to explain disabled deletion actions in the UI. */
   async inspectWorktreeRemoval(workspace: Workspace, worktree: Worktree): Promise<{ cwd: string; commonGitDir: string; rootPath: string; headCommit: string }> {
     const cwd = await managedPath(this.managedRoot, worktree.path);
@@ -753,7 +765,7 @@ export class LocalGitService implements GitService {
     }
     try { await readFile(await this.quarantinePath(cwd)); throw new Error('ARCHIVE_BLOCKED: prior check timed out; descendant cleanup is unconfirmed'); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
-    if (!(await checkoutClean(cwd))) throw new Error('ARCHIVE_BLOCKED: dirty, untracked or ignored content');
+    if (!(await this.removalContentsAllowed(cwd))) throw new Error('ARCHIVE_BLOCKED: dirty, untracked or ignored content');
     return { cwd, commonGitDir: repository.commonGitDir, rootPath: repository.rootPath, headCommit: await gitOk(cwd, ['rev-parse', 'HEAD']) };
   }
   async archiveWorktree(input: { workspace: Workspace; worktree: Worktree; active: boolean; cleanupConfirmed: boolean; artifactsSaved: boolean; beforeRemove?: (evidence: { headCommit: string; preservationRef: string }) => Promise<void> | void }): Promise<void> {
@@ -768,6 +780,10 @@ export class LocalGitService implements GitService {
       await input.beforeRemove?.({ headCommit: target.headCommit, preservationRef });
       const final = await this.inspectWorktreeRemoval(input.workspace, input.worktree);
       if (final.cwd !== target.cwd || final.headCommit !== target.headCommit || final.commonGitDir !== target.commonGitDir) throw new Error('ARCHIVE_BLOCKED: worktree changed during deletion verification');
+      // Clean only ignored files in the approved directories, never tracked or
+      // ordinary untracked content. A fresh strict check catches late changes.
+      await gitOk(final.cwd, ['clean', '-fdX', '--', ...this.removableBuildDirectories]);
+      if (!(await checkoutClean(final.cwd))) throw new Error('ARCHIVE_BLOCKED: dirty, untracked or ignored content');
       await gitOk(target.rootPath, ['worktree', 'remove', '--', target.cwd]);
     });
   }
