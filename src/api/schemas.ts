@@ -33,3 +33,6 @@ export const rolesSchema = z.object({
   bindings: z.array(z.object({ id, providerName: id, packageVersion: id, configRevision: z.number().int().positive(), capabilities: z.record(z.string(), z.boolean()), credentialRefs: z.array(z.string()).max(20), runtime: z.enum(['dsh','codex','claude']).nullable().optional(), model: z.string().min(1).max(160).nullable().optional(), reasoningEffort: z.string().min(1).max(40).nullable().optional(), spawn: z.object({ provider: id, model: id, reasoningEffort: z.string().min(1).max(40).optional(), agentPreset: id.optional(), maxTokens: z.number().int().positive().optional() }).strict().nullable().optional() }).strict()).min(1).max(130),
   roles: z.array(z.object({ name: roleNameSchema, purpose: z.enum(['lead','developer','reviewer']).optional(), kind: z.enum(['dsh-lead','subagent']), providerBindingId: id.optional(), prompt: z.string().max(16000), revision: z.number().int().positive() }).strict()).min(3).max(130),
 }).strict();
+
+export const supplementResultSchema = z.object({taskId:id,runId:id,expectedVersion:version,outputSha256:z.string().regex(/^[a-f0-9]{64}$/),resultText:z.string().min(1).max(1_048_576)}).strict();
+export const recoverTaskSchema = z.object({taskId:id,expectedVersion:version,idempotencyKey:z.string().min(1).max(160)}).strict();

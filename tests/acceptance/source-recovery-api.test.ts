@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Context } from '@deepseek-ai/cordis';
 import { mkdtemp, rm } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { RiftHostService } from '../../src/api/host-service.js';
@@ -55,5 +56,92 @@ describe('Source recollection management API (controlled Git)',()=>{
     else f.host.store.exec("UPDATE runs SET cleanup_status='unknown',slot_released_at=NULL WHERE id='repair'");
     await expect(f.host.handle('POST','/v1/tasks/task/recover-source',{expectedVersion:0},`reject-${mode}`)).rejects.toMatchObject({code:mode==='blocked-result'?'INVALID_STATE':'CLEANUP_UNKNOWN'});
     expect(f.collect).not.toHaveBeenCalled();expect(f.host.store.task('task')).toMatchObject({status:'blocked',attempt:3,version:0,acceptedCommit:null});expect(f.host.store.all("SELECT * FROM operations WHERE kind='integration'")).toHaveLength(0);
+  });
+});
+
+async function formatFailure(outputOverride?:(text:string)=>string){
+  const f=await fixture(),resultText=JSON.stringify(f.result('repair')),output=outputOverride?.(resultText)??`Implementation ready.\n\x60\x60\x60json\n${resultText}\n\x60\x60\x60`;
+  f.host.store.exec("UPDATE runs SET status='failed',stop_reason='INVALID_RESULT',result=? WHERE id='repair'",JSON.stringify({error:'Expected one JSON result object.',output,outputComplete:true}));
+  f.host.store.exec("UPDATE tasks SET blocking_reason='INVALID_RESULT' WHERE id='task'");
+  return{...f,input:{runId:'repair',expectedVersion:0,resultText,outputSha256:createHash('sha256').update(output).digest('hex')},output};
+}
+describe('Result-only supplementation and stage recovery',()=>{
+  it('supplements a wrapped original result without model/code execution or rewriting Run/artifact facts; recovers source on the same attempt',async()=>{
+    const f=await formatFailure(),runs=f.host.store.all('SELECT * FROM runs'),artifacts=f.host.store.all('SELECT * FROM artifacts');
+    const route='/v1/tasks/task/supplement-result';
+    const response=await f.host.handle('POST',route,f.input,'result-only');
+    expect(response).toEqual({runId:'repair',result:f.result('repair')});
+    expect(f.collect).not.toHaveBeenCalled();expect(f.host.store.all('SELECT * FROM runs')).toEqual(runs);expect(f.host.store.all('SELECT * FROM artifacts')).toEqual(artifacts);
+    expect(f.host.store.task('task')).toMatchObject({status:'blocked',attempt:3,version:1,acceptedCommit:null});
+    // Business-level replay also works with a different transport receipt.
+    expect(await f.host.handle('POST',route,f.input,'result-replay')).toEqual(response);
+    expect(f.host.store.events('workflow').filter(e=>e.type==='result.supplemented')).toHaveLength(1);
+    const request={expectedVersion:1,idempotencyKey:'stage-source'};
+    const recovered=await f.host.handle('POST','/v1/tasks/task/recover',request,'recover-stage') as {stage:string;task:Task};
+    expect(recovered).toMatchObject({stage:'source',task:{status:'validating',attempt:3,acceptedCommit:null}});
+    expect(await f.host.coordinator.recoverTask({taskId:'task',...request})).toEqual(recovered);
+    await expect(f.host.coordinator.recoverTask({taskId:'task',...request,expectedVersion:2})).rejects.toMatchObject({code:'IDEMPOTENCY_CONFLICT'});
+    expect(f.collect).toHaveBeenCalledOnce();expect(f.host.store.all('SELECT * FROM runs')).toEqual(runs);
+  });
+  it.each(['wrong-hash','invented-result','wrong-run','ambiguous','truncated','unknown-cleanup','lease-unknown','cancelled','stale-version','provider-stop','writer','wrong-task'] as const)('rejects %s without executing code or changing the Run',async mode=>{
+    const f=await formatFailure(mode==='ambiguous'?text=>`${text}\n${text}`:undefined),input={...f.input};
+    if(mode==='wrong-hash')input.outputSha256='0'.repeat(64);
+    if(mode==='invented-result')input.resultText=JSON.stringify({...f.result('repair'),summary:'Invented by operator'});
+    if(mode==='wrong-run')input.runId='original';
+    if(mode==='wrong-task')input.resultText=JSON.stringify({...f.result('repair'),taskId:'another'});
+    if(mode==='truncated')f.host.store.exec("UPDATE runs SET result=? WHERE id='repair'",JSON.stringify({output:f.output,outputComplete:false}));
+    if(mode==='unknown-cleanup')f.host.store.exec("UPDATE runs SET cleanup_status='unknown' WHERE id='repair'");
+    if(mode==='lease-unknown')f.host.store.exec("UPDATE execution_leases SET cleanup_status='unknown' WHERE owner_id='repair'");
+    if(mode==='cancelled')f.host.store.exec("UPDATE tasks SET status='cancelled' WHERE id='task'");
+    if(mode==='stale-version')input.expectedVersion=42;
+    if(mode==='provider-stop')f.host.store.exec("UPDATE runs SET stop_reason='PROVIDER_STOP' WHERE id='repair'");
+    if(mode==='writer')f.host.store.exec("UPDATE worktrees SET writer_run_id='repair' WHERE id='tree-repair'");
+    const runs=f.host.store.all('SELECT * FROM runs');
+    await expect(f.host.handle('POST','/v1/tasks/task/supplement-result',input,`reject-${mode}`)).rejects.toBeDefined();
+    expect(f.host.store.all('SELECT * FROM runs')).toEqual(runs);expect(f.collect).not.toHaveBeenCalled();
+    expect(f.host.store.events('workflow').filter(e=>e.type==='result.supplemented')).toHaveLength(0);
+  });
+  it('binds CLI supplementation to workspace ownership and the same original Run',async()=>{
+    const f=await formatFailure(),workspaceId=f.host.store.workflow('workflow').workspaceId;
+    const response=await f.host.workspaceCli.execute(workspaceId,{argv:['task','supplement-result','task'],input:f.input});
+    expect(response).toEqual({runId:'repair',result:f.result('repair')});
+    const recovered=await f.host.workspaceCli.execute(workspaceId,{argv:['task','recover','task'],input:{expectedVersion:1,idempotencyKey:'cli-source'}});
+    expect(recovered).toMatchObject({stage:'source',task:{attempt:3,status:'validating'}});
+  });
+  it.each(['format','source','provider'] as const)('does not turn %s infrastructure retry-dispatch into development',async mode=>{
+    const f=mode==='source'?await fixture():await formatFailure();
+    if(mode==='provider')f.host.store.exec("UPDATE runs SET stop_reason='PROVIDER_STOP' WHERE id='repair'");
+    const runs=f.host.store.all('SELECT * FROM runs'),workspaceId=f.host.store.workflow('workflow').workspaceId;
+    await expect(f.host.commands.execute({name:'task.retry-dispatch',workspaceId,id:'task',input:{expectedVersion:0,reason:'Infrastructure restored'}})).rejects.toMatchObject({code:mode==='format'?'RESULT_SUPPLEMENT_REQUIRED':mode==='source'?'STAGE_RECOVERY_REQUIRED':'CONTINUATION_REQUIRED'});
+    expect(f.host.store.all('SELECT * FROM runs')).toEqual(runs);expect(f.host.store.task('task').attempt).toBe(3);expect(f.collect).not.toHaveBeenCalled();expect(f.host.leads.size).toBe(0);
+  });
+  it('refuses developer recovery authority and cross-workspace CLI access',async()=>{
+    const f=await formatFailure(),workspaceId=f.host.store.workflow('workflow').workspaceId,agentId=f.host.store.run('repair').roleId;
+    await expect(f.host.workspaceCli.execute(workspaceId,{argv:['task','supplement-result','task'],input:f.input},{legacy:true,workspaceId,agentId,assertLive:()=>{}},'unauthorized')).rejects.toMatchObject({code:'UNAUTHORIZED'});
+    f.host.store.exec("INSERT INTO workspaces(id,name,root_path,status) VALUES('other','Other','/other','active')");
+    await expect(f.host.workspaceCli.execute('other',{argv:['task','supplement-result','task'],input:f.input})).rejects.toMatchObject({code:'NOT_FOUND'});
+    expect(f.collect).not.toHaveBeenCalled();
+  });
+  it('does not promote an original blocked result or replace it with a completed result',async()=>{
+    const f=await formatFailure(),text=JSON.stringify({...f.result('repair'),outcome:'blocked',blockingReasons:['Unfinished implementation']}),output=`Report: ${text}`;
+    f.host.store.exec("UPDATE runs SET result=? WHERE id='repair'",JSON.stringify({output,outputComplete:true}));
+    f.host.coordinator.supplementResult({taskId:'task',...f.input,resultText:text,outputSha256:createHash('sha256').update(output).digest('hex')});
+    await expect(f.host.coordinator.recoverTask({taskId:'task',expectedVersion:1,idempotencyKey:'not-done'})).rejects.toMatchObject({code:'INVALID_STATE'});
+    expect(f.collect).not.toHaveBeenCalled();expect(f.host.store.task('task')).toMatchObject({attempt:3,status:'blocked',acceptedCommit:null});
+  });
+  it('does not convert an interrupted provider output into completion and persists a rejected recovery receipt',async()=>{
+    const f=await formatFailure();f.host.store.exec("UPDATE runs SET stop_reason='PROVIDER_STOP' WHERE id='repair'");
+    const input={taskId:'task',expectedVersion:0,idempotencyKey:'provider'};
+    await expect(f.host.coordinator.recoverTask(input)).rejects.toMatchObject({code:'CONTINUATION_REQUIRED'});
+    await expect(f.host.coordinator.recoverTask(input)).rejects.toMatchObject({code:'CONTINUATION_REQUIRED'});
+    expect(f.collect).not.toHaveBeenCalled();expect(f.host.store.task('task')).toMatchObject({attempt:3,status:'blocked',acceptedCommit:null});
+  });
+  it('does not replay an interrupted recovery request or recover unknown/cancelled ownership',async()=>{
+    const f=await fixture();
+    f.host.store.event('workflow','task.recovery_receipt',{key:'interrupted',expectedVersion:0},{taskId:'task'});
+    await expect(f.host.coordinator.recoverTask({taskId:'task',expectedVersion:0,idempotencyKey:'interrupted'})).rejects.toMatchObject({code:'REQUEST_PENDING'});
+    f.host.store.exec("UPDATE runs SET cleanup_status='unknown' WHERE id='repair'");
+    await expect(f.host.coordinator.recoverTask({taskId:'task',expectedVersion:0,idempotencyKey:'unknown'})).rejects.toMatchObject({code:'CLEANUP_UNKNOWN'});
+    expect(f.collect).not.toHaveBeenCalled();
   });
 });
