@@ -79,7 +79,7 @@ describe('A06/A09/A12/A17 independent real Git acceptance', () => {
     } finally { await f.dispose(); }
   });
 
-  it('collects unlisted files and preserves subsequent unsaved files instead of deleting them', async () => {
+  it('collects unlisted files and deletes subsequent unsaved files on confirmed removal', async () => {
     const f = await fixture();
     try {
       const ctx = f.context('scoped'); const run = f.run(ctx.task); const worktree = await f.service.prepareTask({ ...ctx, run });
@@ -87,8 +87,8 @@ describe('A06/A09/A12/A17 independent real Git acceptance', () => {
       const source = await f.service.collectSource({ ...ctx, run, worktree });
       expect(source.changedPaths).toContain('outside.txt');
       await writeFile(path.join(worktree.path, 'unsaved.txt'), 'unsaved');
-      await expect(f.service.archiveWorktree({ workspace: f.workspace, worktree, active: false, cleanupConfirmed: true, artifactsSaved: true })).rejects.toThrow(/ARCHIVE_BLOCKED/);
-      expect(await readFile(path.join(worktree.path, 'outside.txt'), 'utf8')).toBe('preserve me');
+      await expect(f.service.archiveWorktree({ workspace: f.workspace, worktree, active: false, cleanupConfirmed: true, artifactsSaved: true })).resolves.toBeUndefined();
+      await expect(readFile(path.join(worktree.path, 'outside.txt'), 'utf8')).rejects.toMatchObject({code:'ENOENT'});
     } finally { await f.dispose(); }
   });
 

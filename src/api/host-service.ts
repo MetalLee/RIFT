@@ -1,4 +1,4 @@
-import { SummaryTranslator } from '../chat/summary-translation.js';
+import { SummaryTranslator, summaryConversationContext } from '../chat/summary-translation.js';
 import { observeNativeRun } from '../task/run-progress.js';
 import { ApplicationCommands } from '../application/commands.js';
 import { resolveHttpCommand } from './command-routes.js';
@@ -99,7 +99,7 @@ export class RiftHostService implements ApiHandler {
         const connection=role.chatConnection??this.chat.validateAgentConnection(owner.workspaceId,owner.agentId);
         this.validateChatConnection(connection);
         const languageSamples=this.store.all<{content:string}>("SELECT content FROM messages WHERE workspace_id=? AND conversation_id=? AND role='user' AND (sender_type='user' OR sender_type IS NULL) AND kind='chat' AND visibility='public' ORDER BY rowid DESC LIMIT 8",owner.workspaceId,owner.conversationId).reverse().map(row=>row.content.slice(0,4000));
-        return {connection,languageSamples};
+        return {connection,languageSamples,conversationContext:summaryConversationContext(this.store,owner)};
       },
       valid:owner=>!this.closing&&!!this.store.get('SELECT id FROM conversations WHERE id=? AND workspace_id=? AND archived=0',owner.conversationId,owner.workspaceId)&&
         !!this.store.get('SELECT id FROM roles WHERE id=? AND workspace_id=? AND enabled=1',owner.agentId,owner.workspaceId)&&
