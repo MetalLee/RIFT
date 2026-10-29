@@ -1,7 +1,7 @@
 import { describe,expect,it } from 'vitest';
-import { buildChatTimeline,buildConversationTimeline,messageAuthor,messageSender } from './chat-timeline';
+import { runResultContent,buildChatTimeline,buildConversationTimeline,messageAuthor,messageSender } from './chat-timeline';
 import { taskHref,parseRoute } from './state';
-import type { AgentTurn,ChatMessage,MessageChunk,StreamMessage } from '@rift/protocol';
+import type { AgentTurn,ChatMessage,MessageChunk,StreamMessage,RunStreamMessage } from '@rift/protocol';
 const message=(id:string,extra:Partial<ChatMessage>={}):ChatMessage=>({id,workspaceId:'ws',conversationId:'c',clientMessageId:null,recipientAgentId:'lead',role:'user',senderType:'user',content:id,status:'completed',version:0,createdAt:'2026-01-01',...extra});
 const turn={id:'turn',messageId:'input',agentId:'lead',status:'running',createdAt:'2026-01-01',activities:[{payload:{taskId:'task-a'}}]} as unknown as AgentTurn;
 describe('conversation author and attached work',()=>{
@@ -66,4 +66,31 @@ it('deduplicates versioned messages and decision receipts by identity, independe
   expect(updates).toHaveLength(2);
   expect(updates[0]).toMatchObject({type:'source.collected',collapsible:true});
   expect(updates[1]).toMatchObject({type:'coordination.blocked',content:'需要用户决定是否继续',collapsible:false});
+});
+
+describe('review result conversation projection',()=>{
+ const review={schemaVersion:1,taskId:'task-eeb3cdc6-10c0-4032-af71-5469c72c8856',runId:'run-16902898-474a-4df4-9cd9-e71256100dbf',verdict:'approve',reviewedCommit:'7cbaf9cd13f31b49ce9d6a13ea1215b3001bf315',findings:[]};
+ const stream=(result:unknown=review):RunStreamMessage=>({seq:1,runId:review.runId,taskId:review.taskId,roleId:'reviewer',workspaceId:'ws',conversationId:'c',messageId:'final',kind:'final',status:'completed',text:JSON.stringify(result),version:0,createdAt:'2026-01-01',updatedAt:'2026-01-01'});
+ it('renders the reported historical reviewer JSON as chat without changing source evidence',()=>{
+  const input=stream(),original=input.text;
+  const row=buildConversationTimeline([],[],[],[],[input]).items[0]!;
+  expect(row.message.content).toBe('审查通过。\n\n审查提交：7cbaf9cd13f3\n未发现问题。');
+  expect(row.message.senderAgentId).toBe('reviewer');expect(row.taskIds).toEqual([review.taskId]);
+  expect(input.text).toBe(original);expect(row.message.content).not.toContain('schemaVersion');
+ });
+ it.each(['changes_requested','blocked'])('renders %s with complete findings and suggestions',verdict=>{
+  const text=runResultContent(stream({...review,verdict,findings:[{severity:'high',file:'src/a.ts',line:7,reason:'遗漏检查',suggestion:'补充校验'}]}));
+  expect(text).toContain(verdict==='blocked'?'审查受阻':'审查要求修改');
+  expect(text).toContain('[高] src/a.ts:7 — 遗漏检查');expect(text).toContain('建议：补充校验');
+ });
+ it('accepts a fenced result and keeps developer summaries working',()=>{
+  const input=stream();expect(runResultContent({...input,text:'```json\n'+input.text+'\n```'})).toContain('审查通过');
+  expect(runResultContent(stream({schemaVersion:1,taskId:review.taskId,runId:review.runId,summary:'实现完成'}))).toBe('实现完成');
+ });
+ it('does not invent approval for malformed, mismatched, interrupted or non-final messages',()=>{
+  for(const result of [{...review,runId:'other'},{...review,taskId:'other'},{...review,verdict:'unknown'},{...review,findings:[{}]},{...review,reviewedCommit:'invalid'}]){
+   const input=stream(result);expect(runResultContent(input)).toBe(input.text);
+  }
+  for(const input of [{...stream(),status:'interrupted' as const},{...stream(),kind:'commentary' as const},{...stream(),text:'ordinary prose'},{...stream(),text:'{"schemaVersion":1'}])expect(runResultContent(input)).toBe(input.text);
+ });
 });
