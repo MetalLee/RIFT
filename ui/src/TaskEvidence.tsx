@@ -6,7 +6,7 @@ import { readTaskEvidence, type TaskEvidenceView } from './task-evidence';
 
 const readinessLabels = { ready: '检查就绪', waiting_evidence: '等待必需证据', failed: '检查失败', environment_unavailable: '检查环境不可用' };
 const blockerLabels = { code_defect: '代码缺陷 · 阻断', evidence_missing: '缺失证据 · 阻断', environment_unavailable: '环境不可用 · 阻断', optional: '可选建议 · 不阻断' };
-const exitLabels = { passed: '执行通过', failed: '执行失败', environment_unavailable: '环境不可用', timed_out: '执行超时' };
+const exitLabels = { passed: '执行通过', failed: '执行失败', environment_unavailable: '环境不可用', timed_out: '执行超时', skipped: '已跳过', cancelled: '已取消' };
 
 function checkLabel(check: TaskEvidenceView['integrations'][number]['checks'][number], candidateHead: string | null) {
   if (check.candidateHead !== candidateHead) return '候选不匹配 · 不可用于此候选';
