@@ -1,3 +1,4 @@
+import type { SummaryTranslationFactory } from '../chat/summary-translation.js';
 import { candidateMatchesTask, CandidateEvidenceError } from '../git/evidence.js';
 import { agentSandboxMode } from '../agent/sandbox-mode.js';
 import { RunChatStream } from './run-stream.js';
@@ -16,7 +17,7 @@ import { provesPreviousBootExited } from '../agent/boot-identity.js';
 
 interface Active { controller:AbortController; handle?:ActivationHandle; cleanup?:Promise<boolean>; cancelled:boolean; cancelReason?:string }
 interface IntegrationRecord { id:string; taskId:string; sourceHead:string; candidateHead:string|null; expectedTargetHead:string|null; checkIds:string[]; status:string; candidate:Candidate|null; reviewRunId:string|null; error:string|null }
-export interface CoordinatorOptions { repositoryAccess?(workspaceId:string):Promise<RepositoryAccess|undefined>; store:RiftStore; bridge:ActivationBridge; git:GitService; runTimeoutMs?:number;cleanupTimeoutMs?:number; limits?:Partial<SchedulerLimits>; skillSnapshot?:(workspaceId:string,agentId:string,runtime:string,runId:string)=>{instructions:string;versions:unknown[]}; textAnalysisBridge?:ActivationBridge; textAnalysisRoot?:string;runTools?(run:Run):import('../agent/runtime-types.js').RuntimeTool[];captureRunInbox?(run:Run):unknown[];acceptRunInbox?(runId:string):void }
+export interface CoordinatorOptions { summaryTranslation?:SummaryTranslationFactory; repositoryAccess?(workspaceId:string):Promise<RepositoryAccess|undefined>; store:RiftStore; bridge:ActivationBridge; git:GitService; runTimeoutMs?:number;cleanupTimeoutMs?:number; limits?:Partial<SchedulerLimits>; skillSnapshot?:(workspaceId:string,agentId:string,runtime:string,runId:string)=>{instructions:string;versions:unknown[]}; textAnalysisBridge?:ActivationBridge; textAnalysisRoot?:string;runTools?(run:Run):import('../agent/runtime-types.js').RuntimeTool[];captureRunInbox?(run:Run):unknown[];acceptRunInbox?(runId:string):void }
 export interface CreateWorkflowInput { id?:string; workspaceId:string; goal:string; integrationRef:string; baseCommit:string; leadSessionId?:string; repositorySnapshots?:{repositoryId:string;baseCommit:string;integrationRef:string}[]; repositoryFree?:boolean }
 export interface DispatchInput {taskId:string;idempotencyKey:string;expectedVersion:number;roleName?:string}
 export interface ReplanInput {workflowId:string;expectedRevision:number;updates:{taskId:string;expectedVersion:number;dependsOn?:string[];priority?:number}[];tasks?:PlanTask[]}
@@ -46,7 +47,7 @@ export class TaskCoordinator {
   private readonly skillSnapshot: CoordinatorOptions['skillSnapshot'];
   private readonly textAnalysisBridge: ActivationBridge | undefined;
   private readonly textAnalysisRoot: string | undefined;
-  private readonly collaboration:Pick<CoordinatorOptions,'runTools'|'captureRunInbox'|'acceptRunInbox'|'repositoryAccess'>;
+  private readonly collaboration:Pick<CoordinatorOptions,'runTools'|'captureRunInbox'|'acceptRunInbox'|'repositoryAccess'|'summaryTranslation'>;
   constructor(options:CoordinatorOptions) {this.store=options.store;this.bridge=options.bridge;this.git=options.git;this.runTimeoutMs=options.runTimeoutMs??30*60_000;this.cleanupTimeoutMs=options.cleanupTimeoutMs??10_000;this.skillSnapshot=options.skillSnapshot;this.textAnalysisBridge=options.textAnalysisBridge;this.textAnalysisRoot=options.textAnalysisRoot;this.collaboration=options;
     if(options.limits){const limits=schedulerLimits(options.limits);this.store.transaction(()=>{
       const occupied=this.globalSlots();
@@ -490,7 +491,7 @@ export class TaskCoordinator {
   }
   private async execute(run:Run,task:Task,cwd:string,state:Active,candidate?:Candidate,worktree?:Worktree):Promise<DevelopmentResult|ReviewResult|undefined> {
     const timeout=setTimeout(()=>{void this.cancelRun(run.id,'TIMEOUT');},Math.max(1,Date.parse(run.deadline)-Date.now()));
-    const stream=new RunChatStream(this.store,run.id);
+    const stream=new RunChatStream(this.store,run.id,this.collaboration.summaryTranslation);
     let startAttempted=false;
     let rawText:string|undefined;
     let abortListener:(()=>void)|undefined;

@@ -27,7 +27,7 @@ describe('conversation author and attached work',()=>{
     expect(result.items[0]!.drafts[0]?.turn.status).toBe('cancelled');expect(result.items).toHaveLength(1);
   });
   it('keeps interleaved turns in generation order before and after their final snapshots',()=>{
-    const stream=(id:string,time:string,kind:StreamMessage['kind']='reasoning_summary'):StreamMessage=>({seq:Number(id),turnId:'turn',messageId:id,kind,text:`text-${id}`,status:'completed',version:0,createdAt:time,updatedAt:time});
+    const stream=(id:string,time:string,kind:StreamMessage['kind']='reasoning_summary'):StreamMessage=>({seq:Number(id),turnId:'turn',messageId:kind==='reasoning_summary'?'translated-summary:'+id:id,kind,text:`text-${id}`,status:'completed',version:0,createdAt:time,updatedAt:time});
     const first=message('input',{createdAt:'2026-01-01T00:00:00Z'});
     const second=message('second',{createdAt:'2026-01-01T00:00:02Z'});
     const live={...turn,activities:[],streamMessages:[stream('1','2026-01-01T00:00:01Z'),stream('2','2026-01-01T00:00:03Z','commentary')]};

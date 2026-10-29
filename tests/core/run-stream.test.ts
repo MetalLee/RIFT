@@ -56,7 +56,7 @@ describe('run conversation streaming',()=>{
    expect(conversationRunMessages(f.store,f.workspace.id,'conversation')).toEqual(rows);
   }finally{stream.finish(true);f.store.close();}
  });
- it('never treats private or unknown deltas as public and retains public summaries',()=>{
+ it('never displays untranslated public summaries or private/unknown deltas',()=>{
   const f=fixture(),stream=new RunChatStream(f.store,'run'),observe=observeNativeRun(undefined,e=>stream.accept(e));
   try{
    observe({type:'message.delta',messageId:'unknown',text:'PRIVATE'});
@@ -67,7 +67,7 @@ describe('run conversation streaming',()=>{
    observe({type:'message.delta',messageId:'s',text:'已核对入口，接下来验证测试。'});
    observe({type:'message.completed',messageId:'s'});
    stream.finish(false);
-   expect(conversationRunMessages(f.store,f.workspace.id,'conversation')).toHaveLength(1);
+   expect(conversationRunMessages(f.store,f.workspace.id,'conversation')).toHaveLength(0);
    expect(JSON.stringify(f.store.all('SELECT * FROM run_stream_messages'))).not.toContain('PRIVATE');
   }finally{stream.finish(true);f.store.close();}
  });
@@ -98,4 +98,20 @@ describe('run conversation streaming',()=>{
    expect(conversationRunMessages(f.store,f.workspace.id,'conversation')[0]?.text).toBe('已有进展。');
   }finally{stream.finish(true);f.store.close();}
  });
+});
+
+it('publishes translated Run summary after normal Run completion without delaying the final message',async()=>{
+ const f=fixture();let resolve!:(text:string)=>void;
+ const stream=new RunChatStream(f.store,'run',()=>()=>new Promise(r=>{resolve=r;}));
+ try{
+  stream.accept({type:'message.started',messageId:'summary',kind:'reasoning_summary'});
+  stream.accept({type:'message.completed',messageId:'summary',text:'English public summary'});
+  stream.accept({type:'message.started',messageId:'answer',kind:'final'});
+  stream.accept({type:'message.completed',messageId:'answer',text:'任务结果'});
+  stream.finish(false);
+  expect(conversationRunMessages(f.store,f.workspace.id,'conversation').map(m=>m.text)).toEqual(['任务结果']);
+  await Promise.resolve();resolve('完整中文摘要');
+  await vi.waitFor(()=>expect(conversationRunMessages(f.store,f.workspace.id,'conversation').map(m=>m.text)).toEqual(['任务结果','完整中文摘要']));
+  expect(JSON.stringify(f.store.all('SELECT * FROM workspace_events'))).not.toContain('English public summary');
+ }finally{f.store.close();}
 });
