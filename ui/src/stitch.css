@@ -166,10 +166,16 @@ button.card { height: auto; text-align: left; }
 .agent-title code { padding: 2px 6px; border-radius: 4px; background: #efeeea; color: #55433d; font-size: 13px; line-height: 20px; }
 .agent-description { min-width: 0; }
 .agent-description>p { margin-top: 6px; font-size: 15px; line-height: 25px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
-.agent-connection { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; max-width: 210px; }
-.agent-connection strong { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; font-weight: 600; overflow-wrap: anywhere; }
-.agent-connection strong svg { color: #8d4b00; }
-.agent-connection>span { color: #55433d; font: 400 11px/20px var(--font-code); }
+.agent-connection { display: flex; flex-direction: column; gap: 8px; width: 232px; min-width: 0; }
+.agent-model { display: grid; grid-template-columns: 36px minmax(0,1fr); gap: 8px; align-items: start; }
+.agent-model-label { padding: 0 6px; border-radius: 4px; background: #efeeea; color: #55433d; font: 500 11px/20px var(--font-body); text-align: center; }
+.agent-model-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.agent-model-body strong { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; font-weight: 600; min-width: 0; }
+.agent-model-body strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-model-body strong svg { flex: none; color: #8d4b00; }
+.agent-model-body>span { color: #55433d; font: 400 11px/16px var(--font-code); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-model.is-empty strong { color: #625e57; font-weight: 500; }
+.agent-model.is-empty strong svg { color: inherit; }
 .agent-controls { margin: 0; }
 .agent-controls button { height: 28px; min-height: 28px; font-size: 11px; }
 .agent-more { grid-column: 2/-1; font-size: 11px; color: #625e57; margin-top: -8px; }
@@ -374,7 +380,7 @@ button.card { height: auto; text-align: left; }
   .workspace-guide { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
   .detail-card { position: static; }
   .agent-card { grid-template-columns: 44px minmax(0,1fr) auto; }
-  .agent-connection { grid-column: 2; grid-row: 2; align-items: flex-start; max-width: none; }
+  .agent-connection { grid-column: 2; grid-row: 2; width: auto; }
   .agent-controls { grid-column: 3; grid-row: 1/3; }
   .agent-more { grid-row: 3; }
   .toolbar { flex-wrap: wrap; }
