@@ -1,0 +1,209 @@
+## development failed attempt: combined
+
+ RUN  v4.0.18 /data/projects/RIFT/.rift/workspaces/e168007d2bbb66742fc6990a/worktrees/6c55568bea7e44ad61cedd31
+
+ ❯ tests/acceptance/evidence-ui-integration.test.tsx (11 tests | 1 failed | 10 skipped) 18326ms
+   ↓ connects real http supplementation after restart to read-only Reviewer evidence and the UI consumer
+   ↓ connects real cli supplementation after restart to read-only Reviewer evidence and the UI consumer
+   ↓ repairs a real code failure and invalidates old evidence and stale candidate approval
+   ↓ coalesces real CLI integration requests and permits explicit transport review retry
+   ↓ coalesces real CLI integration requests and permits explicit blocked review retry
+   ↓ keeps cancellation durable across Host restart and rejects a late approval/tool
+   ↓ keeps actual pipeline receipts without routine Lead wakes and resumes successors and workflow finish from accepted events
+   ↓ exposes historical baseline and measured timings through real HTTP/CLI evidence after restart, without relaxing gates
+   ↓ reads persisted DAG configuration, timings and skipped evidence over real HTTP and CLI
+   × joins historical reuse, private npm snapshots and DAG checks through persisted HTTP/CLI evidence and fresh exact review 18324ms
+   ↓ renders real cancelled and unstarted DAG receipts from HTTP as not passed, durably after restart
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/acceptance/evidence-ui-integration.test.tsx > joins historical reuse, private npm snapshots and DAG checks through persisted HTTP/CLI evidence and fresh exact review
+Error: Command failed: /usr/local/bin/node --import tsx /data/projects/RIFT/.rift/workspaces/e168007d2bbb66742fc6990a/worktrees/6c55568bea7e44ad61cedd31/src/cli/main.ts ws task evidence-log task --workspace own --home /tmp/rift-evidence-ui-integration-wOEQV9/host --json --data {"integrationId":"integration-b6c753f2-1a91-4714-8b49-5a67c7142866","checkId":"edfcc6ad-6aa8-48bc-99a8-4673468459a2"} --key evidence-log
+{"error":{"code":"IDEMPOTENCY_CONFLICT","message":"Key belongs to a different request."}}
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  14:49:40
+   Duration  20.51s (transform 1.17s, setup 0ms, import 2.03s, tests 18.33s, environment 0ms)
+
+## development failed attempt: debug
+
+ RUN  v4.0.18 /data/projects/RIFT/.rift/workspaces/e168007d2bbb66742fc6990a/worktrees/6c55568bea7e44ad61cedd31
+
+stdout | tests/acceptance/evidence-ui-integration.test.tsx > joins historical reuse, private npm snapshots and DAG checks through persisted HTTP/CLI evidence and fresh exact review
+combined retry diagnostics {
+  id: 'task',
+  workflowId: 'workflow',
+  roleId: null,
+  kind: 'change',
+  title: 'Task',
+  instructions: 'Implement task',
+  expectedPaths: [],
+  acceptanceCriteria: [ 'Actual Host evidence' ],
+  status: 'validating',
+  attempt: 1,
+  version: 5,
+  acceptedCommit: null,
+  sourceHead: 'cf2988d428070705533962fb6dfdef30df901133',
+  blockingReason: null,
+  analysisItems: null,
+  priority: 0,
+  repositoryId: 'repository-1e9b6c94-c79c-4016-881b-b6972740b66c'
+} {
+  taskId: 'task',
+  acceptedCommit: null,
+  currentCandidate: {
+    integrationId: 'integration-c073fa6d-6eae-4189-99ea-a6c9f9aff6fc',
+    candidateHead: '4735f294f2dbde6c48f8b0a56d8647d6c70618db',
+    sourceHead: 'cf2988d428070705533962fb6dfdef30df901133',
+    taskAttempt: 1
+  },
+  integrations: [
+    {
+      id: 'integration-c073fa6d-6eae-4189-99ea-a6c9f9aff6fc',
+      status: 'blocked',
+      candidateHead: '4735f294f2dbde6c48f8b0a56d8647d6c70618db',
+      checkPlan: [Object],
+      timings: [Object],
+      baselines: [Array],
+      checks: [Array],
+      review: null,
+      evidenceUnavailable: false,
+      readiness: [Object]
+    }
+  ]
+} [
+  {
+    purpose: 'develop',
+    id: 'run-d0b67358-ea05-4cbf-84ba-8c246fbabb8f'
+  },
+  { purpose: 'review', id: 'run-cb1d5c5d-6d9d-402e-b4c3-f199310ab653' }
+]
+
+ ❯ tests/acceptance/evidence-ui-integration.test.tsx (11 tests | 1 failed | 10 skipped) 28651ms
+   ↓ connects real http supplementation after restart to read-only Reviewer evidence and the UI consumer
+   ↓ connects real cli supplementation after restart to read-only Reviewer evidence and the UI consumer
+   ↓ repairs a real code failure and invalidates old evidence and stale candidate approval
+   ↓ coalesces real CLI integration requests and permits explicit transport review retry
+   ↓ coalesces real CLI integration requests and permits explicit blocked review retry
+   ↓ keeps cancellation durable across Host restart and rejects a late approval/tool
+   ↓ keeps actual pipeline receipts without routine Lead wakes and resumes successors and workflow finish from accepted events
+   ↓ exposes historical baseline and measured timings through real HTTP/CLI evidence after restart, without relaxing gates
+   ↓ reads persisted DAG configuration, timings and skipped evidence over real HTTP and CLI
+   × joins historical reuse, private npm snapshots and DAG checks through persisted HTTP/CLI evidence and fresh exact review 28650ms
+   ↓ renders real cancelled and unstarted DAG receipts from HTTP as not passed, durably after restart
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/acceptance/evidence-ui-integration.test.tsx > joins historical reuse, private npm snapshots and DAG checks through persisted HTTP/CLI evidence and fresh exact review
+Error: Evidence integration did not settle
+ ❯ until tests/acceptance/evidence-ui-integration.test.tsx:36:38
+     34|   const deadline = Date.now() + 20_000;
+     35|   while (!predicate()) {
+     36|     if (Date.now() > deadline) throw new Error('Evidence integration d…
+       |                                      ^
+     37|     await new Promise(resolve => setTimeout(resolve, 20));
+     38|   }
+ ❯ tests/acceptance/evidence-ui-integration.test.tsx:363:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  14:48:41
+   Duration  30.84s (transform 1.20s, setup 0ms, import 2.03s, tests 28.65s, environment 0ms)
+
+## development failed attempt: projection
+
+ RUN  v4.0.18 /data/projects/RIFT/.rift/workspaces/e168007d2bbb66742fc6990a/worktrees/6c55568bea7e44ad61cedd31
+
+stdout | tests/acceptance/evidence-ui-integration.test.tsx > joins historical reuse, private npm snapshots and DAG checks through persisted HTTP/CLI evidence and fresh exact review
+combined projection {"current":null,"finalId":"integration-3b03fb15-5477-4b2c-b907-4ddd8df43a9f","integration":{"id":"integration-3b03fb15-5477-4b2c-b907-4ddd8df43a9f","status":"reviewing","candidateHead":"884083cb62139ce7b00f1682645dc263db3ad6dc","isCurrent":false,"checks":[{"dependencyEnvironment":{"status":"fallback","prepareMs":592.2392499999987,"installMs":592.1186830000006,"restoreMs":0,"reason":"Dependency snapshots disabled; fresh npm install"},"id":"4eba012f-0cd4-4655-83f6-01a6cf15b4bb","commandId":"unit","candidateHead":"884083cb62139ce7b00f1682645dc263db3ad6dc","exitCode":0,"stdout":"[dependency installation]\n\nadded 1 package in 358ms\n\n[candidate check]\ncurrent real check candidate\n","stderr":"","truncated":false,"startedAt":"2026-10-29T06:51:29.730Z","finishedAt":"2026-10-29T06:51:30.471Z","durationMs":740.9946329999984,"host":{"workspaceId":"own","repositoryId":"repository-fcb80ca8-795e-4735-b9f4-7dab3814fad6","repositoryFingerprint":"732ac8dd2e509f3d16c73bf3970cb1d7535d7aa7e0775527aa7ae02957a7dba5","taskId":"task","integrationId":"integration-3b03fb15-5477-4b2c-b907-4ddd8df43a9f","candidateHead":"884083cb62139ce7b00f1682645dc263db3ad6dc","attempt":1,"configurationFingerprint":"a48bc310a5419be13fb17488000b89e635fe0cc313792e36020d3726c67b71fd","environmentFingerprint":"ffde6ca5cf4cbe49b9f3eb53bf64fceafe2c94f847a7f26366cb91b39543c7d5","logSha256":"c0c6843155d01a3c2613d7eadb059dcfa7dc5e9bbd6442d56d3786cefb80923f","summary":"unit: passed (exit 0)","exitStatus":"passed","command":{"executable":"/usr/local/bin/node","args":["-e","const fs=require('fs'),assert=require('assert');\n    assert.equal(require('offline-dependency'),'installed');\n    assert(!fs.existsSync(process.env.HOME+'/marker'));fs.writeFileSync(process.env.HOME+'/marker','private');\n    fs.writeFileSync(require.resolve('offline-dependency'),'module.exports=\"private write\";');\n    console.log('current real check '+(fs.existsSync('task.txt')?'candidate':'baseline'));\n    process.exit(fs.existsSync('task.txt')?0:1);"],"timeoutMs":120000}},"bindingMatches":true,"currentHost":false,"passed":true},{"dependencyEnvironment":{"status":"fallback","prepareMs":549.1977039999983,"installMs":549.1874549999993,"restoreMs":0,"reason":"Dependency snapshots disabled; fresh npm install"},"id":"f25b9322-20e3-4d41-b1ef-d18617241803","commandId":"dependent","candidateHead":"884083cb62139ce7b00f1682645dc263db3ad6dc","exitCode":0,"stdout":"[dependency installation]\n\nadded 1 package in 331ms\n\n[candidate check]\ncurrent real check candidate\n","stderr":"","truncated":false,"startedAt":"2026-10-29T06:51:30.572Z","finishedAt":"2026-10-29T06:51:31.266Z","durationMs":694.8667239999995,"host":{"workspaceId":"own","repositoryId":"repository-fcb80ca8-795e-4735-b9f4-7dab3814fad6","repositoryFingerprint":"732ac8dd2e509f3d16c73bf3970cb1d7535d7aa7e0775527aa7ae02957a7dba5","taskId":"task","integrationId":"integration-3b03fb15-5477-4b2c-b907-4ddd8df43a9f","candidateHead":"884083cb62139ce7b00f1682645dc263db3ad6dc","attempt":1,"configurationFingerprint":"f594c032e691efdc91f769e16599cbce11025dc32c03a7d491f69aa116f4d59f","environmentFingerprint":"ffde6ca5cf4cbe49b9f3eb53bf64fceafe2c94f847a7f26366cb91b39543c7d5","logSha256":"cc2c0cf308909d87f00e81f7a5b0a56d591a31bc187d057d7271f516a6c9b3ea","summary":"dependent: passed (exit 0)","exitStatus":"passed","command":{"executable":"/usr/local/bin/node","args":["-e","const fs=require('fs'),assert=require('assert');\n    assert.equal(require('offline-dependency'),'installed');\n    assert(!fs.existsSync(process.env.HOME+'/marker'));fs.writeFileSync(process.env.HOME+'/marker','private');\n    fs.writeFileSync(require.resolve('offline-dependency'),'module.exports=\"private write\";');\n    console.log('current real check '+(fs.existsSync('task.txt')?'candidate':'baseline'));\n    process.exit(fs.existsSync('task.txt')?0:1);"],"timeoutMs":120000}},"bindingMatches":true,"currentHost":false,"passed":true}],"review":null,"evidenceUnavailable":false,"readiness":{"status":"ready","requiredCheckIds":["unit","dependent"],"missingCheckIds":[],"blockers":[]},"readyConfirmed":false}}
+
+ ❯ tests/acceptance/evidence-ui-integration.test.tsx (11 tests | 1 failed | 10 skipped) 19484ms
+   ↓ connects real http supplementation after restart to read-only Reviewer evidence and the UI consumer
+   ↓ connects real cli supplementation after restart to read-only Reviewer evidence and the UI consumer
+   ↓ repairs a real code failure and invalidates old evidence and stale candidate approval
+   ↓ coalesces real CLI integration requests and permits explicit transport review retry
+   ↓ coalesces real CLI integration requests and permits explicit blocked review retry
+   ↓ keeps cancellation durable across Host restart and rejects a late approval/tool
+   ↓ keeps actual pipeline receipts without routine Lead wakes and resumes successors and workflow finish from accepted events
+   ↓ exposes historical baseline and measured timings through real HTTP/CLI evidence after restart, without relaxing gates
+   ↓ reads persisted DAG configuration, timings and skipped evidence over real HTTP and CLI
+   × joins historical reuse, private npm snapshots and DAG checks through persisted HTTP/CLI evidence and fresh exact review 19482ms
+   ↓ renders real cancelled and unstarted DAG receipts from HTTP as not passed, durably after restart
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/acceptance/evidence-ui-integration.test.tsx > joins historical reuse, private npm snapshots and DAG checks through persisted HTTP/CLI evidence and fresh exact review
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/acceptance/evidence-ui-integration.test.tsx:390:84
+    388|   const finalView = await f.view();
+    389|   console.log('combined projection', JSON.stringify({ current: finalVi…
+    390|   expect(finalView.integrations.find(item => item.id === finalId)!.rea…
+       |                                                                                    ^
+    391|   expect(f.host.store.task('task').attempt).toBe(1);
+    392|   f.approve(finalReview); await f.settled('succeeded');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 skipped (11)
+   Start at  14:51:12
+   Duration  21.67s (transform 1.18s, setup 0ms, import 2.03s, tests 19.48s, environment 0ms)
+
+## development failed attempt: targeted
+
+ RUN  v4.0.18 /data/projects/RIFT/.rift/workspaces/e168007d2bbb66742fc6990a/worktrees/6c55568bea7e44ad61cedd31
+
+ ❯ tests/acceptance/evidence-ui-integration.test.tsx (11 tests | 1 failed) 52161ms
+   ✓ connects real http supplementation after restart to read-only Reviewer evidence and the UI consumer  4096ms
+   ✓ connects real cli supplementation after restart to read-only Reviewer evidence and the UI consumer  4628ms
+   ✓ repairs a real code failure and invalidates old evidence and stale candidate approval  3194ms
+   ✓ coalesces real CLI integration requests and permits explicit transport review retry  4184ms
+   ✓ coalesces real CLI integration requests and permits explicit blocked review retry  4252ms
+   ✓ keeps cancellation durable across Host restart and rejects a late approval/tool  2056ms
+   ✓ keeps actual pipeline receipts without routine Lead wakes and resumes successors and workflow finish from accepted events  2902ms
+   ✓ exposes historical baseline and measured timings through real HTTP/CLI evidence after restart, without relaxing gates  3285ms
+   ✓ reads persisted DAG configuration, timings and skipped evidence over real HTTP and CLI  2688ms
+   × joins historical reuse, private npm snapshots and DAG checks through persisted HTTP/CLI evidence and fresh exact review 18323ms
+   ✓ renders real cancelled and unstarted DAG receipts from HTTP as not passed, durably after restart  2551ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/acceptance/evidence-ui-integration.test.tsx > joins historical reuse, private npm snapshots and DAG checks through persisted HTTP/CLI evidence and fresh exact review
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ tests/acceptance/evidence-ui-integration.test.tsx:388:91
+    386|     expect(log.dependencyEnvironment).toEqual(integration.checks[0]!.d…
+    387|   }
+    388|   expect((await f.view()).integrations.find(item => item.id === finalI…
+       |                                                                                           ^
+    389|   expect(f.host.store.task('task').attempt).toBe(1);
+    390|   f.approve(finalReview); await f.settled('succeeded');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
+   Start at  14:50:10
+   Duration  54.33s (transform 1.16s, setup 0ms, import 2.02s, tests 52.16s, environment 0ms)

@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
+import { writeOfflineNpmFixture } from './npm-fixture.js';
 import { spawn } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -23,17 +24,8 @@ async function fixture() {
   const root = await mkdtemp(path.join(tmpdir(), 'rift-dependency-environment-')); roots.push(root);
   const repo = path.join(root, 'repo'); await mkdir(repo);
   await gitOk(repo, ['init', '-b', 'main']); await gitOk(repo, ['config', 'user.name', 'Test']); await gitOk(repo, ['config', 'user.email', 'test@localhost']);
-  const pack = path.join(root, 'pack'); await mkdir(path.join(pack, 'package'), { recursive: true });
-  await writeFile(path.join(pack, 'package', 'package.json'), JSON.stringify({ name: 'offline-dependency', version: '1.0.0', main: 'index.js', scripts: { postinstall: 'exit 99' } }));
-  await writeFile(path.join(pack, 'package', 'index.js'), 'module.exports="installed";\n');
-  const tarball = path.join(repo, 'dependency.tgz');
-  expect((await execute('tar', ['-czf', tarball, '-C', pack, 'package'], root)).exitCode).toBe(0);
-  const integrity = 'sha512-' + createHash('sha512').update(await readFile(tarball)).digest('base64');
-  const manifest = { name: 'offline-fixture', version: '1.0.0', dependencies: { 'offline-dependency': 'file:dependency.tgz' }, scripts: { postinstall: 'exit 98' } };
-  await writeFile(path.join(repo, 'package.json'), JSON.stringify(manifest));
-  await writeFile(path.join(repo, 'package-lock.json'), JSON.stringify({ name: manifest.name, version: manifest.version, lockfileVersion: 3, packages: { '': manifest, 'node_modules/offline-dependency': { version: '1.0.0', resolved: 'file:dependency.tgz', integrity, hasInstallScript: true } } }));
+  await writeOfflineNpmFixture(root, repo);
   await writeFile(path.join(repo, 'input.txt'), 'base');
-  await writeFile(path.join(repo, '.gitignore'), 'node_modules/\n');
   await gitOk(repo, ['add', '.']); await gitOk(repo, ['commit', '-m', 'base']);
   const base = await gitOk(repo, ['rev-parse', 'HEAD']);
   const ctx: GitContext = {

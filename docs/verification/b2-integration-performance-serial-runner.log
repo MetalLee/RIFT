@@ -1,0 +1,47 @@
+
+ RUN  v4.0.18 /data/projects/RIFT/.rift/workspaces/e168007d2bbb66742fc6990a/worktrees/6c55568bea7e44ad61cedd31
+
+stdout | tests/git/dependency-environment.test.ts > runs real offline npm ci cold/warm, copies private writable inodes, and always executes exact candidate checks across tasks/restart
+dependency npm-ci actual offline performance ms {"cold":{"status":"miss","prepareMs":1617.69218,"installMs":594.4823819999999,"restoreMs":0,"key":"b8e9a21db9e202e435d9e0a3653ee68e26a1fd2089828dbd7aca68a9f265ad9b"},"warm":{"status":"hit","prepareMs":1101.749398,"installMs":0,"restoreMs":3.8439530000005107,"key":"b8e9a21db9e202e435d9e0a3653ee68e26a1fd2089828dbd7aca68a9f265ad9b"},"coldCheck":1758.4503700000002,"warmCheck":1243.961578}
+
+ ✓ tests/git/dependency-environment.test.ts (31 tests | 30 skipped) 5908ms
+   ✓ runs real offline npm ci cold/warm, copies private writable inodes, and always executes exact candidate checks across tasks/restart  5906ms
+stdout | tests/git/check-plan.test.ts > proves real independent command speedup while legacy checks remain serial and required
+DAG real command performance ms {"serial":2420.6215779999998,"parallel":1246.0307950000006,"commands":[["/usr/local/bin/node","-e","setTimeout(()=>console.log(\"a\"),1000)"],["/usr/local/bin/node","-e","setTimeout(()=>console.log(\"b\"),1000)"]]}
+
+ ✓ tests/git/check-plan.test.ts (30 tests | 29 skipped) 4284ms
+   ✓ proves real independent command speedup while legacy checks remain serial and required  4283ms
+stdout | tests/git/baseline.test.ts > persists and reuses a failed historical baseline across roles/tasks and restart, never candidate passes or review
+baseline performance ms {"cold":864.7572399999999,"warm":266.1900810000002,"baselineExecution":311.46792099999993,"candidateExecution":281.3286939999998}
+
+ ✓ tests/git/baseline.test.ts (12 tests | 11 skipped) 3211ms
+   ✓ persists and reuses a failed historical baseline across roles/tasks and restart, never candidate passes or review  3209ms
+
+ Test Files  3 passed (3)
+      Tests  3 passed | 70 skipped (73)
+   Start at  15:02:25
+   Duration  14.32s (transform 309ms, setup 0ms, import 447ms, tests 13.40s, environment 0ms)
+
+	Command being timed: "node node_modules/vitest/vitest.mjs run tests/git/baseline.test.ts tests/git/check-plan.test.ts tests/git/dependency-environment.test.ts --maxWorkers=1 -t persists and reuses a failed historical|proves real independent command speedup|runs real offline npm ci cold/warm"
+	User time (seconds): 5.73
+	System time (seconds): 5.76
+	Percent of CPU this job got: 78%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:14.64
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 169412
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 434289
+	Voluntary context switches: 108391
+	Involuntary context switches: 1012
+	Swaps: 0
+	File system inputs: 32
+	File system outputs: 6592
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

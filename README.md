@@ -239,7 +239,7 @@ CLI 对应 `rift ws task evidence TASK --workspace WORKSPACE`、`task evidence-l
 
 组合验证入口：`pnpm exec vitest run tests/acceptance/evidence-ui-integration.test.tsx tests/acceptance/timeline-ui.test.tsx`。使用真实临时 Git、SQLite、CLI 子进程和鉴权 HTTP，以及现有 UI 读取/投影/服务端渲染；仅模型执行为测试适配器，不代表外部模型实机调用或浏览器交互验收。超时清理与附件/数据库中断恢复的故障注入回归见 `tests/git/core-integration.test.ts`。
 
-待用户分别确认的后续批次（本次不实现）：第二批基线复用/检查 DAG/环境缓存；第三批分阶段队列/跨引用并行。
+第二批三项能力的组合使用、关闭/回退、实测与验证局限见[组合验证记录](docs/verification/b2-integration.md)。第三批分阶段队列/跨引用并行未授权、未实现。
 
 ## 常用管理命令
 
