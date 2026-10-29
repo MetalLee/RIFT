@@ -3,6 +3,27 @@ export interface TimelineUpdate { id:string; content:string; taskId?:string|null
 export interface TimelineItem { message:ChatMessage; turns:AgentTurn[]; taskIds:string[]; updates:TimelineUpdate[]; drafts:{turn:AgentTurn;text:string;messageId?:string;kind?:import('@rift/protocol').StreamMessage['kind'];status?:string}[] }
 export function messageSender(message:ChatMessage): 'user'|'agent'|'system' { return message.senderType ?? (message.role==='user'?'user':message.role==='system'?'system':'agent'); }
 export function messageAuthor(message:ChatMessage):string|null { return messageSender(message)==='agent' ? message.senderAgentId ?? message.recipientAgentId : null; }
+/** Presentation only: never changes the authoritative Run result or acceptance. */
+export function runResultContent(stream:RunStreamMessage):string {
+  if(stream.kind!=='final'||stream.status!=='completed')return stream.text;
+  const source=stream.text.trim().replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i,'$1');
+  try {
+    const result=JSON.parse(source);
+    if(result?.schemaVersion!==1||result.runId!==stream.runId||result.taskId!==stream.taskId)return stream.text;
+    const verdicts:Record<string,string>={approve:'审查通过',changes_requested:'审查要求修改',blocked:'审查受阻'};
+    if(Object.hasOwn(verdicts,result.verdict)&&typeof result.reviewedCommit==='string'&&/^[a-f0-9]{40,64}$/i.test(result.reviewedCommit)&&Array.isArray(result.findings)&&result.findings.every((f:unknown)=>{
+      if(!f||typeof f!=='object')return false;
+      const item=f as Record<string,unknown>;
+      return typeof item.severity==='string'&&['critical','high','medium','low'].includes(item.severity)&&typeof item.file==='string'&&Number.isInteger(item.line)&&Number(item.line)>0&&typeof item.reason==='string'&&typeof item.suggestion==='string';
+    })) {
+      const severity:Record<string,string>={critical:'严重',high:'高',medium:'中',low:'低'};
+      const findings=result.findings.map((f:{severity:string;file:string;line:number;reason:string;suggestion:string},i:number)=>`${i+1}. [${severity[f.severity]}] ${f.file}:${f.line} — ${f.reason}${f.suggestion?`\n   建议：${f.suggestion}`:''}`);
+      return `${verdicts[result.verdict]}。\n\n审查提交：${result.reviewedCommit.slice(0,12)}${findings.length?'\n\n'+findings.join('\n\n'):result.verdict==='approve'?'\n未发现问题。':'\n未提供具体问题。'}`;
+    }
+    if(typeof result.summary==='string'&&!('verdict' in result))return result.summary;
+  } catch {/* Ordinary or malformed text is not interpreted as a verdict. */}
+  return stream.text;
+}
 function finalStream(turn:AgentTurn,final:ChatMessage) {
   return [...(turn.streamMessages??[])].reverse().find(message=>message.status==='completed' &&
     !['commentary','reasoning','reasoning_summary'].includes(message.kind) && (message.kind==='final'||message.text===final.content));
@@ -88,11 +109,7 @@ export function buildConversationTimeline(messages:ChatMessage[],turns:AgentTurn
   for(const message of progress)rows.push({message,turns:[],taskIds:message.taskId?[message.taskId]:[],updates:[],drafts:[]});
   for(const stream of runMessages){
     if(!stream.text||stream.kind==='reasoning'||stream.kind==='reasoning_summary'&&!stream.messageId.startsWith('translated-summary:'))continue;
-    let content=stream.text;
-    // The task's machine result remains authoritative; show its human summary in chat.
-    if(stream.kind==='final'&&stream.status==='completed'){
-      try{const result=JSON.parse(content);if(result?.schemaVersion===1&&result.runId===stream.runId&&typeof result.summary==='string')content=result.summary;}catch{/* Ordinary text stays unchanged. */}
-    }
+    const content=runResultContent(stream);
     const message:ChatMessage={id:`run-stream:${stream.runId}:${stream.messageId}`,workspaceId:stream.workspaceId,conversationId:stream.conversationId,
       clientMessageId:null,recipientAgentId:null,senderType:'agent',senderAgentId:stream.roleId,role:'assistant',kind:'chat',
       content,status:stream.status,version:stream.version,createdAt:stream.createdAt,runId:stream.runId,taskId:stream.taskId};
