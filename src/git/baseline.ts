@@ -8,7 +8,7 @@ import { gitOk } from './process.js';
 import type { CheckPlan, CheckCommand } from './types.js';
 
 /** environmentId is a Host attestation of immutable tools/external inputs, not agent input. */
-export async function baselineIdentity(input: { workspaceId: string; repositoryId: string; commonGitDir: string; repositoryPath: string; baselineCommit: string; planFingerprint: string; command: CheckCommand; checkPlan?: CheckPlan; commands?: readonly CheckCommand[] }): Promise<BaselineIdentity> {
+export async function baselineIdentity(input: { workspaceId: string; repositoryId: string; commonGitDir: string; repositoryPath: string; baselineCommit: string; planFingerprint: string; command: CheckCommand; checkPlan?: CheckPlan; commands?: readonly CheckCommand[]; environmentCache?: import('./dependency-environment.js').EnvironmentCacheOptions }): Promise<BaselineIdentity> {
   const { command } = input;
   const candidates = path.isAbsolute(command.executable) ? [command.executable] : command.executable.includes('/') ? [] : ['/usr/local/bin', '/usr/bin', '/bin'].map(directory => path.join(directory, command.executable));
   let executable: string | undefined;
@@ -23,7 +23,7 @@ export async function baselineIdentity(input: { workspaceId: string; repositoryI
     repositoryFingerprint: fingerprint(input.commonGitDir),
     repositoryConfigurationFingerprint: fingerprint(await gitOk(input.repositoryPath, ['config', '--no-includes', '--null', '--list'])),
     baselineCommit: input.baselineCommit, tree: await gitOk(input.repositoryPath, ['rev-parse', `${input.baselineCommit}^{tree}`]),
-    commandId: command.id, configurationFingerprint: configurationFingerprint(command, input.checkPlan, input.commands), planFingerprint: input.planFingerprint,
+    commandId: command.id, configurationFingerprint: configurationFingerprint(command, input.checkPlan, input.commands, input.environmentCache), planFingerprint: input.planFingerprint,
     environmentFingerprint: environmentFingerprint(), environmentId: command.baseline!.environmentId, executableSha256: hash.digest('hex'),
   };
 }

@@ -219,6 +219,8 @@ checks:
 
 可选的 Host 历史基线复用及准备/检查计时见[基线证据契约](docs/baseline-evidence.md)。基线失败仅作对照，不代替当前候选检查或审核批准；旧配置不增加执行。
 
+显式 npm 依赖快照、私有恢复、持久租约、容量及关闭/回退限制见[依赖环境复用](docs/dependency-environments.md)；默认关闭，缓存命中不替代当前候选真实检查或独立审核。
+
 每次实际执行保存独立、不可通过 API 改写的附件，绑定工作区、仓库、任务/attempt、integration、精确 candidateHead，以及命令/配置和环境指纹、Host 来源、退出状态、脱敏日志和摘要。原始日志无需（也不应）提交源码。环境指纹标识 Host OS/架构/内核、Node 版本和隔离策略版本，不代表依赖安装或构建缓存可复用。附件使用 Host 私有目录和 0600 文件，日志合计最多捕获 64 KiB；截断明确标记，列表只返回每流 8000 字符摘录。历史记录可读取；没有附件绑定的旧记录不会自动升级为可信 Host 证据。
 
 - `GET /ui-api/v1/workspaces/:workspaceId/tasks/:taskId/evidence`：共享协议 `TaskEvidence`，含 `integrations[].readiness` 和检查摘录（最近 20 个 integration）。顶层 `currentCandidate` 仅从 Host 已验证的当前 attempt/source 唯一绑定产生（未知或歧义为 null），不能按列表末项猜测。状态为 `ready / waiting_evidence / failed / environment_unavailable`；`readiness.cleanupStatus` 为 `unknown / confirmed`（旧服务可缺省）；阻塞分类为 `code_defect / evidence_missing / environment_unavailable / optional`。
