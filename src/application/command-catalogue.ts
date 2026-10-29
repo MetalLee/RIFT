@@ -7,7 +7,7 @@ export const WORKSPACE_COMMANDS = {
   worktree: ['list','create','takeover','detach','archive','reconcile','removals','delete','reconcile-delete'],
   workflow: ['list','show','start','pause','resume','cancel','lead','finish','report','wait','yield'],
   plan: ['submit','replan'],
-  task: ['list','show','update','delegate','dispatch','retry','retry-dispatch','cancel','recover-source','evidence','evidence-log','supplement-evidence'],
+  task: ['list','show','update','delegate','dispatch','retry','retry-dispatch','cancel','recover-source','supplement-result','recover','evidence','evidence-log','supplement-evidence'],
   run: ['list','show','logs','cancel','reconcile'],
   integration: ['list','request','reconcile'],
   conversation: ['list','create','show','rename','archive'],

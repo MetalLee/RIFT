@@ -54,3 +54,76 @@ Workflow 已 `completed`，两个任务均 `succeeded`。代码任务接受提�
 按用户后续要求，主 agent 与开发子 agent 现在可在 Host 关联的 workspace 仓库及自己的任务工作树直接执行 Git 提交，并具备使用已登录 `gh` 创建 PR 的执行入口。本文早期恢复过程中的“仅 Host 提交”是当时策略，已由新策略替代；Host 仍验证真实 source、收集剩余未提交改动并执行候选检查与独立审查。参见 [workspace 仓库权限](workspace-repository-permissions.md)。
 
 本轮用户选择先提交当前 `main` 的全部改动，GitHub 登录稍后进行，因此不推送、不创建远端 PR。恢复工作流的 `6639bc3` 仍保留在其集成分支，不能把本轮本地主分支提交描述为已经合并该候选。
+
+## Stage recovery API (2026-10-29)
+
+This section describes current recovery entry points; the earlier incident records above are historical evidence, not proof for a new candidate.
+No new UI, model fallback, or generic workflow engine is introduced.
+
+| Failure | Explicit action | Preserved facts / remaining gates |
+| --- | --- | --- |
+| Successful developer Run, source collection failed | `task recover-source {expectedVersion}` or `task recover` below | Same Run, attempt and checkout; Host revalidates ownership, safe paths and real diff, then queues normal candidate checks/review. Already committed deletions/renames are not passed to `git add`; only index-relative unstaged paths and ordinary untracked files need staging. Returned `changedPaths` describes the final committed diff. |
+| `INVALID_RESULT` caused by prose around one valid developer result | `task supplement-result`, then reload task version and `task recover` | No provider, shell, Git or other code executes during supplementation. Original failed Run/result/artifact remain immutable. Source is collected only after an original `completed` outcome is verified. |
+| Missing/unavailable Host check evidence | `task recover` routes to existing `supplement-evidence` | Exact stored candidate and Host-configured checks only; no uploaded logs/model claims. The existing candidate binding, environment/configuration and cleanup checks remain mandatory. |
+| Provider/transport failure during independent review, or explicitly blocked review | `task recover` routes to existing integration retry | Same source and development attempt. Candidate preparation/checks may run again against the current target; an exact new independent approval is required. Old approval is never carried forward. `changes_requested` is not an infrastructure retry. |
+| Provider stops/errors/Host interruption before a valid completed developer result | `task recover` returns `CONTINUATION_REQUIRED` | Incomplete output cannot establish completion, even if it contains a valid JSON object. After cleanup proof, use explicit `task retry {expectedVersion,reason}` and dispatch, with a continuation reason instructing read-only inspection/reapplication of preserved attempt edits into the new cwd. Existing retry prompts include prior results/checkout paths. No automatic provider/model change or blind replay of the interrupted command. |
+| Real required check failure or substantive review rejection | Explicit code repair with `task retry`, then dispatch | New development attempt and all ordinary source/check/review gates. `task recover` rejects known check defects with `CODE_REPAIR_REQUIRED`. |
+| Unknown Run/check cleanup or publication | Existing `run reconcile` / `integration reconcile`, with current versions and actual owned cleanup/reboot/publication proof | Restarting only the Host is not cleanup proof. Recovery refuses uncertain leases, writers, unfinished finalization, cancelled tasks/workflows and stale versions. |
+
+### Result-only supplementation
+
+`POST /v1/tasks/:id/supplement-result` and `rift ws task supplement-result ID --workspace WS --file supplement.json --key supplement-1` accept:
+
+```json
+{"runId":"original-run","expectedVersion":7,"outputSha256":"<64 lowercase hex characters>","resultText":"<the unchanged bare JSON result from the original output>"}
+```
+
+Read the original Run via `task show` / `run show` (HTTP `GET /v1/runs/:id`): hash the UTF-8 string **`run.result.output`**, not the entire Run, file, JSON string encoding, or provider session log. This is the Host's persisted, sanitized output. For example, in Node: `createHash('sha256').update(run.result.output).digest('hex')`.
+
+The current Run must have failed with `INVALID_RESULT` after a successful provider stop and have confirmed Run **and owned lease** cleanup. The strict schema/task/run identity checks are unchanged. `resultText` must parse as one bare JSON object and occur exactly once, unchanged, in the original output; text outside it may not contain object/array delimiters. This deliberately conservative rule handles prose/Markdown wrappers, not arbitrary extraction, edited fields, merged objects, malformed JSON repair or ambiguous multi-result output. Incomplete/truncated output is refused. Legacy format-failure outputs are eligible only when the complete bounded original output is still present. A blocked business outcome remains blocked.
+
+Success returns `{runId,result}` and appends `result.supplemented` with output hash and original worktree binding, increments task version once, and leaves the task blocked until explicit source recovery. Repeating the same supplement while still recoverable is a no-op; a different supplement conflicts. Historical `result_recorded`, `stopReason`, failure status and original result artifact are not rewritten. HTTP/agent CLI receipt replay also remains available with the same outer request key.
+
+### Stage routing and replay
+
+`POST /v1/tasks/:id/recover` and `rift ws task recover ID --workspace WS --data '{"expectedVersion":8,"idempotencyKey":"recovery-1"}' --key recovery-1` accept `{expectedVersion,idempotencyKey}`. Success returns `{stage:"source"|"checks"|"review",...existingStageResponse}`. The task must be blocked in a running/paused workflow. Paused workflows remain paused; explicit resume consumes queued integration work only after a live Lead is available.
+
+The append-only task event ledger stores keyed recovery receipts. Same task/key/version replays the saved response/error without repeating Git, checks or activation. Changing the version with the same key is `IDEMPOTENCY_CONFLICT`. An interrupted pending receipt is `REQUEST_PENDING`: inspect the persisted stage, reconcile genuine cleanup if necessary, and explicitly choose a new request after inspection; it is never silently replayed. Use a new key/version after fixing a rejected operation's cause.
+
+`RESULT_SUPPLEMENT_REQUIRED` directs format failures to the result-only path. Browser `retry-dispatch` refuses format/source infrastructure failures and interrupted developer executions instead of automatically launching development; explicit `task retry` remains available for a real code repair. Source recovery and result supplementation preserve all normal task/run identity, ownership, cancellation, precise candidate and independent review gates.
+
+### Regression coverage
+
+- `tests/git/integration.test.ts`: real Git committed/staged/unstaged/mixed deletion/rename/add collection, literal names, index-versus-working-tree differences and final changed-path accuracy.
+- `tests/acceptance/source-recovery-api.test.ts`: HTTP/CLI result supplementation, provenance/hash/schema/ambiguity rejection, task/run/workspace/Lead authority, versioning/replay, cancellation and unknown cleanup, source recovery without rewriting Run facts.
+- `tests/git/core-integration.test.ts`: real Git plus controlled provider; collection failure recovery for committed delete/rename, format-only recovery across restart with unchanged immutable artifact, exact checks/review, check-stage recovery, code defect separation and explicit provider continuation preserving old edits.
+- `tests/core/coordinator.test.ts`: failed-review stage recovery, attempt preservation and keyed replay, alongside existing cleanup/cancellation regression.
+
+These tests substitute provider activation; they do not claim real external supplier availability or replace Host candidate checks/independent review.
+
+
+## 组合恢复回归与范围调整（2026-10-29）
+
+`tests/acceptance/combined-recovery.test.ts` 保留三个组合场景（已提交删除、重命名、真实源码缺陷）。除外部 provider 激活受控替代外，使用真实 Git、Host 管理 API / workspace CLI、租约、不可变结果 artifact 和检查附件：
+
+- 格式失败只补交原结果，收集失败显式恢复，同一开发 Run/attempt 不重新开发；重复请求不重复执行，历史失败和原始 artifact 不改写。
+- 缺证沿既有 `supplement-evidence` 恢复，serial 管线完整重跑；通过附件绑定精确候选、身份及日志哈希，未变有效附件可安全复用。
+- 审查基础设施失败只恢复审查，必须对精确检查候选独立批准后发布，租约与清理仍需确认。
+- 失败反例中 `diff-check` 真实退出 0，而 required 源码断言退出 1；仍拒绝发布和基础设施恢复（`CODE_REPAIR_REQUIRED`），不以差异格式检查或开发者声明替代真实检查。该 fixture 不是实际前端或浏览器检查。
+
+### 前次验证与撤销要求的边界
+
+前次开发提交 `679d9cce6be0b317de8656ddfb6736008349019b` 记录了本地组合回归 3/3、受影响测试 31 文件/382 项、类型检查及构建通过；日志保留在前次任务 checkout 的 `.runtime-evidence/p1-combined/`，不是本轮执行证据或正式 Host 附件。前次浏览器命令因系统 Playwright 模块缺失报 `MODULE_NOT_FOUND`，运行 Host 未启用新增 profile，旧部署阻塞与拒审事实不改写，不能称已部署或生效。
+
+用户随后明确“不增加新的检查配置，也不需要预置浏览器依赖”。本轮因此撤销新增前端 profile、专属浏览器包装脚本、profile 加载测试及部署文档，并还原为该 profile 引入的 package scripts 和浏览器脚本修改；不删除基线已有浏览器脚本/测试，不改既有 `profiles/rift.patch.yml`、`profiles/rift.codex.patch.yml`，也不安装浏览器或改运行 Host。原第四项 P1 的新增 profile/浏览器部署要求已撤销，不再是本轮验收条件；这是需求收缩，不是部署问题已修复。
+
+前三项恢复修复、上述组合回归、现有 required 检查及持久证据/安全复用机制继续保留。正式候选仍须由 Host 执行现有检查并独立审查；本地验证不替代这些门禁。
+
+### 本轮本地复验（范围收缩后的工作树）
+
+- 恢复专项 10 文件、240 项通过，包含原样保留的组合回归 3/3，以及来源、结果补交、身份/清理、幂等、补证、baseline、检查计划和精确候选门禁。
+- 还原后的 `pnpm test:ui`：13 文件、128 项通过。`pnpm typecheck`、`pnpm build` 通过，构建保留既有 >500 kB chunk 警告。
+- 断言核对：package scripts 与既有浏览器脚本逐字还原到新增 profile 前；两个既有 profile 与组合回归逐字保持任务基线；仅七个指定文件有差异，index/HEAD 保持 `679d9cce6be0b317de8656ddfb6736008349019b`，`git diff --check` 通过。
+- 私有依赖冷安装下载报错并超时中断；随后首次 `pnpm build:protocol` 的自动依赖安装也被超时中断，均不算成功。确认进程结束后改用已有依赖工具链的本地链接，`@rift/protocol` 明确指向当前 checkout 并从本轮源码构建；后续 pnpm 命令通过环境变量 `pnpm_config_verify_deps_before_run=false` 停止隐式安装，不跳过测试、类型检查或构建。未改旧 checkout 或运行 Host。
+
+本轮真实日志位于当前任务 checkout 的 `.runtime-evidence/p1-scope-reduction/`（`install.log`、`protocol.log`、`protocol-direct.log`、`recovery-tests.log`、`ui-tests.log`、`typecheck.log`、`build.log`、`scope-check.log`），不入 Git，也不是正式 Host 候选附件。没有重测浏览器、预置系统依赖、push 或创建 PR；按派单要求保留最终改动未暂存、不创建本地提交，由 Host 后续收集并独立审查。

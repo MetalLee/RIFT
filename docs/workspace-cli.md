@@ -71,3 +71,11 @@ Candidate checks/publication compare committed source and ordinary untracked fil
 Repository preparation has no fixed file-count rejection; scanning remains cancellable. Shell calls accept longer explicit `timeoutMs` instead of rejecting anything over five minutes (the JavaScript timer ceiling and enclosing execution deadline still apply). Neither change expands mounted workspace paths.
 
 Candidate checks receive read-only access to their repository's canonical Git metadata, so linked-worktree Git commands work without granting writes to shared refs or indexes. Registered repository counts are not a separate native-runtime permission limit.
+
+### Recover a delivery stage, not the implementation
+
+See [stage recovery](blocked-workflow-recovery.md#stage-recovery-api-2026-10-29) for input and failure codes.
+Use `rift ws task recover TASK --workspace WS --data '{"expectedVersion":N,"idempotencyKey":"recover-1"}' --key recover-1`
+after fixing infrastructure. This selects source collection, missing Host checks, or review without dispatching a developer.
+For a result wrapped in prose, first use `task supplement-result` with the original Run/output hash and the unchanged JSON body.
+Both commands are Lead/operator-only for agent CLI calls. The task and Run remain auditable; supplementation is not acceptance.

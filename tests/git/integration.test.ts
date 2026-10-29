@@ -72,6 +72,24 @@ describe('real Git integration', () => {
     expect((await gitOk(worktree.path,['ls-files','-z'])).split('\0')).not.toContain('base.txt');
     expect(await sourceCheckoutClean(worktree.path)).toBe(true);
   });
+  it.each(['committed-delete','committed-rename','staged-delete','staged-rename','unstaged-rename','mixed'] as const)('collects %s using final paths without restaging committed deletions',async mode=>{
+    const f=await fixture(),ctx=f.context(mode),run=f.run(mode),worktree=await f.service.prepareTask({...ctx,run});
+    if(mode.includes('rename'))await gitOk(worktree.path,['mv','base.txt','renamed.txt']);
+    else await gitOk(worktree.path,['rm','base.txt']);
+    if(mode.startsWith('committed')||mode==='mixed')await gitOk(worktree.path,['commit','-m','agent change']);
+    if(mode==='unstaged-rename')await gitOk(worktree.path,['reset','HEAD']);
+    const committed=await gitOk(worktree.path,['rev-parse','HEAD']);
+    if(mode==='mixed'){
+      await writeFile(path.join(worktree.path,'added.txt'),'added');
+      await writeFile(path.join(worktree.path,'.gitignore'),'changed');
+    }
+    const source=await f.service.collectSource({...ctx,run,worktree});
+    const expected=['base.txt',...mode.includes('rename')?['renamed.txt']:[],...mode==='mixed'?['.gitignore','added.txt']:[]].sort();
+    expect(source.changedPaths).toEqual(expected);
+    expect(source.changedPaths).toEqual((await gitOk(worktree.path,['diff','--name-only','--no-renames',f.baseCommit,source.sourceHead])).split('\n').sort());
+    if(mode.startsWith('committed'))expect(source.sourceHead).toBe(committed);
+    expect(await sourceCheckoutClean(worktree.path)).toBe(true);
+  });
   it('stages a legitimate source list larger than Linux ARG_MAX through stdin',async()=>{
     const f=await fixture(),ctx=f.context('large'),run=f.run('large'),worktree=await f.service.prepareTask({...ctx,run});
     const names=Array.from({length:12000},(_,n)=>`file-${String(n).padStart(5,'0')}-${'x'.repeat(175)}.txt`);
@@ -150,7 +168,7 @@ describe('real Git integration', () => {
     await writeFile(path.join(worktree.path, 'base.txt'), 'hidden staged change'); await gitOk(worktree.path, ['add', 'base.txt']);
     await writeFile(path.join(worktree.path, 'base.txt'), 'base\n'); await writeFile(path.join(worktree.path, 'allowed.txt'), 'allowed');
     const collected=await f.service.collectSource({ ...ctx, run, worktree });
-    expect(collected.changedPaths).toContain('base.txt');
+    expect(collected.changedPaths).not.toContain('base.txt');
     expect(await gitOk(worktree.path,['show',`${collected.sourceHead}:base.txt`])).toBe('base');
     expect(await gitOk(worktree.path,['show',`${collected.sourceHead}:allowed.txt`])).toBe('allowed');
   });

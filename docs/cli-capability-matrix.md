@@ -83,6 +83,8 @@ Raw legacy task reads differ intentionally from the scoped diagnostic projection
 | `POST /v1/tasks/:id/integration` | `task.integration` | `ws integration request ID` |
 | `POST /v1/tasks/:id/retry` | `task.retry` | `ws task retry ID` |
 | `POST /v1/tasks/:id/recover-source` | `task.recover-source` | `ws task recover-source ID` |
+| `POST /v1/tasks/:id/supplement-result` | `task.supplement-result` | `ws task supplement-result ID` |
+| `POST /v1/tasks/:id/recover` | `task.recover` | `ws task recover ID` |
 | `POST /v1/tasks/:id/cancel` | `task.cancel` | `ws task cancel ID` |
 | `GET /v1/runs/:id` | `run.raw-show` | `ws run show ID` |
 | `POST /v1/runs/:id/cancel` | `run.cancel` | `ws run cancel ID` |
@@ -160,7 +162,7 @@ invented capabilities. `curl` is not counted as a CLI command.
 
 `ws workspace paths/grant-path/revoke-path`; agent show/disable/enable;
 repository show/update/disconnect; workflow list/start/lead/finish/wait/yield;
-plan submit/replan; task update/delegate/dispatch/retry/recover-source/cancel;
+plan submit/replan; task update/delegate/dispatch/retry/recover-source/supplement-result/recover/cancel;
 run list/show/logs/cancel; integration list/request; conversation show/rename/archive;
 Skill show/discard-preview/restore; source read; queue list; diagnostic show.
 Delegation and yield require a live coordinating chat execution, not an operator
