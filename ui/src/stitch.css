@@ -79,6 +79,11 @@ code { font-size: 13px; }
 .breadcrumbs>span:last-child { color: #974324; }
 .primary, .secondary { padding: 10px 16px; border: 0; border-radius: 12px; font-size: 13px; line-height: 18px; font-weight: 600; min-height: 38px; }
 .secondary { background: white; color: #1b1c1a; box-shadow: 0 1px 4px rgb(0 0 0 / 4%); }
+/* White cards swallow the white .secondary fill; on-card gives the same low-emphasis action a warm-grey fill and a visible edge. Opt-in per button, so other .secondary uses are unchanged. */
+.secondary.on-card { padding: 9px 15px; border: 1px solid #d1cbc1; background: #f4f4f0; color: #1b1c1a; box-shadow: none; }
+.secondary.on-card:hover:not(:disabled) { border-color: #dbc1b9; background: #e9e1d9; }
+/* .secondary's unlayered box-shadow cancels the shadcn focus ring, so draw the focus indicator as an outline. */
+.secondary.on-card:focus-visible { outline: 2px solid #974324; outline-offset: 2px; }
 .text-button { min-height: 30px; padding: 6px 8px; font-size: 11px; line-height: 16px; }
 [data-slot=button] { font-size: 13px; line-height: 18px; }
 [data-slot=button][data-variant=default] { color: white; }
