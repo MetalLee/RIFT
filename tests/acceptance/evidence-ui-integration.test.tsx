@@ -272,3 +272,32 @@ it('keeps actual pipeline receipts without routine Lead wakes and resumes succes
   expect(host.store.all("SELECT id FROM execution_leases WHERE workspace_id='own' AND released_at IS NULL")).toHaveLength(0);
   expect(decisions).toHaveLength(2);
 });
+
+it('exposes historical baseline and measured timings through real HTTP/CLI evidence after restart, without relaxing gates', async () => {
+  const checks: CheckCommand[] = [{ id: 'unit', executable: process.execPath, args: ['-e', 'console.log("historical failure");process.exit(1)'], baseline: { environmentId: 'immutable-evidence-test-v1' } }];
+  const f = await fixture(checks);
+  await f.cli('dispatch', { expectedVersion: 0, idempotencyKey: 'dispatch-baseline' });
+  await f.develop(await f.started('develop'), 'candidate\n'); await f.settled('blocked');
+  const evidence = await f.raw(), integration = evidence.integrations[0]!, baseline = integration.baselines![0]!;
+  expect(integration.readiness.status).toBe('failed');
+  expect(baseline).toMatchObject({ status: 'recorded', check: { host: { taskId: '$baseline', exitStatus: 'failed' } } });
+  expect(baseline.failureFingerprint).toMatch(/^[a-f0-9]{64}$/);
+  expect(integration.timings!.prepareMs).toBeGreaterThan(0);
+  expect(integration.timings!.baselineMs).toBeGreaterThan(0);
+  expect(integration.timings!.checksMs).toBe(integration.checks[0]!.durationMs);
+  expect(integration.checks[0]!.candidateHead).toBe(evidence.currentCandidate!.candidateHead);
+  expect(baseline.check!.candidateHead).not.toBe(evidence.currentCandidate!.candidateHead);
+  expect(f.reviewCalls()).toHaveLength(0);
+  const logInput = { integrationId: integration.id, checkId: baseline.check!.id };
+  const cliLog = await f.cli('evidence-log', logInput);
+  expect(cliLog.host.taskId).toBe('$baseline'); expect(cliLog.stdout).toContain('historical failure');
+  const httpLog = await request('/workspaces/own/tasks/task/evidence/log?' + new URLSearchParams(logInput));
+  expect(httpLog).toEqual(cliLog);
+  f.host.coordinator.pause(f.workflow.id);
+  await f.restart(checks);
+  expect(await f.raw()).toEqual(evidence);
+  const cliEvidence = await f.cli('evidence');
+  expect(cliEvidence.integrations[0].baselines).toEqual(integration.baselines);
+  expect(f.reviewCalls()).toHaveLength(0);
+  await expect(f.post('/evidence', { ...logInput, candidateHead: evidence.currentCandidate!.candidateHead, expectedVersion: f.host.store.task('task').version, idempotencyKey: 'baseline-is-not-pass', baseline: { exitCode: 0 } }, 'forged-baseline')).rejects.toThrow();
+});

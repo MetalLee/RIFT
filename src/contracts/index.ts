@@ -15,7 +15,7 @@ export interface ActivationHandle { childId: string; result: Promise<ActivationR
 /** Owns only DSH activation handles. A live parent is supplied by the host bridge. */
 export interface ActivationBridge { start(input: { run: Run; task: Task; role: Role; cwd: string; repositoryAccess?: import('../agent/repository-access.js').RepositoryAccess; prompt: string; signal: AbortSignal; tools?: import('../agent/runtime-types.js').RuntimeTool[]; onEvent?:(event:import('../agent/runtime-types.js').RuntimeEvent)=>void; onProgress?:(event:import('../task/run-progress.js').RunActivity)=>void; onAccepted?():void }): Promise<ActivationHandle> }
 export interface GitContext { workspace: Workspace; workflow: Workflow; task: Task }
-export interface Candidate { taskAttempt?: number; integrationId: string; sourceHead: string; candidateHead: string; expectedTargetHead: string; cwd: string; checkIds: string[]; checks?: import('../git/types.js').CheckEvidence[]; readiness?: import('@rift/protocol').EvidenceReadiness }
+export interface Candidate { baselines?: import('@rift/protocol').BaselineEvidence[]; timings?: import('@rift/protocol').StageTimings; taskAttempt?: number; integrationId: string; sourceHead: string; candidateHead: string; expectedTargetHead: string; cwd: string; checkIds: string[]; checks?: import('../git/types.js').CheckEvidence[]; readiness?: import('@rift/protocol').EvidenceReadiness }
 /** Git facts are determined by the implementation, never by model claims. */
 export interface GitService {
   prepareTask(input: GitContext & { run: Run }): Promise<Worktree>;
