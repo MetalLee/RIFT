@@ -1,3 +1,4 @@
+import type { SummaryTranslationFactory } from './summary-translation.js';
 import { timelinePage } from './timeline-page.js';
 import { conversationRunMessages } from '../task/run-stream.js';
 import { TurnStream } from './turn-stream.js';
@@ -20,6 +21,7 @@ import { nativeSession, sessionCallbacks, acknowledgeMessages, type NativeSessio
 
 export const sendMessageSchema = z.object({ clientMessageId: z.string().min(1).max(160), recipientAgentId: z.string().min(1).max(160).optional(), content: z.string().trim().min(1).max(32000), contextRefs: z.array(z.object({type:z.enum(['task','repository','worktree']),id:z.string().min(1).max(160)}).strict()).max(20).optional(), mentions:z.array(z.object({agentId:z.string().min(1).max(160),label:z.string().min(1).max(120)}).strict()).max(1).optional() }).strict();
 export interface ChatServiceOptions {
+  summaryTranslation?:SummaryTranslationFactory;
   store: RiftStore; home: string;
   defaultConnection(): ChatConnection;
   validateConnection(connection: ChatConnection): void;
@@ -62,7 +64,7 @@ export class ChatService {
     const workspace=this.store.workspace(workspaceId) as ReturnType<RiftStore['workspace']> & {leadConnection:ChatConnection|null};
     const role=this.store.require<BrowserAgent>('SELECT * FROM roles WHERE id=? AND workspace_id=? AND enabled=1',agentId,workspaceId);
     const binding=role.providerBindingId?this.store.get<import('../contracts/index.js').ProviderBinding>('SELECT * FROM provider_bindings WHERE id=? AND (workspace_id IS NULL OR workspace_id=?)',role.providerBindingId,workspaceId):undefined;
-    const connection=role.chatConnection ?? (role.purpose==='lead' ? workspace.leadConnection ?? this.options.defaultConnection() : bindingConnection(binding));
+    const connection=role.purpose==='lead' ? workspace.leadConnection ?? this.options.defaultConnection() : role.chatConnection ?? bindingConnection(binding);
     invariant(connection,'CONNECTION_REQUIRED','Configure a discussion connection or a supported execution connection for this member.');
     this.options.validateConnection(connection); return connection;
   }
@@ -327,7 +329,7 @@ export class ChatService {
     let lastModelWrite = 0;
     let runtimeStarted = false, modelEnded = false;
     const stream = new SafeChatStream();
-    const structured = new TurnStream(this.store, turn.id, turn.workspaceId, turn.conversationId, error => controller.abort(error));
+    const structured = new TurnStream(this.store, turn.id, turn.workspaceId, turn.conversationId, error => controller.abort(error),undefined,this.options.summaryTranslation?.({workspaceId:turn.workspaceId,agentId:turn.agentId,conversationId:turn.conversationId,ownerType:'turn',ownerId:turn.id}));
     let handle: RuntimeHandle | undefined, cleanup = 'unknown', status: AgentTurn['status'] = 'failed', error: string | null = null, text = '', bufferedText = '', draftText = '';
     const timeoutMs = this.options.turnTimeoutMs?.(turn) ?? this.options.timeoutMs ?? 10 * 60_000;
     let timeoutTriggered = false;

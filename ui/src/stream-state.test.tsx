@@ -48,21 +48,12 @@ describe('chat stream projection and rendering',()=>{
     expect(finalHtml.split('检查完成。')).toHaveLength(2);
   });
 
-  it.each(['reasoning','reasoning_summary'] as const)('renders %s directly as conversation text in both languages',kind=>{
+  it.each(['reasoning','reasoning_summary'] as const)('hides untranslated historical %s',kind=>{
     const data={workspace:{id:'ws'},roles:[{id:'lead',displayName:'主 Agent'}],tasks:[]} as unknown as UiWorkspaceDetail;
-    for (const text of ['需要比较两处调用的结果。','The two call results need to be compared.']) {
-      const page=applyMessageEvent(initial,messageEvent(11,0,text,11,{kind}))!;
-      const html=renderToStaticMarkup(<ChatTimeline messages={page.messages} turns={page.turns} chunks={[]} data={data} stale={false} onStop={()=>{}}/>);
-      expect(html).toContain(text);
-      expect(html.match(/<article/g)).toHaveLength(2);
-      expect(html).not.toContain('<details');
-      expect(html).not.toContain('阶段输出');
-      const rows=buildConversationTimeline(page.messages,page.turns,[]).items;
-      expect(rows.map(row=>row.message.senderType??row.message.role)).toEqual(['user','agent']);
-      expect(rows[1]!.message.senderAgentId).toBe('lead');
-      expect(rows[0]!.turns).toHaveLength(0);
-      expect(rows[1]!.turns).toHaveLength(1);
-    }
+    const page=applyMessageEvent(initial,messageEvent(11,0,'English original',11,{kind}))!;
+    const html=renderToStaticMarkup(<ChatTimeline messages={page.messages} turns={page.turns} chunks={[]} data={data} stale={false} onStop={()=>{}}/>);
+    expect(html).not.toContain('English original');
+    expect(buildConversationTimeline(page.messages,page.turns,[]).items).toHaveLength(1);
   });
 
   it('retains interrupted messages and accepts authoritative replacement text',()=>{
