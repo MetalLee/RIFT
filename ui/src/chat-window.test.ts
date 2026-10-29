@@ -1,3 +1,4 @@
+import {buildConversationTimeline} from './chat-timeline';
 import {describe,it,expect} from 'vitest';
 import type {ChatPage,ChatMessage} from '@rift/protocol';
 import {needsTimelineBridge,mergeChatHistory} from './chat-state';
@@ -25,5 +26,32 @@ describe('lazy live chat window',()=>{
   const old=page(0,1);old.messages[0]!.status='streaming';
   const refreshed=page(0,1);refreshed.messages[0]!.status='interrupted';
   expect(mergeChatHistory(old,refreshed).messages[0]?.status).toBe('interrupted');
+ });
+});
+
+describe('timeline Run result SSE presentation',()=>{
+ const raw=JSON.stringify({schemaVersion:1,taskId:'task',runId:'run',verdict:'approve',reviewedCommit:'cc195cf050b5d0af7b3f42e6e1dcbbf8f0c0f1aa',findings:[]},null,2);
+ const event=(seq:number,offset:number,delta:string,status='streaming',replace=false):WorkspaceEvent=>({workspaceId:'ws',entityVersion:0,occurredAt:'now',seq,type:'run.message',entityId:'run',payload:{conversationId:'c',message:{seq:1,runId:'run',messageId:'review',workspaceId:'ws',conversationId:'c',roleId:'reviewer',taskId:'task',status,kind:'final',version:seq,createdAt:'now',updatedAt:'now'},offset,delta,replace}} as WorkspaceEvent);
+ const visible=(p:ChatPage)=>buildConversationTimeline(p.messages,p.turns,[],[],p.runMessages).items.at(-1)!.message.content;
+ it('formats completion and replay without changing raw offsets, including hydration mid-stream',()=>{
+  let p=applyMessageEvent(page(0,0),event(2,0,raw.slice(0,30)))!;
+  p=JSON.parse(JSON.stringify(p)); // snapshot/reload representation
+  p=applyMessageEvent(p,event(3,30,raw.slice(30),'completed'))!;
+  expect(visible(p)).toContain('审查通过');expect(visible(p)).not.toContain('schemaVersion');
+  expect(p.messages[0]!.content).toBe(raw);
+  expect(applyMessageEvent(p,event(3,30,raw.slice(30),'completed'))).toBe(p);
+  const refreshed=JSON.parse(JSON.stringify(p)) as ChatPage;
+  p=applyMessageEvent(refreshed,event(4,raw.length,'','completed'))!;
+  expect(visible(p)).toContain('审查通过'); // raw offset, not formatted string length
+  expect(applyMessageEvent(p,event(5,raw.length+1,'x','completed'))).toBeUndefined();
+  const blocked=raw.replace('approve','blocked');
+  p=applyMessageEvent(p,event(6,0,blocked,'completed',true))!;expect(visible(p)).toContain('审查受阻');
+ });
+ it('formats developer results too and never treats commentary or mismatched identity as a verdict',()=>{
+  const dev=JSON.stringify({schemaVersion:1,taskId:'task',runId:'run',summary:'实现完成'});
+  expect(visible(applyMessageEvent(page(0,0),event(2,0,dev,'completed',true))!)).toBe('实现完成');
+  const e=event(2,0,raw,'completed',true);(e.payload.message as {kind:string}).kind='commentary';
+  expect(visible(applyMessageEvent(page(0,0),e)!)).toBe(raw);
+  const wrong=raw.replace('"task"','"foreign"');expect(visible(applyMessageEvent(page(0,0),event(2,0,wrong,'completed',true))!)).toBe(wrong);
  });
 });

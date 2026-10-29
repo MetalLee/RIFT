@@ -4,14 +4,14 @@ export interface TimelineItem { message:ChatMessage; turns:AgentTurn[]; taskIds:
 export function messageSender(message:ChatMessage): 'user'|'agent'|'system' { return message.senderType ?? (message.role==='user'?'user':message.role==='system'?'system':'agent'); }
 export function messageAuthor(message:ChatMessage):string|null { return messageSender(message)==='agent' ? message.senderAgentId ?? message.recipientAgentId : null; }
 /** Presentation only: never changes the authoritative Run result or acceptance. */
-export function runResultContent(stream:RunStreamMessage):string {
+export function runResultContent(stream:Pick<RunStreamMessage,'kind'|'text'|'runId'|'taskId'> & {status:string}):string {
   if(stream.kind!=='final'||stream.status!=='completed')return stream.text;
   const source=stream.text.trim().replace(/^```(?:json)?\s*\n([\s\S]*?)\n```$/i,'$1');
   try {
     const result=JSON.parse(source);
-    if(result?.schemaVersion!==1||result.runId!==stream.runId||result.taskId!==stream.taskId)return stream.text;
+    if(result?.schemaVersion!==1||result.runId!==stream.runId||(result.taskId!==undefined&&result.taskId!==stream.taskId))return stream.text;
     const verdicts:Record<string,string>={approve:'审查通过',changes_requested:'审查要求修改',blocked:'审查受阻'};
-    if(Object.hasOwn(verdicts,result.verdict)&&typeof result.reviewedCommit==='string'&&/^[a-f0-9]{40,64}$/i.test(result.reviewedCommit)&&Array.isArray(result.findings)&&result.findings.every((f:unknown)=>{
+    if(result.taskId===stream.taskId&&Object.hasOwn(verdicts,result.verdict)&&typeof result.reviewedCommit==='string'&&/^[a-f0-9]{40,64}$/i.test(result.reviewedCommit)&&Array.isArray(result.findings)&&result.findings.every((f:unknown)=>{
       if(!f||typeof f!=='object')return false;
       const item=f as Record<string,unknown>;
       return typeof item.severity==='string'&&['critical','high','medium','low'].includes(item.severity)&&typeof item.file==='string'&&Number.isInteger(item.line)&&Number(item.line)>0&&typeof item.reason==='string'&&typeof item.suggestion==='string';
@@ -99,7 +99,8 @@ export function buildConversationTimeline(messages:ChatMessage[],turns:AgentTurn
     }
     const owner = item.turns.find(turn=>turn.id===item.message.sourceTurnId && messageAuthor(item.message)===turn.agentId);
     const canonical = owner && finalStream(owner,item.message);
-    rows.push({...item,message:canonical?{...item.message,id:`stream:${owner!.id}:${canonical.messageId}`,createdAt:canonical.createdAt}:item.message,turns:[],drafts:[]});
+    const projected=item.message.runId&&item.message.taskId&&item.message.runtimeMessageKind?{...item.message,content:runResultContent({kind:item.message.runtimeMessageKind,text:item.message.content,status:item.message.status,runId:item.message.runId,taskId:item.message.taskId})}:item.message;
+    rows.push({...item,message:canonical?{...item.message,id:`stream:${owner!.id}:${canonical.messageId}`,createdAt:canonical.createdAt}:projected,turns:[],drafts:[]});
   }
   // Public member-authored progress is a conversation message, not a hidden
   // Host receipt. Keep lifecycle receipts grouped separately.
