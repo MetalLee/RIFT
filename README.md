@@ -207,13 +207,19 @@ checks:
     timeoutMs: 120000
 ```
 
-示例中的 `scripts/rift-check.mjs` 需要你在**目标仓库**实现并提交，它不是 RIFT 提供的文件。检查会在独立的候选 checkout 中执行，该目录不会自动拥有原仓库未提交的文件、`node_modules` 或构建缓存。请准备适用于新 checkout 的依赖方案，并把生成产物放在 checkout 外；即使是 ignored 文件，遗留在候选目录中也会阻止发布。
+示例中的 `scripts/rift-check.mjs` 需要你在**目标仓库**实现并提交，它不是 RIFT 提供的文件。检查会在独立的候选 checkout 中执行，该目录不会自动拥有原仓库未提交的文件、`node_modules` 或构建缓存。请准备适用于新 checkout 的依赖方案；生成产物应使用已提交 `.gitignore` 覆盖的路径，受 Git 管理的候选文件改动仍会阻止发布。ignored 产物保留，但会阻止直接删除有内容的工作树。
 
 每项检查使用固定的可执行程序和参数数组，不经 shell 拼接；Windows 下使用实际 `.exe` 或 `node` 加脚本路径，避免直接依赖 `.cmd`。检查成功后候选必须保持干净且 HEAD 不变。服务也支持 `--patch <配置路径>`，自定义 patch 时须正确保留插件入口及其他必要配置。
 
 ### Host 证据与补证（第一批）
 
 `checks` 是 Host 操作员配置的显式必需清单，不从任务描述猜测测试。默认每项 `required: true`；可选检查可设置 `required: false`，普通非零退出保留为 `optional`，不能伪称通过；超时或清理未知始终是硬阻塞，与 required/optional 无关。至少需要一个必需检查；最多 64 项，单项超时上限 3600000 ms。
+
+显式检查依赖图、互斥/资源额度、隔离并行和产物串行兼容模式见[检查 DAG 契约](docs/check-plan.md)；没有 `checkPlan` 时仍串行。
+
+可选的 Host 历史基线复用及准备/检查计时见[基线证据契约](docs/baseline-evidence.md)。基线失败仅作对照，不代替当前候选检查或审核批准；旧配置不增加执行。
+
+显式 npm 依赖快照、私有恢复、持久租约、容量及关闭/回退限制见[依赖环境复用](docs/dependency-environments.md)；默认关闭，缓存命中不替代当前候选真实检查或独立审核。
 
 每次实际执行保存独立、不可通过 API 改写的附件，绑定工作区、仓库、任务/attempt、integration、精确 candidateHead，以及命令/配置和环境指纹、Host 来源、退出状态、脱敏日志和摘要。原始日志无需（也不应）提交源码。环境指纹标识 Host OS/架构/内核、Node 版本和隔离策略版本，不代表依赖安装或构建缓存可复用。附件使用 Host 私有目录和 0600 文件，日志合计最多捕获 64 KiB；截断明确标记，列表只返回每流 8000 字符摘录。历史记录可读取；没有附件绑定的旧记录不会自动升级为可信 Host 证据。
 
@@ -233,7 +239,7 @@ CLI 对应 `rift ws task evidence TASK --workspace WORKSPACE`、`task evidence-l
 
 组合验证入口：`pnpm exec vitest run tests/acceptance/evidence-ui-integration.test.tsx tests/acceptance/timeline-ui.test.tsx`。使用真实临时 Git、SQLite、CLI 子进程和鉴权 HTTP，以及现有 UI 读取/投影/服务端渲染；仅模型执行为测试适配器，不代表外部模型实机调用或浏览器交互验收。超时清理与附件/数据库中断恢复的故障注入回归见 `tests/git/core-integration.test.ts`。
 
-待用户分别确认的后续批次（本次不实现）：第二批基线复用/检查 DAG/环境缓存；第三批分阶段队列/跨引用并行。
+第二批三项能力的组合使用、关闭/回退、实测与验证局限见[组合验证记录](docs/verification/b2-integration.md)。第三批分阶段队列/跨引用并行未授权、未实现。
 
 ## 常用管理命令
 

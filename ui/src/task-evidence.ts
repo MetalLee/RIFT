@@ -22,7 +22,7 @@ function hostAttachment(value: unknown) {
       !integrationId || !candidateHead || !positiveInteger(host.attempt) || !configurationFingerprint || !environmentFingerprint ||
       !logSha256 || !/^[a-f0-9]{64}$/i.test(logSha256) || typeof host.summary !== 'string' || !text(command.executable) ||
       !Array.isArray(command.args) || !command.args.every(arg => typeof arg === 'string') || !positiveInteger(command.timeoutMs) ||
-      (exitStatus !== 'passed' && exitStatus !== 'failed' && exitStatus !== 'environment_unavailable' && exitStatus !== 'timed_out')) return null;
+      (exitStatus !== 'passed' && exitStatus !== 'failed' && exitStatus !== 'environment_unavailable' && exitStatus !== 'timed_out' && exitStatus !== 'skipped' && exitStatus !== 'cancelled')) return null;
   return { workspaceId, repositoryId, repositoryFingerprint, taskId, integrationId, candidateHead, attempt: host.attempt,
     configurationFingerprint, environmentFingerprint, logSha256, summary: host.summary, exitStatus,
     command: { executable: command.executable as string, args: command.args as string[], timeoutMs: command.timeoutMs } } as const;

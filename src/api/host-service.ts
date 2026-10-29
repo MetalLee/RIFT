@@ -20,7 +20,7 @@ import { ProjectService } from '../project/index.js';
 import { TaskCoordinator } from '../task/coordinator.js';
 import { DshActivationBridge } from '../task/activation-bridge.js';
 import { LocalGitService } from '../git/integration.js';
-import type { CheckCommand } from '../git/types.js';
+import type { CheckCommand, CheckPlan } from '../git/types.js';
 import { RiftError, type ProviderBinding, type Workflow } from '../contracts/index.js';
 import { installLeadTools } from '../tools/rift-tools.js';
 import * as schemas from './schemas.js';
@@ -46,7 +46,7 @@ import { validateBinding } from '../project/provider-bindings.js';
 import { ChatOrchestration } from '../chat/orchestration.js';
 import { CollaborationService,delegateSchema,sendCollaborationMessageSchema } from '../chat/collaboration.js';
 
-export interface HostConfig { home: string; port: number; uiDist?: string; uiEnabled?: boolean; leadTurnLimit?: number; leadProvider: string; leadModel: string; developerProvider?: string; reviewerProvider?: string; limits?: z.infer<typeof schemas.limitsSchema>; checks: CheckCommand[]; runTimeoutMs?: number; chatOrchestration?:boolean; coordinationToolLimit?:number; coordinationStagnantLimit?:number; coordinationAutomaticTurnLimit?:number; coordinationTimeoutMs?:number }
+export interface HostConfig { home: string; port: number; uiDist?: string; uiEnabled?: boolean; leadTurnLimit?: number; leadProvider: string; leadModel: string; developerProvider?: string; reviewerProvider?: string; limits?: z.infer<typeof schemas.limitsSchema>; checks: CheckCommand[]; checkPlan?: CheckPlan; environmentCache?: import('../git/dependency-environment.js').EnvironmentCacheOptions; runTimeoutMs?: number; chatOrchestration?:boolean; coordinationToolLimit?:number; coordinationStagnantLimit?:number; coordinationAutomaticTurnLimit?:number; coordinationTimeoutMs?:number }
 export class RiftHostService implements ApiHandler {
   readonly store: RiftStore;
   readonly project: ProjectService;
@@ -78,7 +78,7 @@ export class RiftHostService implements ApiHandler {
     }
     this.store.db.exec('CREATE TABLE IF NOT EXISTS management_requests (key TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, status TEXT NOT NULL, response TEXT)');
     this.project = new ProjectService(this.store, this.providerNames);
-    this.git = new LocalGitService({ managedRoot: path.join(config.home, 'workspaces'), commands: config.checks });
+    this.git = new LocalGitService({ managedRoot: path.join(config.home, 'workspaces'), commands: config.checks, checkPlan: config.checkPlan, environmentCache: config.environmentCache });
     this.repositories = new RepositoryService(this.store, this.git);
     this.connections = new ApiConnectionService(ctx, this.store, config.home);
     const bridge = new DshActivationBridge(ctx, taskId => this.leads.get(this.store.task(taskId).workflowId)?.agent, this.store);

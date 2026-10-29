@@ -1,0 +1,218 @@
+
+ RUN  v4.0.18 /data/projects/RIFT/.rift/workspaces/e168007d2bbb66742fc6990a/worktrees/70486c9f1fdbfe5f527d1cfb
+
+stdout | tests/git/check-plan.test.ts > proves real independent command speedup while legacy checks remain serial and required
+DAG real command performance ms {"serial":2488.5244110000003,"parallel":1296.0198219999997,"commands":[["/usr/local/bin/node","-e","setTimeout(()=>console.log(\"a\"),1000)"],["/usr/local/bin/node","-e","setTimeout(()=>console.log(\"b\"),1000)"]]}
+
+stdout | tests/git/dependency-environment.test.ts > runs real offline npm ci cold/warm, copies private writable inodes, and always executes exact candidate checks across tasks/restart
+dependency npm-ci actual offline performance ms {"cold":{"status":"miss","prepareMs":2242.906822,"installMs":594.9376670000001,"restoreMs":0,"key":"02e52d454e184dee2e98d92e737a55262bb5d072d264c77161333b6788f43a3e"},"warm":{"status":"hit","prepareMs":1350.8881300000003,"installMs":0,"restoreMs":6.282266999999592,"key":"02e52d454e184dee2e98d92e737a55262bb5d072d264c77161333b6788f43a3e"},"coldCheck":2386.560861,"warmCheck":1504.4162240000005}
+
+stdout | tests/git/dependency-environment.test.ts > rejects uncertain sources before reading old snapshots and real offline npm sees external tarball changes with the same commit/lock
+external tarball same-commit/lock real offline fallback [{"head":"8c9e18a8495eef09c6011249fcc472d8a3119fba","environment":{"status":"fallback","prepareMs":620.0196050000013,"installMs":605.3610349999999,"restoreMs":0,"reason":"Inputs/toolchain not safely cacheable; download cache and fresh install only"},"stdout":"[dependency installation]\n\nadded 1 package in 371ms\n\n[candidate check]\nreal check executed: installed\n"},{"head":"8c9e18a8495eef09c6011249fcc472d8a3119fba","environment":{"status":"fallback","prepareMs":622.3125739999996,"installMs":609.1862340000007,"restoreMs":0,"reason":"Inputs/toolchain not safely cacheable; download cache and fresh install only"},"stdout":"[dependency installation]\n\nadded 1 package in 378ms\n\n[candidate check]\nreal check executed: changed-external\n"},{"head":"8c9e18a8495eef09c6011249fcc472d8a3119fba","environment":{"status":"fallback","prepareMs":648.6743729999998,"installMs":648.0839809999998,"restoreMs":0,"reason":"Dependency snapshots disabled; fresh npm install"},"stdout":"[dependency installation]\n\nadded 1 package in 408ms\n\n[candidate check]\nreal check executed: changed-external\n"}]
+
+stdout | tests/git/dependency-environment.test.ts > keeps a real HTTPS integrity-verified remote source eligible for cold/warm reuse offline
+HTTPS locked source offline cold/warm {"cold":{"status":"miss","prepareMs":2110.2652800000014,"installMs":587.8777160000009,"restoreMs":0,"key":"b96cc0a36c9e21291344bb38e8356cb1773ee4677ad2bc0d9c001196f8c5faf2"},"warm":{"status":"hit","prepareMs":1639.4731650000012,"installMs":0,"restoreMs":6.813919000000169,"key":"b96cc0a36c9e21291344bb38e8356cb1773ee4677ad2bc0d9c001196f8c5faf2"},"check":"real remote-source check executed\n"}
+
+ ✓ tests/git/check-plan.test.ts (30 tests) 68279ms
+   ✓ proves real independent command speedup while legacy checks remain serial and required  4522ms
+   ✓ isolates writable candidate inputs, outputs, HOME/cache, /tmp and ports for the exact same candidate  1382ms
+   ✓ enforces declared read-only sharing with an actual read-only mount  671ms
+   ✓ respects dependency, mutex and weighted slot ordering, not merely a concurrent promise limit  2101ms
+   ✓ collects started independent failures and results, records readable downstream skips and blocks publication  1276ms
+   ✓ supports explicit serial artifact pipelines instead of losing producer outputs in snapshots  1633ms
+   ✓ keeps timeout cleanup and its resource/mutex lease across restart (required=true)  2147ms
+   ✓ keeps timeout cleanup and its resource/mutex lease across restart (required=false)  1979ms
+   ✓ cancels active real processes, skips unstarted nodes and retains the lease until cleanup proof  845ms
+   ✓ does not turn in-flight or pending checks into passes after actual Host process restart  1319ms
+   ✓ reuses only same-candidate passes on supplementation and invalidates graph/resource/isolation configuration  2559ms
+   ✓ includes graph, isolation, mutex and resource policy in historical baseline identities  8351ms
+   ✓ marks the whole failed transitive downstream skipped even when configuration order is reversed  826ms
+   ✓ does not bypass retained resource ownership by starting a new candidate historical baseline  1030ms
+   ✓ blocks every check mode and baseline behind legacy timeout leases (required=true)  3139ms
+   ✓ blocks every check mode and baseline behind legacy timeout leases (required=false)  3086ms
+   ✓ blocks every check mode and baseline behind serial timeout leases (required=true)  3326ms
+   ✓ blocks every check mode and baseline behind serial timeout leases (required=false)  4225ms
+   ✓ blocks every check mode and baseline behind dag timeout leases (required=true)  3918ms
+   ✓ blocks every check mode and baseline behind dag timeout leases (required=false)  2823ms
+   ✓ never executes, supplements, publishes or deletes a no-owner lease  1472ms
+   ✓ never executes, supplements, publishes or deletes a corrupt-owner lease  1513ms
+   ✓ never executes, supplements, publishes or deletes a wrong-binding lease  1451ms
+   ✓ rebuilds serial HOME prerequisites with fresh evidence after persistent restart (same-process)  1896ms
+   ✓ rebuilds serial HOME prerequisites with fresh evidence after persistent restart (retained)  2221ms
+   ✓ rebuilds serial HOME prerequisites with fresh evidence after persistent restart (missing)  2385ms
+   ✓ rebuilds serial HOME prerequisites with fresh evidence after persistent restart (corrupt)  2480ms
+   ✓ does not share serial HOME products across tasks or candidate integrations  2904ms
+   ✓ does not release a retained bound lease using a transient confirmed journal as cleanup proof  793ms
+stdout | tests/git/baseline.test.ts > persists and reuses a failed historical baseline across roles/tasks and restart, never candidate passes or review
+baseline performance ms {"cold":847.054451,"warm":373.6422929999999,"baselineExecution":315.5138629999999,"candidateExecution":294.55906099999993}
+
+ ✓ tests/git/baseline.test.ts (12 tests) 48294ms
+   ✓ persists and reuses a failed historical baseline across roles/tasks and restart, never candidate passes or review  3423ms
+   ✓ does not turn a reused failure into a current required-check pass or an approval  2941ms
+   ✓ invalidates command, required/optional, timeout, environment, and complete base tree/commit inputs  13345ms
+   ✓ isolates workspace and repository trust scopes, even for identical commits  8351ms
+   ✓ fails closed on corrupt persistent evidence and does not repeat the claimed baseline  2790ms
+   ✓ fails closed on interrupted persistent evidence and does not repeat the claimed baseline  2868ms
+   ✓ retains timeout cleanup gates for baseline commands across restart (required=true)  1719ms
+   ✓ retains timeout cleanup gates for baseline commands across restart (required=false)  1667ms
+   ✓ keeps legacy serial checks unchanged and does not infer commands from acceptance prose  2023ms
+   ✓ rejects malformed Host opt-ins and cannot reuse an unresolvable environment  940ms
+   ✓ invalidates the ordered command plan and never shares writable dependency output  5309ms
+   ✓ does not let a reused passing baseline satisfy a failing current candidate  2915ms
+ ✓ tests/git/dependency-environment.test.ts (31 tests) 120097ms
+   ✓ runs real offline npm ci cold/warm, copies private writable inodes, and always executes exact candidate checks across tasks/restart  7458ms
+   ✓ rejects uncertain sources before reading old snapshots and real offline npm sees external tarball changes with the same commit/lock  4487ms
+   ✓ keeps a real HTTPS integrity-verified remote source eligible for cold/warm reuse offline  4708ms
+   ✓ single-flights concurrent real DAG installs and restores each node before allowing writes  3625ms
+   ✓ disabled snapshots still perform npm installation and real checks without creating cache state  1647ms
+   ✓ falls back to a real private install for repository npm configuration rather than ignoring it or caching credentials  1857ms
+   ✓ preserves only bounded relative dependency links and executable modes during private restore  2723ms
+   ✓ a cache hit never suppresses a failing current candidate or supplies an independent approval  5586ms
+   ✓ keys bind complete source, manifests, lock/config, template/args and repository/workspace trust; restoration config changes evidence fingerprints  12468ms
+   ✓ allows only the actual root to omit resolved and validates manifest plus both lock graphs before any cache access  4216ms
+   ✓ queues same-key builders but never merges their private writable destinations or HOME  2837ms
+   ✓ failed installation publishes nothing and releases a proven-finished build lease  3068ms
+   ✓ retains persistent lease after interrupted installation 124 and requires bound reconciliation  5593ms
+   ✓ retains persistent lease after interrupted installation 130 and requires bound reconciliation  6701ms
+   ✓ retains persistent lease after interrupted installation lost-result and requires bound reconciliation  5954ms
+   ✓ never duplicates a builder in another Host process or steals its lease after SIGKILL  8056ms
+   ✓ cold-falls back on a completed corrupt snapshot (bytes), never uses its contents  2986ms
+   ✓ cold-falls back on a completed corrupt snapshot (missing-file), never uses its contents  3272ms
+   ✓ cold-falls back on a completed corrupt snapshot (escaping-link), never uses its contents  2936ms
+   ✓ cold-falls back on a completed corrupt snapshot (metadata), never uses its contents  3046ms
+   ✓ excludes credentials/config/unsafe links from published snapshots (.npmrc)  1354ms
+   ✓ excludes credentials/config/unsafe links from published snapshots (.env)  1599ms
+   ✓ excludes credentials/config/unsafe links from published snapshots (.netrc)  1534ms
+   ✓ excludes credentials/config/unsafe links from published snapshots (credentials.json)  1491ms
+   ✓ excludes credentials/config/unsafe links from published snapshots (secret.key)  1691ms
+   ✓ excludes credentials/config/unsafe links from published snapshots (registered-secret)  1476ms
+   ✓ excludes credentials/config/unsafe links from published snapshots (escaping-link)  1776ms
+   ✓ keeps reclaimable published capacity bounded, never evicts an entry with a persistent use lease  4430ms
+   ✓ does not treat orphan staging or malformed leases as ordinary completed corruption  5656ms
+   ✓ reconciles environment leases through existing reboot proof, with downgrade-to-legacy still protected  5856ms
+ ✓ tests/git/process-tree.test.ts (5 tests) 1350ms
+   ✓ terminates a descendant which ignores SIGTERM instead of only closing its pipes  570ms
+   ✓ streams large binary stdin without argv limits and retains early-exit diagnostics  336ms
+stdout | tests/protocol/boundary.test.ts > client dependency boundary > consumes only the built package entry without repo sources or Node types
+Protocol: isolated package consumer, empty runtime, and UI/server boundary passed.
+
+ ✓ tests/protocol/boundary.test.ts (8 tests) 793ms
+     ✓ consumes only the built package entry without repo sources or Node types  777ms
+ ✓ tests/protocol/backend-source.test.ts (1 test) 388ms
+   ✓ does not redeclare protocol wire types in the backend  386ms
+ ✓ tests/git/metadata-lock.test.ts (1 test) 176ms
+ ✓ tests/git/workspace-config.test.ts (1 test) 56ms
+ ✓ tests/git/path-aliases.test.ts (2 tests) 39ms
+ ✓ tests/git/process-platform.test.ts (3 tests) 14ms
+ ✓ ui/src/protocol-contract.test.ts (3 tests) 12ms
+ ✓ tests/protocol/build-boundary.test.ts (5 tests) 5ms
+ ✓ tests/git/quality-gate.test.ts (3 tests) 4ms
+ ✓ tests/protocol/wire.test.ts (2 tests) 3ms
+ ✓ tests/git/integration.test.ts (21 tests) 33982ms
+     ✓ compares exact candidate commits using Host Git, with bounded redacted repair context  1728ms
+     ✓ collects existing committed source while preserving untracked pnpm stores in old worktrees  538ms
+     ✓ still collects tracked cache-name files and detects modifications to them  334ms
+     ✓ collects literal unusual filenames and staged deletions without pathspec expansion  375ms
+     ✓ stages a legitimate source list larger than Linux ARG_MAX through stdin  4763ms
+     ✓ runs real Git checks in linked candidates with read-only common metadata  1400ms
+     ✓ isolates Chinese/space paths and rebuilds the second candidate on latest accepted HEAD  2305ms
+     ✓ rejects mismatched review and releases integration ownership  1580ms
+     ✓ uses CAS and rejects review checkout mutations  1771ms
+     ✓ preserves accepted work on conflict and allows another candidate afterwards  2643ms
+     ✓ collects unlisted files but protects dirty contents, unknown cleanup and outside paths  1218ms
+     ✓ collects the final working tree without applying the legacy planned-file whitelist  460ms
+     ✓ accepts ignored build/cache outputs while preserving them against deletion  1418ms
+     ✓ persists quarantine after a timed-out check and refuses default archive even after restart  1022ms
+     ✓ makes timed-out checks a durable hard gate (required=true), with reboot-only cleanup recovery  2221ms
+     ✓ makes timed-out checks a durable hard gate (required=false), with reboot-only cleanup recovery  2223ms
+     ✓ persists immutable redacted Host attachments and rejects wrong bindings, log paths and forged sources  1383ms
+     ✓ supplements the same persisted candidate after environment repair and invalidates changed check configuration  2356ms
+     ✓ publishes with an explicitly optional ordinary failure without claiming that check passed  1373ms
+     ✓ keeps old records readable without treating legacy or interrupted checks as passed Host evidence  1102ms
+     ✓ keeps an unexecuted required configuration waiting and ignores only explicitly removed optional checks  1766ms
+ ✓ tests/git/core-integration.test.ts (80 tests) 176622ms
+   ✓ recovers real subprocess publication window lease-acquired and actually executes the next candidate  3508ms
+   ✓ recovers real subprocess publication window publish_planned and actually executes the next candidate  3374ms
+   ✓ recovers real subprocess publication window ref-before-journal and actually executes the next candidate  3477ms
+   ✓ recovers real subprocess publication window ref_published and actually executes the next candidate  4065ms
+   ✓ recovers real subprocess publication window lease-released and actually executes the next candidate  3248ms
+   ✓ recovers real subprocess publication window lease-retired and actually executes the next candidate  3287ms
+   ✓ recovers real subprocess publication window accepted-legacy and actually executes the next candidate  3732ms
+   ✓ does not accept a retained publication lease even in the original owning service after release failure  1822ms
+   ✓ keeps 'ref_published' publication resources blocked for 'no-proof'  2145ms
+   ✓ keeps 'ref_published' publication resources blocked for 'foreign-machine'  2119ms
+   ✓ keeps 'ref_published' publication resources blocked for 'no-owner'  2232ms
+   ✓ keeps 'ref_published' publication resources blocked for 'corrupt-owner'  2356ms
+   ✓ keeps 'ref_published' publication resources blocked for 'extra-owner'  2162ms
+   ✓ keeps 'ref_published' publication resources blocked for 'workspace'  2171ms
+   ✓ keeps 'ref_published' publication resources blocked for 'repositoryId'  2040ms
+   ✓ keeps 'ref_published' publication resources blocked for 'repositoryFingerprint'  2241ms
+   ✓ keeps 'ref_published' publication resources blocked for 'taskId'  2382ms
+   ✓ keeps 'ref_published' publication resources blocked for 'attempt'  2171ms
+   ✓ keeps 'ref_published' publication resources blocked for 'integrationId'  2160ms
+   ✓ keeps 'ref_published' publication resources blocked for 'candidateHead'  2084ms
+   ✓ keeps 'ref_published' publication resources blocked for 'sourceHead'  2106ms
+   ✓ keeps 'ref_published' publication resources blocked for 'expectedTargetHead'  2161ms
+   ✓ keeps 'ref_published' publication resources blocked for 'integrationRef'  2241ms
+   ✓ keeps 'ref_published' publication resources blocked for 'changed-ref'  2255ms
+   ✓ keeps 'ref_published' publication resources blocked for 'review'  2216ms
+   ✓ keeps 'ref_published' publication resources blocked for 'check-ids'  2066ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'no-proof'  2120ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'foreign-machine'  1940ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'no-owner'  2055ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'corrupt-owner'  2303ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'extra-owner'  2102ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'workspace'  2120ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'repositoryId'  2258ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'repositoryFingerprint'  2249ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'taskId'  2217ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'attempt'  2217ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'integrationId'  2174ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'candidateHead'  2104ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'sourceHead'  2081ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'expectedTargetHead'  2127ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'integrationRef'  2096ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'changed-ref'  2121ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'review'  2022ms
+   ✓ keeps 'accepted-legacy' publication resources blocked for 'check-ids'  2134ms
+     ✓ recovers an attachment/DB crash window without rerunning checks or carrying approval forward  3525ms
+     ✓ refuses unsafe attachment reconciliation: workspace  2034ms
+     ✓ refuses unsafe attachment reconciliation: repository  2118ms
+     ✓ refuses unsafe attachment reconciliation: repositoryFingerprint  2034ms
+     ✓ refuses unsafe attachment reconciliation: task  2125ms
+     ✓ refuses unsafe attachment reconciliation: attempt  2090ms
+     ✓ refuses unsafe attachment reconciliation: integration  2024ms
+     ✓ refuses unsafe attachment reconciliation: candidate  2370ms
+     ✓ refuses unsafe attachment reconciliation: source  2352ms
+     ✓ refuses unsafe attachment reconciliation: target  2005ms
+     ✓ refuses unsafe attachment reconciliation: path  1801ms
+     ✓ refuses unsafe attachment reconciliation: missing_new  1752ms
+     ✓ refuses unsafe attachment reconciliation: corrupt_new  1743ms
+     ✓ refuses unsafe attachment reconciliation: missing_old  1936ms
+     ✓ refuses unsafe attachment reconciliation: old_attempt  1997ms
+     ✓ refuses unsafe attachment reconciliation: db_reviewed  1845ms
+     ✓ refuses unsafe attachment reconciliation: missing_binding  1863ms
+     ✓ refuses unsafe attachment reconciliation: untrusted_attachment  1930ms
+     ✓ refuses unsafe attachment reconciliation: reviewed  2003ms
+     ✓ refuses unsafe attachment reconciliation: publication_intent  1967ms
+     ✓ refuses unsafe attachment reconciliation: changed_ref  2037ms
+     ✓ classifies real required failures as defects and permits a fresh development repair  1979ms
+     ✓ retains cleanup ownership across cancellation and restart (required=true)  1214ms
+     ✓ retains cleanup ownership across cancellation and restart (required=false)  1306ms
+     ✓ resumes the same timed-out candidate only after Host reboot proof and explicit supplementation  2129ms
+     ✓ waits for Host evidence without review or development and resumes the exact candidate after supplementation  1889ms
+     ✓ reuses a proven collected source after an infrastructure failure without inventing an empty commit or skipping review  3085ms
+     ✓ collects required helper files beyond legacy path metadata and still requires exact independent review  2200ms
+     ✓ starts both developers, accepts the second result first and retains both through serial reviews  2177ms
+     ✓ releases a rejected candidate and repairs in a fresh attempt with prior evidence  2231ms
+     ✓ a failed deterministic check does not consume the reviewer or block an independent candidate  2004ms
+     ✓ a conflicting later source preserves accepted changes and lets independent work integrate  2453ms
+   ✓ recovers the DAG attachment/DB crash window on the same candidate without an extra attempt or prior approval  2759ms
+   ✓ propagates task cancellation to actual DAG checks without review/publication or lease release  1108ms
+   ✓ propagates workflow cancellation to actual DAG checks without review/publication or lease release  1115ms
+   ✓ propagates shutdown cancellation to actual DAG checks without review/publication or lease release  1156ms
+
+ Test Files  16 passed (16)
+      Tests  208 passed (208)
+   Start at  14:34:44
+   Duration  177.27s (transform 1.42s, setup 0ms, import 2.75s, tests 450.12s, environment 2ms)

@@ -15,7 +15,7 @@ import { mkdir, readdir } from 'node:fs/promises';
 import { provesPreviousBootExited } from '../agent/boot-identity.js';
 
 interface Active { controller:AbortController; handle?:ActivationHandle; cleanup?:Promise<boolean>; cancelled:boolean; cancelReason?:string }
-interface IntegrationRecord { id:string; taskId:string; status:string; candidate:Candidate|null; reviewRunId:string|null; error:string|null }
+interface IntegrationRecord { id:string; taskId:string; sourceHead:string; candidateHead:string|null; expectedTargetHead:string|null; checkIds:string[]; status:string; candidate:Candidate|null; reviewRunId:string|null; error:string|null }
 export interface CoordinatorOptions { repositoryAccess?(workspaceId:string):Promise<RepositoryAccess|undefined>; store:RiftStore; bridge:ActivationBridge; git:GitService; runTimeoutMs?:number;cleanupTimeoutMs?:number; limits?:Partial<SchedulerLimits>; skillSnapshot?:(workspaceId:string,agentId:string,runtime:string,runId:string)=>{instructions:string;versions:unknown[]}; textAnalysisBridge?:ActivationBridge; textAnalysisRoot?:string;runTools?(run:Run):import('../agent/runtime-types.js').RuntimeTool[];captureRunInbox?(run:Run):unknown[];acceptRunInbox?(runId:string):void }
 export interface CreateWorkflowInput { id?:string; workspaceId:string; goal:string; integrationRef:string; baseCommit:string; leadSessionId?:string; repositorySnapshots?:{repositoryId:string;baseCommit:string;integrationRef:string}[]; repositoryFree?:boolean }
 export interface DispatchInput {taskId:string;idempotencyKey:string;expectedVersion:number;roleName?:string}
@@ -33,6 +33,7 @@ export class TaskCoordinator {
   private readonly runTimeoutMs:number;
   private readonly cleanupTimeoutMs:number;
   private readonly active=new Map<string,Active>();
+  private readonly checkControllers=new Map<string,{taskId:string;workflowId:string;controller:AbortController}>();
   private readonly background=new Set<Promise<void>>();
   private pumping=false;
   private stopping=false;
@@ -68,20 +69,34 @@ export class TaskCoordinator {
     this.pump();return this.store.run(runId);
   }
   private cleanupReceipt(runId:string):void {if(this.closed)return;this.cleanupReceipts.add(runId);const run=this.store.run(runId) as Run & {version:number};if(['unknown','failed'].includes(run.cleanupStatus)&&terminalRuns.has(run.status))this.reconcileRun(runId,run.version);}
+  private assertIntegrationCandidate(integration:IntegrationRecord):void {
+    if(integration.candidate)invariant(integration.candidate.integrationId===integration.id&&integration.candidate.sourceHead===integration.sourceHead&&integration.candidate.candidateHead===integration.candidateHead&&integration.candidate.expectedTargetHead===integration.expectedTargetHead&&JSON.stringify(integration.candidate.checkIds)===JSON.stringify(integration.checkIds),'CANDIDATE_EVIDENCE_MISMATCH','Stored integration and candidate bindings differ.');
+  }
   async reconcileIntegration(integrationId:string,expectedVersion:number) {
-    invariant(!this.integrationBusy,'INTEGRATION_ACTIVE','Wait for the current integration worker to stop.');
-    const integration=this.store.require<IntegrationRecord & {version:number;runtimeBootId:string|null;sourceHead:string;candidateHead:string|null;expectedTargetHead:string|null;checkIds:string[]}>('SELECT * FROM integrations WHERE id=?',integrationId),task=this.store.task(integration.taskId);
+    invariant(!this.integrationBusy&&this.checkControllers.size===0,'INTEGRATION_ACTIVE','Wait for the current integration worker to stop.');
+    const integration=this.store.require<IntegrationRecord & {version:number;runtimeBootId:string|null}>('SELECT * FROM integrations WHERE id=?',integrationId),task=this.store.task(integration.taskId);
     invariant(integration.version===expectedVersion,'VERSION_CONFLICT','Integration changed; reload before reconciling.');
-    invariant(['cleanup_unknown','publishing'].includes(integration.status),'INVALID_STATE','Only an uncertain integration can be reconciled.');
+    invariant(['cleanup_unknown','publishing','accepted'].includes(integration.status),'INVALID_STATE','Only an uncertain integration or accepted publication cleanup can be reconciled.');
     invariant(!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',task.id),'CLEANUP_UNKNOWN','Verify all Run cleanup before inspecting publication.');
     invariant(this.integrationCleanupReceipts.has(integrationId)||provesPreviousBootExited(integration.runtimeBootId,this.bootIdentity),'CLEANUP_UNKNOWN','Git/check subprocess cleanup has no owned completion receipt or same-machine reboot proof. Missing candidate/Run rows do not prove cleanup.');
-    if(integration.candidate)invariant(integration.candidate.integrationId===integration.id&&integration.candidate.sourceHead===integration.sourceHead&&integration.candidate.candidateHead===integration.candidateHead&&integration.candidate.expectedTargetHead===integration.expectedTargetHead&&JSON.stringify(integration.candidate.checkIds)===JSON.stringify(integration.checkIds),'CANDIDATE_EVIDENCE_MISMATCH','Stored integration and candidate bindings differ.');
+    this.assertIntegrationCandidate(integration);
+    // Validate publication intent/target before releasing resources, including legacy accepted+lease rows.
+    if(integration.status==='accepted'||integration.status==='publishing'||integration.reviewRunId){
+      invariant(integration.candidate&&this.git.recoverPublication,'PUBLICATION_UNKNOWN','Publication candidate is unavailable.');
+      const publication=await this.git.recoverPublication({...this.context(task),candidate:integration.candidate});
+      invariant(publication!=='unknown'&&(integration.status!=='accepted'||publication==='published'&&task.acceptedCommit===integration.candidate.candidateHead),'PUBLICATION_UNKNOWN','Exact publication/acceptance binding cannot be established; resources remain held.');
+    }
     const checkCleanupReconciled=integration.candidate&&this.git.reconcileCandidateCleanup?await this.git.reconcileCandidateCleanup({...this.context(task),candidate:integration.candidate,previousBootId:integration.runtimeBootId,currentBootId:this.bootIdentity}):false;
     const recoveredCandidate=integration.candidate&&this.git.reconcileCandidateEvidence?await this.git.reconcileCandidateEvidence({...this.context(task),candidate:integration.candidate,allowEvidenceRefresh:!integration.reviewRunId}):null;
     const candidate=recoveredCandidate??integration.candidate;
     let publication:'published'|'not-published'|'unknown'='not-published';
     if(candidate){invariant(this.git.recoverPublication,'PUBLICATION_UNKNOWN','Git publication verification is unavailable.');publication=await this.git.recoverPublication({...this.context(task),candidate});}
     invariant(publication!=='unknown','PUBLICATION_UNKNOWN','Git cannot establish the exact publication outcome; no ledger state was released.');
+    if(integration.status==='accepted'){
+      invariant(publication==='published','PUBLICATION_UNKNOWN','Accepted publication changed during cleanup verification.');
+      // Cleanup of historical acceptance must not rewrite tasks or complete a later operation.
+      return this.store.require('SELECT id,task_id,status,version,error FROM integrations WHERE id=?',integrationId);
+    }
     if(publication==='not-published'&&candidate&&this.git.abandonCandidate)await this.git.abandonCandidate({...this.context(task),candidate,reason:'Execution cleanup verified; unpublished candidate abandoned for explicit retry.'});
     const readiness=publication==='not-published'&&candidate&&this.git.candidateReadiness&&candidateMatchesTask(candidate,task)?await this.git.candidateReadiness({...this.context(task),candidate}):undefined;
     const waiting=(checkCleanupReconciled||recoveredCandidate)&&!integration.reviewRunId&&readiness&&readiness.status!=='failed';
@@ -287,9 +302,11 @@ export class TaskCoordinator {
     invariant(this.git.resumeCandidate, 'EVIDENCE_UNAVAILABLE', 'Host supplementation is unavailable.');
     this.integrationBusy = true;
     this.store.exec("UPDATE integrations SET status='preparing',runtime_boot_id=? WHERE id=?", this.bootIdentity, integration.id);
+    const checkController = new AbortController();
+    this.checkControllers.set(integration.id, { taskId: task.id, workflowId: task.workflowId, controller: checkController });
     const work = (async () => {
       try {
-        const candidate = await this.git.resumeCandidate!({ ...this.context(task), integrationId: integration.id, candidateHead: input.candidateHead, idempotencyKey: input.idempotencyKey });
+        const candidate = await this.git.resumeCandidate!({ ...this.context(task), integrationId: integration.id, candidateHead: input.candidateHead, idempotencyKey: input.idempotencyKey, signal: checkController.signal });
         return this.store.transaction(() => {
           const latest = this.store.task(task.id);
           invariant(latest.version === input.expectedVersion && latest.status === 'blocked' && !terminalWorkflows.has(this.store.workflow(task.workflowId).status), 'CANCELLED', 'Task changed while checks were running.');
@@ -311,7 +328,7 @@ export class TaskCoordinator {
       }
     })();
     this.track(work.then(() => {}, () => {}));
-    try { return await work; } finally { this.integrationBusy = false; this.pump(); }
+    try { return await work; } finally { this.checkControllers.delete(integration.id); this.integrationBusy = false; this.pump(); }
   }
   private enqueue(kind:'dispatch'|'integration',taskId:string,key:string,expectedVersion:number,sourceHead?:string,roleName?:string):Operation {
     invariant(!this.stopping,'HOST_STOPPING','Host is shutting down and cannot accept queue requests.');
@@ -553,9 +570,11 @@ export class TaskCoordinator {
   private async executeIntegration(operation:Operation):Promise<void> {
     let task=this.store.task(operation.entityId);const resuming=!!operation.payload.integrationId;const integrationId=operation.payload.integrationId??id('integration');let candidate:Candidate|undefined;let reviewRun:Run|undefined;
     this.store.transaction(()=>{if(!resuming)this.store.exec('INSERT INTO integrations(id,task_id,source_head,status,runtime_boot_id) VALUES(?,?,?,?,?)',integrationId,task.id,operation.payload.sourceHead!,'preparing',this.bootIdentity);else this.store.exec("UPDATE integrations SET status='preparing',runtime_boot_id=? WHERE id=?",this.bootIdentity,integrationId);operation.payload.integrationId=integrationId;this.operationPhase(operation,'started');this.store.exec('UPDATE tasks SET status=?,version=version+1 WHERE id=?','integrating',task.id);});
+    const checkController = new AbortController();
+    this.checkControllers.set(integrationId, { taskId: task.id, workflowId: task.workflowId, controller: checkController });
     try {
-      if(resuming){const saved=this.store.require<IntegrationRecord>('SELECT * FROM integrations WHERE id=? AND task_id=?',integrationId,task.id);invariant(this.git.resumeCandidate&&saved.candidate,'EVIDENCE_UNAVAILABLE','Stored candidate cannot be resumed.');candidate=await this.git.resumeCandidate({...this.context(task),integrationId,candidateHead:saved.candidate.candidateHead,idempotencyKey:`review:${operation.id}`});}
-      else candidate=await this.git.prepareCandidate({...this.context(task),sourceHead:operation.payload.sourceHead!,integrationId});
+      if(resuming){const saved=this.store.require<IntegrationRecord>('SELECT * FROM integrations WHERE id=? AND task_id=?',integrationId,task.id);invariant(this.git.resumeCandidate&&saved.candidate,'EVIDENCE_UNAVAILABLE','Stored candidate cannot be resumed.');candidate=await this.git.resumeCandidate({...this.context(task),integrationId,candidateHead:saved.candidate.candidateHead,idempotencyKey:`review:${operation.id}`,signal:checkController.signal});}
+      else candidate=await this.git.prepareCandidate({...this.context(task),sourceHead:operation.payload.sourceHead!,integrationId,signal:checkController.signal});
       if(this.git.candidateReadiness){const readiness=await this.git.candidateReadiness({...this.context(task),candidate});if(readiness.status!=='ready')throw new CandidateEvidenceError(candidate,readiness);}
       this.store.transaction(()=>{this.store.exec('UPDATE integrations SET expected_target_head=?,candidate_head=?,check_ids=?,candidate=? WHERE id=?',candidate!.expectedTargetHead,candidate!.candidateHead,JSON.stringify(candidate!.checkIds),JSON.stringify(candidate),integrationId);this.store.event(task.workflowId,'candidate.prepared',candidate,{taskId:task.id,requestId:operation.id});});
       while((this.store.workflow(task.workflowId).status==='paused'||!this.availableReviewer(this.store.workflow(task.workflowId).workspaceId))&&!terminalWorkflows.has(this.store.workflow(task.workflowId).status)&&this.store.task(task.id).status!=='cancelled'&&!this.stopping)await new Promise(resolve=>setTimeout(resolve,25));
@@ -590,7 +609,7 @@ export class TaskCoordinator {
       }
       if(candidate&&!unknown&&this.git.abandonCandidate)await this.git.abandonCandidate({...this.context(task),candidate,reason:errorMessage(error)}).catch(()=>{});
       this.store.transaction(()=>{this.store.exec('UPDATE integrations SET status=?,error=? WHERE id=?',unknown?'cleanup_unknown':'blocked',errorMessage(error),integrationId);this.blockTask(task.id,errorMessage(error));const cancelled=this.store.task(task.id).status==='cancelled'||this.store.workflow(task.workflowId).status==='cancelled';this.operationPhase(this.store.operation(operation.id),cancelled?'cancelled':'blocked',errorMessage(error));});
-    }
+    } finally { this.checkControllers.delete(integrationId); }
   }
   private unexpected(run:Run,error:unknown):void {this.store.transaction(()=>{this.recordResult(run.id,'interrupted','INTERNAL_ERROR',{error:errorMessage(error)});this.store.exec('UPDATE runs SET cleanup_status=? WHERE id=? AND slot_released_at IS NULL','unknown',run.id);this.blockTask(run.taskId,errorMessage(error));});}
 
@@ -646,25 +665,36 @@ export class TaskCoordinator {
   }
   async cancelTask(taskId:string):Promise<Task> {
     this.store.transaction(()=>{const task=this.store.task(taskId);invariant(task.status!=='succeeded','INVALID_STATE','Accepted tasks cannot be cancelled.');this.store.exec('UPDATE tasks SET status=?,version=version+1,blocking_reason=? WHERE id=?','cancelled','CANCELLED',taskId);for(const operation of this.store.all<Operation>('SELECT * FROM operations WHERE entity_id=? AND phase=\'queued\'',taskId))this.operationPhase(operation,'cancelled');this.store.event(task.workflowId,'task.cancel_requested',{}, {taskId});});
+    for (const check of this.checkControllers.values()) if (check.taskId === taskId) check.controller.abort();
     await Promise.allSettled(this.store.all<Run>('SELECT * FROM runs WHERE task_id=? AND slot_released_at IS NULL',taskId).map(run=>this.cancelRun(run.id)));
     if(this.background.size===0&&!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',taskId))this.store.transaction(()=>{for(const operation of this.store.all<Operation>("SELECT * FROM operations WHERE entity_id=? AND kind='dispatch' AND phase='started'",taskId))this.operationPhase(operation,'cancelled');});
     this.pump();return this.store.task(taskId);
   }
   async cancelWorkflow(workflowId:string):Promise<ReturnType<TaskCoordinator['status']>> {
     this.store.transaction(()=>{const workflow=this.store.workflow(workflowId);invariant(workflow.status!=='completed','INVALID_STATE','Completed workflow cannot be cancelled.');this.store.exec('UPDATE workflows SET status=?,version=version+1 WHERE id=?','cancelled',workflowId);for(const operation of this.store.all<Operation>('SELECT o.* FROM operations o JOIN tasks t ON t.id=o.entity_id WHERE t.workflow_id=? AND o.phase=\'queued\'',workflowId))this.operationPhase(operation,'cancelled');this.store.exec('UPDATE tasks SET status=?,version=version+1 WHERE workflow_id=? AND status<>?','cancelled',workflowId,'succeeded');this.store.event(workflowId,'workflow.cancel_requested');});
+    for (const check of this.checkControllers.values()) if (check.workflowId === workflowId) check.controller.abort();
     await Promise.allSettled(this.store.all<Run>('SELECT r.* FROM runs r JOIN tasks t ON t.id=r.task_id WHERE t.workflow_id=? AND r.slot_released_at IS NULL',workflowId).map(run=>this.cancelRun(run.id)));this.pump();return this.status(workflowId);
   }
   finish(input:{workflowId:string;summary:string;expectedVersion?:number}):Workflow {
     return this.store.transaction(()=>{const workflow=this.store.workflow(input.workflowId);if(input.expectedVersion!==undefined)invariant(workflow.version===input.expectedVersion,'VERSION_CONFLICT','Workflow version changed.');invariant(workflow.status==='running'||workflow.status==='paused','INVALID_STATE','Workflow cannot be finished in this state.');const tasks=this.store.all<Task>('SELECT * FROM tasks WHERE workflow_id=?',workflow.id);invariant(tasks.length>0&&tasks.every(task=>task.status==='succeeded'&&(task.kind==='analysis'||task.acceptedCommit)),'UNFINISHED_TASKS','Every task must pass its actual acceptance gate.');invariant(!this.store.get('SELECT r.id FROM runs r JOIN tasks t ON t.id=r.task_id WHERE t.workflow_id=? AND r.slot_released_at IS NULL',workflow.id),'CLEANUP_UNKNOWN','All execution cleanup must be confirmed.');invariant(!this.store.get('SELECT o.id FROM operations o JOIN tasks t ON t.id=o.entity_id WHERE t.workflow_id=? AND o.phase IN (\'queued\',\'started\')',workflow.id),'UNFINISHED_REQUESTS','Workflow still has unfinished queue requests.');this.store.exec('UPDATE workflows SET status=?,summary=?,version=version+1 WHERE id=?','completed',input.summary,workflow.id);this.store.event(workflow.id,'workflow.completed',{summary:input.summary});return this.store.workflow(workflow.id);});
   }
   async recover():Promise<{interruptedRunIds:string[];recoveredIntegrationIds:string[]}> {
-    invariant(this.active.size===0,'ACTIVE_HOST','Recovery only runs before this host starts executing.');
+    invariant(this.active.size===0&&!this.integrationBusy&&this.checkControllers.size===0,'ACTIVE_HOST','Recovery only runs before this host starts executing.');
     const interruptedRunIds:string[]=[],recoveredIntegrationIds:string[]=[];
     this.store.transaction(()=>{for(const run of this.store.all<Run>('SELECT * FROM runs WHERE slot_released_at IS NULL')){if(!terminalRuns.has(run.status))this.recordResult(run.id,'interrupted','HOST_INTERRUPTED',null);this.store.exec('UPDATE runs SET cleanup_status=? WHERE id=?','unknown',run.id);this.blockTask(run.taskId,'INTERRUPTED_CLEANUP_UNKNOWN');interruptedRunIds.push(run.id);}for(const operation of this.store.all<Operation>('SELECT * FROM operations WHERE phase=\'started\' AND kind=\'dispatch\'')){if(!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',operation.entityId))this.blockTask(operation.entityId,'HOST_INTERRUPTED_FINALIZATION');this.operationPhase(operation,'blocked','HOST_INTERRUPTED');}});
     for(const integration of this.store.all<IntegrationRecord>('SELECT * FROM integrations WHERE status IN (\'preparing\',\'reviewing\',\'publishing\',\'cleanup_unknown\')')) {
       const task=this.store.task(integration.taskId);
-      if(integration.status==='publishing'&&integration.candidate&&this.git.recoverPublication&&await this.git.recoverPublication({...this.context(task),candidate:integration.candidate})==='published'){
-        this.store.transaction(()=>{this.store.exec('UPDATE integrations SET status=? WHERE id=?','accepted',integration.id);this.store.exec('UPDATE tasks SET status=?,accepted_commit=?,version=version+1,blocking_reason=NULL WHERE id=?','succeeded',integration.candidate!.candidateHead,task.id);for(const operation of this.store.all<Operation>('SELECT * FROM operations WHERE entity_id=? AND kind=\'integration\' AND phase=\'started\'',task.id))this.operationPhase(operation,'completed');this.store.event(task.workflowId,'integration.recovered',{integrationId:integration.id},{taskId:task.id});});recoveredIntegrationIds.push(integration.id);
+      let publishedAndClean=false;
+      if(integration.status==='publishing'&&integration.candidate&&this.git.recoverPublication){
+        try {
+          this.assertIntegrationCandidate(integration);
+          publishedAndClean=await this.git.recoverPublication({...this.context(task),candidate:integration.candidate})==='published'
+            &&(!this.git.candidateReadiness||(await this.git.candidateReadiness({...this.context(task),candidate:integration.candidate})).cleanupStatus==='confirmed')
+            &&!this.store.get('SELECT id FROM runs WHERE task_id=? AND slot_released_at IS NULL',task.id);
+        }catch{/* Unverifiable cleanup remains explicitly recoverable. */}
+      }
+      if(publishedAndClean){
+        this.store.transaction(()=>{this.store.exec('UPDATE integrations SET status=? WHERE id=?','accepted',integration.id);this.store.exec('UPDATE tasks SET status=?,accepted_commit=?,version=version+1,blocking_reason=NULL WHERE id=?',task.status==='cancelled'?'cancelled':'succeeded',integration.candidate!.candidateHead,task.id);for(const operation of this.store.all<Operation>('SELECT * FROM operations WHERE entity_id=? AND kind=\'integration\' AND phase=\'started\'',task.id))this.operationPhase(operation,'completed');this.store.event(task.workflowId,'integration.recovered',{integrationId:integration.id},{taskId:task.id});});recoveredIntegrationIds.push(integration.id);
       }else this.store.transaction(()=>{this.store.exec('UPDATE integrations SET status=?,error=? WHERE id=?','cleanup_unknown','RECOVERY_REQUIRES_INSPECTION',integration.id);this.blockTask(task.id,'RECOVERY_REQUIRES_INSPECTION');});
     }
     // Queued requests are intentionally left durable. An explicit resume, with a
@@ -672,6 +702,6 @@ export class TaskCoordinator {
     this.store.transaction(()=>{this.store.exec('UPDATE workflows SET status=?,version=version+1 WHERE status IN (\'running\',\'planning\',\'blocked\')','paused');});
     return{interruptedRunIds,recoveredIntegrationIds};
   }
-  async shutdown():Promise<void> {this.stopping=true;await Promise.allSettled([...this.active.keys()].map(runId=>this.cancelRun(runId,'HOST_SHUTDOWN')));await Promise.allSettled([...this.background]);this.closed=true;}
+  async shutdown():Promise<void> {this.stopping=true;for(const check of this.checkControllers.values())check.controller.abort();await Promise.allSettled([...this.active.keys()].map(runId=>this.cancelRun(runId,'HOST_SHUTDOWN')));await Promise.allSettled([...this.background]);this.closed=true;}
 }
 

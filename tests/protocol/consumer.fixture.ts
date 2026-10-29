@@ -37,3 +37,11 @@ const timeline: Pick<ChatPage, 'timeline' | 'refreshedMessages' | 'runMessages'>
   timeline: true, refreshedMessages: [], runMessages: [runMessage],
 };
 void timeline;
+
+const baseline: import('@rift/protocol').BaselineEvidence = {
+  key: '', status: 'unavailable', cleanupStatus: 'confirmed', lookupMs: 1,
+};
+const measuredEvidence: Pick<import('@rift/protocol').TaskEvidenceIntegration, 'baselines' | 'timings'> = {
+  baselines: [baseline], timings: { prepareMs: 1, baselineMs: 1, checksMs: 2 },
+};
+void measuredEvidence;
