@@ -167,18 +167,14 @@ describe('safe Worktree deletion: real Git, service and browser Host API', () =>
     expect(await gitOk(f.repositoryPath,['rev-parse',task.tree.branch!])).toBe(task.source.sourceHead);
   });
 
-  it.each(['workflow','task','writer','run-cleanup','lease','operation','integration','integration-timeout','move'] as const)('disables and refuses deletion for busy/unfinished %s state', async mode => {
+  it.each(['writer','run-cleanup','operation','integration','integration-timeout'] as const)('disables and refuses deletion for busy/unfinished %s state', async mode => {
     const f = await fixture(), task = await f.task(); f.finish();
     const item = await f.target('task', task.tree.id);
-    if (mode === 'workflow') f.host.store.exec("UPDATE workflows SET status='paused',version=version+1 WHERE id='workflow'");
-    if (mode === 'task') f.host.store.exec("UPDATE tasks SET status='blocked',version=version+1 WHERE id='task'");
     if (mode === 'writer') f.host.store.exec('UPDATE worktrees SET writer_run_id=? WHERE id=?','run', task.tree.id);
     if (mode === 'run-cleanup') f.host.store.exec("UPDATE runs SET cleanup_status='unknown' WHERE id='run'");
-    if (mode === 'lease') f.host.store.exec("INSERT INTO execution_leases(id,owner_type,owner_id,workspace_id,agent_id,capacity,cleanup_status,acquired_at) VALUES('busy','turn','busy',?,?,'developer','unknown','now')", f.workspace.id, f.roles.find(role => role.name === 'developer-b')!.id);
     if (mode === 'operation') f.host.store.exec("INSERT INTO operations(id,kind,dedupe_key,entity_id,phase,payload,created_at) VALUES('pending','dispatch','pending','task','started','{}','now')");
     if (mode === 'integration') f.host.store.exec("INSERT INTO integrations(id,task_id,source_head,status) VALUES('unknown','task',?,'cleanup_unknown')", task.source.sourceHead);
     if (mode === 'integration-timeout') f.host.store.exec("INSERT INTO integrations(id,task_id,source_head,status,error) VALUES('timeout','task',?,'blocked','CHECK_FAILED: check (124)')", task.source.sourceHead);
-    if (mode === 'move') { const tree = await f.user(); f.host.store.exec("UPDATE workspace_worktrees SET status='move_unknown' WHERE id=?", tree.id); }
     const current = await f.target('task', task.tree.id); expect(current.canDelete).toBe(false);
     if (current.expectedVersion !== item.expectedVersion) await expect(f.remove(item)).rejects.toMatchObject({ code: 'VERSION_CONFLICT' });
     await expect(f.remove(current)).rejects.toThrow();
@@ -375,9 +371,10 @@ describe('Lead cleanup scope and lifetime', () => {
   });
   it('retains busy task protections for the Lead rather than bypassing every lease', async () => {
     const f = await fixture(), task = await f.task(), lead = await liveLead(f);
+    f.host.store.exec("UPDATE runs SET cleanup_status='pending',slot_released_at=NULL WHERE id='run'");
     const item = (await lead.targets()).find(item => item.kind === 'task' && item.recordId === task.tree.id)!;
     expect(item.canDelete).toBe(false);
-    await expect(lead.call(['worktree','delete',task.tree.id],{kind:'task',expectedVersion:item.expectedVersion,confirmDelete:true})).rejects.toMatchObject({code:'WORKTREE_IN_USE'});
+    await expect(lead.call(['worktree','delete',task.tree.id],{kind:'task',expectedVersion:item.expectedVersion,confirmDelete:true})).rejects.toMatchObject({code:'CLEANUP_UNKNOWN'});
   });
 });
 
@@ -404,4 +401,41 @@ it('uses one Git registration snapshot for multiple missing historical directori
   const listing = vi.spyOn(gitProcess, 'worktreePorcelain');
   expect((await f.list()).map(item => item.state)).toEqual(['missing','missing']);
   expect(listing).toHaveBeenCalledTimes(1);
+});
+
+it.each(['running','paused','blocked'])('deletes an idle task worktree while its workflow is %s and unrelated work is active',async status=>{
+ const f=await fixture(),task=await f.task();
+ f.host.store.exec("UPDATE workflows SET status=? WHERE id='workflow'",status);
+ f.host.store.exec("UPDATE tasks SET status='blocked' WHERE id='task'");
+ f.host.store.exec("UPDATE runs SET status='running' WHERE id='run'");
+ f.host.store.exec("INSERT INTO execution_leases(id,owner_type,owner_id,workspace_id,agent_id,capacity,acquired_at) VALUES('unrelated','turn','unrelated',?,?,'developer','now')",f.workspace.id,f.roles.find(role=>role.name==='developer-b')!.id);
+ const item=await f.target('task',task.tree.id);expect(item.canDelete).toBe(true);
+ await f.remove(item);await expect(lstat(task.tree.path)).rejects.toMatchObject({code:'ENOENT'});
+ expect(f.host.store.run('run').status).toBe('running');
+});
+
+it.each(['dist','node_modules','packages/protocol/dist','packages/protocol/node_modules'])('removes approved ignored build directory %s',async directory=>{
+  const f=await fixture(),tree=await f.user();
+  await writeFile(path.join(tree.path,'.gitignore'),'ignored.log\n'+directory+'/\n');
+  await gitOk(tree.path,['add','.gitignore']);await gitOk(tree.path,['commit','-m','ignore build output']);
+  await mkdir(path.join(tree.path,directory),{recursive:true});
+  await writeFile(path.join(tree.path,directory,'generated.txt'),'generated');
+  const item=await f.target('user',tree.id);expect(item.canDelete).toBe(true);
+  expect(await readFile(path.join(tree.path,directory,'generated.txt'),'utf8')).toBe('generated');
+  await f.remove(item);await expect(lstat(tree.path)).rejects.toMatchObject({code:'ENOENT'});
+});
+
+it.each(['untracked','tracked'])('retains %s source content inside a build-named directory',async mode=>{
+  const f=await fixture(),tree=await f.user();
+  await mkdir(path.join(tree.path,'dist'));
+  const file=path.join(tree.path,'dist','source.txt');await writeFile(file,'source');
+  if(mode==='tracked'){
+    await gitOk(tree.path,['add','dist']);await gitOk(tree.path,['commit','-m','tracked source']);
+    await writeFile(path.join(tree.path,'.gitignore'),'ignored.log\ndist/\n');
+    await gitOk(tree.path,['add','.gitignore']);await gitOk(tree.path,['commit','-m','ignore output']);
+    await writeFile(file,'modified source');
+  }
+  const item=await f.target('user',tree.id);expect(item.canDelete).toBe(false);
+  await expect(f.remove(item)).rejects.toThrow('ARCHIVE_BLOCKED');
+  expect(await readFile(file,'utf8')).toBe(mode==='tracked'?'modified source':'source');
 });

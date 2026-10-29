@@ -60,7 +60,21 @@ export class TaskCoordinator {
     this.store.transaction(()=>{
       const run=this.store.require<Run & {version:number;runtimeBootId:string|null}>('SELECT * FROM runs WHERE id=?',runId);
       invariant(run.version===expectedVersion,'VERSION_CONFLICT','Run changed; reload before reconciling cleanup.');
-      if(run.cleanupStatus==='confirmed')return;
+      if(run.cleanupStatus==='confirmed'){
+        if(terminalRuns.has(run.status))return;
+        const task=this.store.task(run.taskId),workflow=this.store.workflow(task.workflowId);
+        invariant(run.slotReleasedAt && !this.active.has(run.id) && ['succeeded','failed','cancelled'].includes(task.status) && ['completed','failed','cancelled'].includes(workflow.status),
+          'RUN_ACTIVE','Only a released historical Run in a terminal task and workflow can be reconciled.');
+        invariant(!this.store.get("SELECT id FROM execution_leases WHERE owner_type='run' AND owner_id=? AND (released_at IS NULL OR cleanup_status<>'confirmed')",run.id)
+          && !this.store.get('SELECT id FROM worktrees WHERE writer_run_id=?',run.id)
+          && !this.store.get("SELECT id FROM operations WHERE entity_id=? AND phase IN ('queued','started')",task.id),
+          'CLEANUP_UNKNOWN','Historical Run still has execution, writer or finalization ownership.');
+        // Cleanup proves cessation, not successful execution. Keep the result,
+        // accepted task and integration evidence intact; repair only this Run.
+        this.store.exec("UPDATE runs SET status='interrupted',ended_at=COALESCE(ended_at,slot_released_at),stop_reason=COALESCE(stop_reason,'HISTORICAL_RUN_RECONCILED'),version=version+1 WHERE id=?",run.id);
+        this.store.event(task.workflowId,'run.status_reconciled',{previousStatus:run.status,status:'interrupted',reason:'confirmed cleanup and released historical execution'},{taskId:task.id,runId:run.id});
+        return;
+      }
       invariant(terminalRuns.has(run.status),'RUN_ACTIVE','Cancel the Run before reconciling cleanup.');
       invariant(this.cleanupReceipts.has(runId)||provesPreviousBootExited(run.runtimeBootId,this.bootIdentity),'CLEANUP_UNKNOWN','No owned cleanup receipt or same-machine OS reboot proof is available. Restarting only the Host does not prove descendants exited.');
       this.confirmCleanup(runId);

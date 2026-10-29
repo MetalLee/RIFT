@@ -121,22 +121,28 @@ export class WorktreeRemovalService {
     }
     if (task) {
       invariant(tree.status !== 'archived', 'INVALID_STATE', '磁盘目录已删除，任务证据已保留。');
-      invariant(['completed','failed','cancelled'].includes(this.store.workflow(task.workflowId).status), 'WORKTREE_IN_USE', '流程尚未终结，目录仍可能用于执行或恢复。');
-      invariant(['succeeded','failed','cancelled'].includes(task.status), 'WORKTREE_IN_USE', '任务尚未终结，目录仍可能用于执行或恢复。');
       invariant(!tree.writerRunId, 'WORKTREE_IN_USE', '目录仍有关联写入者。');
-      invariant(!this.store.get("SELECT id FROM runs WHERE task_id=? AND (cleanup_status<>'confirmed' OR slot_released_at IS NULL OR status NOT IN ('succeeded','failed','cancelled','interrupted'))", task.id), 'CLEANUP_UNKNOWN', '任务执行尚未确认清理。');
+      invariant(!this.store.get("SELECT id FROM runs WHERE task_id=? AND (cleanup_status<>'confirmed' OR slot_released_at IS NULL)", task.id), 'CLEANUP_UNKNOWN', '任务执行尚未确认清理。');
+      // Occupancy follows the associated task, not unrelated repository work
+      // or stale status labels on already released historical Runs.
+      invariant(!this.store.get("SELECT l.id FROM execution_leases l JOIN runs r ON l.owner_type='run' AND l.owner_id=r.id WHERE r.task_id=? AND (l.released_at IS NULL OR l.cleanup_status<>'confirmed')",task.id),'WORKTREE_IN_USE','关联任务仍有执行租约。');
+      invariant(!this.store.get("SELECT id FROM operations WHERE entity_id=? AND phase IN ('queued','started')",task.id),'WORKTREE_IN_USE','关联任务仍有执行或结果收集操作。');
+      invariant(!this.store.get("SELECT id FROM integrations WHERE task_id=? AND status NOT IN ('accepted','blocked')",task.id),'CLEANUP_UNKNOWN','关联任务仍有集成执行或未确认清理。');
+      invariant(!this.store.all<{error:string|null}>("SELECT error FROM integrations WHERE task_id=? AND status='blocked'",task.id).some(row=>row.error&&uncertain(row.error)),'CLEANUP_UNKNOWN','关联任务的集成清理尚未确认。');
     }
-    // Conservative repository-wide exclusion includes other workspace aliases,
-    // discussion writers, legacy Runs, finalizers and unconfirmed integrations.
-    invariant(!this.store.get(`SELECT l.id FROM execution_leases l JOIN repositories r ON r.workspace_id=l.workspace_id WHERE r.common_git_dir=? AND (l.released_at IS NULL OR l.cleanup_status<>'confirmed') AND l.id<>?`, repo.commonGitDir, requester.leaseId), 'WORKTREE_IN_USE', '仓库仍有执行租约或未确认的清理。');
-    invariant(!this.store.get(`SELECT a.id FROM agent_turns a JOIN repositories r ON r.workspace_id=a.workspace_id WHERE r.common_git_dir=? AND a.status IN ('queued','running','stopping') AND a.id<>?`, repo.commonGitDir, requester.turnId), 'WORKTREE_IN_USE', '仓库仍有排队或活跃的讨论执行。');
-    invariant(!this.store.get(`SELECT run.id FROM runs run JOIN tasks t ON t.id=run.task_id JOIN workflows f ON f.id=t.workflow_id JOIN repositories r ON r.workspace_id=f.workspace_id WHERE r.common_git_dir=? AND (run.cleanup_status<>'confirmed' OR run.slot_released_at IS NULL OR run.status IN ('preparing','running','cancelling'))`, repo.commonGitDir), 'CLEANUP_UNKNOWN', '仓库执行清理尚未确认。');
-    invariant(!this.store.get(`SELECT o.id FROM operations o JOIN tasks t ON t.id=o.entity_id JOIN workflows f ON f.id=t.workflow_id JOIN repositories r ON r.workspace_id=f.workspace_id WHERE r.common_git_dir=? AND o.phase IN ('queued','started')`, repo.commonGitDir), 'WORKTREE_IN_USE', '仓库仍有未完成的任务操作或结果收集。');
-    invariant(!this.store.get(`SELECT i.id FROM integrations i JOIN tasks t ON t.id=i.task_id JOIN workflows f ON f.id=t.workflow_id JOIN repositories r ON r.workspace_id=f.workspace_id WHERE r.common_git_dir=? AND i.status NOT IN ('accepted','blocked')`, repo.commonGitDir), 'CLEANUP_UNKNOWN', '仓库仍有未完成或清理未知的集成。');
-    const blocked = this.store.all<{error:string|null}>(`SELECT i.error FROM integrations i JOIN tasks t ON t.id=i.task_id JOIN workflows f ON f.id=t.workflow_id JOIN repositories r ON r.workspace_id=f.workspace_id WHERE r.common_git_dir=? AND i.status='blocked'`, repo.commonGitDir);
-    invariant(!blocked.some(row => row.error && uncertain(row.error)), 'CLEANUP_UNKNOWN', '仓库集成曾超时，子进程清理尚未确认。');
-    invariant(!this.store.get(`SELECT w.id FROM worktrees w JOIN tasks t ON t.id=w.task_id JOIN workflows f ON f.id=t.workflow_id JOIN repositories r ON r.workspace_id=f.workspace_id WHERE r.common_git_dir=? AND w.writer_run_id IS NOT NULL`, repo.commonGitDir), 'WORKTREE_IN_USE', '仓库目录仍有写入者。');
-    invariant(!this.store.get(`SELECT w.id FROM workspace_worktrees w JOIN repositories r ON r.id=w.repository_id WHERE r.common_git_dir=? AND (w.pending_path IS NOT NULL OR w.status IN ('creating','creation_unknown','moving','move_unknown'))`, repo.commonGitDir), 'WORKTREE_IN_USE', '请先核对仓库中未完成的目录操作。');
+    if (!task) {
+      // Conservative repository-wide exclusion includes other workspace aliases,
+      // discussion writers, legacy Runs, finalizers and unconfirmed integrations.
+      invariant(!this.store.get(`SELECT l.id FROM execution_leases l JOIN repositories r ON r.workspace_id=l.workspace_id WHERE r.common_git_dir=? AND (l.released_at IS NULL OR l.cleanup_status<>'confirmed') AND l.id<>?`, repo.commonGitDir, requester.leaseId), 'WORKTREE_IN_USE', '仓库仍有执行租约或未确认的清理。');
+      invariant(!this.store.get(`SELECT a.id FROM agent_turns a JOIN repositories r ON r.workspace_id=a.workspace_id WHERE r.common_git_dir=? AND a.status IN ('queued','running','stopping') AND a.id<>?`, repo.commonGitDir, requester.turnId), 'WORKTREE_IN_USE', '仓库仍有排队或活跃的讨论执行。');
+      invariant(!this.store.get(`SELECT run.id FROM runs run JOIN tasks t ON t.id=run.task_id JOIN workflows f ON f.id=t.workflow_id JOIN repositories r ON r.workspace_id=f.workspace_id WHERE r.common_git_dir=? AND (run.cleanup_status<>'confirmed' OR run.slot_released_at IS NULL )`, repo.commonGitDir), 'CLEANUP_UNKNOWN', '仓库执行清理尚未确认。');
+      invariant(!this.store.get(`SELECT o.id FROM operations o JOIN tasks t ON t.id=o.entity_id JOIN workflows f ON f.id=t.workflow_id JOIN repositories r ON r.workspace_id=f.workspace_id WHERE r.common_git_dir=? AND o.phase IN ('queued','started')`, repo.commonGitDir), 'WORKTREE_IN_USE', '仓库仍有未完成的任务操作或结果收集。');
+      invariant(!this.store.get(`SELECT i.id FROM integrations i JOIN tasks t ON t.id=i.task_id JOIN workflows f ON f.id=t.workflow_id JOIN repositories r ON r.workspace_id=f.workspace_id WHERE r.common_git_dir=? AND i.status NOT IN ('accepted','blocked')`, repo.commonGitDir), 'CLEANUP_UNKNOWN', '仓库仍有未完成或清理未知的集成。');
+      const blocked = this.store.all<{error:string|null}>(`SELECT i.error FROM integrations i JOIN tasks t ON t.id=i.task_id JOIN workflows f ON f.id=t.workflow_id JOIN repositories r ON r.workspace_id=f.workspace_id WHERE r.common_git_dir=? AND i.status='blocked'`, repo.commonGitDir);
+      invariant(!blocked.some(row => row.error && uncertain(row.error)), 'CLEANUP_UNKNOWN', '仓库集成曾超时，子进程清理尚未确认。');
+      invariant(!this.store.get(`SELECT w.id FROM worktrees w JOIN tasks t ON t.id=w.task_id JOIN workflows f ON f.id=t.workflow_id JOIN repositories r ON r.workspace_id=f.workspace_id WHERE r.common_git_dir=? AND w.writer_run_id IS NOT NULL`, repo.commonGitDir), 'WORKTREE_IN_USE', '仓库目录仍有写入者。');
+      invariant(!this.store.get(`SELECT w.id FROM workspace_worktrees w JOIN repositories r ON r.id=w.repository_id WHERE r.common_git_dir=? AND (w.pending_path IS NOT NULL OR w.status IN ('creating','creation_unknown','moving','move_unknown'))`, repo.commonGitDir), 'WORKTREE_IN_USE', '请先核对仓库中未完成的目录操作。');
+    }
     invariant(!this.store.get(`SELECT d.record_id FROM worktree_removals d JOIN repositories r ON r.id=d.repository_id WHERE r.common_git_dir=? AND d.state IN ('deleting','unknown') AND NOT (d.kind=? AND d.record_id=?)`, repo.commonGitDir, target.kind, target.recordId), 'WORKTREE_IN_USE', '仓库有正在删除或清理未知的目录。');
     invariant(!this.store.get("SELECT id FROM workspace_worktrees WHERE path=? AND status='active' AND NOT (id=? AND ?='user')", tree.path, target.recordId, target.kind), 'WORKTREE_IN_USE', '此目录仍有其他活跃关联。');
   }
