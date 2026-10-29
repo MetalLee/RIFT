@@ -8,8 +8,8 @@ function CodeBlock({ language, content }: { language: string; content: string })
   return <div className="message-code"><div><span>{language || 'CODE'}</span><Button variant="ghost" className="text-button" onClick={async () => { try { await copyText(content); setCopied(true); } catch { setCopied(false); } }}>{copied ? '已复制' : '复制代码'}</Button></div><pre><code>{content}</code></pre></div>;
 }
 /** Render Markdown without raw HTML, using the same editorial hierarchy as Stitch. */
-export const MessageBody = memo(function MessageBody({ text }: { text: string }) {
-  return <div className="message-content"><ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{
+export const MessageBody = memo(function MessageBody({ text, mention }: { text: string; mention?: string }) {
+  return <div className="message-content">{mention&&<><span className="message-mention">@{mention}</span>{' '}</>}<ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{
     pre({ children }) { return <>{children}</>; },
     code({ className, children }) {
       const content = String(children);

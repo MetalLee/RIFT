@@ -519,3 +519,31 @@ button.card { height: auto; text-align: left; }
   .chat-transcript { padding: 16px 8px; }
   .live-chat .composer-dock { padding-left: 8px; padding-right: 8px; }
 }
+
+/* Conversation bubbles: one shared body inset keeps text and task links aligned. */
+.message-list { align-items: stretch; gap: 28px; }
+.message-list > .message { min-width: 0; width: min(92%, 680px); align-self: flex-start; }
+.message-list > .message.user { width: fit-content; max-width: 85%; align-self: flex-end; }
+.message-list .message-heading { gap: 10px; margin-bottom: 8px; }
+.message-list .message-avatar { width: 28px; height: 28px; flex: 0 0 28px; }
+.message-list .message-heading time { width: auto; margin: 0; font-size: 11px; }
+.message.user .message-heading { flex-direction: row-reverse; }
+.message-body { min-width: 0; margin-left: 38px; }
+.message.user .message-body { margin-left: 0; margin-right: 38px; }
+.message-bubble { padding: 14px 16px; border: 1px solid #e9e5df; border-radius: 4px 16px 16px; background: #fffefa; }
+.message.user .message-bubble { background: #f1e6dd; border-color: #e9d7c8; border-radius: 16px 4px 16px 16px; }
+.message-bubble .message-content { margin: 0; text-align: left; min-width: 0; }
+.message-bubble .message-task-tags { margin: 12px 0 0; padding: 0; }
+.message-bubble .task-tag { max-width: 100%; overflow-wrap: anywhere; white-space: normal; }
+.message-mention { color: #974324; font-weight: 600; }
+.message-mention + p { display: inline; }
+.message-body > .turn-state { margin-left: 0; }
+.message-body > .chat-notices { margin-left: 0; overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+  .message-list > .message { width: 96%; }
+  .message-list > .message.user { max-width: 92%; }
+  .message-body { margin-left: 34px; }
+  .message.user .message-body { margin-right: 34px; }
+  .message-list .message-heading { gap: 6px; }
+  .message-bubble { padding: 12px; }
+}
