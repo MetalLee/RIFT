@@ -14,7 +14,8 @@ export function modelLines(role: Role, binding: UiBinding | undefined, lead: UiW
     line('execution', '执行', lead.model, '主 Agent 编排通道', lead.runtime),
   ];
   const execution = binding?.executionConnection ?? null;
-  const inherited = !execution && binding && binding.providerName !== 'discussion-only' ? binding.model : null;
+  // Binding existence and model name are independent: validateBinding allows a null model (provider default).
+  const inherited = !execution && binding && binding.providerName !== 'discussion-only' ? binding.model || '默认模型' : null;
   const [chat, exec] = role.chatConnection
     ? [line('chat', '对话', role.chatConnection.model, runtimeLabel(role.chatConnection), role.chatConnection.runtime), execution ? line('execution', '执行', execution.model, runtimeLabel(execution), execution.runtime) : inherited ? line('execution', '执行', inherited, '继承默认执行') : line('execution', '执行', '', '仅对话')]
     : execution ? [line('chat', '对话', execution.model, '沿用执行连接', execution.runtime), line('execution', '执行', execution.model, runtimeLabel(execution), execution.runtime)] : [line('chat', '对话', '', '可在配置中添加连接'), inherited ? line('execution', '执行', inherited, '继承默认执行') : line('execution', '执行', '', '仅对话')];

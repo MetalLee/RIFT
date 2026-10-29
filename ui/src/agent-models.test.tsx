@@ -25,3 +25,12 @@ it('shows unconfigured and inherited states without leaking binding names', () =
   expect(inherited.map(l => [l.model, l.source])).toEqual([['codex-m', 'Codex 原生运行时'], ['m1', '继承默认执行']]);
   expect(html(inherited)).not.toContain('spawn');
 });
+
+it('treats a non-discussion-only binding without a model name as the default model, not chat-only', () => {
+  const [chat, exec] = modelLines(role({ chatConnection: null }), binding({ model: null, executionConnection: null }), lead);
+  expect([chat.model, chat.configured]).toEqual(['未配置', false]);
+  expect([exec.model, exec.source, exec.configured]).toEqual(['默认模型', '继承默认执行', true]);
+  const withChat = modelLines(role({ chatConnection: { runtime: 'dsh', model: 'c' } }), binding({ model: null }), lead)[1];
+  expect([withChat.model, withChat.configured]).toEqual(['默认模型', true]);
+  expect(html([exec])).not.toContain('仅对话');
+});
