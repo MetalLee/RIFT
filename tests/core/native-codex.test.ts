@@ -56,6 +56,16 @@ function harness(options: { sandbox?: string; cleanup?: boolean; resumeId?:strin
 }
 
 describe('native Codex Host-owned tool gateway', () => {
+  it('enables read-only native image viewing without native shell or delegation',async()=>{
+    const h=harness({mode:'analysis'}),handle=await h.start();
+    const request=h.requests.find(r=>r.method==='thread/start')!.params;
+    expect(request.config).toMatchObject({'features.view_image':false,'features.shell_tool':false,'features.multi_agent':false});
+    expect(h.spawnSpec!.argv).toContain('features.view_image=false');
+    expect(request.sandbox).toBe('read-only');
+    expect((request.dynamicTools as {name:string}[]).map(t=>t.name)).toContain('view_image');
+    h.complete();await handle.result;
+  });
+
   it.each(['我先检查代码。', 'I will inspect the code.'])('streams native commentary, public summaries and tool progress before completion: %s',async text=>{
     const h=harness();const events:RuntimeEvent[]=[];let legacy='';
     h.input.onEvent=event=>events.push(event);h.input.onText=chunk=>{legacy+=chunk;};
@@ -234,7 +244,7 @@ describe('native repository capabilities',()=>{
     const request=h.requests.find(r=>r.method==='thread/start')!.params;expect(request.sandbox).toBe('read-only');expect(request.config).toMatchObject({'features.shell_tool':false,'features.unified_exec':false});expect(request.environments).toEqual([]);
     expect(request.config).toMatchObject({'features.code_mode':false,'features.code_mode_host':false});
     expect(h.spawnSpec!.argv).toEqual(expect.arrayContaining(['features.code_mode=false','features.code_mode_host=false']));
-    expect((request.dynamicTools as {name:string}[]).map(tool=>tool.name)).toEqual(['rift_status','rift_read_file','rift_list_files']);
+    expect((request.dynamicTools as {name:string}[]).map(tool=>tool.name)).toEqual(['rift_status','rift_read_file','rift_list_files','rift_view_image','view_image']);
     expect(h.requests.find(r=>r.method==='turn/start')!.params.sandboxPolicy).toEqual({type:'readOnly',networkAccess:false});
     h.complete();await handle.result;await handle.dispose();
   });

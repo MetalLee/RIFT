@@ -1,31 +1,99 @@
 {
-  "date": "2026-10-26T06:17:23.597Z",
+  "date": "2026-10-30T03:48:31.694Z",
   "model": "gpt-6.1-sol",
   "mode": "real native Codex app-server with controlled local Responses server; zero external model calls",
   "payload": "0.164.0",
+  "dshImageAttachment": [
+    "image"
+  ],
   "result": {
     "text": "RIFT_NATIVE_TOOL_PROBE_OK",
+    "finalText": "RIFT_NATIVE_TOOL_PROBE_OK",
     "stopReason": "completed",
-    "nativeSessionId": "01a176db-4e15-7c93-a845-0aba7b2034ad"
+    "nativeSessionId": "01a18aec-71f5-7ff3-8625-8ce866c114e4"
   },
   "advertisedTools": [
     [
       "request_user_input",
-      "rift_probe"
+      "rift_probe",
+      "rift_view_image",
+      "view_image"
     ],
     [
       "request_user_input",
-      "rift_probe"
+      "rift_probe",
+      "rift_view_image",
+      "view_image"
+    ],
+    [
+      "request_user_input",
+      "rift_probe",
+      "rift_view_image",
+      "view_image"
+    ],
+    [
+      "request_user_input",
+      "rift_probe",
+      "rift_view_image",
+      "view_image"
     ]
   ],
   "codeTools": [
     [],
+    [],
+    [],
     []
   ],
   "invocationCount": 1,
-  "httpCount": 2,
+  "httpCount": 4,
+  "imageRequests": 2,
+  "toolOutputTypes": [
+    [],
+    [
+      {
+        "callId": "call_probe",
+        "types": [
+          "text"
+        ]
+      }
+    ],
+    [
+      {
+        "callId": "call_probe",
+        "types": [
+          "text"
+        ]
+      },
+      {
+        "callId": "call_image",
+        "types": [
+          "input_image"
+        ]
+      }
+    ],
+    [
+      {
+        "callId": "call_probe",
+        "types": [
+          "text"
+        ]
+      },
+      {
+        "callId": "call_image",
+        "types": [
+          "input_image"
+        ]
+      },
+      {
+        "callId": "call_scoped_image",
+        "types": [
+          "input_image"
+        ]
+      }
+    ]
+  ],
   "boundaryPassed": true,
-  "deniedNativeSurface": "request_user_input is native interaction only; its server request is rejected by the RIFT gateway. No shell, filesystem, MCP, plugins, or delegation tools are advertised.",
+  "deniedNativeSurface": "request_user_input is native interaction only; its server request is rejected by the RIFT gateway. Host-scoped view_image and rift_view_image are allowed; no shell, other native filesystem, MCP, plugins, or delegation tools are advertised.",
   "status": "pass",
   "cleanup": "confirmed"
 }

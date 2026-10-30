@@ -24,10 +24,52 @@ async function fixture(execute:(input:RuntimeTurnInput,host:RiftHostService)=>Pr
 const invoke=(input:RuntimeTurnInput,name:string,args:unknown={})=>input.tools.find(tool=>tool.name===name)!.execute(args,input.signal);
 
 describe('short durable Lead turns',()=>{
+  it.each(['cancelled','completed','failed'])('rebinds the same live Lead after a %s workflow without releasing its lease',async status=>{
+    const model=deferred<RuntimeTurnResult>();let received:RuntimeTurnInput|undefined;
+    const f=await fixture(async input=>{received=input;return model.promise;});
+    try{
+      const turn=f.host.chat.send(f.workspace.id,f.conversation.id,{clientMessageId:'switch',content:'Switch workflow.'}).turn;
+      await until(()=>Boolean(received));
+      const old=await invoke(received!,'rift_workflow_start',{goal:'Old workflow',mode:'analysis'}) as {id:string};
+      const decision=f.host.store.require<{id:string;toolCalls:number}>('SELECT * FROM coordination_decisions WHERE turn_id=?',turn.id);
+      f.host.store.exec('UPDATE workflows SET status=? WHERE id=?',status,old.id);
+      const next=await invoke(received!,'rift_workflow_start',{goal:'Replacement workflow',mode:'analysis'}) as {id:string};
+      expect(next.id).not.toBe(old.id);
+      expect(f.host.orchestration.forTurn(turn)?.workflowId).toBe(next.id);
+      expect(f.host.store.require<{id:string;toolCalls:number}>('SELECT * FROM coordination_decisions WHERE turn_id=?',turn.id)).toMatchObject({id:decision.id});
+      expect(f.host.store.get('SELECT id FROM execution_leases WHERE owner_id=? AND released_at IS NULL',turn.id)).toBeTruthy();
+      expect(f.host.store.get("SELECT id FROM coordination_decisions WHERE workflow_id=? AND status='active'",old.id)).toBeUndefined();
+      await invoke(received!,'rift_plan_submit',{expectedRevision:0,tasks:[{id:'replacement',kind:'analysis',title:'Replacement',instructions:'Inspect',expectedPaths:[]}]});
+      expect(f.host.store.task('replacement').workflowId).toBe(next.id);
+      expect(f.host.store.get("SELECT seq FROM turn_activities WHERE turn_id=? AND type='coordination.rebound'",turn.id)).toBeTruthy();
+      model.resolve({text:'Replacement planned.',stopReason:'completed'});
+      await until(()=>f.host.chat.turn(f.workspace.id,turn.id).status==='completed');
+      expect(f.host.store.require<{status:string}>('SELECT status FROM coordination_decisions WHERE turn_id=?',turn.id).status).toBe('completed');
+    }finally{model.resolve({text:'',stopReason:'cancelled'});await f.close();}
+  });
+
+  it.each(['handoff_requested','interrupted','released'])('does not transfer a %s decision or release its locks',async state=>{
+    const model=deferred<RuntimeTurnResult>();let received:RuntimeTurnInput|undefined;
+    const f=await fixture(async input=>{received=input;return model.promise;});
+    try{
+      const turn=f.host.chat.send(f.workspace.id,f.conversation.id,{clientMessageId:'invalid-switch',content:'Inspect switching.'}).turn;
+      await until(()=>Boolean(received));
+      const old=await invoke(received!,'rift_workflow_start',{goal:'Old',mode:'analysis'}) as {id:string};
+      f.host.store.exec("UPDATE workflows SET status='cancelled' WHERE id=?",old.id);
+      if(state==='released')f.host.store.exec("UPDATE execution_leases SET released_at='test' WHERE owner_id=?",turn.id);
+      else f.host.store.exec('UPDATE coordination_decisions SET status=? WHERE turn_id=?',state,turn.id);
+      const before=f.host.store.all('SELECT id FROM workflows').length;
+      await expect(f.host.createChatWorkflow(turn,{workspaceId:f.workspace.id,goal:'Rejected replacement',mode:'analysis',startLead:false})).rejects.toMatchObject({code:state==='released'?'UNAUTHORIZED':'DECISION_EXPIRED'});
+      expect(f.host.store.all('SELECT id FROM workflows')).toHaveLength(before);
+      expect(f.host.orchestration.forTurn(turn)?.workflowId).toBe(old.id);
+      expect(f.host.store.all("SELECT seq FROM turn_activities WHERE type='coordination.rebound'")).toHaveLength(0);
+    }finally{model.resolve({text:'',stopReason:'cancelled'});await f.close();}
+  });
+
   it('ends the dispatch turn while development runs, then consumes a real event trigger and finishes acceptance',async()=>{
     const development=deferred<RuntimeTurnResult>();let leadCalls=0,workflowId='';let firstTools:string[]=[];
     const f=await fixture(async input=>{
-      if(input.instructions.startsWith('You are executing a registered text-only'))return development.promise;
+      if(input.instructions.includes('You are executing a registered read-only analysis task.'))return development.promise;
       leadCalls++;
       if(leadCalls===1){
         firstTools=input.tools.map(tool=>tool.name);

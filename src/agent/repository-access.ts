@@ -7,7 +7,7 @@ import type { RiftStore } from '../storage/database.js';
 import { gitOk } from '../git/process.js';
 
 /** Bump when runtime permission semantics change: old native threads must not resume. */
-export const REPOSITORY_PERMISSION_VERSION = 'workspace-repositories-v10-explicit-agent-sandbox';
+export const REPOSITORY_PERMISSION_VERSION = 'workspace-repositories-v11-image-view';
 export interface RepositoryAccess { sandboxMode?:AgentSandboxMode; repositoryPaths: string[]; protectedPaths?: string[]; shellHome?:string; skillResources?:string; workspaceDirectory?:string }
 
 /** Resolve only registered roots; model content and context references never grant access. */

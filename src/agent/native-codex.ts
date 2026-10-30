@@ -1,3 +1,4 @@
+import { createImageTool, renderNativeToolResult } from './image-tool.js';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -122,8 +123,13 @@ export class NativeCodexRuntime implements AgentRuntime {
     const writableRoots=repositoryWrite&&!unrestricted?await nativeRepositoryRoots(input.cwd,input.repositoryAccess!.repositoryPaths,input.signal,input.repositoryAccess?.workspaceDirectory):[];
     const shell=repositoryWrite?await (await import('./repository-shell.js')).createRepositoryShell({spawn:this.options.spawn} as import('@deepseek-ai/cordis').Context['subprocess'],input):undefined;
     const runtimeTools=[...input.tools,...formalReadOnly?createRepositoryReadTools(input.cwd):[],...shell?[{...shell.tool,name:'rift_exec_command'}]:[]];
+    if(!runtimeTools.some(tool=>tool.name==='rift_view_image'))runtimeTools.push(createImageTool([input.cwd,...formalReadOnly?[]:[...(input.repositoryAccess?.repositoryPaths??[]),...input.repositoryAccess?.workspaceDirectory?[input.repositoryAccess.workspaceDirectory]:[]]]));
+    // The builtin needs native execution environments (intentionally absent).
+    // Offer a Host-scoped, read-only implementation under the familiar name.
+    if(input.tools.some(tool=>tool.name==='view_image'))throw new RiftError('NATIVE_TOOL_SCOPE','view_image is reserved for the Host image reader.');
+    runtimeTools.push({...runtimeTools.find(tool=>tool.name==='rift_view_image')!,name:'view_image'});
     const tools = new Map(runtimeTools.map(tool => [tool.name, tool]));
-    if (tools.size !== runtimeTools.length || runtimeTools.some(tool => !/^rift_[a-z0-9_]+$/.test(tool.name))) throw new RiftError('NATIVE_TOOL_SCOPE', 'Native turns accept only unique RIFT tool names.');
+    if (tools.size !== runtimeTools.length || runtimeTools.some(tool => tool.name!=='view_image'&&!/^rift_[a-z0-9_]+$/.test(tool.name))) throw new RiftError('NATIVE_TOOL_SCOPE', 'Native turns accept only unique RIFT tool names.');
     const controller = new AbortController();
     // A Host launched inside Codex must not let the child attach to the
     // desktop app's tool pipe or inherit its task/session authority.
@@ -283,7 +289,7 @@ export class NativeCodexRuntime implements AgentRuntime {
         });
         if (!prior) calls.set(params.callId, { fingerprint, result });
         const value = await result;
-        return { contentItems: [{ type: 'inputText', text: redact(JSON.stringify(value ?? null), 256 * 1024) }], success: true };
+        return { contentItems: renderNativeToolResult(value), success: true };
       } catch (error) {
         return { contentItems: [{ type: 'inputText', text: JSON.stringify({ error: publicError(error) }) }], success: false };
       }
@@ -329,7 +335,7 @@ export class NativeCodexRuntime implements AgentRuntime {
         ...(resuming ? { threadId: input.session!.threadId, excludeTurns: true } : { ephemeral: !input.session }),
         ...(restrictedTools?{environments: [],runtimeWorkspaceRoots: []}:repositoryWrite?{runtimeWorkspaceRoots:writableRoots}:{}),
         approvalPolicy: 'never', sandbox, config,
-        ...(restrictedTools ? {baseInstructions: unrestricted?'You are a RIFT workspace agent. The Host operator enabled unrestricted filesystem and network access through rift_exec_command. Keep task ownership, cancellation, review and acceptance protocols intact. Do not delegate outside RIFT.':'You are a RIFT workspace agent. Use only the provided RIFT tools. For repository commands use rift_exec_command when available; its Host-enforced sandbox fixes the filesystem and network boundary. Never delegate outside RIFT or claim acceptance from prose.'} : repositoryWrite?{baseInstructions:'You are a RIFT workspace agent. Native shell and file tools may operate on the Host-associated workspace repositories, including Git commits and authorized remote Git/PR operations. Stay within these repository capabilities. Use RIFT for task ownership and coordination; commits and PRs do not replace required checks, independent review, or workflow acceptance. Do not delegate outside RIFT.'}:{}),
+        ...(restrictedTools ? {baseInstructions: unrestricted?'You are a RIFT workspace agent. The Host operator enabled unrestricted filesystem and network access through rift_exec_command. Keep task ownership, cancellation, review and acceptance protocols intact. Do not delegate outside RIFT.':'You are a RIFT workspace agent. Use the provided RIFT tools and view_image for read-only image inspection. For repository commands use rift_exec_command when available; its Host-enforced sandbox fixes the filesystem and network boundary. Never delegate outside RIFT or claim acceptance from prose.'} : repositoryWrite?{baseInstructions:'You are a RIFT workspace agent. Native shell and file tools may operate on the Host-associated workspace repositories, including Git commits and authorized remote Git/PR operations. Stay within these repository capabilities. Use RIFT for task ownership and coordination; commits and PRs do not replace required checks, independent review, or workflow acceptance. Do not delegate outside RIFT.'}:{}),
         developerInstructions: `${input.instructions}${formalReadOnly&&!unrestricted?'\nFormal read-only execution: use rift_list_files and rift_read_file for this assigned checkout. They cannot execute commands, write files or Git metadata, or reach network services. Host check evidence supplies executed test results; do not invent tests you could not run.':formalReadOnly?'\nThe operator enabled unrestricted commands through rift_exec_command. You may execute verification commands; preserve the exact candidate and do not change tracked source or Git history during review. Report actual results.':''}`,
         // 0.164.0 restores dynamic tool declarations from its rollout on resume.
         // The Host binds fresh closures to this turn below; schemas are part of

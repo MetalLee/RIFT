@@ -28,7 +28,17 @@ export class ChatOrchestration {
       invariant(this.store.workflow(workflowId).workspaceId===turn.workspaceId,'CROSS_WORKFLOW','Workflow does not belong to this Turn.');
       invariant(!this.owner(workflowId),'COORDINATION_OWNED','Workflow already has a coordination owner.');
       this.store.exec("INSERT INTO workflow_conversations(workflow_id,workspace_id,conversation_id,agent_id,mode,created_at,correlation_id,parent_message_id) VALUES(?,?,?,?,'chat',?,?,?)",workflowId,turn.workspaceId,turn.conversationId,turn.agentId,now(),turn.messageId??`workflow:${workflowId}`,turn.messageId);
-      this.beforeStart(turn);
+      const previous=this.store.get<Decision>('SELECT * FROM coordination_decisions WHERE turn_id=?',turn.id);
+      if(previous){
+        // One live Turn owns one decision. Transfer that decision, not its
+        // runtime lease; retain the old association as durable audit evidence.
+        const oldOwner=this.owner(previous.workflowId);
+        invariant(['completed','cancelled','failed'].includes(this.store.workflow(previous.workflowId).status),'COORDINATION_BUSY','Finish or cancel the previous workflow before switching.');
+        invariant(previous.status==='active'&&oldOwner?.workspaceId===turn.workspaceId&&oldOwner.conversationId===turn.conversationId&&oldOwner.agentId===turn.agentId&&oldOwner.version===previous.ownerVersion,'DECISION_EXPIRED','Only the current active decision may switch workflows.');
+        invariant(this.store.get("SELECT id FROM agent_turns WHERE id=? AND status='running'",turn.id)&&this.store.get("SELECT id FROM execution_leases WHERE owner_type='turn' AND owner_id=? AND agent_id=? AND released_at IS NULL",turn.id,turn.agentId),'UNAUTHORIZED','Workflow switching requires this Turn live lease.');
+        this.store.exec("INSERT INTO turn_activities(turn_id,type,phase,summary,payload,created_at) VALUES(?,'coordination.rebound','tool','Workflow coordination transferred.',?,?)",turn.id,JSON.stringify({fromWorkflowId:previous.workflowId,toWorkflowId:workflowId,previousDecision:previous}),now());
+        this.store.exec('UPDATE coordination_decisions SET workflow_id=?,owner_version=0,plan_revision=?,last_event_seq=?,stagnant_calls=0 WHERE id=?',workflowId,this.store.workflow(workflowId).planRevision,this.eventSeq(workflowId),previous.id);
+      }else this.beforeStart(turn);
     });
   }
   canStart(turn:AgentTurn):boolean {
