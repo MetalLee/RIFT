@@ -96,3 +96,30 @@ it('summarizes stable API errors in Chinese without exposing upstream secrets', 
   expect(errorText(new ApiError(409, 'archived', 'SKILL_ARCHIVED'))).toContain('重新导入');
   expect(errorText(new ApiError(401, 'expired'))).toContain('重新连接 RIFT');
 });
+
+it.each([
+  ['SKILL_SIZE_LIMIT', ['256 KiB', '4 MiB', '32 MiB', '512', '2048', '32 层', '缩减', '重新预览']],
+  ['SKILL_ENCODING', ['UTF-8', '转换', '重新预览']],
+  ['INVALID_SKILL_METADATA', ['1–120', '2000', '修改']],
+  ['INVALID_SKILL_RUNTIME', ['20', '1–80', '修正']],
+  ['SKILL_SYMLINK', ['符号链接', '移除']],
+  ['SKILL_PATH_ESCAPE', ['超出', '移入']],
+  ['SKILL_PATH_CHANGED', ['发生变化', '停止修改']],
+  ['SKILL_PREVIEW_LIMIT', ['20', '15 分钟', '保存']],
+  ['SKILL_ENTRY_MISSING', ['非空', '根部']],
+  ['SKILL_UNSAFE_RESOURCE', ['.git', 'node_modules', '.env', '移除']],
+])('explains import validation %s without echoing raw paths or credentials', async (code, fragments) => {
+  const { errorText } = await import('./api');
+  const text = errorText(new ApiError(400, '/private/path Bearer test-secret', code));
+  for (const fragment of fragments) expect(text).toContain(fragment);
+  expect(text).not.toContain('/private/path');
+  expect(text).not.toContain('test-secret');
+});
+it('keeps unknown API errors safe and actionable', async () => {
+  const { errorText } = await import('./api');
+  const text = errorText(new ApiError(400, '/private/path Bearer test-secret', 'UNKNOWN'));
+  expect(text).toContain('核对输入');
+  expect(text).toContain('HTTP 400 · UNKNOWN');
+  expect(text).not.toContain('/private/path');
+  expect(text).not.toContain('test-secret');
+});

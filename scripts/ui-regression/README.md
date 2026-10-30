@@ -21,3 +21,11 @@ long models, responsive detail navigation, touch bounds/hit testing and contrast
 The measurements are not a screen-reader, real-device or backend acceptance test.
 Images and opacity ancestors are excluded from the generic contrast sampler;
 decorative slashes and disabled controls are not normal text failures.
+
+Focused review regressions (reuse the previous unaffected visual evidence):
+
+```sh
+UI_CHECK_FILTER='^(tasks-(390|768|1280)|detail-.*|task-history-.*|task-filter-pagination|skill-import-validation|deep-links-evidence|narrow-deep-link-keyboard|connection-recovery|form-error-drafts)$' UI_EVIDENCE_DIR=/absolute/path/out node scripts/ui-regression/check.mjs
+```
+
+Only executed checks are recorded; skipped checks are not reported as passes.

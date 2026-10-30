@@ -13,15 +13,18 @@ const playwrightPath=process.env.PLAYWRIGHT_PATH || '/data/projects/RIFT/.rift/w
 const {chromium}=require(playwrightPath);
 const out=path.resolve(process.env.UI_EVIDENCE_DIR || '/data/projects/RIFT/.rift/workspaces/workspace-a6791aae-4934-4069-a7d9-870bf02d2539/workspace/playwright-tools/ui-fixes-c4d993cd')+'/', origin='http://127.0.0.1:5209';
 await mkdir(out+'screens',{recursive:true});
-const report={startedAt:new Date().toISOString(),head:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),dirty:execFileSync('git',['status','--short'],{cwd:root,encoding:'utf8'}),root,playwright:require(playwrightPath+'/package.json').version,mode:'isolated Vite; all API responses mocked; no real business writes',screens:[],checks:[],pageErrors:[],requests:[],unexpectedRequests:[]};
+const report={checkFilter:process.env.UI_CHECK_FILTER??null,startedAt:new Date().toISOString(),head:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),dirty:execFileSync('git',['status','--short'],{cwd:root,encoding:'utf8'}),root,playwright:require(playwrightPath+'/package.json').version,mode:'isolated Vite; all API responses mocked; no real business writes',screens:[],checks:[],pageErrors:[],requests:[],unexpectedRequests:[]};
+const checkFilter = process.env.UI_CHECK_FILTER ? new RegExp(process.env.UI_CHECK_FILTER) : null;
 let state={empty:false,fail:'',delay:'',long:false,stale:false,unreferenced:false};let page,context,browser,server;
 const savedConnections=[{id:'api-demo-1',name:'团队模型（模拟）',protocol:'openai-responses',endpoint:'https://example.invalid/v1',model:'audit-model',revision:1,available:true,verificationStatus:'unverified',verifiedAt:null,verification:null,verificationError:null}];
 savedConnections.push({...savedConnections[0],id:'api-demo-2',name:'备用模型（模拟）'});
 const removals=[{kind:'user',recordId:'tree-1',repositoryId:'repo-1',path:f.trees[0].path,state:'present',expectedVersion:1,canDelete:true,canReconcile:false,reason:null,error:null}];
+function taskFixtures(){return [...f.tasks,...Array.from({length:31},(_,i)=>({...f.tasks[0],id:'page-task-'+i,workflowId:'workflow-2',repositoryId:'repo-2'}))];}
 async function intercept(route){const r=route.request(),u=new URL(r.url()); if(!u.pathname.startsWith('/ui-api/')){if(u.origin!==origin){report.unexpectedRequests.push(r.url());return route.abort();}return route.continue();}
 const p=u.pathname.replace('/ui-api/v1',''); report.requests.push({path:p,method:r.method(),mock:true}); let body,status=200;
 if(state.delay && p.endsWith(state.delay))await new Promise(r=>setTimeout(r,1800));
 if(state.fail && (p===state.fail || p.endsWith(state.fail) || state.fail==='/session' && p==='/session/connect')){status=state.fail==='/session'?401:503;body={error:{code:'PROVIDER_UNAVAILABLE',message:'upstream connection refused (audit simulated)'}};}
+else if(state.importCode && p.endsWith('/skills/preview')){status=400;body={error:{code:state.importCode,message:'/private/path Bearer test-secret'}};}
 else if(r.method()!=='GET'){
  if(p.endsWith('/conversations')){body={...f.conversation,id:'conversation-'+(f.conversations.length+1),title:'新对话',version:0};f.conversations.unshift(body);}
  else if(p.endsWith('/verify')){await new Promise(r=>setTimeout(r,150));body={passed:false,error:'upstream timeout (audit simulated)',connection:savedConnections.find(c=>p.includes(c.id))};}
@@ -31,12 +34,18 @@ else if(r.method()!=='GET'){
 }else if(p==='/session')body={csrfToken:'audit-not-a-real-session',expiresAt:'2099-01-01T00:00:00Z'};
 else if(p==='/workspaces')body={workspaces:state.empty?[]:f.workspaces,capabilities:f.capabilities,observedAt:f.now()};
 else if(p==='/connections')body={configuration:{available:true,reason:null},connections:[{id:'dsh:anthropic',runtime:'dsh',provider:'anthropic',available:true,models:['Claude 3.7 Sonnet'],modelSelection:'free',tools:true},{id:'codex',runtime:'codex',available:true,models:['gpt-6.1-sol'],modelSelection:'verified-only',tools:true}],savedConnections,executionProviders:[]};
+else if(p.endsWith('/tasks')){const all=taskFixtures();const filtered=all.filter(t=>(!u.searchParams.has('status')||u.searchParams.get('status').split(',').includes(t.status))&&['workflowId','repositoryId','roleId'].every(k=>!u.searchParams.has(k)||t[k]===u.searchParams.get(k)));const after=Number(u.searchParams.get('after')||0),end=after+30;body={tasks:filtered.slice(after,end),totalCount:filtered.length,nextAfter:end<filtered.length?end:null};}
+else if(/\/tasks\/[^/]+$/.test(p)){body={...f.tasks[2],id:p.split('/').at(-1),title:'外部深链任务'};}
 else if(p.endsWith('/messages')){const c=f.conversations.find(c=>c.id===p.split('/').at(-2))??f.conversation;body={conversation:c,messages:state.empty||c.id!==f.conversation.id?[]:f.messages,turns:[],chunks:[],nextBefore:null,snapshotCursor:1};}
 else if(p.endsWith('/conversations'))body={conversations:state.empty?[]:f.conversations};
 else if(p.endsWith('/skills'))body={skills:state.empty?[]:f.skills.map(s=>state.unreferenced?{...s,shared:null}:s)};
 else if(p.endsWith('/worktrees'))body={worktrees:p.includes('repo-1')?f.trees:[],discovered:[],removals:p.includes('repo-1')?removals:[]};
 else if(p.endsWith('/evidence'))body={taskId:p.split('/').at(-2),acceptedCommit:null,currentCandidate:null,integrations:[]};
 else if(p==='/workspaces/wsp-001') {body=f.detail();body.hostCapacity={limits:{developers:3,reviewers:1,total:4,lead:1},occupied:{developers:1,reviewers:0,total:1,lead:0}};
+ body.snapshotCursor=state.revision??1;
+ if(state.large)body.tasks=taskFixtures();
+ body.capabilities={...body.capabilities,pagination:{available:!!state.pagination}};
+ body.workflows=[...body.workflows,{...body.workflows[0],id:'workflow-2',goal:'第二工作流'}];
  if(state.stale)body.observedAt='2026-01-01T00:00:00Z';
  if(state.empty)for(const k of ['tasks','roles','repositories','managedWorktrees','presence','workflows'])body[k]=[];
  if(state.long)body.roles=body.roles.map(r=>({...r,prompt:r.prompt.repeat(8),chatConnection:{...r.chatConnection,model:'long-audit-model-context-extended-version-20261030-'.repeat(3)}}));
@@ -50,7 +59,7 @@ async function snap(name){await ready();const file='screens/'+name+'.png';await 
  const controls=[...document.querySelectorAll('button,a,input,textarea,select,[role=checkbox],[role=tab],[role=radio]')].filter(visible).map(e=>({tag:e.tagName,slot:e.getAttribute('data-slot'),label:label(e),class:String(e.className),disabled:e.matches(':disabled')||e.getAttribute('aria-disabled')==='true',...box(e),pressed:e.getAttribute('aria-pressed'),selected:e.getAttribute('aria-selected'),checked:e.getAttribute('aria-checked')}));
  const contrasts=[];for(const e of [...document.querySelectorAll('main *,header *,aside *')].filter(visible)){if(![...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())||e.closest(':disabled,[aria-disabled=true]'))continue;let bg=[255,255,255],chain=[],x=e,excluded=false;while(x){chain.unshift(x);x=x.parentElement;}for(const a of chain){const s=getComputedStyle(a);if(Number(s.opacity)!==1||s.backgroundImage!=='none')excluded=true;bg=mix(rgba(s.backgroundColor),bg);}const s=getComputedStyle(e),fg=mix(rgba(s.color),bg),l1=lum(fg),l2=lum(bg),ratio=(Math.max(l1,l2)+.05)/(Math.min(l1,l2)+.05);contrasts.push({text:e.textContent.trim().slice(0,90),class:String(e.className),foreground:fg,background:bg,ratio:Number(ratio.toFixed(2)),fontSize:s.fontSize,fontWeight:s.fontWeight,excluded,threshold:parseFloat(s.fontSize)>=24||(parseFloat(s.fontSize)>=18.66&&parseInt(s.fontWeight)>=700)?3:4.5});}
  return {url:location.href,viewport:{width:innerWidth,height:innerHeight},documentWidth:document.documentElement.scrollWidth,overflow:document.documentElement.scrollWidth>innerWidth,background:getComputedStyle(document.body).backgroundColor,sidebar:document.querySelector('.sidebar')?box(document.querySelector('.sidebar')):null,controls,contrasts,alerts:[...document.querySelectorAll('[role=alert]')].filter(visible).map(e=>e.innerText),statuses:[...document.querySelectorAll('[role=status]')].map(e=>e.innerText),headings:[...document.querySelectorAll('h1,h2,h3')].map(e=>({tag:e.tagName,text:e.innerText,hidden:e.classList.contains('sr-only')}))};});report.screens.push({name,file,...measure});return measure;}
-async function check(name,fn){try{const data=await fn();report.checks.push({name,status:'passed',data});console.log('PASS',name);}catch(e){report.checks.push({name,status:'failed',error:e.stack});console.error('FAIL',name,e.message);await page?.screenshot({path:out+'screens/failed-'+name+'.png',fullPage:true}).catch(()=>{});}await writeFile(out+'measurements.json',JSON.stringify(report,null,2));}
+async function check(name,fn){if(checkFilter && !checkFilter.test(name))return;try{const data=await fn();report.checks.push({name,status:'passed',data});console.log('PASS',name);}catch(e){report.checks.push({name,status:'failed',error:e.stack});console.error('FAIL',name,e.message);await page?.screenshot({path:out+'screens/failed-'+name+'.png',fullPage:true}).catch(()=>{});}await writeFile(out+'measurements.json',JSON.stringify(report,null,2));}
 const eq=assert.equal;
 async function count(selector,n){await page.waitForFunction(({selector,n})=>document.querySelectorAll(selector).length===n,{selector,n});}
 try{
@@ -59,7 +68,7 @@ for(const width of [1280,768,390]){
  await page.setViewportSize({width,height:900});
  for(const name of ['workspaces','chat','agents','skills','repositories','tasks','activity','settings']) await check(`${name}-${width}`,async()=>{await go(name);await page.locator('.loading,.auth-card').waitFor({state:'hidden'});const m=await snap(`${name}-${width}`);eq(m.overflow,false);const low=m.contrasts.filter(c=>!c.excluded&&c.ratio<c.threshold&&c.text!=='/'&&!c.class.includes('rift-icon'));assert.deepEqual(low,[],'low contrast: '+JSON.stringify(low));return {overflow:m.overflow};});
  for(const [tab,label] of [['connections','API 连接'],['workspace','工作区'],['session','浏览器会话']]) await check(`settings-${tab}-${width}`,async()=>{await go('settings?tab='+tab);await page.getByRole('tab',{name:label,exact:true,selected:true}).waitFor();const m=await snap(`settings-${tab}-${width}`);eq(m.overflow,false);});
- if(width<1101) for(const [route,row] of [['skills','.skill-list-item'],['tasks','.task-card'],['activity','.activity-card']]) await check(`detail-${route}-${width}`,async()=>{await go(route);const item=page.locator(row).last();await item.scrollIntoViewIfNeeded();const before=await page.evaluate(()=>scrollY);await item.click();await page.locator('.detail-back').waitFor({state:'visible'});eq(await page.evaluate(()=>document.activeElement.className),'detail-pane');eq(await page.locator(row).first().isVisible(),false);assert.ok((await page.locator('.detail-back').boundingBox()).y>=56);await snap(`detail-${route}-${width}`);await page.getByRole('button',{name:'返回列表',exact:true}).click();eq(await item.evaluate(e=>e===document.activeElement),true);assert.ok(Math.abs((await page.evaluate(()=>scrollY))-before)<3);return {returnedScroll:before};});
+ if(width<1101) for(const [route,row] of [['skills','.skill-list-item'],['tasks','.task-card'],['activity','.activity-card']]) await check(`detail-${route}-${width}`,async()=>{await go(route);const item=page.locator(row).last();await item.scrollIntoViewIfNeeded();const before=await page.evaluate(()=>scrollY);await item.click();await page.locator('.detail-back').waitFor({state:'visible'});eq(await page.evaluate(()=>document.activeElement.className),'detail-pane');eq(await page.locator(row).first().isVisible(),false);assert.ok((await page.locator('.detail-back').boundingBox()).y>=56);await snap(`detail-${route}-${width}`);await page.getByRole('button',{name:'返回列表',exact:true}).click();await page.waitForFunction(e=>e===document.activeElement,await item.elementHandle());assert.ok(Math.abs((await page.evaluate(()=>scrollY))-before)<3);return {returnedScroll:before};});
 }
 await page.setViewportSize({width:1280,height:900});
 await check('keyboard-entry',async()=>{await go('chat');await page.keyboard.press('Tab');eq(await page.evaluate(()=>document.activeElement.className),'skip-link');await snap('skip-link');await page.keyboard.press('Enter');eq(await page.evaluate(()=>document.activeElement.id),'main');await page.locator('#live-draft').focus();await page.keyboard.press('Tab');await page.keyboard.press('Shift+Tab');const style=await page.locator('.composer').evaluate(e=>({outline:getComputedStyle(e).outlineWidth,color:getComputedStyle(e).outlineColor}));eq(style.outline,'2px');await snap('composer-focus');return style;});
@@ -80,6 +89,90 @@ await check('narrow-deep-link-keyboard',async()=>{await page.setViewportSize({wi
 await check('contrast-interaction-states',async()=>{await page.setViewportSize({width:390,height:900});for(const name of ['agents','settings']){await go(name);const tab=page.getByRole('tab').nth(1);await tab.hover();let m=await snap(name+'-tab-hover');assert.deepEqual(m.contrasts.filter(c=>!c.excluded&&c.ratio<c.threshold&&c.text!=='/'&&!c.class.includes('rift-icon')),[]);await tab.click();m=await snap(name+'-tab-selected');assert.deepEqual(m.contrasts.filter(c=>!c.excluded&&c.ratio<c.threshold&&c.text!=='/'&&!c.class.includes('rift-icon')),[]);} });
 await check('repository-summary-wrap',async()=>{const measurements=[];for(const width of [390,767,768,1100,1101,1280]){await page.setViewportSize({width,height:900});await go('repositories');const rects=await page.locator('.metric-card strong').evaluateAll(nodes=>nodes.map((node,i)=>{const word=['已挂载','工作目录','资源占用'][i],text=[...node.childNodes].find(n=>n.nodeType===3&&n.textContent.includes(word)),range=document.createRange();const start=text.textContent.indexOf(word);range.setStart(text,start);range.setEnd(text,start+word.length);return {text:word,lines:range.getClientRects().length,font:getComputedStyle(node).fontSize};}));assert.ok(rects.every(r=>r.lines===1));measurements.push({width,rects});}return measurements;});
 await check('landscape-and-reduced-motion',async()=>{await page.setViewportSize({width:844,height:390});await page.emulateMedia({reducedMotion:'reduce'});await go('chat');const m=await snap('chat-landscape');eq(m.overflow,false);});
+
+for (const width of [390,768]) await check(`task-history-${width}`,async()=>{
+  await page.setViewportSize({width,height:900});await go('tasks');
+  const row=page.locator('.task-card').filter({hasText:'task-106'});
+  await row.scrollIntoViewIfNeeded();const scroll=await page.evaluate(()=>scrollY);
+  await row.click();await page.locator('.detail-open').waitFor();
+  await page.goBack();await page.locator('.detail-open').waitFor({state:'hidden'});
+  assert.ok(!page.url().includes('task='));eq(await row.evaluate(e=>e===document.activeElement),true);
+  assert.ok(Math.abs(await page.evaluate(()=>scrollY)-scroll)<3);
+  await snap(`history-list-${width}`);
+  await page.goForward();await page.locator('.detail-open').waitFor();
+  assert.match(await page.locator('[aria-label="任务详情"]').innerText(),/task-106/);
+  eq(await page.evaluate(()=>document.activeElement.className),'detail-pane');
+  await page.getByRole('button',{name:'返回列表',exact:true}).click();
+  await page.waitForFunction(()=>!location.hash.includes('task='));await row.waitFor({state:'visible'});
+  await page.goBack();await page.locator('.detail-open').waitFor();
+  await page.goForward();await row.waitFor({state:'visible'});
+  await row.focus();await page.keyboard.press('Enter');await page.locator('.detail-open').waitFor();
+  await page.reload();await page.locator('.detail-open').waitFor();
+  assert.match(await page.locator('[aria-label="任务详情"]').innerText(),/task-106/);
+  await page.locator('[aria-label="任务详情"] code').first().focus();
+  const before=await page.evaluate(()=>({scroll:scrollY,tag:document.activeElement.outerHTML}));
+  // Refresh workspace data without a navigation or click moving keyboard focus.
+  state.revision=2;await page.getByRole('button',{name:'刷新记录',exact:true}).evaluate(e=>e.click());await ready();state.revision=1;
+  eq(await page.evaluate(()=>document.activeElement.outerHTML),before.tag);
+  eq(await page.evaluate(()=>scrollY),before.scroll);
+  await snap(`history-detail-${width}`);
+  await go('tasks?task=task-105');await page.locator('.detail-open').waitFor();
+  await page.evaluate(()=>{location.hash='#/workspace/wsp-001/tasks?task=task-106';});
+  await page.waitForFunction(()=>document.querySelector('[aria-label="任务详情"]').textContent.includes('task-106'));
+  await page.goBack();await page.waitForFunction(()=>document.querySelector('[aria-label="任务详情"]').textContent.includes('task-105'));
+  await page.goForward();await page.waitForFunction(()=>document.querySelector('[aria-label="任务详情"]').textContent.includes('task-106'));
+});
+await check('task-filter-pagination',async()=>{
+ await page.setViewportSize({width:1280,height:900});
+ try {
+  for(const pagination of [false,true]){
+   state.pagination=pagination;state.large=!pagination;
+   for(const filter of ['status','workflow','repository']){
+    await go('tasks');await page.getByRole('region',{name:'任务列表'}).locator('.task-card').filter({hasText:'task-106'}).click();
+    if(filter==='status')await page.getByRole('button',{name:'进行中',exact:true}).click();
+    if(filter==='workflow')await page.locator('.workflow-select select').selectOption('workflow-2');
+    if(filter==='repository'){await page.getByRole('button',{name:'筛选',exact:true}).click();await page.locator('.task-extra-filters select').nth(1).selectOption('repo-2');}
+    await page.getByRole('region',{name:'链接指定的任务',exact:true}).waitFor();
+    const list=page.getByRole('region',{name:'任务列表',exact:true});
+    eq(await list.locator('.task-card').filter({hasText:'task-106'}).count(),0);
+    eq(await list.locator('.task-card').count(),30);
+    assert.match(await page.locator('[aria-label="任务详情"]').innerText(),/task-106/);
+    const m=await snap(`filter-${filter}-${pagination?'server':'local'}`);eq(m.overflow,false);
+   }
+   await go('tasks');await page.locator('.task-card').filter({hasText:'task-106'}).click();
+   await page.getByRole('button',{name:'下一页',exact:true}).click();
+   await page.getByRole('region',{name:'链接指定的任务',exact:true}).waitFor();
+   eq(await page.getByRole('region',{name:'任务列表',exact:true}).locator('.task-card').count(),5);
+   await snap(`pagination-${pagination?'server':'local'}`);
+   await page.getByRole('button',{name:'上一页',exact:true}).click();
+   await page.getByRole('region',{name:'链接指定的任务',exact:true}).waitFor({state:'hidden'});
+   await page.locator('.task-card[aria-pressed=true]').filter({hasText:'task-106'}).waitFor();
+   await page.getByRole('button',{name:'筛选',exact:true}).click();
+   await page.locator('.task-extra-filters select').nth(1).selectOption('repo-2');
+   await page.getByRole('button',{name:'已通过',exact:true}).click();
+   await page.getByText('当前页没有匹配任务，请切换筛选。',{exact:true}).waitFor();
+   eq(await page.getByRole('region',{name:'任务列表',exact:true}).locator('.task-card').count(),0);
+   await page.getByRole('button',{name:'清除链接选择',exact:true}).click();
+   await page.getByRole('heading',{name:'这个筛选下没有任务'}).waitFor();
+  }
+  state.pagination=true;state.large=false;
+  await page.setViewportSize({width:390,height:900});await go('tasks?task=task-remote');
+  await page.locator('.detail-open').waitFor();assert.match(await page.locator('[aria-label="任务详情"]').innerText(),/task-remote/);
+  await page.reload();await page.locator('.detail-open').waitFor();await snap('external-deep-link-390');
+ }finally{state.pagination=false;state.large=false;}
+});
+await check('skill-import-validation',async()=>{
+ await page.setViewportSize({width:390,height:900});await go('skills');
+ await page.getByRole('button',{name:'导入 Skill',exact:true}).click();await page.locator('input[name=directory]').fill('/mock/skill');
+ try{for(const [code,fragment] of [['SKILL_SIZE_LIMIT','256 KiB'],['SKILL_ENCODING','UTF-8'],['UNKNOWN','核对输入']]){
+  state.importCode=code;await page.getByRole('button',{name:'预览内容',exact:true}).click();
+  const error=page.locator('.error-banner');await error.filter({hasText:fragment}).waitFor();
+  assert.ok(!(await error.innerText()).includes('test-secret'));assert.ok(!(await error.innerText()).includes('/private/path'));
+  eq(await page.locator('input[name=directory]').inputValue(),'/mock/skill');
+  const m=await snap('import-'+code);eq(m.overflow,false);
+ }}finally{state.importCode='';}
+});
+
 assert.deepEqual(report.unexpectedRequests,[]);assert.deepEqual(report.pageErrors,[]);
 }catch(e){report.fatal=e.stack;console.error(e);}finally{await browser?.close();await server?.close();report.cleanup={browserClosed:true,serverClosed:true};report.finishedAt=new Date().toISOString();await writeFile(out+'measurements.json',JSON.stringify(report,null,2));}
 if(report.fatal||report.checks.some(c=>c.status==='failed'))process.exitCode=1;
