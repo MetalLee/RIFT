@@ -19,9 +19,22 @@ let state={empty:false,fail:'',delay:'',long:false,stale:false,unreferenced:fals
 const savedConnections=[{id:'api-demo-1',name:'团队模型（模拟）',protocol:'openai-responses',endpoint:'https://example.invalid/v1',model:'audit-model',revision:1,available:true,verificationStatus:'unverified',verifiedAt:null,verification:null,verificationError:null}];
 savedConnections.push({...savedConnections[0],id:'api-demo-2',name:'备用模型（模拟）'});
 const removals=[{kind:'user',recordId:'tree-1',repositoryId:'repo-1',path:f.trees[0].path,state:'present',expectedVersion:1,canDelete:true,canReconcile:false,reason:null,error:null}];
+// Per-request gates exercise real fetch/abort/route identity without timing guesses.
+const taskReads = new Map();
+function holdTask(id, status = 200) {
+ let release; const gate = new Promise(resolve => { release = resolve; });
+ const read = { status, gate, release, started: 0, finished: 0 };
+ taskReads.set(id, read); return read;
+}
 function taskFixtures(){return [...f.tasks,...Array.from({length:31},(_,i)=>({...f.tasks[0],id:'page-task-'+i,workflowId:'workflow-2',repositoryId:'repo-2'}))];}
 async function intercept(route){const r=route.request(),u=new URL(r.url()); if(!u.pathname.startsWith('/ui-api/')){if(u.origin!==origin){report.unexpectedRequests.push(r.url());return route.abort();}return route.continue();}
 const p=u.pathname.replace('/ui-api/v1',''); report.requests.push({path:p,method:r.method(),mock:true}); let body,status=200;
+const taskRead = /\/tasks\/[^/]+$/.test(p) ? taskReads.get(p.split('/').at(-1)) : null;
+if (taskRead) {
+ taskRead.started++; await taskRead.gate;
+ await route.fulfill({status:taskRead.status,json:taskRead.status===200 ? {...f.tasks[2],id:p.split('/').at(-1),title:'外部深链任务'} : {error:{code:'PROVIDER_UNAVAILABLE',message:'mock task unavailable'}}});
+ taskRead.finished++; return;
+}
 if(state.delay && p.endsWith(state.delay))await new Promise(r=>setTimeout(r,1800));
 if(state.fail && (p===state.fail || p.endsWith(state.fail) || state.fail==='/session' && p==='/session/connect')){status=state.fail==='/session'?401:503;body={error:{code:'PROVIDER_UNAVAILABLE',message:'upstream connection refused (audit simulated)'}};}
 else if(state.importCode && p.endsWith('/skills/preview')){status=400;body={error:{code:state.importCode,message:'/private/path Bearer test-secret'}};}
@@ -160,6 +173,82 @@ await check('task-filter-pagination',async()=>{
   await page.locator('.detail-open').waitFor();assert.match(await page.locator('[aria-label="任务详情"]').innerText(),/task-remote/);
   await page.reload();await page.locator('.detail-open').waitFor();await snap('external-deep-link-390');
  }finally{state.pagination=false;state.large=false;}
+});
+for (const width of [390,768,1280]) await check(`task-target-lifecycle-${width}`,async()=>{
+ await page.setViewportSize({width,height:900});
+ const id='task-remote', path=`/workspaces/wsp-001/tasks/${id}`;
+ const pending=holdTask(id);const requestStart=report.requests.length;
+ const status=page.getByRole('region',{name:'链接任务读取状态',exact:true});
+ const detail=page.locator('aside[aria-label="任务详情"]');
+ try {
+  await go(`tasks?task=${id}`);
+  await status.getByRole('status').filter({hasText:'正在读取链接指定的任务'}).waitFor();
+  assert.ok(pending.started>=1);eq(await detail.count(),0);eq(await page.locator('.task-evidence').count(),0);
+  eq(report.requests.slice(requestStart).filter(r=>r.path.endsWith('/evidence')).length,0);
+  eq((await snap(`target-loading-${width}`)).overflow,false);
+  pending.release();await detail.locator('code').filter({hasText:id}).first().waitFor();
+  await page.locator('.task-evidence [role=status]').waitFor({state:'hidden'});
+  eq(await status.count(),0);
+  // Same-target refresh keeps its own details and evidence, then exposes a recoverable error.
+  const refresh=holdTask(id,503);state.revision=11;
+  await page.getByRole('button',{name:'刷新记录',exact:true}).evaluate(e=>e.click());
+  await status.getByRole('status').filter({hasText:'正在刷新此任务'}).waitFor();
+  assert.match(await detail.innerText(),/task-remote/);eq(await page.locator('.task-evidence').count(),1);
+  refresh.release();await status.getByRole('status').filter({hasText:'刷新失败'}).waitFor();
+  assert.match(await detail.innerText(),/task-remote/);
+  const retry=holdTask(id);retry.release();await status.getByRole('button',{name:'重试读取任务'}).click();
+  await status.waitFor({state:'hidden'});assert.match(await detail.innerText(),/task-remote/);
+  // A new target must not inherit that successful target, even before its effect runs.
+  const failed=holdTask('task-missing',503);
+  await page.evaluate(()=>{location.hash='#/workspace/wsp-001/tasks?task=task-missing';});
+  await status.getByRole('status').filter({hasText:'正在读取链接指定的任务'}).waitFor();
+  eq(await detail.count(),0);eq(await page.locator('.task-evidence').count(),0);
+  failed.release();await status.getByRole('status').filter({hasText:'未能读取此任务'}).waitFor();
+  eq(await detail.count(),0);eq(await page.locator('.task-evidence').count(),0);
+  eq((await snap(`target-error-${width}`)).overflow,false);
+  const recovered=holdTask('task-missing');
+  await status.getByRole('button',{name:'重试读取任务'}).click();
+  await status.getByRole('status').filter({hasText:'正在读取链接指定的任务'}).waitFor();
+  eq(await detail.count(),0);recovered.release();
+  await detail.locator('code').filter({hasText:'task-missing'}).first().waitFor();
+  eq(await status.count(),0);eq((await snap(`target-recovered-${width}`)).overflow,false);
+  const evidence=report.requests.slice(requestStart).filter(r=>r.path.endsWith('/evidence')).map(r=>r.path);
+  assert.ok(evidence.length>=2);assert.ok(evidence.every(p=>[path+'/evidence','/workspaces/wsp-001/tasks/task-missing/evidence'].includes(p)));
+  // The failure escape route restores the ordinary list/default selection.
+  const exit=holdTask('task-exit',503);exit.release();
+  await page.evaluate(()=>{location.hash='#/workspace/wsp-001/tasks?task=task-exit';});
+  await status.getByRole('button',{name:'返回任务列表'}).click();
+  await page.waitForFunction(()=>!location.hash.includes('task='));
+  await page.locator('.task-card').first().waitFor({state:'visible'});
+  assert.match(await detail.innerText(),/task-104/);
+  return {evidence,delayedTarget:id,failedTarget:'task-missing',sameTargetRefreshRetained:true};
+ } finally { for(const read of taskReads.values())read.release();taskReads.clear();state.revision=1; }
+});
+await check('task-target-late-response',async()=>{
+ await page.setViewportSize({width:390,height:900});
+ const results=[];
+ try {
+  for(const statusCode of [200,503]) {
+   const a=holdTask('task-a',statusCode),b=holdTask('task-b');
+   const start=report.requests.length;
+   await go('tasks?task=task-a');
+   await page.getByRole('status').filter({hasText:'正在读取链接指定的任务'}).waitFor();assert.ok(a.started>=1);
+   await page.evaluate(()=>{location.hash='#/workspace/wsp-001/tasks?task=task-b';});
+   await page.getByRole('region',{name:'链接任务读取状态',exact:true}).getByText('task-b',{exact:true}).waitFor();
+   eq(await page.locator('[aria-label="任务详情"]').count(),0);
+   b.release();await page.locator('[aria-label="任务详情"] code').filter({hasText:'task-b'}).first().waitFor();
+   a.release();
+   // The earlier fetch may be aborted by the browser, but its mock handler must finish.
+   await ready();eq(a.finished,a.started);
+   assert.match(await page.locator('[aria-label="任务详情"]').innerText(),/task-b/);
+   eq(await page.getByRole('region',{name:'链接任务读取状态',exact:true}).count(),0);
+   const evidence=report.requests.slice(start).filter(r=>r.path.endsWith('/evidence')).map(r=>r.path);
+   assert.ok(evidence.length>=1);assert.ok(evidence.every(p=>p==='/workspaces/wsp-001/tasks/task-b/evidence'));
+   results.push({lateStatus:statusCode,evidence});
+   await snap(`target-late-${statusCode}-390`);taskReads.clear();
+  }
+  return results;
+ } finally {for(const read of taskReads.values())read.release();taskReads.clear();}
 });
 await check('skill-import-validation',async()=>{
  await page.setViewportSize({width:390,height:900});await go('skills');

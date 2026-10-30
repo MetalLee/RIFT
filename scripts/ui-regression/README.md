@@ -29,3 +29,13 @@ UI_CHECK_FILTER='^(tasks-(390|768|1280)|detail-.*|task-history-.*|task-filter-pa
 ```
 
 Only executed checks are recorded; skipped checks are not reported as passes.
+
+Explicit task target identity (delayed snapshot-external reads, 503/retry,
+same-target refresh retention, A→B late success/failure and evidence isolation):
+
+```sh
+UI_CHECK_FILTER='^(tasks-(390|768|1280)|detail-tasks-.*|task-history-.*|task-filter-pagination|task-target-.*|deep-links-evidence|narrow-deep-link-keyboard)$' UI_EVIDENCE_DIR=/absolute/path/out node scripts/ui-regression/check.mjs
+```
+
+Task reads use manually released mock gates rather than assuming a network delay.
+Unresolved explicit targets must not mount another task's details or evidence.
