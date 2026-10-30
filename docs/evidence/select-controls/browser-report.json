@@ -1,0 +1,26 @@
+{
+  "mode": "Isolated Chromium, mocked API; no Host writes",
+  "checks": [
+    "native defaults, labels, empty values, single change and exact FormData",
+    "required validation focuses the visible trigger and blocks submission",
+    "reset, external form reset, controlled values and changing options",
+    "disabled fieldsets and disabled options preserve semantics",
+    "keyboard arrows, Home/End, typeahead, Escape and focus return",
+    "320px long tokens, scrollable menu, reduced motion and landscape",
+    "Add Agent dialog: responsibilities, connections, linkage, layer, Escape and submission",
+    "Task workflow/filter and Skill view/shared versions use the same selection UI"
+  ],
+  "screenshots": [
+    "long-320.png",
+    "long-667.png",
+    "agent-open-1280.png",
+    "agent-selected-1280.png",
+    "agent-open-375.png",
+    "agent-selected-375.png",
+    "task-filter.png",
+    "skill-version.png",
+    "skill-version-375.png"
+  ],
+  "errors": [],
+  "browser": "149.0.7827.55"
+}

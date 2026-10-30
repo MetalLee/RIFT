@@ -4,7 +4,6 @@ import type { WorkspaceEvent, AgentTurn, ChatMessage, ChatPage, Conversation, Co
 import { ChatTimeline } from './ChatTimeline';
 import { subscribeWorkspaceEvents } from './workspace-stream';
 import { randomId } from './browser-platform';
-import { NativeSelect, NativeSelectOption } from './components/ui/native-select';
 import { Button } from './components/ui/button';
 import { Checkbox } from './components/ui/checkbox';
 import { Textarea } from './components/ui/textarea';

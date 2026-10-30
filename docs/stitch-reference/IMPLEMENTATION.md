@@ -42,3 +42,7 @@ node scripts/ui-stitch-visual-check.mjs
 `report.json` 记录检查结果；截图用于人工对照，不等同于零差异的整页像素测试。
 
 2026-10-26 最终检查：UI TypeScript 通过，16 项 UI 单元测试通过，Vite 生产构建通过，24 个视口页面与 8 项浏览器交互检查通过。浏览器无未捕获异常。全项目 `pnpm typecheck` 在本轮未修改的 `src/agent/codex-provider.ts:15` 报 TS2742（Config 推导类型引用 pnpm 内部依赖路径）；该项不计作通过。Vite 对约 670KB 的主 JS chunk 给出体积提示，构建成功。
+
+## 选择框统一补充（2026-10-30）
+
+表单和列表筛选的 15 处单选字段继续使用共享 `NativeSelect` 调用，但可视层由已安装的 Radix Select 渲染，展开菜单与 shadcn 语义色板一致；原生字段只承担 FormData、校验和重置。导航/动作 DropdownMenu 与聊天内联选择不更换交互模式。完整排查、实现边界和本轮验证见 [选择框记录](../evidence/select-controls/README.md)。
