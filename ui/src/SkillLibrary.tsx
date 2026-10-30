@@ -1,3 +1,4 @@
+import { DetailLayout } from './DetailLayout';
 import { Button } from './components/ui/button';
 import { Card } from './components/ui/card';
 import { NativeSelect, NativeSelectOption } from './components/ui/native-select';
@@ -26,7 +27,7 @@ export function SkillLibrary({ data, csrf }: { data: UiWorkspaceDetail; csrf: st
     {error && <div className="error-banner" role="alert"><p>{error}</p><Button variant="secondary" className="secondary" onClick={() => void load()}>刷新</Button></div>}
     {importing && <Card asChild><div className="card configuration-form"><h2>{preview ? '确认导入内容' : '从本机目录导入'}</h2>{!preview ? <form onSubmit={async e => { e.preventDefault(); if (busy) return; setBusy(true); setError(''); const form = new FormData(e.currentTarget); const skillId = String(form.get('skillId') ?? ''); const existing = skills.find(s => s.id === skillId); try { setPreview(await mutation<Preview>(`${base}/skills/preview`, { directory: String(form.get('directory')).trim(), name: String(form.get('name')).trim() || undefined, description: String(form.get('description')).trim() || undefined, ...(existing ? { skillId, expectedRevision: existing.revision } : {}) })); } catch (e) { setError(errorText(e)); } finally { setBusy(false); } }}><div className="form-grid"><label className="full-width">保存为<NativeSelect name="skillId"><NativeSelectOption value="">新的 Skill</NativeSelectOption>{skills.filter(s => !s.archived).map(s => <NativeSelectOption value={s.id} key={s.id}>{s.name} · 新增版本</NativeSelectOption>)}</NativeSelect></label><label className="full-width">Skill 目录<Input name="directory" required placeholder="包含 SKILL.md 的本机绝对路径" /></label><label>名称（可选）<Input name="name" maxLength={120} placeholder="留空使用已有名称或目录名" /></label><label>说明（可选）<Input name="description" maxLength={2000} /></label></div><Notice>先预览再保存；不会执行包内脚本。目录不能包含符号链接、环境凭据文件或依赖目录。</Notice><div className="form-actions"><Button variant="secondary" type="button" onClick={() => setImporting(false)}>取消</Button><Button variant="default" className="primary" disabled={busy}>{busy ? '正在读取…' : '预览内容'}</Button></div></form> : <><div className="preview-summary"><h3>{preview.name}</h3><p>{preview.description}</p><Copy value={preview.sourceDirectory} /><p>{preview.resources.length} 个资源 · {preview.requirements.scripts ? '包含脚本，当前运行连接不支持加载' : preview.requirements.resources ? '包含资源，当前运行连接不支持加载' : '仅指令，可供受支持的连接加载'}</p></div><pre className="skill-document">{preview.instructions}</pre>{preview.resources.length > 0 && <ul className="resource-list">{preview.resources.map(r => <li key={r.path}><code>{r.path}</code><span>{r.bytes} bytes</span></li>)}</ul>}<Notice>保存的是此次预览的内容快照。当前引用成员：{preview.currentReferenceAgents.map(id => data.roles.find(r => r.id === id)?.displayName ?? id).join('、') || '无'}。新版本不会自动启用；已有执行仍使用原版本。</Notice><div className="form-actions"><Button variant="secondary" disabled={busy} onClick={() => setPreview(null)}>返回</Button><Button variant="default" className="primary" disabled={busy} onClick={async () => { setBusy(true); try { const result = await mutation<{ skill: LibrarySkill }>(`${base}/skills/import`, { previewId: preview.previewId }); setSelected(result.skill.id); setImporting(false); setPreview(null); await load(); } catch (e) { setError(errorText(e)); } finally { setBusy(false); } }}>{busy ? '正在保存…' : '保存不可变版本'}</Button></div></>}</div></Card>}
     <div className="skill-library-toolbar"><Tabs value={scope} onValueChange={setScope}><TabsList aria-label="Skill 作用域"><TabsTrigger value="shared">工作区共享库 <span className="tab-count">{skills.filter(s=>s.shared?.enabled).length}</span></TabsTrigger><TabsTrigger value="dedicated">Agent 专属配置 <span className="tab-count">{skills.filter(s=>s.assignments.some(a=>a.mode==='include')).length}</span></TabsTrigger><TabsTrigger value="all">全部</TabsTrigger></TabsList></Tabs></div>
-    {loading ? <div className="loading">正在读取 Skill 库…</div> : !skills.length ? <SkillEmptyState title="为团队导入第一项 Skill">选择含 SKILL.md 的目录，预览后保存，再设置共享或成员专属版本。</SkillEmptyState> : !visibleSkills.length ? <SkillEmptyState title="此作用域暂无 Skill">切换到“全部”查看已导入的技能，或导入一项新技能。</SkillEmptyState> : <div className="skill-library-layout"><section className="skill-list" aria-label="Skill 列表">{visibleSkills.map(s => <Card key={s.id} asChild><Button variant="ghost" className={`card skill-list-item ${s.id === skill?.id ? 'is-selected' : ''}`}  onClick={() => setSelected(s.id)}><div className="skill-card-heading"><div><h2>{s.name}</h2><code>{s.id}</code></div><Pill active={!!s.shared?.enabled}>{s.archived ? '已归档' : s.shared?.enabled ? '默认共享' : '可供选择'}</Pill></div><p>{s.description || '尚未填写说明。'}</p><footer className="skill-card-footer"><span>{s.versions.length} 个版本</span><span>{s.shared?.enabled ? '全员默认共享' : `${s.assignments.filter(a=>a.mode==='include').length} 位成员专属`}</span></footer></Button></Card>)}</section>{skill && <SkillDetail key={skill.id} skill={skill} data={data} csrf={csrf} onChanged={load} />}</div>}
+    {loading ? <div className="loading" role="status">正在读取 Skill 库…</div> : !skills.length ? <SkillEmptyState title="为团队导入第一项 Skill">选择含 SKILL.md 的目录，预览后保存，再设置共享或成员专属版本。</SkillEmptyState> : !visibleSkills.length ? <SkillEmptyState title="此作用域暂无 Skill">切换到“全部”查看已导入的技能，或导入一项新技能。</SkillEmptyState> : <DetailLayout className="skill-library-layout" list={<section className="skill-list" aria-label="Skill 列表">{visibleSkills.map(s => <Card key={s.id} asChild><Button variant="ghost" data-detail-select aria-pressed={s.id === skill?.id} className={`card skill-list-item ${s.id === skill?.id ? 'is-selected' : ''}`}  onClick={() => setSelected(s.id)}><div className="skill-card-heading"><div><h2>{s.name}</h2><code>{s.id}</code></div><Pill active={!!s.shared?.enabled}>{s.archived ? '已归档' : s.shared?.enabled ? '默认共享' : '可供选择'}</Pill></div><p>{s.description || '尚未填写说明。'}</p><footer className="skill-card-footer"><span>{s.versions.length} 个版本</span><span>{s.shared?.enabled ? '全员默认共享' : `${s.assignments.filter(a=>a.mode==='include').length} 位成员专属`}</span></footer></Button></Card>)}</section>}>{skill && <SkillDetail key={skill.id} skill={skill} data={data} csrf={csrf} onChanged={load} />}</DetailLayout>}
   </>;
 }
 
@@ -52,6 +53,9 @@ export function SkillDetail({ skill, data, csrf, onChanged }: { skill: LibrarySk
   const shared = newer(savedShared, skill.shared) ?? null;
   const [sharedDraft, setSharedDraft] = useState<{ versionId: string; baseRevision: number } | null>(null);
   const [sharedBusy, setSharedBusy] = useState(false); const [sharedStatus, setSharedStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [confirmArchive, setConfirmArchive] = useState(false);
+  const [archiveDone, setArchiveDone] = useState(false);
+  const archiveTrigger = useRef<HTMLButtonElement>(null);
   const [archiveBusy, setArchiveBusy] = useState(false); const [archiveError, setArchiveError] = useState('');
   const [state, dispatch] = useReducer(assignmentReducer, emptyAssignments);
   const requestSeq = useRef(0);
@@ -64,6 +68,9 @@ export function SkillDetail({ skill, data, csrf, onChanged }: { skill: LibrarySk
   const sharedStale = !!sharedDraft && sharedDraft.baseRevision !== (shared?.revision ?? 0);
   const view = { versions: skill.versions, shared, archived: skill.archived };
   const currentOf = (agentId: string) => newer(state.saved[agentId], skill.assignments.find(a => a.agentId === agentId));
+
+  const archiveReferences = [...new Set([...skill.assignments.map(a => a.agentId), ...Object.keys(state.saved)])].filter(id => currentOf(id)?.mode === 'include');
+  const archiveBlocked = !!shared?.enabled || archiveReferences.length > 0;
 
   async function saveShared(enabled: boolean) {
     if (sharedBusy) return;
@@ -86,8 +93,8 @@ export function SkillDetail({ skill, data, csrf, onChanged }: { skill: LibrarySk
     catch (e) { if (token.current()) setEffective({ agentId, error: errorText(e) }); }
   }
   async function archive() {
-    if (archiveBusy) return; setArchiveBusy(true); setArchiveError('');
-    try { await mutation(`${skillPath}/archive`, { expectedRevision: skill.revision }, 'POST'); await onChanged(); } catch (e) { setArchiveError(errorText(e)); } finally { setArchiveBusy(false); }
+    if (archiveBusy || archiveBlocked) return; setArchiveBusy(true); setArchiveError('');
+    try { await mutation(`${skillPath}/archive`, { expectedRevision: skill.revision }, 'POST'); setArchiveDone(true); setConfirmArchive(false); await onChanged(); } catch (e) { setArchiveError(errorText(e)); } finally { setArchiveBusy(false); }
   }
 
   return <Card asChild><article className="card skill-detail" aria-labelledby={`skill-title-${skill.id}`}>
@@ -131,6 +138,14 @@ export function SkillDetail({ skill, data, csrf, onChanged }: { skill: LibrarySk
         </li>; })}</ul>}
     </section>
 
-    {!skill.archived && <section className="skill-assignment"><h3>归档 Skill</h3><p>历史版本和执行快照会保留。现有共享与分配引用不会自动清除，归档后仍可撤销共享或改为继承/排除。</p><Button variant="ghost" className="text-button" disabled={archiveBusy} aria-busy={archiveBusy} onClick={() => void archive()}>{archiveBusy ? '正在归档…' : '归档此 Skill'}</Button>{archiveError && <p className="form-error" role="alert">{archiveError}</p>}</section>}
+    {archiveDone && <p role="status">已归档“{skill.name}”。历史版本和执行快照仍可查看。</p>}
+    {!!skill.archived && <Notice>此 Skill 已归档，当前不支持取消归档。如需再次使用，请从原目录导入为新的 Skill，再重新设置共享和成员分配。</Notice>}
+    {!skill.archived && <section className="skill-assignment"><h3>归档 Skill</h3><p>历史版本和执行快照会保留。归档后不能启用或新增版本；当前不支持取消归档，再次使用需重新导入。</p>
+      <Button ref={archiveTrigger} variant="ghost" className="text-button" disabled={archiveBusy} aria-expanded={confirmArchive} onClick={() => setConfirmArchive(true)}>归档此 Skill</Button>
+      {confirmArchive && <div className="notice archive-confirm" role="group" aria-label="归档 Skill 确认"><p>确认归档“{skill.name}”？共享引用：{shared?.enabled ? '默认供全员使用' : '无'}；专属引用：{archiveReferences.map(id => { const role = data.roles.find(r => r.id === id); return role?.displayName || role?.name || id; }).join('、') || '无'}。</p>
+        {archiveBlocked && <p>请先在上方撤销默认共享，并将专属分配改为继承或排除，再归档。正在执行的快照不受影响。</p>}
+        <div className="form-actions"><Button variant="secondary" disabled={archiveBusy} onClick={() => {setConfirmArchive(false);archiveTrigger.current?.focus();}}>取消归档</Button><Button variant="destructive" disabled={archiveBusy || archiveBlocked} onClick={() => void archive()}>{archiveBusy ? '正在归档…' : '确认归档 Skill'}</Button></div>
+      </div>}{archiveError && <p className="form-error" role="status">{archiveError}</p>}</section>}
+
   </article></Card>;
 }

@@ -48,7 +48,7 @@ describe('the 13 white-card actions reuse the shared secondary variant', () => {
     // not add any new bounded class, so a stray override would change these numbers.
     const plain = (text: string) => (text.match(/<Button variant="secondary"(?![^>]*className)[^>]*>/g) ?? []).length;
     expect(Object.fromEntries(covered.map(f => [f, plain(source(f))]))).toEqual({
-      WorkspaceControls: 2, ConnectionCatalogue: 3, SkillLibrary: 4, RepositoryManager: 3, TaskActions: 3,
+      WorkspaceControls: 2, ConnectionCatalogue: 3, SkillLibrary: 5, RepositoryManager: 3, TaskActions: 3,
     });
   });
 

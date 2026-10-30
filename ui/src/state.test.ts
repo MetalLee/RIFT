@@ -33,3 +33,9 @@ describe('workspace isolation', () => {
     try { expect(readDraft('ws')).toBe(''); expect(saveDraft('ws', 'draft')).toBe(false); } finally { vi.unstubAllGlobals(); }
   });
 });
+
+it('preserves validated settings tabs independently of task deep links', () => {
+  expect(parseRoute('#/workspace/w/settings?tab=connections')).toEqual({ workspaceId: 'w', page: 'settings', settingsTab: 'connections' });
+  expect(parseRoute('#/workspace/w/settings?tab=invalid')).toEqual({ workspaceId: 'w', page: 'settings' });
+  expect(parseRoute('#/workspace/w/tasks?task=one%2Ftwo&tab=session')).toEqual({ workspaceId: 'w', page: 'tasks', taskId: 'one/two' });
+});

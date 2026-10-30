@@ -1,0 +1,24 @@
+// Isolated visual fixtures; never sent to a real Host.
+const now = () => new Date().toISOString();
+const capabilities = Object.fromEntries(['workspaceCreate','chat','agentConfiguration','skills','multipleRepositories','worktreeManagement','workflowActions','events','pagination'].map(k => [k,{available:!['events','pagination','workflowActions'].includes(k),reason:'Visual verification fixture'}]));
+const connection = { runtime:'dsh',provider:'anthropic',model:'Claude 3.7 Sonnet' };
+const workspaces = ['RIFT 界面组','执行引擎 / 宿主核心','移动端重构项目'].map((name,i)=>({id:`wsp-00${i+1}`,name,rootPath:`/workspace/${i}`,repositoryPath:['~/workspace/rift-ui-runtime','~/runtime/execution-node-core','~/mobile/react-native-subsystem'][i],baseRef:'main',status:'active',version:1,leadConnection:connection,defaultConversationId:'conversation-1',workflowCount:3+i,activeWorkflowId:i===0?'workflow-1':null,taskCount:14+i,createdAt:now()}));
+const roles = [
+  ['coordinator','协调者','解析全局任务目标，进行工作流分发、子代理调度与最终输出仲裁。'],
+  ['ui-builder','界面实现','专注前端组件、Tailwind 结构编排与高保真响应式交互推演。'],
+  ['api-worker','接口实现','处理服务端逻辑与 REST API 端点，维护持久化层与系统接口。'],
+  ['qa-inspector','回归检查','验证界面行为与执行证据，检查跨组件依赖并执行回归测试。'],
+].map(([name,displayName,prompt],i)=>({id:`role-${i}`,name,displayName,prompt,kind:i===0?'dsh-lead':'worker',purpose:i===3?'reviewer':i===0?'lead':'developer',enabled:1,version:1,chatConnection:connection}));
+const repositories = [{id:'repo-1',workspaceId:'wsp-001',canonicalPath:'/workspace/rift-web',baseRef:'main',commonGitDir:'/workspace/rift-web/.git'},{id:'repo-2',workspaceId:'wsp-001',canonicalPath:'/workspace/rift-runtime',baseRef:'develop',commonGitDir:'/workspace/rift-runtime/.git'}];
+const tasks = ['统一消息接收路由状态','实现 Agent 状态投影面板','补齐输入框键盘交互测试','截图回归与发布验收'].map((title,i)=>({id:`task-${104+i}`,title,instructions:'根据工作区规范完善组件与交互，保留执行记录并验证所有边界状态。',status:['running','blocked','succeeded','ready'][i],workflowId:'workflow-1',repositoryId:'repo-1',roleId:`role-${i}`,dependsOn:i?[`task-${103+i}`]:[],attempt:1,acceptanceCriteria:['支持键盘与中文输入。','页面不存在横向溢出。'],expectedPaths:['ui/src/'],version:1,blockingReason:null}));
+const conversation = {id:'conversation-1',workspaceId:'wsp-001',title:'消息路由与协作边界',version:0,createdAt:now()};
+const conversations = [conversation];
+const messages = [
+  {id:'message-1',role:'user',recipientAgentId:'role-0',content:'请梳理一下多 Agent 协同流程中，关于 `MessageRecipient` 单选路由的边界处理逻辑。当接收者正在执行高开销编译时，后续消息应如何优雅降级？'},
+  {id:'message-2',role:'assistant',recipientAgentId:'role-0',content:'在多代理网格协议中，`MessageRecipient` 的单选路由需要避免直接阻塞调用链路。当指定的接收代理节点处于受限或高开销状态时，推荐采用 **「非侵入排队与快照卸载」** 三重降级范式：\n\n1. **状态感知与幂等排队 (State-Aware Idempotent Queue)**\n\n   调度总线广播其繁忙心跳标志，将即时同步请求转化为非阻塞信箱任务。通过在元数据中注入 `idempotency-key` 与生存期，防止因网络重试导致任务重复执行。\n\n2. **协调者介入归纳 (Coordinator Summarization Intervention)**\n\n   若等待队列积压超过设定阈值，协调代理将接管并将细碎指令合并为一份结构化的变更意图增量包。\n\n3. **快照挂载与独立沙箱 (Snapshot Forking)**\n\n   如遇紧急查询，可根据上一次确定性状态树派生只读快照分支。\n\n```typescript\ninterface MessageRecipient {\n  id: string;\n  role: \'primary\' | \'worker\';\n  state: \'idle\' | \'busy_compiling\';\n  queuePolicy: {\n    maxDepth: 32;\n    ttlSeconds: 120;\n  };\n}\n```\n\n是否需要补充多播通知广播与回滚状态机的生命周期？'},
+].map(m=>({...m,conversationId:conversation.id,workspaceId:'wsp-001',status:'completed',createdAt:'2026-10-25T02:42:00Z'}));
+const skills = ['工程协作与代码规范','前端高保真实现','安全审查流程'].map((name,i)=>({id:`skill-${i}`,name,description:'工作区共享规范、代码边界与可重复验证的协作流程。',revision:1,archived:0,shared:{enabled:1,versionId:`version-${i}`,revision:1},assignments:[],versions:[{id:`version-${i}`,version:1,createdAt:now(),digest:'sha256:visual-fixture',sourceDirectory:'/workspace/skills/engineering',requirements:{resources:false,scripts:false,runtimes:[]},resources:[],instructions:'# Engineering Collaboration\n\n## 核心原则\n\n每次执行都应保持可追踪的记录。先检查代码与上下文，再做最小范围的修改。\n\n## Implementation\n\n1. 明确任务的验收条件。\n2. 保留工作区的隔离边界。\n3. 检查运行状态与输出证据。\n\n## Verification\n\n验证目标页面、交互与响应式布局。'}]}));
+const trees = [{id:'tree-1',repositoryId:'repo-1',origin:'managed',status:'active',branch:'feature/rift-chat-input',path:'/workspace/.worktrees/rift-chat-input',baseCommit:'c047bf8',version:1}];
+const detail = () => ({workspace:workspaces[0],roles,bindings:[],repositories,tasks,workflows:[{id:'workflow-1',goal:'RIFT 前端界面实现与验收',status:'running',planRevision:1,version:1}],runs:[],worktrees:[],integrations:[],managedWorktrees:trees,workflowRepositories:[],presence:roles.map((r,i)=>({roleId:r.id,state:['running','running','idle','queued'][i],runIds:[],turnIds:[],taskIds:i<2?[tasks[i].id]:[],reason:['正在将用户交互蓝图拆解为独立任务，并同步检查工作区上下文。','正在调优组件边距节奏与响应式网格布局。','当前没有排队任务，等待下一次调用。','等待前置依赖审查。'][i],observedAt:now()})),capabilities,observedAt:now(),conversations:[conversation],snapshotCursor:1,leadConfiguration:{...connection,source:'workspace'}});
+
+export {now,capabilities,connection,workspaces,roles,repositories,tasks,conversation,conversations,messages,skills,trees,detail};

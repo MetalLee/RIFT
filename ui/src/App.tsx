@@ -20,7 +20,7 @@ import { RepositoryManager } from './RepositoryManager';
 export function Heading({ eyebrow, title, subtitle, action, english }: { eyebrow: string; title: string; subtitle: string; action?: ReactNode; english?: string }) {
   return <header className="page-heading"><div className="heading-copy">{eyebrow === 'WORKSPACE DIRECTORY' ? <div className="eyebrow accent-text">WORKSPACE DIRECTORY <span className="eyebrow-context">/ 系统工作区矩阵</span></div> : <nav aria-label="当前位置" className="breadcrumbs"><span>RIFT</span><span>/</span><span>{eyebrow === 'SETTINGS' ? '系统设置' : '工作台'}</span><span>/</span><span>{title}</span></nav>}<h1 className="sr-only">{title}{english ? ` · ${english}` : ''}</h1><p className="sr-only">{subtitle}</p></div>{action && <div className="heading-actions">{action}</div>}</header>;
 }
-export function Notice({ children }: { children: ReactNode }) { return <Alert className="notice"><Icon name="help" size={17}/><AlertDescription>{children}</AlertDescription></Alert>; }
+export function Notice({ children, role = 'note' }: { children: ReactNode; role?: 'note' | 'status' }) { return <Alert role={role} className="notice"><Icon name="help" size={17}/><AlertDescription>{children}</AlertDescription></Alert>; }
 export function Empty({ icon = 'grid', title, children }: { icon?: string; title: string; children: ReactNode }) {
   return <div className="empty"><span className="empty-icon"><Icon name={icon} size={28} /></span><h2>{title}</h2><p>{children}</p></div>;
 }
@@ -28,7 +28,9 @@ export function Pill({ children, active = false }: { children: ReactNode; active
 export function Field({ name, children }: { name: string; children: ReactNode }) { return <div className="field"><dt>{name}</dt><dd>{children ?? '未提供'}</dd></div>; }
 export function Copy({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
-  return <div className="copy-field"><code>{value}</code><Button variant="ghost" className="text-button" onClick={async () => { try { await copyText(value); setCopied(true); } catch { setCopied(false); } }} aria-label={`复制 ${value}`}>{copied ? '已复制' : '复制'}</Button></div>;
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { setCopied(false); setFailed(false); }, [value]);
+  return <div className="copy-field"><code tabIndex={0}>{value}</code><Button variant="ghost" className="text-button" onClick={async () => { setFailed(false); try { await copyText(value); setCopied(true); } catch { setCopied(false); setFailed(true); } }} aria-label={`复制 ${value}`}>{copied ? '已复制' : '复制'}</Button><span role="status" className="copy-status">{failed ? '复制失败，请手动选择文本。' : copied ? '已复制到剪贴板。' : ''}</span></div>;
 }
 export function time(value: string) { return new Date(value).toLocaleString('zh-CN', { hour12: false }); }
 
@@ -97,7 +99,7 @@ export function App({ initialSession }: { initialSession: Promise<UiSession> }) 
   };
   const newChat = () => { setNewChatRequest(n => n + 1); navigate(route.workspaceId, 'chat'); };
   useEffect(() => { const key = (event: KeyboardEvent) => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && route.workspaceId) { event.preventDefault(); setNewChatRequest(n=>n+1); location.hash=routeHref(route.workspaceId,'chat'); } }; addEventListener('keydown',key); return ()=>removeEventListener('keydown',key); },[route.workspaceId]);
-  return <AppChrome workspaceId={route.workspaceId} page={actualPage} list={list} current={current} connected={!!session && !error && !listError} onNewChat={newChat}>
+  return <AppChrome workspaceId={route.workspaceId} page={actualPage} list={list} current={current} connected={!!session} stale={stale} syncingError={!!error || !!listError} onNewChat={newChat}>
     <main id="main" tabIndex={-1} className={`main-content page-${actualPage}${actualPage === 'chat' ? ' chat-main' : ''}`}>
       {!session ? <div className="auth-card"><div className="eyebrow">LOCAL CONNECTION</div><h1>{sessionError ? '暂时无法连接 RIFT' : '正在连接 RIFT'}</h1><p role="status">{sessionError || '正在自动连接并确认浏览器会话…'}</p>{sessionError && <><Notice>请确认 RIFT 服务已启动、当前网络可以访问该地址，然后重新连接。</Notice><Button onClick={retry}>重新连接</Button></>}</div> : <>
         {(error || listError) && <div className="error-banner" role="status"><div><strong>数据尚未同步</strong><p>{error || listError}</p>{current && <small>以下为 {time(current.observedAt)} 的记录。</small>}</div><Button variant="secondary" className="secondary" onClick={retry}>重新同步</Button></div>}
@@ -109,7 +111,7 @@ export function App({ initialSession }: { initialSession: Promise<UiSession> }) 
           {actualPage === 'repositories' && (current.capabilities.multipleRepositories.available ? <RepositoryManager key={route.workspaceId} data={current} csrf={session.csrfToken} onChanged={retry} /> : <Repositories data={current} />)}
           {actualPage === 'tasks' && <Tasks key={route.workspaceId} taskId={route.taskId} data={current} csrf={session.csrfToken} onChanged={retry} />}
           {actualPage === 'activity' && <Activity key={route.workspaceId} data={current} stale={stale} csrf={session.csrfToken} onChanged={retry} />}
-          {actualPage === 'settings' && <Settings key={route.workspaceId} data={current} csrf={session.csrfToken} onSaved={retry} onLogout={async () => { try { await api.logout(session.csrfToken); setSession(null); setList(null); setDetail(null); setSessionError('浏览器会话已退出。可以重新连接 RIFT。'); } catch (e) { setError(errorText(e)); fail(e); } }} />}
+          {actualPage === 'settings' && <Settings tab={route.settingsTab} key={route.workspaceId} data={current} csrf={session.csrfToken} onSaved={retry} onLogout={async () => { try { await api.logout(session.csrfToken); setSession(null); setList(null); setDetail(null); setSessionError('浏览器会话已退出。可以重新连接 RIFT。'); } catch (e) { setError(errorText(e)); fail(e); } }} />}
           {actualPage !== 'chat' && <footer className="data-footer"><span>记录同步于 {time(current.observedAt)}</span><Button variant="ghost" className="text-button" onClick={retry}>刷新记录</Button></footer>}
         </>}
       </>}
