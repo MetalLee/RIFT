@@ -147,7 +147,7 @@ describe('Independent workspace repository permissions',()=>{
       const handle=await p.runtime.start(nativeInput(f.repositories[0]!,f.repositories.slice(0,2)));
       const request=p.requests.find(row=>row.method==='thread/start')!.params;
       expect(request.sandbox).toBe('read-only');expect(request.config['features.shell_tool']).toBe(false);expect(request.config['features.unified_exec']).toBe(false);
-      expect(request.dynamicTools.map((tool:any)=>tool.name)).toEqual(['rift_read_file','rift_list_files']);expect(request.environments).toEqual([]);
+      expect(request.dynamicTools.map((tool:any)=>tool.name)).toEqual(['rift_read_file','rift_list_files','rift_view_image','view_image']);expect(request.environments).toEqual([]);
       expect(request.config['mcp_servers.desktop_authority.enabled']).toBe(false);expect(request.config['features.apps']).toBe(false);expect(request.config['features.multi_agent']).toBe(false);
       expect(p.spec.env!.CODEX_TEST_DESKTOP_PIPE).toBeUndefined();await handle.dispose();
     }finally{p.close();await f.close();}

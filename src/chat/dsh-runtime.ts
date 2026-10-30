@@ -1,3 +1,4 @@
+import { createImageTool, prepareDshToolResult, renderDshToolResult } from '../agent/image-tool.js';
 import type { Context } from '@deepseek-ai/cordis';
 import { MessageId, ReasoningEffortId } from '@deepseek-ai/dsh-llm';
 import { SessionId } from '@deepseek-ai/dsh-session';
@@ -20,6 +21,7 @@ export class DshChatRuntime implements AgentRuntime {
     const recordFailure=(failure:unknown)=>{failed=true;failureMessage=redact(failure&&typeof failure==='object'&&'message' in failure&&typeof failure.message==='string'?failure.message:publicError(failure).message,4096);};
     const shell=input.repositoryAccess?await createRepositoryShell(this.ctx.subprocess,input):undefined;
     const scopedTools=[...input.tools,...shell?[shell.tool]:[]];
+    if(!scopedTools.some(tool=>tool.name==='rift_view_image'))scopedTools.push(createImageTool([input.cwd,...(input.repositoryAccess?.repositoryPaths??[]),...(input.repositoryAccess?.workspaceDirectory?[input.repositoryAccess.workspaceDirectory]:[])]));
     let handle:Awaited<ReturnType<Context['agents']['create']>>;
     try { handle = await this.ctx.agents.create({
       sessionId: SessionId(`rift-chat-${input.turnId}`), meta: { cwd: input.cwd }, signal: input.signal,
@@ -81,14 +83,14 @@ export class DshChatRuntime implements AgentRuntime {
         });
         for (const tool of scopedTools) scope.tools.register({
           name: tool.name, description: tool.description, parameters: tool.inputSchema as ToolDefinition['parameters'],
-          output: { schema: {}, render: (_args, value) => [{ type: 'text', text: redact(JSON.stringify(value)) }] },
+          output: { schema: {}, render: (_args, value) => renderDshToolResult(value) },
           async execute(args, execution) {
             if (execution.agent !== agent || scope.agents.get(agent.id) !== agent) throw new RiftError('UNAUTHORIZED', 'Only this live Turn may invoke its scoped tools.');
             execution.signal.throwIfAborted();
             const toolCallId = `dsh-tool-${++toolSequence}`;
             input.onEvent?.({type:'tool.started',toolCallId,toolName:tool.name});
             try {
-              const result = await tool.execute(args, execution.signal, {callId:toolCallId});
+              const result = await prepareDshToolResult(scope,await tool.execute(args, execution.signal, {callId:toolCallId}));
               input.onEvent?.({type:'tool.completed',toolCallId,toolName:tool.name});
               return result;
             } catch (error) {

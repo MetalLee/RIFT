@@ -23,7 +23,7 @@ describe('DSH development repository capability ownership',()=>{
     streamListener?.({agent:child,frame:{type:'chunk',chunk:{type:'text-delta',index:0,text:'正在检查。'}}});
     expect(events).toHaveBeenCalledWith(expect.objectContaining({type:'message.delta',text:'正在检查。'}));
     expect(createRepositoryShell).toHaveBeenCalledWith(ctx.subprocess,input);expect(restrict).toHaveBeenCalledWith({allow:[]});
-    expect(definitions.map(tool=>tool.name)).toEqual(['rift_send_message','exec_command']);
+    expect(definitions.map(tool=>tool.name)).toEqual(['rift_send_message','exec_command','rift_view_image']);
     const shell=definitions.find(tool=>tool.name==='exec_command')!;
     await expect(shell.execute({cmd:'git status'},{agent:parent,signal:controller.signal})).rejects.toMatchObject({code:'UNAUTHORIZED'});
     await shell.execute({cmd:'git status'},{agent:child,signal:controller.signal});expect(execute).toHaveBeenCalledOnce();expect(progress.mock.calls.slice(-2).map(call=>call[0])).toEqual([{phase:'tool',toolName:'exec_command'},{phase:'tool_done',toolName:'exec_command'}]);
@@ -38,7 +38,7 @@ describe('DSH development repository capability ownership',()=>{
     const ctx={subprocess:{},agents:{get:()=>parent},on:(_event:string,handler:typeof listener)=>{listener=handler;return()=>{};},subagents:{getProvider:()=>({capabilities:{},prepareContinuable:async()=>({})}),startActivation:async()=>{listener?.({agent:child});return{childId:'review',result:Promise.resolve({stopReason:'completed',output:[]}),async dispose(){}};}}} as unknown as Context;
     const handle=await new DshActivationBridge(ctx,()=>parent).start({run:{id:'review',purpose:'review',providerSnapshot:{binding:{providerName:'spawn',runtime:'dsh'}}},task:{id:'task',kind:'change'},role:{},cwd:'/candidate',repositoryAccess:{repositoryPaths:['/repo']},prompt:'Review.',tools:[{name:'rift_skill_resource',description:'Read immutable assigned Skill bytes',inputSchema:{},async execute(){return{content:'CAPTURED'};}}],signal:new AbortController().signal} as unknown as Parameters<ActivationBridge['start']>[0]);
     expect(createRepositoryShell).not.toHaveBeenCalled();
-    expect(vi.mocked(child.ctx.tools.register).mock.calls.map(([tool])=>tool.name)).toEqual(['rift_skill_resource','rift_read_file','rift_list_files']);
+    expect(vi.mocked(child.ctx.tools.register).mock.calls.map(([tool])=>tool.name)).toEqual(['rift_skill_resource','rift_read_file','rift_list_files','rift_view_image']);
     expect(restrict).toHaveBeenCalledWith({allow:[]});await handle.dispose();
   });
 });

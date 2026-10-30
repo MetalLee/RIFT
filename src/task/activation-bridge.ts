@@ -1,3 +1,4 @@
+import { createImageTool, prepareDshToolResult, renderDshToolResult } from '../agent/image-tool.js';
 import { observeDshRun } from './run-progress.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { Agent, AgentOptions } from '@deepseek-ai/dsh-agent';
@@ -48,6 +49,7 @@ export class DshActivationBridge implements ActivationBridge {
     const shell=needsRepositoryShell?await createRepositoryShell(this.ctx.subprocess,{...input,repositoryAccess}):undefined;
     if(restrictInherited&&readOnly&&(input.tools??[]).some(tool=>!['rift_send_message','rift_skill_resource',...(input.run.purpose==='review'?['rift_read_evidence']:[])].includes(tool.name)))throw new RiftError('START_NOT_PUBLISHED','Formal review and analysis accept only scoped collaboration and file reading tools.');
     const scopedTools=[...(input.tools??[]),...(restrictInherited&&readOnly&&repositoryAccess?createRepositoryReadTools(input.cwd):[]),...(shell?[shell.tool]:[])];
+    if(!scopedTools.some(tool=>tool.name==='rift_view_image'))scopedTools.push(createImageTool([input.cwd,...readOnly?[]:[...(repositoryAccess?.repositoryPaths??[]),...(repositoryAccess?.workspaceDirectory?[repositoryAccess.workspaceDirectory]:[])]]));
     // The manager supports a reserved identity for local DSH children. Install
     // only into that exact child's scope before its first prompt is released.
     const childId=provider.prepareContinuable&&(restrictInherited||scopedTools.length)?SessionId(`rift-run-${input.run.id}`):undefined;
@@ -57,7 +59,7 @@ export class DshActivationBridge implements ActivationBridge {
       child=agent;
       observeDshRun(agent,input.onProgress,input.onEvent);
       if(restrictInherited)agent.ctx.tools.restrict({allow:[]});
-      for(const tool of scopedTools)agent.ctx.tools.register({name:tool.name,description:tool.description,parameters:tool.inputSchema as ToolDefinition['parameters'],output:{schema:{},render:(_args,value)=>[{type:'text',text:redact(JSON.stringify(value))}]},execute:async(args,execution)=>{if(execution.agent!==agent||this.ctx.agents.get(agent.id)!==agent)throw new RiftError('UNAUTHORIZED','Only this live Run may use its scoped tools.');input.signal.throwIfAborted();execution.signal.throwIfAborted();input.onProgress?.({phase:'tool',toolName:tool.name});try{const result=await tool.execute(args,execution.signal);input.onProgress?.({phase:'tool_done',toolName:tool.name});return result;}catch(error){input.onProgress?.({phase:'tool_failed',toolName:tool.name});throw error;}}});
+      for(const tool of scopedTools)agent.ctx.tools.register({name:tool.name,description:tool.description,parameters:tool.inputSchema as ToolDefinition['parameters'],output:{schema:{},render:(_args,value)=>renderDshToolResult(value)},execute:async(args,execution)=>{if(execution.agent!==agent||this.ctx.agents.get(agent.id)!==agent)throw new RiftError('UNAUTHORIZED','Only this live Run may use its scoped tools.');input.signal.throwIfAborted();execution.signal.throwIfAborted();input.onProgress?.({phase:'tool',toolName:tool.name});try{const result=await prepareDshToolResult(agent.ctx,await tool.execute(args,execution.signal));input.onProgress?.({phase:'tool_done',toolName:tool.name});return result;}catch(error){input.onProgress?.({phase:'tool_failed',toolName:tool.name});throw error;}}});
       return undefined;
     }):undefined;
     let activation:Awaited<ReturnType<Context['subagents']['startActivation']>>;

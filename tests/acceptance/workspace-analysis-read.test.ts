@@ -16,7 +16,7 @@ describe('workspace read-only analysis',()=>{
    await writeFile(path.join(first,'source.ts'),'FIRST');await writeFile(path.join(second,'source.ts'),'SECOND');
    await writeFile(path.join(first,'.env'),'PRIVATE');await symlink(second,path.join(first,'escape'),'junction');
    const tools=createWorkspaceRepositoryReadTools([{id:'first',name:'First',path:first},{id:'second',name:'Second',path:second}]);
-   expect(tools.map(t=>t.name)).toEqual(['rift_read_file','rift_list_files']);
+   expect(tools.map(t=>t.name)).toEqual(['rift_read_file','rift_list_files','rift_view_image']);
    const signal=new AbortController().signal,read=tools[0]!,list=tools[1]!;
    expect(await read.execute({path:'source.ts'},signal)).toMatchObject({content:'FIRST',repositoryId:'first'});
    expect(await read.execute({path:'source.ts',repositoryId:'second'},signal)).toMatchObject({content:'SECOND'});

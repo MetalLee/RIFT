@@ -91,7 +91,7 @@ export class ApiConnectionService {
   private profiles(connections = this.records()): Record<string, PiAiProviderProfile> {
     return Object.fromEntries(connections.map(connection => [connection.provider, {
       displayName: connection.name, api: connection.protocol, baseURL: normalizeApiEndpoint(connection.endpoint,connection.protocol), apiKeyEnv: connection.credentialRef,
-      models: [{ id: connection.model, input: ['text'], contextWindow: connectionContextWindow(connection.model), maxTokens: 128_000 }],
+      models: [{ id: connection.model, input: ['text', 'image'], contextWindow: connectionContextWindow(connection.model), maxTokens: 128_000 }],
       // Keep transport failure explicit (no replay); use the adapter's maintained
       // idle policy instead of imposing a shorter 60s RIFT-specific deadline.
       retryPolicy: { mode: 'normal', maxRetries: 0 },

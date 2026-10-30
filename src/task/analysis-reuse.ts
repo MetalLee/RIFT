@@ -1,3 +1,4 @@
+import { prepareDshToolResult, renderDshToolResult } from '../agent/image-tool.js';
 import { observeDshRun } from './run-progress.js';
 import { randomUUID } from 'node:crypto';
 import { createRepositoryReadTools } from '../agent/repository-read.js';
@@ -63,10 +64,10 @@ export async function startAnalysisBatch(ctx:Context,store:RiftStore|undefined,l
       // restrict masks inherited names only. The Run tools must be registered in
       // each child's own scope, never named as supposedly global capabilities.
       agent.ctx.tools.restrict({allow:[]});
-      for(const tool of scopedTools)agent.ctx.tools.register({name:tool.name,description:tool.description,parameters:tool.inputSchema as ToolDefinition['parameters'],output:{schema:{},render:(_args,value)=>[{type:'text',text:redact(JSON.stringify(value))}]},execute:async(args,execution)=>{
+      for(const tool of scopedTools)agent.ctx.tools.register({name:tool.name,description:tool.description,parameters:tool.inputSchema as ToolDefinition['parameters'],output:{schema:{},render:(_args,value)=>renderDshToolResult(value)},execute:async(args,execution)=>{
         invariant(execution.agent===agent&&ctx.agents.get(agent.id)===agent,'UNAUTHORIZED','Only this live analysis child may use its scoped tools.');assertActive();execution.signal.throwIfAborted();
         input.onProgress?.({phase:'tool',toolName:tool.name});
-        let result:unknown;try{result=await tool.execute(args,AbortSignal.any([input.signal,execution.signal]));input.onProgress?.({phase:'tool_done',toolName:tool.name});}catch(error){input.onProgress?.({phase:'tool_failed',toolName:tool.name});throw error;}
+        let result:unknown;try{result=await prepareDshToolResult(agent.ctx,await tool.execute(args,AbortSignal.any([input.signal,execution.signal])));input.onProgress?.({phase:'tool_done',toolName:tool.name});}catch(error){input.onProgress?.({phase:'tool_failed',toolName:tool.name});throw error;}
         assertActive();execution.signal.throwIfAborted();return result;
       }});
     }

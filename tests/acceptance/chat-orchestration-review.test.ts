@@ -199,8 +199,8 @@ describe('Independent C1 acceptance: Host orchestration boundaries',()=>{
       const workflow=await invoke<{id:string}>(first.input,'rift_workflow_start',{goal:'Review supplied text',mode:'analysis'});
       await invoke(first.input,'rift_plan_submit',{expectedRevision:0,tasks:[{id:'review-analysis',kind:'analysis',title:'Review text',instructions:'Compare alpha with beta',expectedPaths:[],roleName:'analyst'}]});
       const dispatch=await invoke<{id:string}>(first.input,'rift_task_dispatch',{taskId:'review-analysis',expectedVersion:0,idempotencyKey:'review-dispatch'});
-      await until(()=>calls.some(call=>call.input.instructions.startsWith('You are executing a registered text-only')));
-      const development=calls.find(call=>call.input.instructions.startsWith('You are executing a registered text-only'))!;
+      await until(()=>calls.some(call=>call.input.instructions.includes('You are executing a registered read-only analysis task.')));
+      const development=calls.find(call=>call.input.instructions.includes('You are executing a registered read-only analysis task.'))!;
       await invoke(first.input,'rift_yield',{summary:'Task is dispatched',taskIds:['review-analysis'],requestIds:[dispatch.id]});
       expect(host.store.get('SELECT id FROM execution_leases WHERE owner_id=? AND released_at IS NULL',initial.id)).toBeTruthy();
       first.finish({text:'Task dispatched; results will follow.',stopReason:'completed'});

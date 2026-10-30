@@ -1,3 +1,4 @@
+import { createImageTool } from './image-tool.js';
 import { constants } from 'node:fs';
 import { privateEntry } from './filesystem-sandbox.js';
 import { open, opendir, realpath, readlink } from 'node:fs/promises';
@@ -34,6 +35,7 @@ export function createRepositoryReadTools(cwd:string):RuntimeTool[] {
       for await(const entry of directory){signal.throwIfAborted();if(entry.name.toLowerCase()==='.git'||privateEntry(entry.name))continue;if(entries.length===input.limit){truncated=true;break;}entries.push({name:entry.name,type:entry.isSymbolicLink()?'symlink':entry.isDirectory()?'directory':entry.isFile()?'file':'other'});}
       signal.throwIfAborted();await unchanged(target);return{path:input.path,entries,truncated};
     }},
+    createImageTool([cwd]),
   ];
 }
 
@@ -41,18 +43,18 @@ export function createRepositoryReadTools(cwd:string):RuntimeTool[] {
  * workflows without a Git integration snapshot. No caller-supplied root paths. */
 export function createWorkspaceRepositoryReadTools(repositories:{id:string;name:string;path:string}[]):RuntimeTool[] {
   if(!repositories.length)return [];
-  const scoped=new Map(repositories.map(repo=>[repo.id,createRepositoryReadTools(repo.path)]));
+  const scoped=new Map(repositories.map(repo=>[repo.id,createRepositoryReadTools(repo.path).filter(tool=>tool.name!=='rift_view_image') ]));
   const catalog=repositories.map(({id,name})=>({id,name}));
-  return [readInput.extend({repositoryId:z.string().optional()}),listInput.extend({repositoryId:z.string().optional()})].map((schema,index)=>({
+  return [...[readInput.extend({repositoryId:z.string().optional()}),listInput.extend({repositoryId:z.string().optional()})].map((schema,index)=>({
     name:index===0?'rift_read_file':'rift_list_files',
     description:`${index===0?'Read source text':'List files'} in a registered workspace repository, read-only. Select repositoryId; omission uses the workspace default/first repository. Paths are relative; no writes, shell, Git metadata or private files. Repositories: ${JSON.stringify(catalog)}`,
     inputSchema:z.toJSONSchema(schema,{io:'input'}),
-    execute:async(args,signal)=>{
+    execute:async(args:unknown,signal:AbortSignal)=>{
       const {repositoryId,...input}=schema.parse(args);
       const id=repositoryId??repositories[0]!.id,tools=scoped.get(id);
       invariant(tools,'UNAUTHORIZED','Repository is not registered in this workspace.');
       const result=await tools[index]!.execute(input,signal);
       return {...result as Record<string,unknown>,repositoryId:id,...index===1?{repositories:catalog}:{}};
     },
-  }));
+  })),createImageTool(repositories.map(repo=>repo.path))];
 }
