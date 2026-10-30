@@ -86,3 +86,13 @@ describe('browser API boundary', () => {
     } finally {vi.unstubAllGlobals();}
   });
 });
+
+it('summarizes stable API errors in Chinese without exposing upstream secrets', async () => {
+  const { errorText } = await import('./api');
+  expect(errorText(new ApiError(409, 'Version conflict', 'VERSION_CONFLICT'))).toContain('配置已更新');
+  expect(errorText(new ApiError(503, 'upstream credential=secret', 'PROVIDER_UNAVAILABLE'))).toContain('检查 Host');
+  expect(errorText(new ApiError(400, 'Bearer private-token', 'UNKNOWN'))).not.toContain('private-token');
+  expect(errorText(new ApiError(400, 'bad', 'secret malicious-code'))).not.toContain('malicious-code');
+  expect(errorText(new ApiError(409, 'archived', 'SKILL_ARCHIVED'))).toContain('重新导入');
+  expect(errorText(new ApiError(401, 'expired'))).toContain('重新连接 RIFT');
+});

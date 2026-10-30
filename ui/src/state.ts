@@ -1,13 +1,15 @@
 export const pages = ['chat', 'workspaces', 'agents', 'skills', 'repositories', 'tasks', 'settings', 'activity'] as const;
 export type Page = typeof pages[number];
-export interface Route { workspaceId: string; page: Page; taskId?: string }
+export interface Route { workspaceId: string; page: Page; taskId?: string; settingsTab?: string }
 export function parseRoute(hash: string): Route {
   const [pathname, query = ''] = hash.replace(/^#/, '').split('?');
   const [, segment, encodedId, page] = pathname.split('/');
   let workspaceId = '';
   try { workspaceId = segment === 'workspace' ? decodeURIComponent(encodedId ?? '') : ''; } catch { /* A malformed link returns to the directory. */ }
-  const taskId = new URLSearchParams(query).get('task');
-  return { workspaceId, page: pages.includes(page as Page) ? page as Page : 'chat', ...(page === 'tasks' && taskId ? {taskId} : {}) };
+  const params = new URLSearchParams(query);
+  const taskId = params.get('task');
+  const tab = params.get('tab');
+  return { workspaceId, page: pages.includes(page as Page) ? page as Page : 'chat', ...(page === 'tasks' && taskId ? {taskId} : {}), ...(page === 'settings' && tab && ['lead','connections','workspace','session'].includes(tab) ? {settingsTab: tab} : {}) };
 }
 export function routeHref(workspaceId: string, page: Page): string { return `#/workspace/${encodeURIComponent(workspaceId)}/${page}`; }
 export function draftKey(workspaceId: string, conversationId?: string): string { return `rift:draft:${encodeURIComponent(workspaceId)}${conversationId ? `:${encodeURIComponent(conversationId)}` : ''}`; }
