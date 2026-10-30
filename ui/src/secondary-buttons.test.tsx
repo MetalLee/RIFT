@@ -56,7 +56,7 @@ describe('the 13 white-card actions reuse the shared secondary variant', () => {
     // These keep the original shared class and are not part of the 13.
     expect(source('WorkspaceControls')).toContain('variant="secondary" className="secondary" disabled={busy} onClick={() => setArchiving(false)}>保留工作区');
     expect(source('TaskActions')).toContain('variant="secondary" className="secondary" onClick={() => { setFrozen(');
-    expect(source('RepositoryManager')).toContain('variant="secondary" onClick={onChanged}');
+    expect(source('RepositoryManager')).toContain('variant="secondary" onClick={() => { void load(); onChanged(); }}');
   });
 
   it('renders covered actions as plain secondary buttons with unchanged labels', () => {
