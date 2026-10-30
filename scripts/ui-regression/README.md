@@ -39,3 +39,14 @@ UI_CHECK_FILTER='^(tasks-(390|768|1280)|detail-tasks-.*|task-history-.*|task-fil
 
 Task reads use manually released mock gates rather than assuming a network delay.
 Unresolved explicit targets must not mount another task's details or evidence.
+
+Shared page gutters (rendered geometry, not CSS string matching):
+
+```sh
+UI_CHECK_FILTER='^layout-' UI_EVIDENCE_DIR="$PWD/.runtime-evidence/page-gutters" node scripts/ui-regression/check.mjs
+```
+
+Covers all eight routes and all four settings tabs at 390/768/1280/1920px.
+Checks the common main/heading/body/topbar edges, centred chat reading width,
+transcript/composer separation, input bounds and document overflow. Screenshots
+and exact bounding rectangles are retained for every checked route/viewport.
