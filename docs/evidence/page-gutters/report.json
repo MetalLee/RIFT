@@ -1,0 +1,2478 @@
+{
+  "startedAt": "2026-10-30T13:29:55.571Z",
+  "finishedAt": "2026-10-30T13:31:03.868Z",
+  "head": "0781d42077f53a583c17832a31650ab63a1c3aaa",
+  "dirty": " M DESIGN.md\n M scripts/ui-regression/README.md\n M scripts/ui-regression/check.mjs\n M ui/src/stitch.css\n",
+  "mode": "isolated Vite; all API responses mocked; no real business writes",
+  "browser": "149.0.7827.55",
+  "playwright": "1.64.1",
+  "checks": [
+    {
+      "name": "layout-workspaces-390",
+      "status": "passed",
+      "data": {
+        "viewport": 390,
+        "documentWidth": 390,
+        "main": {
+          "left": 0,
+          "right": 390,
+          "top": 56,
+          "bottom": 1637,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "topbar": {
+          "left": 0,
+          "right": 390,
+          "top": 0,
+          "bottom": 56,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "heading": {
+          "left": 16,
+          "right": 374,
+          "top": 80,
+          "bottom": 164,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 16,
+          "right": 374,
+          "top": 188,
+          "bottom": 1613,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 16,
+          "right": 374
+        },
+        "screenshot": "screens/layout-workspaces-390.png"
+      }
+    },
+    {
+      "name": "layout-chat-390",
+      "status": "passed",
+      "data": {
+        "viewport": 390,
+        "documentWidth": 390,
+        "main": {
+          "left": 0,
+          "right": 390,
+          "top": 56,
+          "bottom": 900,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "topbar": {
+          "left": 0,
+          "right": 390,
+          "top": 0,
+          "bottom": 56,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "heading": null,
+        "frame": null,
+        "chat": {
+          "left": 16,
+          "right": 374,
+          "top": 56,
+          "bottom": 900,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "transcript": {
+          "left": 16,
+          "right": 374,
+          "top": 56,
+          "bottom": 649,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "composer": {
+          "left": 16,
+          "right": 374,
+          "top": 649,
+          "bottom": 900,
+          "width": 358,
+          "paddingLeft": 8,
+          "paddingRight": 8
+        },
+        "input": {
+          "left": 38,
+          "right": 352,
+          "top": 731,
+          "bottom": 795,
+          "width": 314,
+          "paddingLeft": 8,
+          "paddingRight": 8
+        },
+        "expected": {
+          "left": 16,
+          "right": 374
+        },
+        "screenshot": "screens/layout-chat-390.png"
+      }
+    },
+    {
+      "name": "layout-agents-390",
+      "status": "passed",
+      "data": {
+        "viewport": 390,
+        "documentWidth": 390,
+        "main": {
+          "left": 0,
+          "right": 390,
+          "top": 56,
+          "bottom": 1727,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "topbar": {
+          "left": 0,
+          "right": 390,
+          "top": 0,
+          "bottom": 56,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "heading": {
+          "left": 16,
+          "right": 374,
+          "top": 80,
+          "bottom": 108,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 16,
+          "right": 374,
+          "top": 336,
+          "bottom": 1468,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 16,
+          "right": 374
+        },
+        "screenshot": "screens/layout-agents-390.png"
+      }
+    },
+    {
+      "name": "layout-skills-390",
+      "status": "passed",
+      "data": {
+        "viewport": 390,
+        "documentWidth": 390,
+        "main": {
+          "left": 0,
+          "right": 390,
+          "top": 56,
+          "bottom": 986,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "topbar": {
+          "left": 0,
+          "right": 390,
+          "top": 0,
+          "bottom": 56,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "heading": {
+          "left": 16,
+          "right": 374,
+          "top": 80,
+          "bottom": 156,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 16,
+          "right": 374,
+          "top": 296,
+          "bottom": 886,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 16,
+          "right": 374
+        },
+        "screenshot": "screens/layout-skills-390.png"
+      }
+    },
+    {
+      "name": "layout-repositories-390",
+      "status": "passed",
+      "data": {
+        "viewport": 390,
+        "documentWidth": 390,
+        "main": {
+          "left": 0,
+          "right": 390,
+          "top": 56,
+          "bottom": 1838,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "topbar": {
+          "left": 0,
+          "right": 390,
+          "top": 0,
+          "bottom": 56,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "heading": {
+          "left": 16,
+          "right": 374,
+          "top": 80,
+          "bottom": 156,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 16,
+          "right": 374,
+          "top": 484,
+          "bottom": 1558,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 16,
+          "right": 374
+        },
+        "screenshot": "screens/layout-repositories-390.png"
+      }
+    },
+    {
+      "name": "layout-tasks-390",
+      "status": "passed",
+      "data": {
+        "viewport": 390,
+        "documentWidth": 390,
+        "main": {
+          "left": 0,
+          "right": 390,
+          "top": 56,
+          "bottom": 1282,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "topbar": {
+          "left": 0,
+          "right": 390,
+          "top": 0,
+          "bottom": 56,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "heading": {
+          "left": 16,
+          "right": 374,
+          "top": 80,
+          "bottom": 154,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 16,
+          "right": 374,
+          "top": 374,
+          "bottom": 1182,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 16,
+          "right": 374
+        },
+        "screenshot": "screens/layout-tasks-390.png"
+      }
+    },
+    {
+      "name": "layout-activity-390",
+      "status": "passed",
+      "data": {
+        "viewport": 390,
+        "documentWidth": 390,
+        "main": {
+          "left": 0,
+          "right": 390,
+          "top": 56,
+          "bottom": 1065,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "topbar": {
+          "left": 0,
+          "right": 390,
+          "top": 0,
+          "bottom": 56,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "heading": {
+          "left": 16,
+          "right": 374,
+          "top": 80,
+          "bottom": 124,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 16,
+          "right": 374,
+          "top": 148,
+          "bottom": 965,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 16,
+          "right": 374
+        },
+        "screenshot": "screens/layout-activity-390.png"
+      }
+    },
+    {
+      "name": "layout-settings-390",
+      "status": "passed",
+      "data": {
+        "viewport": 390,
+        "documentWidth": 390,
+        "main": {
+          "left": 0,
+          "right": 390,
+          "top": 56,
+          "bottom": 2202,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "topbar": {
+          "left": 0,
+          "right": 390,
+          "top": 0,
+          "bottom": 56,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "heading": {
+          "left": 16,
+          "right": 374,
+          "top": 80,
+          "bottom": 104,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 16,
+          "right": 374,
+          "top": 128,
+          "bottom": 2102,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 16,
+          "right": 374
+        },
+        "screenshot": "screens/layout-settings-390.png"
+      }
+    },
+    {
+      "name": "layout-settings-connections-390",
+      "status": "passed",
+      "data": {
+        "viewport": 390,
+        "documentWidth": 390,
+        "main": {
+          "left": 0,
+          "right": 390,
+          "top": 56,
+          "bottom": 1196.96875,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "topbar": {
+          "left": 0,
+          "right": 390,
+          "top": 0,
+          "bottom": 56,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "heading": {
+          "left": 16,
+          "right": 374,
+          "top": 80,
+          "bottom": 104,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 16,
+          "right": 374,
+          "top": 128,
+          "bottom": 1096.96875,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 16,
+          "right": 374
+        },
+        "screenshot": "screens/layout-settings-connections-390.png"
+      }
+    },
+    {
+      "name": "layout-settings-workspace-390",
+      "status": "passed",
+      "data": {
+        "viewport": 390,
+        "documentWidth": 390,
+        "main": {
+          "left": 0,
+          "right": 390,
+          "top": 56,
+          "bottom": 808,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "topbar": {
+          "left": 0,
+          "right": 390,
+          "top": 0,
+          "bottom": 56,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "heading": {
+          "left": 16,
+          "right": 374,
+          "top": 80,
+          "bottom": 104,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 16,
+          "right": 374,
+          "top": 128,
+          "bottom": 708,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 16,
+          "right": 374
+        },
+        "screenshot": "screens/layout-settings-workspace-390.png"
+      }
+    },
+    {
+      "name": "layout-settings-session-390",
+      "status": "passed",
+      "data": {
+        "viewport": 390,
+        "documentWidth": 390,
+        "main": {
+          "left": 0,
+          "right": 390,
+          "top": 56,
+          "bottom": 517.1875,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "topbar": {
+          "left": 0,
+          "right": 390,
+          "top": 0,
+          "bottom": 56,
+          "width": 390,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "heading": {
+          "left": 16,
+          "right": 374,
+          "top": 80,
+          "bottom": 104,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 16,
+          "right": 374,
+          "top": 128,
+          "bottom": 417.1875,
+          "width": 358,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 16,
+          "right": 374
+        },
+        "screenshot": "screens/layout-settings-session-390.png"
+      }
+    },
+    {
+      "name": "layout-workspaces-768",
+      "status": "passed",
+      "data": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "main": {
+          "left": 240,
+          "right": 768,
+          "top": 56,
+          "bottom": 1619,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 768,
+          "top": 0,
+          "bottom": 56,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 736,
+          "top": 96,
+          "bottom": 142,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 736,
+          "top": 182,
+          "bottom": 1579,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 736
+        },
+        "screenshot": "screens/layout-workspaces-768.png"
+      }
+    },
+    {
+      "name": "layout-chat-768",
+      "status": "passed",
+      "data": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "main": {
+          "left": 240,
+          "right": 768,
+          "top": 56,
+          "bottom": 900,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 768,
+          "top": 0,
+          "bottom": 56,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": null,
+        "frame": null,
+        "chat": {
+          "left": 272,
+          "right": 736,
+          "top": 56,
+          "bottom": 900,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "transcript": {
+          "left": 272,
+          "right": 736,
+          "top": 56,
+          "bottom": 668,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "composer": {
+          "left": 272,
+          "right": 736,
+          "top": 668,
+          "bottom": 900,
+          "width": 464,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "input": {
+          "left": 302,
+          "right": 706,
+          "top": 742,
+          "bottom": 806,
+          "width": 404,
+          "paddingLeft": 8,
+          "paddingRight": 8
+        },
+        "expected": {
+          "left": 272,
+          "right": 736
+        },
+        "screenshot": "screens/layout-chat-768.png"
+      }
+    },
+    {
+      "name": "layout-agents-768",
+      "status": "passed",
+      "data": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "main": {
+          "left": 240,
+          "right": 768,
+          "top": 56,
+          "bottom": 1447,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 768,
+          "top": 0,
+          "bottom": 56,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 736,
+          "top": 88,
+          "bottom": 116,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 736,
+          "top": 315,
+          "bottom": 1201,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 736
+        },
+        "screenshot": "screens/layout-agents-768.png"
+      }
+    },
+    {
+      "name": "layout-skills-768",
+      "status": "passed",
+      "data": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "main": {
+          "left": 240,
+          "right": 768,
+          "top": 56,
+          "bottom": 911,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 768,
+          "top": 0,
+          "bottom": 56,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 736,
+          "top": 88,
+          "bottom": 158,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 736,
+          "top": 284,
+          "bottom": 811,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 736
+        },
+        "screenshot": "screens/layout-skills-768.png"
+      }
+    },
+    {
+      "name": "layout-repositories-768",
+      "status": "passed",
+      "data": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "main": {
+          "left": 240,
+          "right": 768,
+          "top": 56,
+          "bottom": 1752,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 768,
+          "top": 0,
+          "bottom": 56,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 736,
+          "top": 88,
+          "bottom": 172,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 736,
+          "top": 508,
+          "bottom": 1485,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 736
+        },
+        "screenshot": "screens/layout-repositories-768.png"
+      }
+    },
+    {
+      "name": "layout-tasks-768",
+      "status": "passed",
+      "data": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "main": {
+          "left": 240,
+          "right": 768,
+          "top": 56,
+          "bottom": 1178,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 768,
+          "top": 0,
+          "bottom": 56,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 736,
+          "top": 80,
+          "bottom": 154,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 736,
+          "top": 322,
+          "bottom": 1078,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 736
+        },
+        "screenshot": "screens/layout-tasks-768.png"
+      }
+    },
+    {
+      "name": "layout-activity-768",
+      "status": "passed",
+      "data": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "main": {
+          "left": 240,
+          "right": 768,
+          "top": 56,
+          "bottom": 1113,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 768,
+          "top": 0,
+          "bottom": 56,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 736,
+          "top": 88,
+          "bottom": 132,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 736,
+          "top": 164,
+          "bottom": 1013,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 736
+        },
+        "screenshot": "screens/layout-activity-768.png"
+      }
+    },
+    {
+      "name": "layout-settings-768",
+      "status": "passed",
+      "data": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "main": {
+          "left": 240,
+          "right": 768,
+          "top": 56,
+          "bottom": 2193,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 768,
+          "top": 0,
+          "bottom": 56,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 736,
+          "top": 104,
+          "bottom": 128,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 736,
+          "top": 176,
+          "bottom": 2077,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 736
+        },
+        "screenshot": "screens/layout-settings-768.png"
+      }
+    },
+    {
+      "name": "layout-settings-connections-768",
+      "status": "passed",
+      "data": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "main": {
+          "left": 240,
+          "right": 768,
+          "top": 56,
+          "bottom": 1070.390625,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 768,
+          "top": 0,
+          "bottom": 56,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 736,
+          "top": 104,
+          "bottom": 128,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 736,
+          "top": 176,
+          "bottom": 954.390625,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 736
+        },
+        "screenshot": "screens/layout-settings-connections-768.png"
+      }
+    },
+    {
+      "name": "layout-settings-workspace-768",
+      "status": "passed",
+      "data": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "main": {
+          "left": 240,
+          "right": 768,
+          "top": 56,
+          "bottom": 858,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 768,
+          "top": 0,
+          "bottom": 56,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 736,
+          "top": 104,
+          "bottom": 128,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 736,
+          "top": 176,
+          "bottom": 742,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 736
+        },
+        "screenshot": "screens/layout-settings-workspace-768.png"
+      }
+    },
+    {
+      "name": "layout-settings-session-768",
+      "status": "passed",
+      "data": {
+        "viewport": 768,
+        "documentWidth": 768,
+        "main": {
+          "left": 240,
+          "right": 768,
+          "top": 56,
+          "bottom": 583.59375,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 768,
+          "top": 0,
+          "bottom": 56,
+          "width": 528,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 736,
+          "top": 104,
+          "bottom": 128,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 736,
+          "top": 176,
+          "bottom": 467.59375,
+          "width": 464,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 736
+        },
+        "screenshot": "screens/layout-settings-session-768.png"
+      }
+    },
+    {
+      "name": "layout-workspaces-1280",
+      "status": "passed",
+      "data": {
+        "viewport": 1280,
+        "documentWidth": 1280,
+        "main": {
+          "left": 240,
+          "right": 1280,
+          "top": 56,
+          "bottom": 973,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1280,
+          "top": 0,
+          "bottom": 56,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 1248,
+          "top": 96,
+          "bottom": 142,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 1248,
+          "top": 182,
+          "bottom": 933,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 1248
+        },
+        "screenshot": "screens/layout-workspaces-1280.png"
+      }
+    },
+    {
+      "name": "layout-chat-1280",
+      "status": "passed",
+      "data": {
+        "viewport": 1280,
+        "documentWidth": 1280,
+        "main": {
+          "left": 240,
+          "right": 1280,
+          "top": 56,
+          "bottom": 900,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1280,
+          "top": 0,
+          "bottom": 56,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": null,
+        "frame": null,
+        "chat": {
+          "left": 380,
+          "right": 1140,
+          "top": 56,
+          "bottom": 900,
+          "width": 760,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "transcript": {
+          "left": 380,
+          "right": 1140,
+          "top": 56,
+          "bottom": 668,
+          "width": 760,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "composer": {
+          "left": 380,
+          "right": 1140,
+          "top": 668,
+          "bottom": 900,
+          "width": 760,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "input": {
+          "left": 410,
+          "right": 1110,
+          "top": 742,
+          "bottom": 806,
+          "width": 700,
+          "paddingLeft": 8,
+          "paddingRight": 8
+        },
+        "expected": {
+          "left": 272,
+          "right": 1248
+        },
+        "screenshot": "screens/layout-chat-1280.png"
+      }
+    },
+    {
+      "name": "layout-agents-1280",
+      "status": "passed",
+      "data": {
+        "viewport": 1280,
+        "documentWidth": 1280,
+        "main": {
+          "left": 240,
+          "right": 1280,
+          "top": 56,
+          "bottom": 965,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1280,
+          "top": 0,
+          "bottom": 56,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 1248,
+          "top": 88,
+          "bottom": 116,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 1248,
+          "top": 218,
+          "bottom": 740,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 1248
+        },
+        "screenshot": "screens/layout-agents-1280.png"
+      }
+    },
+    {
+      "name": "layout-skills-1280",
+      "status": "passed",
+      "data": {
+        "viewport": 1280,
+        "documentWidth": 1280,
+        "main": {
+          "left": 240,
+          "right": 1280,
+          "top": 56,
+          "bottom": 1428,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1280,
+          "top": 0,
+          "bottom": 56,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 1248,
+          "top": 88,
+          "bottom": 158,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 1248,
+          "top": 284,
+          "bottom": 1328,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 1248
+        },
+        "screenshot": "screens/layout-skills-1280.png"
+      }
+    },
+    {
+      "name": "layout-repositories-1280",
+      "status": "passed",
+      "data": {
+        "viewport": 1280,
+        "documentWidth": 1280,
+        "main": {
+          "left": 240,
+          "right": 1280,
+          "top": 56,
+          "bottom": 1490,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1280,
+          "top": 0,
+          "bottom": 56,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 1248,
+          "top": 88,
+          "bottom": 132,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 1248,
+          "top": 288,
+          "bottom": 1244,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 1248
+        },
+        "screenshot": "screens/layout-repositories-1280.png"
+      }
+    },
+    {
+      "name": "layout-tasks-1280",
+      "status": "passed",
+      "data": {
+        "viewport": 1280,
+        "documentWidth": 1280,
+        "main": {
+          "left": 240,
+          "right": 1280,
+          "top": 56,
+          "bottom": 1374,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1280,
+          "top": 0,
+          "bottom": 56,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 1248,
+          "top": 80,
+          "bottom": 154,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 1248,
+          "top": 262,
+          "bottom": 1274,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 1248
+        },
+        "screenshot": "screens/layout-tasks-1280.png"
+      }
+    },
+    {
+      "name": "layout-activity-1280",
+      "status": "passed",
+      "data": {
+        "viewport": 1280,
+        "documentWidth": 1280,
+        "main": {
+          "left": 240,
+          "right": 1280,
+          "top": 56,
+          "bottom": 1241,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1280,
+          "top": 0,
+          "bottom": 56,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 1248,
+          "top": 88,
+          "bottom": 132,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 1248,
+          "top": 164,
+          "bottom": 1141,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 1248
+        },
+        "screenshot": "screens/layout-activity-1280.png"
+      }
+    },
+    {
+      "name": "layout-settings-1280",
+      "status": "passed",
+      "data": {
+        "viewport": 1280,
+        "documentWidth": 1280,
+        "main": {
+          "left": 240,
+          "right": 1280,
+          "top": 56,
+          "bottom": 1718,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1280,
+          "top": 0,
+          "bottom": 56,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 1248,
+          "top": 104,
+          "bottom": 128,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 1248,
+          "top": 176,
+          "bottom": 1602,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 1248
+        },
+        "screenshot": "screens/layout-settings-1280.png"
+      }
+    },
+    {
+      "name": "layout-settings-connections-1280",
+      "status": "passed",
+      "data": {
+        "viewport": 1280,
+        "documentWidth": 1280,
+        "main": {
+          "left": 240,
+          "right": 1280,
+          "top": 56,
+          "bottom": 977.59375,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1280,
+          "top": 0,
+          "bottom": 56,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 1248,
+          "top": 104,
+          "bottom": 128,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 1248,
+          "top": 176,
+          "bottom": 861.59375,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 1248
+        },
+        "screenshot": "screens/layout-settings-connections-1280.png"
+      }
+    },
+    {
+      "name": "layout-settings-workspace-1280",
+      "status": "passed",
+      "data": {
+        "viewport": 1280,
+        "documentWidth": 1280,
+        "main": {
+          "left": 240,
+          "right": 1280,
+          "top": 56,
+          "bottom": 788,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1280,
+          "top": 0,
+          "bottom": 56,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 1248,
+          "top": 104,
+          "bottom": 128,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 1248,
+          "top": 176,
+          "bottom": 672,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 1248
+        },
+        "screenshot": "screens/layout-settings-workspace-1280.png"
+      }
+    },
+    {
+      "name": "layout-settings-session-1280",
+      "status": "passed",
+      "data": {
+        "viewport": 1280,
+        "documentWidth": 1280,
+        "main": {
+          "left": 240,
+          "right": 1280,
+          "top": 56,
+          "bottom": 490.796875,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1280,
+          "top": 0,
+          "bottom": 56,
+          "width": 1040,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "heading": {
+          "left": 272,
+          "right": 1248,
+          "top": 104,
+          "bottom": 128,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 272,
+          "right": 1248,
+          "top": 176,
+          "bottom": 374.796875,
+          "width": 976,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 272,
+          "right": 1248
+        },
+        "screenshot": "screens/layout-settings-session-1280.png"
+      }
+    },
+    {
+      "name": "layout-workspaces-1920",
+      "status": "passed",
+      "data": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "main": {
+          "left": 440,
+          "right": 1720,
+          "top": 56,
+          "bottom": 973,
+          "width": 1280,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1920,
+          "top": 0,
+          "bottom": 56,
+          "width": 1680,
+          "paddingLeft": 232,
+          "paddingRight": 232
+        },
+        "heading": {
+          "left": 472,
+          "right": 1688,
+          "top": 96,
+          "bottom": 142,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 472,
+          "right": 1688,
+          "top": 182,
+          "bottom": 933,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 472,
+          "right": 1688
+        },
+        "screenshot": "screens/layout-workspaces-1920.png"
+      }
+    },
+    {
+      "name": "layout-chat-1920",
+      "status": "passed",
+      "data": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "main": {
+          "left": 440,
+          "right": 1720,
+          "top": 56,
+          "bottom": 900,
+          "width": 1280,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1920,
+          "top": 0,
+          "bottom": 56,
+          "width": 1680,
+          "paddingLeft": 232,
+          "paddingRight": 232
+        },
+        "heading": null,
+        "frame": null,
+        "chat": {
+          "left": 700,
+          "right": 1460,
+          "top": 56,
+          "bottom": 900,
+          "width": 760,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "transcript": {
+          "left": 700,
+          "right": 1460,
+          "top": 56,
+          "bottom": 668,
+          "width": 760,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "composer": {
+          "left": 700,
+          "right": 1460,
+          "top": 668,
+          "bottom": 900,
+          "width": 760,
+          "paddingLeft": 16,
+          "paddingRight": 16
+        },
+        "input": {
+          "left": 730,
+          "right": 1430,
+          "top": 742,
+          "bottom": 806,
+          "width": 700,
+          "paddingLeft": 8,
+          "paddingRight": 8
+        },
+        "expected": {
+          "left": 472,
+          "right": 1688
+        },
+        "screenshot": "screens/layout-chat-1920.png"
+      }
+    },
+    {
+      "name": "layout-agents-1920",
+      "status": "passed",
+      "data": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "main": {
+          "left": 440,
+          "right": 1720,
+          "top": 56,
+          "bottom": 965,
+          "width": 1280,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1920,
+          "top": 0,
+          "bottom": 56,
+          "width": 1680,
+          "paddingLeft": 232,
+          "paddingRight": 232
+        },
+        "heading": {
+          "left": 472,
+          "right": 1688,
+          "top": 88,
+          "bottom": 116,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 472,
+          "right": 1688,
+          "top": 218,
+          "bottom": 740,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 472,
+          "right": 1688
+        },
+        "screenshot": "screens/layout-agents-1920.png"
+      }
+    },
+    {
+      "name": "layout-skills-1920",
+      "status": "passed",
+      "data": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "main": {
+          "left": 440,
+          "right": 1720,
+          "top": 56,
+          "bottom": 1407,
+          "width": 1280,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1920,
+          "top": 0,
+          "bottom": 56,
+          "width": 1680,
+          "paddingLeft": 232,
+          "paddingRight": 232
+        },
+        "heading": {
+          "left": 472,
+          "right": 1688,
+          "top": 88,
+          "bottom": 158,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 472,
+          "right": 1688,
+          "top": 284,
+          "bottom": 1307,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 472,
+          "right": 1688
+        },
+        "screenshot": "screens/layout-skills-1920.png"
+      }
+    },
+    {
+      "name": "layout-repositories-1920",
+      "status": "passed",
+      "data": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "main": {
+          "left": 440,
+          "right": 1720,
+          "top": 56,
+          "bottom": 1469,
+          "width": 1280,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1920,
+          "top": 0,
+          "bottom": 56,
+          "width": 1680,
+          "paddingLeft": 232,
+          "paddingRight": 232
+        },
+        "heading": {
+          "left": 472,
+          "right": 1688,
+          "top": 88,
+          "bottom": 132,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 472,
+          "right": 1688,
+          "top": 288,
+          "bottom": 1244,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 472,
+          "right": 1688
+        },
+        "screenshot": "screens/layout-repositories-1920.png"
+      }
+    },
+    {
+      "name": "layout-tasks-1920",
+      "status": "passed",
+      "data": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "main": {
+          "left": 440,
+          "right": 1720,
+          "top": 56,
+          "bottom": 1353,
+          "width": 1280,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1920,
+          "top": 0,
+          "bottom": 56,
+          "width": 1680,
+          "paddingLeft": 232,
+          "paddingRight": 232
+        },
+        "heading": {
+          "left": 472,
+          "right": 1688,
+          "top": 80,
+          "bottom": 154,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 472,
+          "right": 1688,
+          "top": 262,
+          "bottom": 1253,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 472,
+          "right": 1688
+        },
+        "screenshot": "screens/layout-tasks-1920.png"
+      }
+    },
+    {
+      "name": "layout-activity-1920",
+      "status": "passed",
+      "data": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "main": {
+          "left": 440,
+          "right": 1720,
+          "top": 56,
+          "bottom": 1204,
+          "width": 1280,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1920,
+          "top": 0,
+          "bottom": 56,
+          "width": 1680,
+          "paddingLeft": 232,
+          "paddingRight": 232
+        },
+        "heading": {
+          "left": 472,
+          "right": 1688,
+          "top": 88,
+          "bottom": 132,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 472,
+          "right": 1688,
+          "top": 164,
+          "bottom": 1104,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 472,
+          "right": 1688
+        },
+        "screenshot": "screens/layout-activity-1920.png"
+      }
+    },
+    {
+      "name": "layout-settings-1920",
+      "status": "passed",
+      "data": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "main": {
+          "left": 440,
+          "right": 1720,
+          "top": 56,
+          "bottom": 1718,
+          "width": 1280,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1920,
+          "top": 0,
+          "bottom": 56,
+          "width": 1680,
+          "paddingLeft": 232,
+          "paddingRight": 232
+        },
+        "heading": {
+          "left": 472,
+          "right": 1688,
+          "top": 104,
+          "bottom": 128,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 472,
+          "right": 1688,
+          "top": 176,
+          "bottom": 1602,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 472,
+          "right": 1688
+        },
+        "screenshot": "screens/layout-settings-1920.png"
+      }
+    },
+    {
+      "name": "layout-settings-connections-1920",
+      "status": "passed",
+      "data": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "main": {
+          "left": 440,
+          "right": 1720,
+          "top": 56,
+          "bottom": 954.796875,
+          "width": 1280,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1920,
+          "top": 0,
+          "bottom": 56,
+          "width": 1680,
+          "paddingLeft": 232,
+          "paddingRight": 232
+        },
+        "heading": {
+          "left": 472,
+          "right": 1688,
+          "top": 104,
+          "bottom": 128,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 472,
+          "right": 1688,
+          "top": 176,
+          "bottom": 838.796875,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 472,
+          "right": 1688
+        },
+        "screenshot": "screens/layout-settings-connections-1920.png"
+      }
+    },
+    {
+      "name": "layout-settings-workspace-1920",
+      "status": "passed",
+      "data": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "main": {
+          "left": 440,
+          "right": 1720,
+          "top": 56,
+          "bottom": 788,
+          "width": 1280,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1920,
+          "top": 0,
+          "bottom": 56,
+          "width": 1680,
+          "paddingLeft": 232,
+          "paddingRight": 232
+        },
+        "heading": {
+          "left": 472,
+          "right": 1688,
+          "top": 104,
+          "bottom": 128,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 472,
+          "right": 1688,
+          "top": 176,
+          "bottom": 672,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 472,
+          "right": 1688
+        },
+        "screenshot": "screens/layout-settings-workspace-1920.png"
+      }
+    },
+    {
+      "name": "layout-settings-session-1920",
+      "status": "passed",
+      "data": {
+        "viewport": 1920,
+        "documentWidth": 1920,
+        "main": {
+          "left": 440,
+          "right": 1720,
+          "top": 56,
+          "bottom": 490.796875,
+          "width": 1280,
+          "paddingLeft": 32,
+          "paddingRight": 32
+        },
+        "topbar": {
+          "left": 240,
+          "right": 1920,
+          "top": 0,
+          "bottom": 56,
+          "width": 1680,
+          "paddingLeft": 232,
+          "paddingRight": 232
+        },
+        "heading": {
+          "left": 472,
+          "right": 1688,
+          "top": 104,
+          "bottom": 128,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "frame": {
+          "left": 472,
+          "right": 1688,
+          "top": 176,
+          "bottom": 374.796875,
+          "width": 1216,
+          "paddingLeft": 0,
+          "paddingRight": 0
+        },
+        "chat": null,
+        "transcript": null,
+        "composer": null,
+        "input": null,
+        "expected": {
+          "left": 472,
+          "right": 1688
+        },
+        "screenshot": "screens/layout-settings-session-1920.png"
+      }
+    },
+    {
+      "name": "detail-skills-768",
+      "status": "passed",
+      "data": {
+        "returnedScroll": 0
+      }
+    },
+    {
+      "name": "detail-tasks-768",
+      "status": "passed",
+      "data": {
+        "returnedScroll": 278
+      }
+    },
+    {
+      "name": "detail-activity-768",
+      "status": "passed",
+      "data": {
+        "returnedScroll": 113
+      }
+    },
+    {
+      "name": "detail-skills-390",
+      "status": "passed",
+      "data": {
+        "returnedScroll": 0
+      }
+    },
+    {
+      "name": "detail-tasks-390",
+      "status": "passed",
+      "data": {
+        "returnedScroll": 382
+      }
+    },
+    {
+      "name": "detail-activity-390",
+      "status": "passed",
+      "data": {
+        "returnedScroll": 65
+      }
+    },
+    {
+      "name": "keyboard-entry",
+      "status": "passed",
+      "data": {
+        "outline": "2px",
+        "color": "rgb(151, 67, 36)"
+      }
+    },
+    {
+      "name": "mobile-targets",
+      "status": "passed"
+    },
+    {
+      "name": "landscape-and-reduced-motion",
+      "status": "passed"
+    }
+  ],
+  "pageErrors": [],
+  "unexpectedRequests": [],
+  "cleanup": {
+    "browserClosed": true,
+    "serverClosed": true
+  },
+  "screenshots": [
+    "layout-chat-390.png",
+    "layout-agents-768.png",
+    "layout-workspaces-1280.png",
+    "layout-settings-1920.png"
+  ],
+  "screenshotNote": "Four representative captures retained here; all 44 layout captures can be reproduced using the documented command. Check data screenshot paths refer to the runtime output directory."
+}
