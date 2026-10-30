@@ -143,8 +143,8 @@ await check('task-filter-pagination',async()=>{
    for(const filter of ['status','workflow','repository']){
     await go('tasks');await page.getByRole('region',{name:'任务列表'}).locator('.task-card').filter({hasText:'task-106'}).click();
     if(filter==='status')await page.getByRole('button',{name:'进行中',exact:true}).click();
-    if(filter==='workflow')await page.locator('.workflow-select select').selectOption('workflow-2');
-    if(filter==='repository'){await page.getByRole('button',{name:'筛选',exact:true}).click();await page.locator('.task-extra-filters select').nth(1).selectOption('repo-2');}
+    if(filter==='workflow'){await page.getByRole('combobox',{name:'工作流',exact:true}).click();await page.getByRole('option',{name:'第二工作流',exact:true}).click();}
+    if(filter==='repository'){await page.getByRole('button',{name:'筛选',exact:true}).click();await page.getByRole('combobox',{name:'仓库',exact:true}).click();await page.getByRole('option',{name:'rift-runtime',exact:true}).click();}
     await page.getByRole('region',{name:'链接指定的任务',exact:true}).waitFor();
     const list=page.getByRole('region',{name:'任务列表',exact:true});
     eq(await list.locator('.task-card').filter({hasText:'task-106'}).count(),0);
@@ -161,7 +161,7 @@ await check('task-filter-pagination',async()=>{
    await page.getByRole('region',{name:'链接指定的任务',exact:true}).waitFor({state:'hidden'});
    await page.locator('.task-card[aria-pressed=true]').filter({hasText:'task-106'}).waitFor();
    await page.getByRole('button',{name:'筛选',exact:true}).click();
-   await page.locator('.task-extra-filters select').nth(1).selectOption('repo-2');
+   await page.getByRole('combobox',{name:'仓库',exact:true}).click();await page.getByRole('option',{name:'rift-runtime',exact:true}).click();
    await page.getByRole('button',{name:'已通过',exact:true}).click();
    await page.getByText('当前页没有匹配任务，请切换筛选。',{exact:true}).waitFor();
    eq(await page.getByRole('region',{name:'任务列表',exact:true}).locator('.task-card').count(),0);
