@@ -77,6 +77,40 @@ const eq=assert.equal;
 async function count(selector,n){await page.waitForFunction(({selector,n})=>document.querySelectorAll(selector).length===n,{selector,n});}
 try{
 server=await serve();browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH || '/root/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome'});report.browser=browser.version();context=await browser.newContext({viewport:{width:1280,height:900},locale:'zh-CN',timezoneId:'Asia/Shanghai',serviceWorkers:'block'});await context.route('**/*',intercept);page=await context.newPage();page.setDefaultTimeout(6000);page.on('pageerror',e=>report.pageErrors.push({url:page.url(),error:e.stack}));page.on('console',m=>{if(m.type()==='error') (report.consoleErrors??=[]).push(m.text());});
+// Measure the rendered cascade, including route-specific frames and late chat overrides.
+for (const width of [390,768,1280,1920]) {
+ for (const route of ['workspaces','chat','agents','skills','repositories','tasks','activity','settings','settings?tab=connections','settings?tab=workspace','settings?tab=session']) {
+  await check(`layout-${route.replace('?tab=','-')}-${width}`,async()=>{
+   await page.setViewportSize({width,height:900});await go(route);
+   await page.locator('.loading,.auth-card').waitFor({state:'hidden'});
+   if(route==='chat')await page.locator('#live-draft').waitFor();
+   else await page.locator('.page-heading').waitFor();
+   if(route==='skills')await page.locator('.skill-list-item').first().waitFor();
+   if(route.startsWith('settings'))await page.getByRole('tabpanel').waitFor();
+   await ready();
+   const m=await page.evaluate(()=>{
+    const bounds=selector=>{const e=document.querySelector(selector);if(!e)return null;const r=e.getBoundingClientRect(),s=getComputedStyle(e);return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,paddingLeft:parseFloat(s.paddingLeft),paddingRight:parseFloat(s.paddingRight)};};
+    return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,main:bounds('main'),topbar:bounds('.topbar'),heading:bounds('.page-heading'),frame:bounds('.workspace-layout, .agent-list, .skill-library-layout, .repository-list, .list-detail, .settings-tabs'),chat:bounds('.live-chat'),transcript:bounds('.chat-transcript-scroll'),composer:bounds('.live-chat .composer-dock'),input:bounds('#live-draft')};
+   });
+   const sidebar=width<768?0:240,gutter=width<768?16:32;
+   const frameWidth=Math.min(1280,width-sidebar),left=sidebar+(width-sidebar-frameWidth)/2+gutter,right=width-(width-sidebar-frameWidth)/2-gutter;
+   const near=(a,b,label)=>assert.ok(Math.abs(a-b)<1,`${label}: ${a} != ${b}`);
+   near(m.main.left+m.main.paddingLeft,left,'main left');near(m.main.right-m.main.paddingRight,right,'main right');
+   near(m.topbar.left+m.topbar.paddingLeft,left,'topbar left');near(m.topbar.right-m.topbar.paddingRight,right,'topbar right');
+   eq(m.documentWidth,width,'horizontal document overflow');
+   if(route==='chat'){
+    near(m.chat.width,Math.min(760,right-left),'chat reading width');near((m.chat.left+m.chat.right)/2,(left+right)/2,'chat centred');
+    assert.ok(m.transcript.bottom<=m.composer.top+1,'composer covers transcript');
+    assert.ok(m.input.left>=left&&m.input.right<=right&&m.input.bottom<=900,'input outside viewport frame');
+   }else{
+    for(const key of ['heading','frame']){assert.ok(m[key],`missing ${key}`);near(m[key].left,left,key+' left');near(m[key].right,right,key+' right');}
+   }
+   const file=`screens/layout-${route.replace('?tab=','-')}-${width}.png`;
+   await page.screenshot({path:out+file,fullPage:true,animations:'disabled'});
+   return {...m,expected:{left,right},screenshot:file};
+  });
+ }
+}
 for(const width of [1280,768,390]){
  await page.setViewportSize({width,height:900});
  for(const name of ['workspaces','chat','agents','skills','repositories','tasks','activity','settings']) await check(`${name}-${width}`,async()=>{await go(name);await page.locator('.loading,.auth-card').waitFor({state:'hidden'});const m=await snap(`${name}-${width}`);eq(m.overflow,false);const low=m.contrasts.filter(c=>!c.excluded&&c.ratio<c.threshold&&c.text!=='/'&&!c.class.includes('rift-icon'));assert.deepEqual(low,[],'low contrast: '+JSON.stringify(low));return {overflow:m.overflow};});
