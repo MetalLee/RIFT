@@ -1,4 +1,4 @@
-// Browser check: the 13 secondary actions must look and behave like the reference "退出浏览器会话" button
+// Browser check: the page-accessible secondary actions must look and behave like the reference "退出浏览器会话" button
 // (plain `<Button variant="secondary">`, no extra class). Compares computed styles against that reference.
 // Usage: pnpm dev:ui  # then: RIFT_PLAYWRIGHT_MODULE=... RIFT_UI_URL=http://127.0.0.1:5173 node scripts/ui-secondary-reuse-check.mjs
 // Uses deterministic API fixtures only; no real Host, writes are never sent.
@@ -25,7 +25,7 @@ const skills = [{ id: 'skill-0', name: '工程协作', description: '示例', re
 const saved = [{ id: 'conn-1', name: '示例连接', protocol: 'openai-responses', endpoint: 'https://example.com/v1', model: 'm', revision: 1, available: true, verificationStatus: 'unverified' }];
 let verifyDelay = false;
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}) });
 const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
 const page = await context.newPage();
 const errors = []; page.on('pageerror', e => errors.push(e.message));
@@ -137,25 +137,18 @@ await check('9 关联新仓库取消', page.locator('form.configuration-form').g
 await page.screenshot({ path: path.join(output, 'repositories-1280.png') });
 assert.equal(await byName('同步所有状态').getAttribute('data-variant'), 'secondary'); assert.ok(!(await classes(byName('同步所有状态'))).includes('on-card'));
 
-// Tasks (11, 12, 13)
+// Tasks (11, 12); workflow-level replan controls are not part of this page.
 await open('tasks');
 await check('11 准备重试', byName('准备重试'));
 await byName('准备重试').click();
 await check('12 重试取消', page.locator('.task-retry').getByRole('button', { name: '取消', exact: true }));
 await page.screenshot({ path: path.join(output, 'tasks-retry-1280.png') });
 await page.locator('.task-retry').getByRole('button', { name: '取消', exact: true }).click();
-await page.getByRole('combobox', { name: '工作流', exact: true }).click();
-await page.getByRole('option', { name: '示例工作流', exact: true }).click();
-await keepsSecondary('调整依赖与优先级', page.getByRole('button', { name: '调整依赖与优先级', exact: true }));
-await page.getByRole('button', { name: '调整依赖与优先级', exact: true }).click();
-await check('13 调整取消', page.locator('form.configuration-form').getByRole('button', { name: '取消', exact: true }));
-await page.screenshot({ path: path.join(output, 'tasks-1280.png') });
-
 // 390px: no horizontal overflow for the pages that host the buttons
 await page.setViewportSize({ width: 390, height: 844 });
 for (const route of ['settings', 'skills', 'repositories', 'tasks']) { await open(route); const o = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth); assert.equal(o, false, `${route} overflows at 390px`); }
 await open('repositories'); await byName('关联新仓库').click(); await page.screenshot({ path: path.join(output, 'repositories-390.png') });
-await open('tasks'); await byName('准备重试').click(); await page.screenshot({ path: path.join(output, 'tasks-390.png') });
+await open('tasks'); await page.locator('.task-card').first().click(); await byName('准备重试').click(); await page.screenshot({ path: path.join(output, 'tasks-390.png') });
 assert.deepEqual(errors, []);
 assert.deepEqual(writes, ['/connections/conn-1/verify'], 'only the verify click should write');
 console.log(JSON.stringify({ checked: report.length, report, writes }, null, 1));

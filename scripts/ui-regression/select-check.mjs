@@ -91,7 +91,7 @@ try {
     await page.keyboard.press('Space'); await page.waitForFunction(() => document.activeElement?.getAttribute('role') === 'option');
     await page.keyboard.press('End'); await page.waitForFunction(() => document.activeElement?.textContent === '带前缀的真实值'); await page.keyboard.press('Enter');
     assert.equal((await formData()).purpose, 'value:');
-    await page.keyboard.press('b'); assert.equal(await purpose.innerText(), 'Beta');
+    await page.keyboard.press('b'); await page.waitForFunction(e => e.textContent === 'Beta', await purpose.elementHandle());
     await page.keyboard.press('Space'); await page.keyboard.press('Escape'); await focused(purpose);
     await page.keyboard.press('Tab'); await focused(model);
   });
@@ -155,11 +155,9 @@ try {
       } else { await page.keyboard.press('Escape'); await dialog.waitFor({ state: 'hidden' }); await focused(add); }
     }
   });
-  await check('Task workflow/filter and Skill view/shared versions use the same selection UI', async () => {
+  await check('Task filters and Skill view/shared versions use the same selection UI', async () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(origin + '/#/workspace/wsp-001/tasks');
-    await selected(page.getByRole('combobox', { name: '工作流', exact: true }), 'RIFT 前端界面实现与验收');
-    await page.getByRole('button', { name: '筛选', exact: true }).click();
     await selected(page.getByRole('combobox', { name: '顺序', exact: true }), '依赖优先');
     await page.getByRole('combobox', { name: '仓库', exact: true }).click(); await snap('task-filter'); await page.keyboard.press('Escape');
     await page.goto(origin + '/#/workspace/wsp-001/skills');

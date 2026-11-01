@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { LatestRequest, parseRoute, readDraft, routeHref, saveDraft } from './state';
+import { LatestRequest, parseRoute, readDraft, routeHref, saveDraft, taskHref } from './state';
 
 describe('workspace isolation', () => {
   it('aborts the previous request and rejects a response that ignored cancellation', async () => {
@@ -38,4 +38,12 @@ it('preserves validated settings tabs independently of task deep links', () => {
   expect(parseRoute('#/workspace/w/settings?tab=connections')).toEqual({ workspaceId: 'w', page: 'settings', settingsTab: 'connections' });
   expect(parseRoute('#/workspace/w/settings?tab=invalid')).toEqual({ workspaceId: 'w', page: 'settings' });
   expect(parseRoute('#/workspace/w/tasks?task=one%2Ftwo&tab=session')).toEqual({ workspaceId: 'w', page: 'tasks', taskId: 'one/two' });
+});
+
+it('keeps task links limited to the existing task contract and ignores workflow parameters', () => {
+  expect(taskHref('团队/a', 'task/b')).toBe('#/workspace/%E5%9B%A2%E9%98%9F%2Fa/tasks?task=task%2Fb');
+  expect(parseRoute(taskHref('团队/a', 'task/b'))).toEqual({ workspaceId: '团队/a', page: 'tasks', taskId: 'task/b' });
+  expect(parseRoute('#/workspace/w/tasks?workflow=wf')).toEqual({ workspaceId: 'w', page: 'tasks' });
+  expect(parseRoute('#/workspace/w/tasks?task=one&workflow=wf')).toEqual({ workspaceId: 'w', page: 'tasks', taskId: 'one' });
+  expect(parseRoute('#/workspace/w/settings?tab=session&workflow=wf')).toEqual({ workspaceId: 'w', page: 'settings', settingsTab: 'session' });
 });
