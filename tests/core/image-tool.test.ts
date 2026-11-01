@@ -24,15 +24,33 @@ describe('cross-runtime read-only image tool',()=>{
       await expect(prepareDshToolResult({get:()=>undefined} as unknown as Context,value)).rejects.toMatchObject({code:'IMAGE_STORAGE_UNAVAILABLE'});
     }finally{await rm(root,{recursive:true,force:true});}
   });
-  it('rejects escapes, private files, fake images, oversize files, directories and aborted calls',async()=>{
+  it('reads images in any directory inside the assigned task root, including hidden evidence directories',async()=>{
+    const root=await mkdtemp(path.join(os.tmpdir(),'rift-image-any-directory-'));
+    try{
+      const tool=createImageTool([root]),signal=new AbortController().signal;
+      for(const directory of ['.runtime-evidence/reviewer/screens','.rift/screens','.git/screens','.ssh/screens','.env/screens','credentials/screens','普通目录/截图']){
+        await mkdir(path.join(root,directory),{recursive:true});
+        const file=path.join(directory,'screen.png');await writeFile(path.join(root,file),png);
+        for(const location of [file,path.join(root,file)]){
+          const result=await tool.execute({path:location},signal);
+          expect(renderNativeToolResult(result)).toEqual([{type:'inputImage',imageUrl:'data:image/png;base64,'+png.toString('base64')}]);
+        }
+        expect(await readFile(path.join(root,file))).toEqual(png);
+      }
+      await symlink(path.join(root,'.runtime-evidence'),path.join(root,'evidence-link'));
+      expect(renderNativeToolResult(await tool.execute({path:'evidence-link/reviewer/screens/screen.png'},signal))[0]?.type).toBe('inputImage');
+      await writeFile(path.join(root,'.env','secret.txt'),'not an image');
+      await expect(tool.execute({path:'.env/secret.txt'},signal)).rejects.toMatchObject({code:'INVALID_INPUT'});
+    }finally{await rm(root,{recursive:true,force:true});}
+  });
+  it('rejects escapes, fake images, oversize files, directories and aborted calls',async()=>{
     const base=await mkdtemp(path.join(os.tmpdir(),'rift-image-boundary-')),root=path.join(base,'root');
     try{
       await mkdir(root);await writeFile(path.join(base,'outside.png'),png);
       await symlink(path.join(base,'outside.png'),path.join(root,'escape.png'));
-      await mkdir(path.join(root,'.git'));await writeFile(path.join(root,'.git','hidden.png'),png);
       await writeFile(path.join(root,'fake.png'),'not image bytes');await writeFile(path.join(root,'huge.png'),Buffer.alloc(10*1024*1024+1));
       const tool=createImageTool([root]),signal=new AbortController().signal;
-      for(const file of ['../outside.png',path.join(base,'outside.png'),'escape.png','.git/hidden.png','fake.png','huge.png','.'])await expect(tool.execute({path:file},signal)).rejects.toBeTruthy();
+      for(const file of ['../outside.png',path.join(base,'outside.png'),'escape.png','fake.png','huge.png','.'])await expect(tool.execute({path:file},signal)).rejects.toBeTruthy();
       const controller=new AbortController();controller.abort();await expect(tool.execute({path:'fake.png'},controller.signal)).rejects.toBeTruthy();
     }finally{await rm(base,{recursive:true,force:true});}
   });

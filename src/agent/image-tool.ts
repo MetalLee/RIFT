@@ -5,7 +5,6 @@ import { z } from 'zod';
 import type { Context } from '@deepseek-ai/cordis';
 import type { ContentBlock } from '@deepseek-ai/dsh-llm';
 import { invariant } from '../contracts/index.js';
-import { privateEntry } from './filesystem-sandbox.js';
 import { redact } from '../api/security.js';
 import type { RuntimeTool } from './runtime-types.js';
 
@@ -14,10 +13,11 @@ const MAX_BYTES=10*1024*1024;
 interface ImageResult { kind:'rift-image'; mediaType:'image/png'|'image/jpeg'|'image/webp'|'image/gif'; data:string; name:string }
 function isImage(value:unknown):value is ImageResult {return !!value&&typeof value==='object'&&'kind' in value&&value.kind==='rift-image';}
 
-/** Host-selected roots only. Read a regular raster file, never execute or write it. */
+/** Host-selected roots only. Directory names (including hidden evidence folders)
+ * do not change image-read access. Read a regular raster file, never execute or write it. */
 export function createImageTool(roots:string[]):RuntimeTool {
-  const inside=(root:string,target:string)=>{const rel=path.relative(root,target);return !path.isAbsolute(rel)&&rel!=='..'&&!rel.startsWith('..'+path.sep)&&!rel.split(path.sep).some(p=>p.toLowerCase()==='.git'||privateEntry(p));};
-  return {name:'rift_view_image',description:'View a local PNG, JPEG, WebP or GIF as an image (not text). Read-only; max 10 MiB. Use a relative path in the assigned directory or an absolute path within an assigned repository/workspace. Does not capture screenshots or execute commands.',inputSchema:z.toJSONSchema(schema),execute:async(args,signal)=>{
+  const inside=(root:string,target:string)=>{const rel=path.relative(root,target);return !path.isAbsolute(rel)&&rel!=='..'&&!rel.startsWith('..'+path.sep);};
+  return {name:'rift_view_image',description:'View a local PNG, JPEG, WebP or GIF as an image (not text). Read-only; any subdirectory, including hidden screenshot/evidence directories; max 10 MiB. Use a relative path in the assigned directory or an absolute path within an assigned repository/workspace. Does not capture screenshots or execute commands.',inputSchema:z.toJSONSchema(schema),execute:async(args,signal)=>{
     signal.throwIfAborted();const input=schema.parse(args);
     invariant(!input.path.includes('\0')&&!input.path.split(/[\\/]/).some(p=>p==='..'),'UNAUTHORIZED','Image path must remain inside the assigned roots.');
     const bases=await Promise.all([...new Set(roots)].map(root=>realpath(root)));
