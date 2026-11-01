@@ -14,7 +14,7 @@ import { Copy, Empty, Field, Heading, Icon, Notice, Pill, time } from './App';
 import { LatestRequest, routeHref, taskHref } from './state';
 import { AgentEditor, LeadEditor } from './Configuration';
 import { errorText, mutate, request } from './api';
-import { ReplanEditor, TaskRetry } from './TaskActions';
+import { TaskRetry } from './TaskActions';
 import { ActivityTurn } from './ActivityTurn';
 import { ConnectionCatalogue } from './ConnectionCatalogue';
 import { TaskEvidence } from './TaskEvidence';
@@ -80,14 +80,9 @@ export function Repositories({ data }: { data: UiWorkspaceDetail }) {
     {data.integrations.filter(i => (data.repositories.length === 1 || data.tasks.find(t => t.id === i.taskId)?.repositoryId === repo.id) && i.candidatePath && !data.worktrees.some(w => w.path === i.candidatePath)).map(i => <div className="worktree-row" key={i.id}><div className="worktree-top"><h3>候选集成现场</h3><Pill>{status(i.status)}</Pill></div><Copy value={i.candidatePath!} /><dl className="compact-fields"><Field name="关联任务">{data.tasks.find(t => t.id === i.taskId)?.title ?? i.taskId}</Field><Field name="候选提交"><code>{i.candidateHead ?? '尚未记录'}</code></Field><Field name="检查记录">{i.checkIds.length} 条</Field></dl>{i.error && <p className="form-error">{i.error}</p>}</div>)}</div></article></Card>)}</div></>;
 }
 
-export function Tasks({ data, csrf, onChanged, taskId, workflowId }: { data: UiWorkspaceDetail; csrf: string; onChanged: () => void; taskId?: string; workflowId?: string }) {
+export function Tasks({ data, csrf, onChanged, taskId }: { data: UiWorkspaceDetail; csrf: string; onChanged: () => void; taskId?: string }) {
   const [filter, setFilter] = useState('all');
-  const [actionError, setActionError] = useState('');
-  const [actionBusy, setActionBusy] = useState(false);
-  const [confirmCancel, setConfirmCancel] = useState(false);
-  const workflow = workflowId || 'all';
-  const listHref = routeHref(data.workspace.id, 'tasks') + (workflowId ? `?workflow=${encodeURIComponent(workflowId)}` : '');
-  useEffect(() => { setConfirmCancel(false); setActionError(''); }, [workflowId]);
+  const listHref = routeHref(data.workspace.id, 'tasks');
   const [repository, setRepository] = useState('all');
   const [member, setMember] = useState('all');
   const [order, setOrder] = useState('record');
@@ -96,13 +91,13 @@ export function Tasks({ data, csrf, onChanged, taskId, workflowId }: { data: UiW
   const [cursors, setCursors] = useState([0]);
   const [remotePage, setRemotePage] = useState<{ key: string; after: number; tasks: UiTask[]; nextAfter: number | null; totalCount: number } | null>(null);
   const [pageError, setPageError] = useState(''); const taskRequests = useRef(new LatestRequest());
-  useEffect(() => { setTaskPage(0); setCursors([0]); }, [filter, workflow, repository, member, order]);
-  const serverKey = JSON.stringify([filter, workflow, repository, member, order]); const after = cursors[taskPage] ?? 0;
+  useEffect(() => { setTaskPage(0); setCursors([0]); }, [filter, repository, member, order]);
+  const serverKey = JSON.stringify([filter, repository, member, order]); const after = cursors[taskPage] ?? 0;
   useEffect(() => {
     if (!useServerPages) return;
     const token = taskRequests.current.begin(); const query = new URLSearchParams({ after: String(after), limit: '30' });
     if (filter !== 'all') query.set('status', filter === 'active' ? 'running,ready,validating,integrating' : filter === 'attention' ? 'failed,blocked,cancelled' : filter);
-    if (workflow !== 'all') query.set('workflowId', workflow); if (repository !== 'all') query.set('repositoryId', repository); if (member !== 'all') query.set('roleId', member);
+    if (repository !== 'all') query.set('repositoryId', repository); if (member !== 'all') query.set('roleId', member);
     request<{ tasks: UiTask[]; nextAfter: number | null; totalCount: number }>(`/workspaces/${encodeURIComponent(data.workspace.id)}/tasks?${query}`, { signal: token.signal }).then(value => { if (token.current()) { setRemotePage({ ...value, key: serverKey, after }); setPageError(''); } }, e => { if (token.current()) setPageError(errorText(e)); });
     return () => taskRequests.current.cancel();
   }, [data.workspace.id, data.snapshotCursor, useServerPages, serverKey, after]);
@@ -126,7 +121,7 @@ export function Tasks({ data, csrf, onChanged, taskId, workflowId }: { data: UiW
     });
     return () => controller.abort();
   }, [taskId, data.workspace.id, data.snapshotCursor, linkedRetry]);
-  const subset = (order === 'dependency' ? dependencyOrder(data.tasks) : data.tasks).filter(t => (workflow === 'all' || t.workflowId === workflow) && (repository === 'all' || t.repositoryId === repository) && (member === 'all' || t.roleId === member));
+  const subset = (order === 'dependency' ? dependencyOrder(data.tasks) : data.tasks).filter(t => (repository === 'all' || t.repositoryId === repository) && (member === 'all' || t.roleId === member));
   const filtered = subset.filter(t => filter === 'all' || (filter === 'active' ? ['running', 'ready', 'validating', 'integrating'].includes(t.status) : filter === 'attention' ? ['failed', 'blocked', 'cancelled'].includes(t.status) : t.status === filter));
   const currentPage = useServerPages ? taskPage : Math.min(taskPage, Math.max(0, Math.ceil(filtered.length / 30) - 1));
   const matchingRemote = remotePage?.key === serverKey && remotePage.after === after ? remotePage : null;
@@ -136,19 +131,13 @@ export function Tasks({ data, csrf, onChanged, taskId, workflowId }: { data: UiW
   const { task, outsidePage } = taskSelection(listed, linked, selection, taskId);
   const totalMatching = useServerPages ? matchingRemote?.totalCount ?? 0 : filtered.length;
   const remoteLoading = !taskId && useServerPages && !matchingRemote && !pageError && !linked;
-  const selectedWorkflow = data.workflows.find(w => w.id === workflow);
-  async function workflowAction(action: string) { if (!selectedWorkflow || actionBusy) return; setActionBusy(true); setActionError(''); try { await mutate(`/workspaces/${encodeURIComponent(data.workspace.id)}/workflows/${encodeURIComponent(selectedWorkflow.id)}/${action}`, csrf, action === 'cancel' ? {} : { expectedVersion: selectedWorkflow.version }); setConfirmCancel(false); onChanged(); } catch(e) { setActionError(errorText(e)); } finally { setActionBusy(false); } }
   return <div className="task-page"><div className="task-controls">
-    <Heading eyebrow="TASKS & ACCEPTANCE" title={selectedWorkflow?.goal || "任务队列"} subtitle="跟踪工作流的执行、依赖与验收，让每一步协作有据可查。" />
+    <Heading eyebrow="TASKS & ACCEPTANCE" title="任务队列" subtitle="跟踪工作流的执行、依赖与验收，让每一步协作有据可查。" />
     <div className="toolbar task-toolbar"><div className="filter-tabs" aria-label="任务状态筛选">{[['all', '全部'], ['active', '进行中'], ['attention', '需关注'], ['succeeded', '已通过']].map(([value, label]) => <Button variant="ghost" key={value} aria-pressed={filter === value} className={filter === value ? 'selected' : ''} onClick={() => setFilter(value)}>{label}</Button>)}</div><div className="task-extra-filters"><label><span>顺序</span><NativeSelect aria-label="顺序" value={order} onChange={e => setOrder(e.target.value)}><NativeSelectOption value="record">记录顺序</NativeSelectOption><NativeSelectOption value="dependency">依赖优先</NativeSelectOption></NativeSelect></label><label><span>仓库</span><NativeSelect aria-label="仓库" value={repository} onChange={e => setRepository(e.target.value)}><NativeSelectOption value="all">全部仓库</NativeSelectOption>{data.repositories.map(r => <NativeSelectOption key={r.id} value={r.id}>{r.canonicalPath.split(/[\\/]/).filter(Boolean).at(-1)}</NativeSelectOption>)}</NativeSelect></label><label><span>成员</span><NativeSelect aria-label="成员" value={member} onChange={e => setMember(e.target.value)}><NativeSelectOption value="all">全部成员</NativeSelectOption>{data.roles.map(r => <NativeSelectOption key={r.id} value={r.id}>{r.displayName || r.name}</NativeSelectOption>)}</NativeSelect></label></div></div>
-    {selectedWorkflow && <div className="workflow-context"><Pill>{status(selectedWorkflow.status)}</Pill><p>{selectedWorkflow.goal}</p><span className="muted">计划修订 {selectedWorkflow.planRevision}</span></div>}
-    {actionError && <Notice role="status">{actionError}</Notice>}
-    {selectedWorkflow && <ReplanEditor key={selectedWorkflow.id} data={data} workflowId={selectedWorkflow.id} csrf={csrf} onChanged={onChanged} />}
     {pageError && <Notice role="status">{pageError}</Notice>}
     {(totalMatching > 30 || currentPage > 0) && <div className="pagination"><Button variant="secondary" className="secondary" disabled={currentPage === 0} onClick={() => setTaskPage(currentPage - 1)}>上一页</Button><span>第 {currentPage + 1} 页 · 共 {totalMatching} 项匹配任务</span><Button variant="secondary" className="secondary" disabled={useServerPages ? matchingRemote?.nextAfter == null : (currentPage + 1) * 30 >= totalMatching} onClick={() => { if (useServerPages && matchingRemote?.nextAfter != null) setCursors(values => [...values.slice(0,currentPage + 1), matchingRemote.nextAfter!]); setTaskPage(currentPage + 1); }}>下一页</Button></div>}
-    {selectedWorkflow && data.capabilities.workflowActions.available && !['completed','cancelled','failed'].includes(selectedWorkflow.status) && <div className="workflow-actions"><Button variant="secondary" className="secondary" disabled={actionBusy} onClick={() => void workflowAction(selectedWorkflow.status === 'paused' ? 'resume' : 'pause')}>{selectedWorkflow.status === 'paused' ? '恢复工作流' : '暂停工作流'}</Button><Button variant="ghost" className="text-button" disabled={actionBusy} onClick={() => setConfirmCancel(true)}>取消工作流…</Button>{confirmCancel && <div className="cancel-confirm"><p>这会取消此工作流中的任务，并请求停止实际执行。清理未确认前仍会占用资源。</p><Button variant="secondary" className="secondary" onClick={() => setConfirmCancel(false)}>保留工作流</Button><Button variant="default" className="primary" disabled={actionBusy} onClick={() => void workflowAction('cancel')}>确认取消此工作流</Button></div>}</div>}
     </div>
-    {remoteLoading ? <div className="loading" role="status">正在读取这一页任务…</div> : !task && !taskId ? <Card asChild><div className="card"><Empty icon="tasks" title={data.tasks.length ? '这个筛选下没有任务' : '还没有执行任务'}>{data.tasks.length ? '切换筛选可查看其他任务。' : '工作流中的任务被记录后，将在这里呈现状态、依赖与验收依据。'}</Empty></div></Card> : <DetailLayout detailKey={taskId ?? ''} onBack={() => { location.hash = listHref; }} className="list-detail" list={<section className="task-list">{outsidePage && <section className="notice" aria-label="链接指定的任务"><div className="min-w-0"><p>链接指定的任务不在当前页的匹配结果中；下方列表仅显示当前筛选结果。</p><p className="[overflow-wrap:anywhere]"><code>{outsidePage.id}</code> · {outsidePage.title}</p><Button variant="ghost" onClick={() => { setSelection(null); location.hash = listHref; }}>清除链接选择</Button></div></section>}<section className="task-list" aria-label="任务列表">{!listed.length && <p>当前页没有匹配任务，请切换筛选。</p>}{listed.map(t => <Card key={t.id} asChild><Button variant="ghost" data-detail-select className={`card task-card selectable-card ${task?.id === t.id ? 'is-selected' : ''}`}  onClick={() => { setSelection(t.id); location.hash = taskHref(data.workspace.id, t.id, workflowId); }} aria-pressed={task?.id === t.id}><div className="task-meta"><code>{t.id}</code><Pill active={t.status === 'running'}>{status(t.status)}</Pill></div><h2>{t.title}</h2><p>{taskIssueSummary(t) || t.instructions}</p><div className="task-card-bottom"><span>{data.roles.find(r => r.id === t.roleId)?.displayName ?? '尚未指派'}</span><span>{t.dependsOn.length} 项依赖 · 尝试 {t.attempt}</span></div></Button></Card>)}</section></section>}>
+    {remoteLoading ? <div className="loading" role="status">正在读取这一页任务…</div> : !task && !taskId ? <Card asChild><div className="card"><Empty icon="tasks" title={data.tasks.length ? '这个筛选下没有任务' : '还没有执行任务'}>{data.tasks.length ? '切换筛选可查看其他任务。' : '工作流中的任务被记录后，将在这里呈现状态、依赖与验收依据。'}</Empty></div></Card> : <DetailLayout detailKey={taskId ?? ''} onBack={() => { location.hash = listHref; }} className="list-detail" list={<section className="task-list">{outsidePage && <section className="notice" aria-label="链接指定的任务"><div className="min-w-0"><p>链接指定的任务不在当前页的匹配结果中；下方列表仅显示当前筛选结果。</p><p className="[overflow-wrap:anywhere]"><code>{outsidePage.id}</code> · {outsidePage.title}</p><Button variant="ghost" onClick={() => { setSelection(null); location.hash = listHref; }}>清除链接选择</Button></div></section>}<section className="task-list" aria-label="任务列表">{!listed.length && <p>当前页没有匹配任务，请切换筛选。</p>}{listed.map(t => <Card key={t.id} asChild><Button variant="ghost" data-detail-select className={`card task-card selectable-card ${task?.id === t.id ? 'is-selected' : ''}`}  onClick={() => { setSelection(t.id); location.hash = taskHref(data.workspace.id, t.id); }} aria-pressed={task?.id === t.id}><div className="task-meta"><code>{t.id}</code><Pill active={t.status === 'running'}>{status(t.status)}</Pill></div><h2>{t.title}</h2><p>{taskIssueSummary(t) || t.instructions}</p><div className="task-card-bottom"><span>{data.roles.find(r => r.id === t.roleId)?.displayName ?? '尚未指派'}</span><span>{t.dependsOn.length} 项依赖 · 尝试 {t.attempt}</span></div></Button></Card>)}</section></section>}>
       {taskId && (targetState?.error || targetState?.loading || !task) && <Card className="card detail-card" role="region" aria-label="链接任务读取状态">
         <p className="[overflow-wrap:anywhere]">链接指定任务：<code>{taskId}</code></p>
         <p role="status">{targetState?.error ? `${task ? '刷新失败，保留此任务上次读取的数据。' : '未能读取此任务。'}${targetState.error}` : task ? '正在刷新此任务，显示上次读取的数据…' : '正在读取链接指定的任务…'}</p>

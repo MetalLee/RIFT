@@ -54,11 +54,35 @@ and exact bounding rectangles are retained for every checked route/viewport.
 Task queue cards, independent panes and auto-hiding scrollbars:
 
 ```sh
-UI_CHECK_FILTER='^(task-queue-.*|task-workflow-link-context|task-filter-pagination|task-target-.*|task-history-.*|detail-tasks-.*|deep-links-evidence|narrow-deep-link-keyboard|layout-tasks-.*|tasks-(390|768|1280))$' UI_EVIDENCE_DIR="$PWD/.runtime-evidence/task-queue" node scripts/ui-regression/check.mjs
+UI_CHECK_FILTER='^(task-queue-.*|task-all-workflows|task-filter-pagination|task-target-.*|task-history-.*|detail-tasks-.*|deep-links-evidence|narrow-deep-link-keyboard|layout-tasks-.*|tasks-(390|768|1280))$' UI_EVIDENCE_DIR="$PWD/.runtime-evidence/task-queue" node scripts/ui-regression/check.mjs
 ```
 
 Compares task/Skill normal, hover and selected computed surfaces; checks independent
-pane scrolling, idle scrollbar hiding, single outer frame, direct filters at
+pane scrolling, CSS hover/focus scrollbar visibility and keyboard scrolling, single outer frame, direct filters at
 320/375/768/1100px and normal document scrolling after navigation to Skills.
-Workflow context uses `#/workspace/<id>/tasks?workflow=<id>`; task selection and
-return preserve it without a workflow dropdown. Includes local/server pagination.
+Tasks from all workflows share the list; task links retain only the existing
+`?task=<id>` contract. Includes local/server pagination and repository/member/status
+filters; task list API requests must not send a workflow filter.
+
+### Scope-convergence verification (2026-11-01)
+
+Task `task-05fe7360-225b-4b1d-ab9b-53338a0392a4`, run
+`run-4f6e5050-96ae-4e9a-9b7e-66aa60ecc731`, based on `1ca1cb1`:
+
+- `pnpm typecheck:ui` and `pnpm build:ui` passed (build retains the >500 kB chunk warning).
+- `pnpm exec vitest run ui/src`: 26 files, 200 tests passed.
+- The task-queue filter above: 20 browser checks passed in Chromium 149.0.7827.55;
+  38 screenshots, no page errors or unexpected requests. Includes settings tab
+  reload/back/forward in `deep-links-evidence`.
+- `scripts/ui-secondary-reuse-check.mjs`: 15 button-state samples passed;
+  workflow-only replan controls are no longer reachable on the task page.
+- Local artifacts: `.runtime-evidence/task-queue-scope-final/measurements.json`
+  and `screens/`; secondary-button report/screens in
+  `.runtime-evidence/task-queue-secondary/` (relative to this task checkout).
+
+The first browser run exposed a test synchronization issue: native PageDown
+animation was still moving the previously tested pane. The final test waits for
+`scrollend` before comparing pane positions. No application timer was added.
+Browser data is mocked; no backend or real-device acceptance is claimed. The
+image-view tool rejected this checkout path, so screenshots were captured but
+not manually visually reviewed. Independent Host review remains outstanding.
