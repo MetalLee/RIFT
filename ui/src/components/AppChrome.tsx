@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { UiWorkspaceDetail, UiWorkspaceList } from '@rift/protocol';
 import { routeHref, type Page } from '../state';
 import { Icon } from './Icon';
@@ -17,6 +17,24 @@ export function AppChrome({ workspaceId, page, list, current, connected, stale, 
   workspaceId: string; page: Page; list: UiWorkspaceList | null; current: UiWorkspaceDetail | null;
   connected: boolean; stale: boolean; syncingError: boolean; onNewChat: () => void; children: ReactNode;
 }) {
+  useEffect(() => {
+    const timers = new Map<Element, ReturnType<typeof setTimeout>>();
+    const onScroll = (event: Event) => {
+      const target = event.target === document ? document.documentElement : event.target;
+      if (!(target instanceof Element)) return;
+      clearTimeout(timers.get(target));
+      target.classList.add('is-scrolling');
+      timers.set(target, setTimeout(() => {
+        target.classList.remove('is-scrolling');
+        timers.delete(target);
+      }, 900));
+    };
+    document.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    return () => {
+      document.removeEventListener('scroll', onScroll, true);
+      for (const [target, timer] of timers) { clearTimeout(timer); target.classList.remove('is-scrolling'); }
+    };
+  }, []);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState('');
   const selected = list?.workspaces.find(w=>w.id===workspaceId);

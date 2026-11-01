@@ -50,3 +50,15 @@ Covers all eight routes and all four settings tabs at 390/768/1280/1920px.
 Checks the common main/heading/body/topbar edges, centred chat reading width,
 transcript/composer separation, input bounds and document overflow. Screenshots
 and exact bounding rectangles are retained for every checked route/viewport.
+
+Task queue cards, independent panes and auto-hiding scrollbars:
+
+```sh
+UI_CHECK_FILTER='^(task-queue-.*|task-workflow-link-context|task-filter-pagination|task-target-.*|task-history-.*|detail-tasks-.*|deep-links-evidence|narrow-deep-link-keyboard|layout-tasks-.*|tasks-(390|768|1280))$' UI_EVIDENCE_DIR="$PWD/.runtime-evidence/task-queue" node scripts/ui-regression/check.mjs
+```
+
+Compares task/Skill normal, hover and selected computed surfaces; checks independent
+pane scrolling, idle scrollbar hiding, single outer frame, direct filters at
+320/375/768/1100px and normal document scrolling after navigation to Skills.
+Workflow context uses `#/workspace/<id>/tasks?workflow=<id>`; task selection and
+return preserve it without a workflow dropdown. Includes local/server pagination.
