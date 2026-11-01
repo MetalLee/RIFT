@@ -78,11 +78,11 @@ it('isolates writable candidate inputs, outputs, HOME/cache, /tmp and ports for 
   const commands = ['a', 'b'].map(id => node(id, `
     const fs=require('fs'),path=require('path'),assert=require('assert');
     assert.equal(fs.readFileSync('input.txt','utf8'),'candidate');
-    for(const file of ['out.txt','/tmp/check-marker',path.join(process.env.HOME,'cache-marker')]){assert(!fs.existsSync(file));fs.writeFileSync(file,${JSON.stringify(id)});}
+    for(const file of ['out.txt',path.join(require('os').tmpdir(),'check-marker'),path.join(process.env.HOME,'cache-marker')]){assert(!fs.existsSync(file));fs.writeFileSync(file,${JSON.stringify(id)});}
     fs.writeFileSync('input.txt',${JSON.stringify(id)});
-    const server=require('net').createServer();server.listen(18473,'0.0.0.0',()=>setTimeout(()=>{
+    const server=require('net').createServer();const finish=()=>setTimeout(()=>{
       assert.equal(fs.readFileSync('input.txt','utf8'),${JSON.stringify(id)});server.close();console.log(${JSON.stringify(id)});
-    },500));
+    },500);if(process.platform==='darwin'){server.once('error',error=>{assert(['EPERM','EACCES'].includes(error.code));finish();});server.listen(18473,'127.0.0.1');}else server.listen(18473,'0.0.0.0',finish);
   `));
   const git = f.service(commands, { mode: 'dag' }), candidate = await f.prepare(git, 'isolate');
   expect(candidate.readiness!.status).toBe('ready');
@@ -102,7 +102,7 @@ it('isolates writable candidate inputs, outputs, HOME/cache, /tmp and ports for 
 
 it('enforces declared read-only sharing with an actual read-only mount', async () => {
   const f = await fixture();
-  const command = node('ro', `const fs=require('fs'),assert=require('assert');assert.throws(()=>fs.writeFileSync('input.txt','corrupt'),e=>e.code==='EROFS');console.log(fs.readFileSync('input.txt','utf8'));`, { isolation: 'read_only' });
+  const command = node('ro', `const fs=require('fs'),assert=require('assert');assert.throws(()=>fs.writeFileSync('input.txt','corrupt'),e=>['EROFS','EACCES','EPERM'].includes(e.code));console.log(fs.readFileSync('input.txt','utf8'));`, { isolation: 'read_only' });
   const candidate = await f.prepare(f.service([command], { mode: 'dag' }), 'ro');
   expect(candidate.readiness!.status).toBe('ready'); expect(candidate.checks![0]!.stdout.trim()).toBe('candidate');
 });

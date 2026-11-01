@@ -2,7 +2,7 @@
 
 ## 当前配置（2026-10-28）
 
-权限版本为 `workspace-repositories-v10-explicit-agent-sandbox`。Host 通过环境变量 `RIFT_AGENT_SANDBOX` 选择执行模式：未配置时为 `sandboxed`，显式设置 `unrestricted` 后，关联工作区的 Lead、聊天成员、正式开发、review 和仓库 analysis 共用 Host 权限。未知值报错，不隐式降级。
+权限版本为 `workspace-repositories-v14-host-http-egress`。Host 通过环境变量 `RIFT_AGENT_SANDBOX` 选择执行模式：未配置时为 `sandboxed`，显式设置 `unrestricted` 后，关联工作区的 Lead、聊天成员、正式开发、review 和仓库 analysis 共用 Host 权限。未知值报错，不隐式降级。
 
 ```ini
 # /etc/systemd/system/rift.service.d/agent-permissions.conf
@@ -15,6 +15,14 @@ Environment=RIFT_AGENT_SANDBOX=unrestricted
 取消、超时、子进程清理、任务版本和精确提交验收保持有效。review 可以运行验收命令，但必须保持候选源码及历史不变。切回 `sandboxed` 并重启恢复隔离执行；已启动的执行不会在中途切换权限。
 
 审核恢复同时支持基础设施失败的 reviewer Run，以及正常结束但 `verdict=blocked` 的最新审核。后者必须对应当前 attempt、source 和已阻塞 integration 的候选提交。`changes_requested` 仍走开发返工；恢复只创建新的检查/审核，不直接批准旧候选，浏览器重试与管理 API 一致。
+
+## 2026-11-01 命令出网与权限说明修复
+
+命令代理已移除仅公网目的地址限制：HTTP(S) 的 80/443 端口可以访问公网、内网及 Host 地址，仍经 Host DNS 解析并固定连接地址。文件系统授权、凭据文件隔离、取消与清理机制保持原样。历史章节中“拒绝内网/Host 网络”的描述不再代表当前命令代理策略；GitHub `source read` 独立传输仍按其原有来源约束执行。
+
+原生 Codex 的 `read-only` 标记约束原生工具，不能用来判断 Host `rift_exec_command` 是否可写。普通讨论和开发轮次现在明确注入可写能力与 Skill 安装目录；正式只读审查/分析不获得此说明或命令工具。权限版本变化会使后续轮次使用新会话。
+
+本次故障轮次为 `turn-9ce5d855-7125-4a08-aba0-526f9f900443`：已下发并调用 `rift_exec_command`，仅执行 curl，返回 CONNECT 403；没有文件写入尝试或写入拒绝。`skills.deepwisdomai.com` 在 Host 解析到 `172.31.0.189`，触发旧的仅公网限制。代理现在对 DNS 失败返回 502，对无效目标/端口保留 403，并提供 Proxy-Status 诊断头。
 
 ## 历史配置与证据
 
@@ -75,3 +83,15 @@ Host 的 legacy Lead 入口也使用相同的关联仓库命令 scope。部署�
 另用真实二进制对正式 review/analysis 发送恶意 `exec` 包装调用，8 项独立负例检查通过：调用均被拒、Host 回调与本机 HTTP 触达为 0、无文件副作用，正常 `rift_read_file` 仍可用。见 [正式只读包装隔离证据](evidence/native-code-mode-readonly-independent-probe.json)。
 
 修复前仓库权限版本的完整回归为 330 项通过、1 项平台跳过、0 失败；类型检查与生产构建通过。Host 已在无活动执行时备份并重启（PID 24588），HTTP/doctor 返回 200，数据库完整性 ok、外键错误为 0，默认新模式继续开启。见 [最终集成证据](evidence/repository-permissions-final-validation.json) 与 [完整测试](evidence/repository-permissions-tests.json)。GitHub 登录按用户选择延后，本次只提交本地 main 全部变更。
+
+## macOS 执行隔离
+
+macOS 使用系统 `sandbox-exec`（Seatbelt）执行检查与受限命令，Linux 继续使用 bubblewrap。两者都只开放授权仓库、独立 HOME 和只读 Git 元数据，屏蔽凭据与其他工作区，并清除继承环境中的密钥。macOS 的系统临时目录别名（`/var` 与 `/private/var`）按真实路径校验；Node/npm 支持 Homebrew 安装路径。
+
+Seatbelt 不提供 Linux 网络命名空间：macOS 沙箱仅允许连接 Host 的校验代理，禁止直接连接 Host 服务以及创建监听套接字；需要监听本地端口的检查不适用于此沙箱模式。临时文件必须通过 `TMPDIR` 或运行时的临时目录 API 创建，不能写死 `/tmp`。只读写入被拒绝时，macOS 可返回 `EPERM`，Linux 可返回 `EROFS`。
+
+## Skill 来源
+
+RIFT 原生 Codex 会话只使用 RIFT 显式绑定并注入的版本化 Skill。每次启动或续接前，Host 重新枚举本地 Skill，并通过该会话的 `skills.config` 将它们全部禁用；枚举失败时不启动模型请求。不会修改个人 `~/.codex/config.toml`，已有登录认证和模型连接继续复用。DSH 已通过工具范围限制隐藏其原生 `skill` 工具及对应目录，RIFT 共享 Skill 仍由执行快照注入。
+
+此权限版本会为下一次执行建立新的原生会话，避免续接包含旧本地 Skill 的上下文；RIFT 对话记录和共享 Skill 绑定保留。此规则控制运行时自动加载，不阻止用户通过已授权的文件工具显式要求读取某个文件。

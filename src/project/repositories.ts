@@ -1,3 +1,4 @@
+import { prepareSubmodules, submodulesPresent } from '../git/submodules.js';
 import type { Repository, WorkspaceWorktree } from '@rift/protocol';
 export type { Repository, WorkspaceWorktree } from '@rift/protocol';
 import path from 'node:path';
@@ -73,7 +74,7 @@ export class RepositoryService {
       await gitOk(repo.canonicalPath, ['check-ref-format', '--branch', branch]);
       this.store.exec('INSERT INTO workspace_worktrees(id,workspace_id,repository_id,origin,path,base_commit,branch,status,created_at,runtime_boot_id) VALUES(?,?,?,?,?,?,?,?,?,?)', worktreeId, workspaceId, repositoryId, input.origin, directory, head, branch, 'creating', now(),this.bootIdentity);
       try {
-        await withMetadataLock(repo.commonGitDir, async () => { await mkdir(path.dirname(directory), { recursive: true }); await gitOk(repo.canonicalPath, ['worktree', 'add', '-b', branch!, '--', directory, head]); });
+        await withMetadataLock(repo.commonGitDir, async () => { await mkdir(path.dirname(directory), { recursive: true }); await gitOk(repo.canonicalPath, ['worktree', 'add', '-b', branch!, '--', directory, head]); await prepareSubmodules(repo.canonicalPath, directory); });
         this.store.exec("UPDATE workspace_worktrees SET status='active',version=version+1 WHERE id=?", worktreeId);
         this.operationReceipts.add(worktreeId);
       } catch (error) { if(!/\(124\)|timed out/i.test(String(error)))this.operationReceipts.add(worktreeId);this.store.exec("UPDATE workspace_worktrees SET status='creation_unknown',version=version+1 WHERE id=?", worktreeId); throw error; }
@@ -134,6 +135,7 @@ export class RepositoryService {
         invariant(actual.commonGitDir===repo.commonGitDir,'WORKTREE_OWNERSHIP','Worktree repository changed.');
         invariant((targetEntry.branch??'').replace(/^refs\/heads\//,'')===(tree.branch??'').replace(/^refs\/heads\//,''),'WORKTREE_OWNERSHIP','Worktree branch does not match the saved intent.');
         await gitOk(target,['merge-base','--is-ancestor',tree.baseCommit,'HEAD']);
+        invariant(await submodulesPresent(target), 'SUBMODULE_NOT_PREPARED', 'Submodule preparation is incomplete or changed; inspect the retained worktree before reconciliation.');
         this.store.transaction(()=>{invariant(this.store.require<{version:number}>('SELECT version FROM workspace_worktrees WHERE id=?',tree.id).version===expectedVersion,'VERSION_CONFLICT','Worktree changed during verification.');this.store.exec("UPDATE workspace_worktrees SET origin='managed',path=?,pending_path=NULL,status='active',version=version+1 WHERE id=?",target,tree.id);});
       }else if(!targetExists){
         if(tree.pendingPath)invariant(registered.some(entry=>normalize(entry.path)===normalize(tree.path)),'WORKTREE_STATE_UNKNOWN','Neither the old nor new registered worktree proves the move outcome.');

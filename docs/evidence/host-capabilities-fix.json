@@ -1,0 +1,38 @@
+{
+  "date": "2026-11-01",
+  "incidentTurn": "turn-9ce5d855-7125-4a08-aba0-526f9f900443",
+  "findings": {
+    "hostShellProvided": true,
+    "hostShellCalled": true,
+    "fileWriteAttempted": false,
+    "originalCurlExitCode": 56,
+    "originalCurlError": "CONNECT tunnel failed, response 403",
+    "destination": "skills.deepwisdomai.com",
+    "resolvedAddress": "172.31.0.189"
+  },
+  "changes": [
+    "Explicit Host write capability and workspace installation directory instructions",
+    "Removed public-only destination filtering from command HTTP(S) proxy; retained ports 80/443",
+    "Proxy-Status diagnostics and correct CONNECT body length",
+    "Permission version v14-host-http-egress rotates subsequent native sessions"
+  ],
+  "validation": {
+    "testsPassed": 52,
+    "testsSkipped": 1,
+    "typecheck": "passed",
+    "build": "passed",
+    "liveModel": "gpt-6-astra",
+    "nativeSandbox": "read-only",
+    "hostTool": "rift_exec_command",
+    "fileWriteVerified": true,
+    "internalHttpsStatus": 200,
+    "downloadedPageBytes": 159900
+  },
+  "deployment": {
+    "pid": 32408,
+    "doctor": "passed",
+    "activeExecutionsBeforeRestart": 0,
+    "backup": "/Users/deepwisdomsz/.rift-home/backups/before-host-egress-20261101-164434.db"
+  },
+  "scope": "No Skill installed and no original user message replayed; probe files removed. Existing workspace changes preserved."
+}

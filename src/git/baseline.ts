@@ -10,12 +10,12 @@ import type { CheckPlan, CheckCommand } from './types.js';
 /** environmentId is a Host attestation of immutable tools/external inputs, not agent input. */
 export async function baselineIdentity(input: { workspaceId: string; repositoryId: string; commonGitDir: string; repositoryPath: string; baselineCommit: string; planFingerprint: string; command: CheckCommand; checkPlan?: CheckPlan; commands?: readonly CheckCommand[]; environmentCache?: import('./dependency-environment.js').EnvironmentCacheOptions }): Promise<BaselineIdentity> {
   const { command } = input;
-  const candidates = path.isAbsolute(command.executable) ? [command.executable] : command.executable.includes('/') ? [] : ['/usr/local/bin', '/usr/bin', '/bin'].map(directory => path.join(directory, command.executable));
+  const candidates = path.isAbsolute(command.executable) ? [command.executable] : command.executable.includes('/') ? [] : [path.dirname(process.execPath), '/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin'].map(directory => path.join(directory, command.executable));
   let executable: string | undefined;
   for (const candidate of candidates) {
     try { executable = await realpath(candidate); break; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
   }
-  if (!executable || !['/usr/', '/bin/'].some(root => executable!.startsWith(root)) || !(await stat(executable)).isFile()) throw new Error('BASELINE_ENVIRONMENT_UNVERIFIABLE');
+  if (!executable || !['/usr/', '/bin/', ...(process.platform==='darwin'?['/opt/homebrew/','/Library/Developer/']:[])].some(root => executable!.startsWith(root)) || !(await stat(executable)).isFile()) throw new Error('BASELINE_ENVIRONMENT_UNVERIFIABLE');
   const hash = createHash('sha256');
   for await (const chunk of createReadStream(executable)) hash.update(chunk);
   return {

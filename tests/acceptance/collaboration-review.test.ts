@@ -21,7 +21,8 @@ const invoke=async<T=unknown>(input:RuntimeTurnInput,name:string,args:unknown)=>
 };
 interface Delegation {workflowId:string;taskId:string;requestId:string;messageId:string;receiptMessageId:string;recipientAgentId:string;state:string}
 interface Delivery {messageId:string;inboxId:string;state:string}
-const taskCall=(calls:Call[],taskId:string)=>calls.find(call=>call.input.instructions.startsWith('You are executing a registered text-only')&&JSON.parse(call.input.messages[0]!.content).taskId===taskId);
+const isTaskCall=(call:Call,taskId?:string)=>{try{const envelope=JSON.parse(call.input.messages[0]!.content);return typeof envelope.taskId==='string'&&(taskId===undefined||envelope.taskId===taskId)&&envelope.runId===call.input.turnId;}catch{return false;}};
+const taskCall=(calls:Call[],taskId:string)=>calls.find(call=>isTaskCall(call,taskId));
 
 async function fixture(mode:boolean=true) {
   const home=await mkdtemp(path.join(tmpdir(),'rift-collaboration-review-'));
@@ -226,8 +227,8 @@ describe('Independent C2 acceptance: Run messages and immutable inboxes',()=>{
       expect(captured.map(message=>message.messageId)).toEqual([a.messageId]);
       expect(runA.input.messages[0]!.content).toBe(originalA);expect(runB.input.messages[0]!.content).toBe(originalB);
       runB.finish({text:'B analysis complete.',stopReason:'completed'});
-      await until(()=>f.calls.some(call=>call.input.agentId===f.developers[1]!.id&&!call.input.instructions.startsWith('You are executing a registered text-only')));
-      const reply=f.calls.find(call=>call.input.agentId===f.developers[1]!.id&&!call.input.instructions.startsWith('You are executing a registered text-only'))!;
+      await until(()=>f.calls.some(call=>call.input.agentId===f.developers[1]!.id&&!isTaskCall(call)));
+      const reply=f.calls.find(call=>call.input.agentId===f.developers[1]!.id&&!isTaskCall(call))!;
       expect(reply.input.session!.threadId).toBeUndefined();
       expect(reply.input.messages.at(-1)!.content).toContain(question.messageId);
       expect(reply.input.messages.at(-1)!.content).toContain(`Source agent ${f.developers[0]!.id}`);
@@ -243,8 +244,8 @@ describe('Independent C2 acceptance: Run messages and immutable inboxes',()=>{
       await until(()=>f.host.store.task(a.taskId).status==='blocked'&&f.host.store.run(runA.input.turnId).cleanupStatus==='confirmed');
       const repair=await invoke<{version:number}>(f.lead.input,'rift_task_retry',{taskId:a.taskId,expectedVersion:f.host.store.task(a.taskId).version,reason:'Apply the newly received task supplement'});
       await invoke(f.lead.input,'rift_task_dispatch',{taskId:a.taskId,expectedVersion:repair.version,idempotencyKey:'repair-dispatch'});
-      await until(()=>f.calls.filter(call=>call.input.instructions.startsWith('You are executing a registered text-only')&&JSON.parse(call.input.messages[0]!.content).taskId===a.taskId).length===2);
-      const repaired=f.calls.filter(call=>call.input.instructions.startsWith('You are executing a registered text-only')&&JSON.parse(call.input.messages[0]!.content).taskId===a.taskId)[1]!;
+      await until(()=>f.calls.filter(call=>isTaskCall(call,a.taskId)).length===2);
+      const repaired=f.calls.filter(call=>isTaskCall(call,a.taskId))[1]!;
       // A repair checkout changes the native permission boundary. The Host
       // carries prior evidence and inbox context into a fresh native thread.
       expect(repaired.input.session!.threadId).toBeUndefined();

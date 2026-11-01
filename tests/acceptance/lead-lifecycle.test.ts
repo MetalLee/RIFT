@@ -1,3 +1,4 @@
+import { leadPlanningPolicy } from '../../src/task/planning-policy.js';
 import { describe, expect, it, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -31,6 +32,7 @@ describe('independent Lead lifecycle management', () => {
     try {
       const results = await Promise.all([f.service.startLead(f.workflow.id), f.service.startLead(f.workflow.id)]);
       expect(f.create).toHaveBeenCalledTimes(1);
+      expect(f.handles[0]!.agent.followup.mock.calls[0]![0].content[0].text).toContain(leadPlanningPolicy);
       expect(new Set(results.map(result => result.leadSessionId)).size).toBe(1);
       expect(f.service.store.events(f.workflow.id).filter(event => event.type === 'lead.attached')).toHaveLength(1);
     } finally { await f.close(); }

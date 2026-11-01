@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import type { Context } from '@deepseek-ai/cordis';
 import type { CheckEvidence, TaskEvidence } from '@rift/protocol';
 import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { realpath, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { RiftHostService } from '../../src/api/host-service.js';
@@ -24,7 +24,7 @@ async function eventually(predicate: () => boolean) {
 }
 
 async function fixture() {
-  const root = await mkdtemp(path.join(tmpdir(), 'rift-combined-recovery-'));
+  const root = await realpath(await mkdtemp(path.join(tmpdir(), 'rift-combined-recovery-')));
   cleanups.push(() => rm(root, { recursive: true, force: true }));
   const repo = path.join(root, 'repo'); await mkdir(repo);
   await gitOk(repo, ['init', '-b', 'main']);

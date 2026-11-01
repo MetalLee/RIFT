@@ -131,7 +131,7 @@ node dist/cli/main.js report --home D:\RiftHome --workflow <workflowId> --json
 
 新建 Workspace 默认配置一个 Developer（`developer-a`）、一个 Lead 和一个 Reviewer，成员数与 Host 开发预算独立；已有配置保留，也可手动添加成员或提交显式角色配置。Lead 只能调用八个 `rift_*` 协作工具（新增 `rift_plan_replan`）。Developer 在独立 attempt worktree 执行；成功开发自动进入串行集成队列，检查及精确候选审查后才更新 `refs/heads/rift/...`。不会 push 或更新用户默认分支。
 
-`--no-lead` 只创建业务 Workflow，不调用模型，适合管理测试。`plan --workflow ID --file plan.json` 接受 `expectedRevision`、`tasks`；任务需声明 `kind/title/instructions/expectedPaths`，可指定 `id/roleName/dependsOn/acceptanceCriteria`。开发派发由 Lead 工具或本地 API 请求。
+`--no-lead` 只创建业务 Workflow，不调用模型，适合管理测试。`plan --workflow ID --file plan.json` 接受 `expectedRevision`、`tasks`；任务需声明 `kind/title/instructions`，可指定 `id/roleName/dependsOn/acceptanceCriteria`；`expectedPaths` 是可选展示元数据，不限制文件、不参与调度。按功能拆分、任务说明与验收条件见[功能拆分与验收](feature-planning.md)。开发派发由 Lead 工具或本地 API 请求。
 
 所有写命令支持 `--key`，同一个键及同样输入返回同一结果；不同输入复用同一键被拒绝。发生未知启动结果时先查询，不要换键盲目重试。`retry`、`pause`、`resume` 可显式传 `--version`；省略时客户端查询当前版本再写入，服务端仍检测竞争。
 

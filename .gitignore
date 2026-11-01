@@ -16,3 +16,6 @@ endpoint.json
 *.db
 *.db-shm
 *.db-wal
+
+# macOS directory metadata
+.DS_Store

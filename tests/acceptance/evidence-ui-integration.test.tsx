@@ -2,7 +2,7 @@ import React from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { realpath, mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -21,7 +21,7 @@ import { registerCredentialRedaction } from '../../src/api/security.js';
 import { mutate, request } from '../../ui/src/api';
 import { readTaskEvidence } from '../../ui/src/task-evidence';
 import { EvidenceContent } from '../../ui/src/TaskEvidence';
-import { writeOfflineNpmFixture } from '../git/npm-fixture.js';
+import { writeOfflineNpmFixture, removeReadonlyFixture } from '../git/npm-fixture.js';
 import type { EnvironmentCacheOptions } from '../../src/git/dependency-environment.js';
 
 const exec = promisify(execFile);
@@ -42,8 +42,8 @@ const passing: CheckCommand[] = [{ id: 'unit', executable: process.execPath, arg
 
 async function fixture(checks: CheckCommand[], checkPlan?: CheckPlan, npm = false) {
   let environmentCache: EnvironmentCacheOptions | undefined = npm ? { enabled: true, maxBytes: 1_000_000 } : undefined;
-  const root = await mkdtemp(path.join(tmpdir(), 'rift-evidence-ui-integration-'));
-  cleanups.push(() => rm(root, { recursive: true, force: true }));
+  const root = await realpath(await mkdtemp(path.join(tmpdir(), 'rift-evidence-ui-integration-')));
+  cleanups.push(() => removeReadonlyFixture(root));
   const repo = path.join(root, '真实 仓库'); await mkdir(repo);
   await gitOk(repo, ['init', '-b', 'main']);
   await gitOk(repo, ['config', 'user.name', 'Test']); await gitOk(repo, ['config', 'user.email', 'test@localhost']);

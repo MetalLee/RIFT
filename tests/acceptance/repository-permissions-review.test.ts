@@ -24,6 +24,7 @@ function protocol(mode:NativeCodexOptions['mode'],alter?:(reply:Record<string,an
   peer.onRequest(async(method,params)=>{
     requests.push({method,params});
     if(method==='initialize')return{};
+    if(method==='skills/list')return{data:[{cwd:(params.cwds as string[])[0],errors:[],skills:[]}]};
     if(method==='config/read')return{config:{mcp_servers:{desktop_authority:{command:'must-not-run'}}}};
     if(method==='thread/start'||method==='thread/resume'){
       const config=params.config as Record<string,unknown>;
@@ -101,7 +102,7 @@ describe('Independent workspace repository permissions',()=>{
       const roots=await nativeRepositoryRoots(linked,f.repositories.slice(0,2),new AbortController().signal);
       const canonical=(value:string)=>path.resolve(value).toLowerCase();
       const actual=roots.map(canonical);
-      for(const root of [linked,...f.repositories.slice(0,2),path.join(f.repositories[0]!,'.git'),path.join(f.repositories[0]!,'.git','worktrees','linked'),path.join(f.repositories[1]!,'.git')])expect(actual).toContain(canonical(root));
+      for(const root of [linked,...f.repositories.slice(0,2),path.join(f.repositories[0]!,'.git'),path.join(f.repositories[0]!,'.git','worktrees','linked'),path.join(f.repositories[1]!,'.git')])expect(actual).toContain(canonical(await realpath(root)));
       expect(actual).toHaveLength(6);expect(actual).not.toContain(canonical(f.home));expect(actual).not.toContain(canonical(f.repositories[2]!));
     }finally{await f.close();}
   });
@@ -174,7 +175,7 @@ describe('Independent workspace repository permissions',()=>{
     const shell=await createRepositoryShell(subprocess,{cwd:f.repositories[0]!,repositoryAccess:{repositoryPaths:f.repositories.slice(0,2)},signal:new AbortController().signal});
     try{
       await shell.tool.execute({cmd:'git status --porcelain'},new AbortController().signal);
-      expect(spec!.argv[0]).toBe('/usr/bin/bwrap');expect(spec!.argv).toContain('--unshare-all');expect(spec!.argv).toContain('--clearenv');expect(spec!.argv).toContain('--bind');expect(spec!.argv).not.toContain('--share-net');
+      if(process.platform==='darwin'){expect(spec!.argv).toContain('/usr/bin/sandbox-exec');expect(spec!.argv).toContain('-i');expect(spec!.argv.join(' ')).toContain('(deny default)');}else{ expect(spec!.argv[0]).toBe('/usr/bin/bwrap');expect(spec!.argv).toContain('--unshare-all');expect(spec!.argv).toContain('--clearenv');expect(spec!.argv).toContain('--bind');expect(spec!.argv).not.toContain('--share-net'); }
       await expect(shell.tool.execute({cmd:'git status',cwd:f.repositories[2]},new AbortController().signal)).rejects.toMatchObject({code:'REPOSITORY_SCOPE'});
       expect(spawns).toBe(1);await shell.dispose();
       await expect(shell.tool.execute({cmd:'git status'},new AbortController().signal)).rejects.toMatchObject({code:'TURN_STOPPED'});expect(spawns).toBe(1);

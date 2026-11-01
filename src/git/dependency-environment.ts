@@ -1,3 +1,4 @@
+import { realpathSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { chmod, copyFile, lstat, mkdir, open, readFile, readdir, readlink, realpath, rename, rm, symlink, unlink } from 'node:fs/promises';
 import { constants } from 'node:fs';
@@ -71,6 +72,7 @@ async function tree(directory: string, options: { copyTo?: string; immutable?: b
   };
   const stat = await lstat(directory);
   if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('Dependency root must be a private directory');
+  directory = await realpath(directory);
   await walk('');
   return { digest: hash.digest('hex'), bytes };
 }
@@ -85,6 +87,7 @@ export async function npmEnvironmentKey(input: { cwd: string; binding: EvidenceB
     if (!stat.isFile()) throw new Error('Source links/submodules require a fresh install');
     inputs.push([file, await hashFile(source)]);
   }
+
   // npm-shrinkwrap takes precedence over package-lock; never validate the unused lock.
   if (files.some(file => path.basename(file) === 'npm-shrinkwrap.json')) throw new Error('Unsupported shrinkwrap input');
   const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
@@ -152,14 +155,20 @@ export async function npmEnvironmentKey(input: { cwd: string; binding: EvidenceB
     }
   };
   if ('dependencies' in parsed) legacy(parsed.dependencies);
-  const npm = await realpath('/usr/local/bin/npm'), npmRoot = path.resolve(path.dirname(npm), '..');
+  const npm = await realpath(path.join(path.dirname(process.execPath), process.platform==='win32'?'npm.cmd':'npm')), npmRoot = path.resolve(path.dirname(npm), '..');
   const version = JSON.parse(await readFile(path.join(npmRoot, 'package.json'), 'utf8')).version;
-  const report = process.report.getReport() as { header?: { glibcVersionRuntime?: string; glibcVersionCompiler?: string } };
+  // glibc is Linux-only. On macOS getReport also resolves live socket names
+  // synchronously, which can stall the Host for a DNS timeout per lookup.
+  const report = process.platform === 'linux' ? process.report.getReport() as { header?: { glibcVersionRuntime?: string } } : undefined;
+
+  const headTree = await gitOk(input.cwd, ['rev-parse', 'HEAD^{tree}']);
+  const nodeHash = await hashFile(await realpath(process.execPath));
+  const npmTree = await tree(npmRoot);
   // v2 retires snapshots published before complete dependency source validation.
   return fingerprint({ schema: 2, trust: [input.binding.workspaceId, input.binding.repositoryId, input.binding.repositoryFingerprint], inputs,
-    tree: await gitOk(input.cwd, ['rev-parse', 'HEAD^{tree}']), environment: input.environment, args: npmInstallArgs(input.environment),
-    sandbox: environmentFingerprint(), abi: process.versions.modules, libc: report.header?.glibcVersionRuntime, node: await hashFile(await realpath('/usr/local/bin/node')),
-    npm: { path: npm, version, tree: await tree(npmRoot) } });
+    tree: headTree, environment: input.environment, args: npmInstallArgs(input.environment),
+    sandbox: environmentFingerprint(), abi: process.versions.modules, libc: report?.header?.glibcVersionRuntime, node: nodeHash,
+    npm: { path: npm, version, tree: npmTree } });
 }
 
 // Published trees are read-only; make only directories removable, without following links.
@@ -176,7 +185,10 @@ async function removeSnapshot(directory: string): Promise<void> {
 
 const flights = new Map<string, Promise<unknown>>();
 export class DependencyEnvironmentCache {
-  constructor(readonly root: string, readonly options: EnvironmentCacheOptions) {}
+  constructor(readonly root: string, readonly options: EnvironmentCacheOptions) {
+    const absolute=path.resolve(root);let parent=path.dirname(absolute);
+    for(;;){try{this.root=path.resolve(realpathSync(parent),path.relative(parent,absolute));break;}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;parent=path.dirname(parent);}}
+  }
   private async initialize(): Promise<void> {
     await mkdir(this.root, { recursive: true, mode: 0o700 });
     if (await realpath(this.root) !== this.root) throw new Error('UNSAFE_ENVIRONMENT_CACHE_PATH');
@@ -301,10 +313,12 @@ export class DependencyEnvironmentCache {
           const metadata = JSON.stringify({ key, ...measured });
           const file = await open(path.join(staging, 'snapshot.json'), 'wx', 0o400);
           try { await file.writeFile(metadata); await file.sync(); } finally { await file.close(); }
-          await chmod(staging, 0o555);
           await withMetadataLock(this.root, async () => {
             if (!await this.collect(measured.bytes + Buffer.byteLength(metadata), key)) throw new Error('Environment cache capacity/leases prevent publication');
+            // macOS needs the directory writable while moving it between parents.
+            // The key lease and metadata lock keep it private until sealing completes.
             await rename(staging, ready);
+            await chmod(ready, 0o555);
           });
           evidence.status = evidence.reason ? 'fallback' : 'miss';
         } catch {

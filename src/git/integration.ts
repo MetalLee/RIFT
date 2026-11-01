@@ -1,3 +1,4 @@
+import { prepareSubmodules, submodulesPresent } from './submodules.js';
 import { DependencyEnvironmentCache, npmInstallArgs, validateEnvironmentConfig, type EnvironmentCacheOptions } from './dependency-environment.js';
 import { provesPreviousBootExited } from '../agent/boot-identity.js';
 import { sandboxCommand } from '../agent/filesystem-sandbox.js';
@@ -248,7 +249,7 @@ export class LocalGitService implements GitService {
     const operation: GitOperation = { purpose: 'baseline', baselineIdentity: identity, integrationId, taskId: '$baseline', integrationRef: this.ref(input.workflow), sourceHead: baselineCommit, expectedTargetHead: baselineCommit, candidateHead: baselineCommit, candidatePath, reviewPath: await this.directory(input.workspace, 'reviews', integrationId), phase: 'candidate_planned', checkCleanup: 'unknown', binding: { workspaceId: identity.workspaceId, repositoryId: identity.repositoryId, repositoryFingerprint: identity.repositoryFingerprint, taskId: '$baseline', attempt: 1, integrationId, candidateHead: baselineCommit } };
     try {
       await this.record(input.workspace, operation);
-      await withMetadataLock(repository.commonGitDir, async () => { await mkdir(path.dirname(candidatePath), { recursive: true }); await gitOk(repository.rootPath, ['worktree', 'add', '--detach', '--', candidatePath, baselineCommit]); });
+      await withMetadataLock(repository.commonGitDir, async () => { await mkdir(path.dirname(candidatePath), { recursive: true }); await gitOk(repository.rootPath, ['worktree', 'add', '--detach', '--', candidatePath, baselineCommit]); await prepareSubmodules(repository.rootPath, candidatePath); });
       const check = await this.executeCheck(input, operation, command, environmentOwner);
       operation.phase = 'completed';
       await this.record(input.workspace, operation);
@@ -285,10 +286,10 @@ export class LocalGitService implements GitService {
         const sandbox = await sandboxCommand(options.readOnly ? [options.home!] : [await realpath(candidatePath)], candidatePath, [executable, ...args].map(quote).join(' '), [], { home: options.home, signal: input.signal ? AbortSignal.any([input.signal, AbortSignal.timeout(command.timeoutMs ?? 120_000)]) : AbortSignal.timeout(command.timeoutMs ?? 120_000), readOnlyRoots: [repository.commonGitDir, ...(options.readOnly ? [candidatePath] : [])] });
         return execute(sandbox[0]!, sandbox.slice(1), candidatePath, { timeoutMs: command.timeoutMs ?? 120_000, maxOutputBytes: 65_536, signal: input.signal, env: Object.fromEntries(Object.keys(process.env).map(name => [name, undefined])) });
       };
-      const prepared = command.environment ? await this.environmentCache.prepare({ cwd: candidatePath, binding: options.environmentOwner ?? operation.binding!, environment: command.environment, install: () => invoke('/usr/local/bin/npm', npmInstallArgs(command.environment!)) }) : undefined;
+      const prepared = command.environment ? await this.environmentCache.prepare({ cwd: candidatePath, binding: options.environmentOwner ?? operation.binding!, environment: command.environment, install: () => invoke(path.join(path.dirname(process.execPath),process.platform==='win32'?'npm.cmd':'npm'), npmInstallArgs(command.environment!)) }) : undefined;
       dependencyEnvironment = prepared?.evidence;
       result = prepared?.failure ?? await invoke(command.executable, command.args);
-      unavailable = result.exitCode === 126 || result.exitCode === 127 || result.exitCode !== 0 && result.stderr.startsWith('bwrap:');
+      unavailable = result.exitCode === 126 || result.exitCode === 127 || result.exitCode !== 0 && /^(?:bwrap|sandbox-exec):/.test(result.stderr);
       if (prepared?.installation?.exitCode === 0) {
         const installation = prepared.installation;
         // Each capture has its own potentially split credential tail, including this interior boundary.
@@ -396,7 +397,7 @@ export class LocalGitService implements GitService {
         cwd = await this.directory(input.workspace, 'check-inputs', `${operation.integrationId}:${executionId}:${command.id}`);
         await withMetadataLock(repository.commonGitDir, async () => {
           await mkdir(path.dirname(cwd), { recursive: true });
-          await gitOk(repository.rootPath, ['worktree', 'add', '--detach', '--', cwd, operation.candidateHead!]);
+          await gitOk(repository.rootPath, ['worktree', 'add', '--detach', '--', cwd, operation.candidateHead!]); await prepareSubmodules(repository.rootPath, cwd);
         });
       }
       executions.set(command.id, { cwd, home, readOnly: node.isolation === 'read_only' });
@@ -482,7 +483,7 @@ export class LocalGitService implements GitService {
     try { await lstat(operation.reviewPath); }
     catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      await withMetadataLock(repository.commonGitDir, async () => { await mkdir(path.dirname(operation.reviewPath), { recursive: true }); await gitOk(repository.rootPath, ['worktree', 'add', '--detach', '--', operation.reviewPath, operation.candidateHead!]); });
+      await withMetadataLock(repository.commonGitDir, async () => { await mkdir(path.dirname(operation.reviewPath), { recursive: true }); await gitOk(repository.rootPath, ['worktree', 'add', '--detach', '--', operation.reviewPath, operation.candidateHead!]); await prepareSubmodules(repository.rootPath, operation.reviewPath); });
     }
     if (await gitOk(operation.reviewPath, ['rev-parse', 'HEAD']) !== operation.candidateHead || !(await sourceCheckoutClean(operation.reviewPath))) throw new Error('REVIEW_MODIFIED_CHECKOUT');
     return candidate;
@@ -541,7 +542,7 @@ export class LocalGitService implements GitService {
     await withMetadataLock(repository.commonGitDir, async () => {
       await mkdir(path.dirname(cwd), { recursive: true });
       // An existing checkout is never silently reused: its writer may be unknown.
-      await gitOk(repository.rootPath, ['worktree', 'add', '-b', branch, '--', cwd, baseCommit]);
+      await gitOk(repository.rootPath, ['worktree', 'add', '-b', branch, '--', cwd, baseCommit]); await prepareSubmodules(repository.rootPath, cwd);
     });
     return { id, taskId: task.id, attempt: task.attempt, kind: 'task', path: cwd, branch, baseCommit, headCommit: baseCommit, writerRunId: run.id, status: 'active' };
   }
@@ -557,8 +558,8 @@ export class LocalGitService implements GitService {
     let comparisonBase = worktree.baseCommit;
     let reusedSource = false;
     let changedPaths = [...new Set([
-      ...split((await git(cwd, ['diff', '--name-only', '-z', '--no-renames', worktree.baseCommit, '--'])).stdout),
-      ...split((await git(cwd, ['diff', '--cached', '--name-only', '-z', '--no-renames', worktree.baseCommit, '--'])).stdout),
+      ...split((await git(cwd, ['diff', '--name-only', '-z', '--no-renames', '--ignore-submodules=none', worktree.baseCommit, '--'])).stdout),
+      ...split((await git(cwd, ['diff', '--cached', '--name-only', '-z', '--no-renames', '--ignore-submodules=none', worktree.baseCommit, '--'])).stdout),
       ...await sourceUntrackedFiles(cwd),
     ])].sort();
     if (!changedPaths.length) {
@@ -570,7 +571,7 @@ export class LocalGitService implements GitService {
       if (task.attempt <= 1 || !prior || prior.sourceHead !== task.sourceHead || head !== task.sourceHead || worktree.baseCommit !== head || !/^[a-f0-9]{40,64}$/.test(prior.baseCommit)) throw new Error('EMPTY_CHANGE: no new diff or verified prior source');
       await gitOk(cwd, ['merge-base', '--is-ancestor', prior.baseCommit, head]);
       comparisonBase = prior.baseCommit;
-      changedPaths = split((await git(cwd, ['diff', '--name-only', '-z', '--no-renames', comparisonBase, head, '--'])).stdout).sort();
+      changedPaths = split((await git(cwd, ['diff', '--name-only', '-z', '--no-renames', '--ignore-submodules=none', comparisonBase, head, '--'])).stdout).sort();
       reusedSource = true;
     }
     await assertSafeFiles(cwd, changedPaths);
@@ -580,7 +581,7 @@ export class LocalGitService implements GitService {
       // Only index-relative dirty paths need staging; base-relative paths also
       // include already committed deletions which no longer exist in the index.
       const stagePaths = [...new Set([
-        ...split((await git(cwd, ['diff', '--name-only', '-z', '--no-renames', '--'])).stdout),
+        ...split((await git(cwd, ['diff', '--name-only', '-z', '--no-renames', '--ignore-submodules=none', '--'])).stdout),
         ...await sourceUntrackedFiles(cwd),
       ])];
       await assertSafeFiles(cwd,stagePaths);
@@ -592,7 +593,7 @@ export class LocalGitService implements GitService {
     const sourceHead = await gitOk(cwd, ['rev-parse', 'HEAD']);
     const diff = await gitOk(cwd, ['diff', '--no-ext-diff', '--no-textconv', comparisonBase, sourceHead, '--']);
     if (!diff) throw new Error('EMPTY_CHANGE: final source has no actual diff from its attempt base');
-    changedPaths = split((await git(cwd, ['diff', '--name-only', '-z', '--no-renames', comparisonBase, sourceHead, '--'])).stdout).sort();
+    changedPaths = split((await git(cwd, ['diff', '--name-only', '-z', '--no-renames', '--ignore-submodules=none', comparisonBase, sourceHead, '--'])).stdout).sort();
     return { sourceHead, diff, changedPaths };
   }
   async verifyAnalysis(input:GitContext & {run:Run;worktree:Worktree}):Promise<{headCommit:string}> {
@@ -602,8 +603,8 @@ export class LocalGitService implements GitService {
     const expected=await inspectRepository(workspace.repositoryPath,worktree.baseCommit),actual=await inspectRepository(cwd,worktree.baseCommit);
     if(actual.commonGitDir!==expected.commonGitDir||actual.rootPath!==await realpath(cwd))throw new Error('WORKTREE_OWNERSHIP: analysis repository mismatch');
     const headCommit=await gitOk(cwd,['rev-parse','HEAD']);
-    const status=await gitOk(cwd,['status','--porcelain=v1','--untracked-files=all','--ignored']);
-    if(headCommit!==worktree.baseCommit||status)throw new Error(`ANALYSIS_MODIFIED_CHECKOUT: expected HEAD ${worktree.baseCommit}; actual HEAD ${headCommit}; changes preserved for inspection${status?`\n${status}`:''}`);
+    const status=await gitOk(cwd,['status','--porcelain=v1','--untracked-files=all','--ignored','--ignore-submodules=none']);
+    if(headCommit!==worktree.baseCommit||status||!await submodulesPresent(cwd,0,true))throw new Error(`ANALYSIS_MODIFIED_CHECKOUT: expected HEAD ${worktree.baseCommit}; actual HEAD ${headCommit}; changes preserved for inspection${status?`\n${status}`:''}`);
     return {headCommit};
   }
   async prepareCandidate(input: GitContext & { sourceHead: string; integrationId: string }): Promise<Candidate> {
@@ -628,6 +629,7 @@ export class LocalGitService implements GitService {
         const detail = [merge.stdout.trim(), merge.stderr.trim(), conflictedPaths ? `Conflicted paths:\n${conflictedPaths}` : ''].filter(Boolean).join('\n');
         throw new Error(`${conflictedPaths ? 'INTEGRATION_CONFLICT' : 'INTEGRATION_FAILED'}: ${detail}`);
       }
+      await prepareSubmodules(repository.rootPath, candidatePath);
       const candidateHead = await gitOk(candidatePath, ['rev-parse', 'HEAD']);
       operation = { ...operation, candidateHead, binding: { workspaceId: workspace.id, repositoryId: task.repositoryId ?? fingerprint(repository.commonGitDir), repositoryFingerprint: fingerprint(repository.commonGitDir), taskId: task.id, attempt: task.attempt, integrationId, candidateHead }, phase: 'candidate_created' }; await this.record(workspace, operation);
       operation.timings = { prepareMs: performance.now() - started };

@@ -1,3 +1,4 @@
+import { leadPlanningPolicy } from '../../src/task/planning-policy.js';
 import { describe,expect,it } from 'vitest';
 import { mkdtemp,rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -25,6 +26,7 @@ describe('frozen collaboration input',()=>{
       await until(()=>calls.length===1);
       const input=calls[0]!.input;
       expect(input.instructions).toContain('Developer role. Return JSON');
+      expect(input.instructions).not.toContain(leadPlanningPolicy);
       expect(input.instructions).toContain('this is a discussion turn, not a Task Run');
       expect(input.instructions).toContain('Reply in natural language to the current speaker');
       expect(input.instructions).toContain('applies only inside an actual Task Run and does not apply here');

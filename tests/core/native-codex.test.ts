@@ -4,7 +4,7 @@ import { JsonRpcLineTransport } from '@deepseek-ai/dsh-sdk-protocol';
 import type { SubprocessHandle, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess';
 import { NativeCodexRuntime, nativeRepositoryRoots, type NativeCodexOptions } from '../../src/agent/native-codex.js';
 import type { RuntimeEvent, RuntimeHandle, RuntimeTurnInput } from '../../src/agent/runtime-types.js';
-import { mkdtemp,mkdir,rm,writeFile } from 'node:fs/promises';
+import { realpath,mkdtemp,mkdir,rm,writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
@@ -28,6 +28,7 @@ function harness(options: { sandbox?: string; cleanup?: boolean; resumeId?:strin
   peer.onRequest(async (method, params) => {
     requests.push({ method, params });
     if (method === 'initialize') return {};
+    if(method==='skills/list')return{data:[{cwd:(params.cwds as string[])[0],errors:[],skills:[{name:'local-only',path:'/tmp/local-only/SKILL.md',enabled:true}]}]};
     if (method === 'config/read') return { config: { mcp_servers: { legacy: { command: 'never-start' } } } };
     if (method === 'thread/start') return { cwd:params.cwd,thread: { id: 'native-thread', ephemeral: params.ephemeral }, approvalPolicy: 'never', sandbox: sandbox(params) };
     if (method === 'thread/resume') {
@@ -202,7 +203,7 @@ describe('native repository capabilities',()=>{
     h.complete();await handle.result;await handle.dispose();
   });
   async function repositories(){
-    const folder=await mkdtemp(path.join(tmpdir(),'rift-native-roots-')),repo=path.join(folder,'repo'),other=path.join(folder,'other'),worktree=path.join(folder,'worktree');
+    const folder=await realpath(await mkdtemp(path.join(tmpdir(),'rift-native-roots-'))),repo=path.join(folder,'repo'),other=path.join(folder,'other'),worktree=path.join(folder,'worktree');
     disposers.push(async()=>{await rm(folder,{recursive:true,force:true});});
     const exec=promisify(execFile);
     for(const cwd of [repo,other]){await mkdir(cwd);await exec('git',['init','-q','-b','main',cwd]);await writeFile(path.join(cwd,'base.txt'),'base\n');await exec('git',['-C',cwd,'add','.']);await exec('git',['-C',cwd,'-c','user.name=Probe','-c','user.email=probe@example.invalid','commit','-qm','base']);}
@@ -223,6 +224,7 @@ describe('native repository capabilities',()=>{
       const h=harness({mode,env:{CODEX_DESKTOP_TOOL_PIPE:'must-not-inherit',CODEX_THREAD_ID:'foreign'}});h.input.cwd=f.worktree;h.input.repositoryAccess={repositoryPaths:[f.repo,f.other]};
       if(resume)h.input.session={threadId:'native-thread',runtimeHome:f.folder,onThread(){},onTurn(){},onSettled(){}};
       const handle=await h.start(),request=h.requests.find(r=>r.method===(resume?'thread/resume':'thread/start'))!.params;
+      expect(request.developerInstructions).toContain('rift_exec_command is a Host-provided writable shell');
       expect(request.sandbox).toBe('read-only');expect(request.environments).toEqual([]);expect(h.requests.find(r=>r.method==='turn/start')!.params.environments).toEqual([]);if(!resume)expect((request.dynamicTools as any[]).map((tool:any)=>tool.name)).toContain('rift_exec_command');
       expect(request.config).toMatchObject({'features.shell_tool':false,'features.unified_exec':false,'features.multi_agent':false,'mcp_servers.legacy.enabled':false});
       expect(request.config).toMatchObject({'features.code_mode':false,'features.code_mode_host':false});
@@ -245,6 +247,7 @@ describe('native repository capabilities',()=>{
     expect(request.config).toMatchObject({'features.code_mode':false,'features.code_mode_host':false});
     expect(h.spawnSpec!.argv).toEqual(expect.arrayContaining(['features.code_mode=false','features.code_mode_host=false']));
     expect((request.dynamicTools as {name:string}[]).map(tool=>tool.name)).toEqual(['rift_status','rift_read_file','rift_list_files','rift_view_image','view_image']);
+    expect(request.developerInstructions).not.toContain('Host-provided writable shell');
     expect(h.requests.find(r=>r.method==='turn/start')!.params.sandboxPolicy).toEqual({type:'readOnly',networkAccess:false});
     h.complete();await handle.result;await handle.dispose();
   });

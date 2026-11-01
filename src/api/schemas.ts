@@ -3,10 +3,10 @@ const id = z.string().min(1).max(160);
 const version = z.number().int().nonnegative();
 export const roleNameSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/);
 const priority = z.number().int().min(-100).max(100);
-export const planTaskSchema = z.object({ id: id.optional(), repositoryId: id.optional(), kind: z.enum(['change', 'analysis']), title: z.string().min(1).max(240), instructions: z.string().min(1).max(32000), expectedPaths: z.array(z.string()).max(100).default([]).describe('Legacy display metadata; ignored for permissions, scheduling and acceptance.'), acceptanceCriteria: z.array(z.string()).optional(), roleName: roleNameSchema.optional(), dependsOn: z.array(id).max(1000).optional(), priority: priority.optional(), analysisItems: z.array(z.object({ id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/), prompt: z.string().min(1).max(32000) }).strict()).min(1).max(32).optional() }).strict().refine(task => !task.analysisItems || task.kind === 'analysis', 'Only analysis tasks may contain analysisItems.');
+export const planTaskSchema = z.object({ id: id.optional(), repositoryId: id.optional(), kind: z.enum(['change', 'analysis']), title: z.string().min(1).max(240), instructions: z.string().min(1).max(32000).describe('A complete feature outcome, scope/exclusions, preserved behavior, dependency contracts and verification approach; analysis tasks state their question and deliverable.'), expectedPaths: z.array(z.string()).max(100).default([]).describe('Legacy display metadata; ignored for permissions, scheduling and acceptance.'), acceptanceCriteria: z.array(z.string()).optional().describe('Task-specific observable behavior, relevant edge cases and required verification evidence.'), roleName: roleNameSchema.optional(), dependsOn: z.array(id).max(1000).optional(), priority: priority.optional(), analysisItems: z.array(z.object({ id: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/), prompt: z.string().min(1).max(32000) }).strict()).min(1).max(32).optional() }).strict().refine(task => !task.analysisItems || task.kind === 'analysis', 'Only analysis tasks may contain analysisItems.');
 export const planSchema = z.object({
   expectedRevision: version,
-  acceptanceCriteria: z.array(z.string()).default([]),
+  acceptanceCriteria: z.array(z.string()).default([]).describe('Universal requirements inherited by EVERY task. Put feature-specific criteria on each task; do not put whole-workflow outcomes here.'),
   tasks: z.array(planTaskSchema).min(1).max(1000),
 }).strict();
 export const replanSchema = z.object({

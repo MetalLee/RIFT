@@ -53,7 +53,6 @@ export async function nativeRepositoryRoots(cwd:string,repositoryPaths:readonly 
   const repositories=[];
   for(const location of repositoryPaths){const repo=await inspect(location);if(canonicalPath(repo.root)!==canonicalPath(repo.actual))throw new RiftError('NATIVE_REPOSITORY_SCOPE','Repository capabilities must name registered Git roots, not broader directories or arbitrary subdirectories.');repositories.push(repo);}
   const workspace=workspaceDirectory?await directory(workspaceDirectory):undefined;
-  if(workspace&&canonicalPath(workspace)!==canonicalPath(workspaceDirectory!))throw new RiftError('NATIVE_REPOSITORY_SCOPE','Workspace directory identity changed.');
   const currentPath=await directory(cwd);
   const inWorkspace=workspace&&(currentPath===workspace||currentPath.startsWith(workspace+path.sep));
   if(inWorkspace){signal.throwIfAborted();return [...new Set([workspace,...repositories.flatMap(repo=>[repo.root,repo.gitDir,repo.commonDir])])].sort();}
@@ -327,6 +326,16 @@ export class NativeCodexRuntime implements AgentRuntime {
       const loaded = record(await request('config/read', { includeLayers: false }));
       const mcpNames = Object.keys(loaded.config?.mcp_servers ?? {});
       const config: Record<string, unknown> = restrictedTools ? nativeCodexRestrictions(mcpNames) : { ...restrictions, ...Object.fromEntries(mcpNames.map(name => [`mcp_servers.${name}.enabled`, false])) };
+      // Keep local Codex authentication/configuration, but advertise only the
+      // versioned skills already supplied by RIFT in developerInstructions.
+      // Per-thread overrides never write the user's global skill preferences.
+      const discovered = record(await request('skills/list', { cwds: [input.cwd], forceReload: true }));
+      if (!Array.isArray(discovered.data) || discovered.data.length !== 1 || !Array.isArray(discovered.data[0]?.skills) || discovered.data[0]?.errors?.length) throw new RiftError('NATIVE_SKILL_DISCOVERY', 'Native skills could not be enumerated before disabling local skill loading.');
+      config['skills.config'] = discovered.data[0].skills.map((skill: unknown) => {
+        const entry = record(skill);
+        if (typeof entry.path !== 'string' || !path.isAbsolute(entry.path)) throw new RiftError('NATIVE_SKILL_DISCOVERY', 'Native skill did not provide an absolute manifest path.');
+        return { path: entry.path, enabled: false };
+      });
       if (this.options.modelProvider) config.model_providers = { [this.options.modelProvider.id]: this.options.modelProvider.config };
       const resuming = Boolean(input.session?.threadId);
       const sandbox = unrestricted?'danger-full-access':'read-only';
@@ -336,7 +345,7 @@ export class NativeCodexRuntime implements AgentRuntime {
         ...(restrictedTools?{environments: [],runtimeWorkspaceRoots: []}:repositoryWrite?{runtimeWorkspaceRoots:writableRoots}:{}),
         approvalPolicy: 'never', sandbox, config,
         ...(restrictedTools ? {baseInstructions: unrestricted?'You are a RIFT workspace agent. The Host operator enabled unrestricted filesystem and network access through rift_exec_command. Keep task ownership, cancellation, review and acceptance protocols intact. Do not delegate outside RIFT.':'You are a RIFT workspace agent. Use the provided RIFT tools and view_image for read-only image inspection. For repository commands use rift_exec_command when available; its Host-enforced sandbox fixes the filesystem and network boundary. Never delegate outside RIFT or claim acceptance from prose.'} : repositoryWrite?{baseInstructions:'You are a RIFT workspace agent. Native shell and file tools may operate on the Host-associated workspace repositories, including Git commits and authorized remote Git/PR operations. Stay within these repository capabilities. Use RIFT for task ownership and coordination; commits and PRs do not replace required checks, independent review, or workflow acceptance. Do not delegate outside RIFT.'}:{}),
-        developerInstructions: `${input.instructions}${formalReadOnly&&!unrestricted?'\nFormal read-only execution: use rift_list_files and rift_read_file for this assigned checkout. They cannot execute commands, write files or Git metadata, or reach network services. Host check evidence supplies executed test results; do not invent tests you could not run.':formalReadOnly?'\nThe operator enabled unrestricted commands through rift_exec_command. You may execute verification commands; preserve the exact candidate and do not change tracked source or Git history during review. Report actual results.':''}`,
+        developerInstructions: `${input.instructions}${shell&&!formalReadOnly?'\nExecution capabilities: rift_exec_command is a Host-provided writable shell. The native read-only / network-disabled sandbox applies to native tools, not this Host tool. Use it for authorized file creation, downloads and installation in the granted repositories or workspace installation directory. Current Host proxy policy allows public, private and Host HTTP(S) destinations on ports 80 and 443, superseding older Skill descriptions of public-only egress. A network denial is not a filesystem denial; continue independent accessible sources. Do not claim writes are unavailable without an actual failed write through this tool. There is no pending permission approval to wait for.': ''}${shell&&input.repositoryAccess?.workspaceDirectory?`\nWritable workspace installation directory: ${JSON.stringify(input.repositoryAccess.workspaceDirectory)}. Download Skill sources here, then use the scoped RIFT Skill preview/import/assign operations; immutable skill-resources are not installation destinations.`:''}${formalReadOnly&&!unrestricted?'\nFormal read-only execution: use rift_list_files and rift_read_file for this assigned checkout. They cannot execute commands, write files or Git metadata, or reach network services. Host check evidence supplies executed test results; do not invent tests you could not run.':formalReadOnly?'\nThe operator enabled unrestricted commands through rift_exec_command. You may execute verification commands; preserve the exact candidate and do not change tracked source or Git history during review. Report actual results.':''}`,
         // 0.164.0 restores dynamic tool declarations from its rollout on resume.
         // The Host binds fresh closures to this turn below; schemas are part of
         // the session configuration identity, so changed tools use a new thread.

@@ -23,7 +23,6 @@ export function createImageTool(roots:string[]):RuntimeTool {
     const bases=await Promise.all([...new Set(roots)].map(root=>realpath(root)));
     invariant(bases.length,'UNAUTHORIZED','No image read root is assigned.');
     const lexical=path.resolve(bases[0]!,input.path);
-    invariant(bases.some(root=>inside(root,lexical)),'UNAUTHORIZED','Image path is outside assigned roots.');
     const actual=await realpath(lexical);
     invariant(bases.some(root=>inside(root,actual)),'UNAUTHORIZED','Image symlink leaves assigned roots.');
     const file=await open(actual,constants.O_RDONLY|(constants.O_NOFOLLOW??0)|(constants.O_NONBLOCK??0));

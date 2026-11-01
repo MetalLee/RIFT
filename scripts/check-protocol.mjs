@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -37,10 +37,10 @@ export async function checkProtocol() {
   }
   const config = ts.readConfigFile(join(root, 'ui/tsconfig.json'), ts.sys.readFile);
   const { options } = ts.parseJsonConfigFileContent(config.config, ts.sys, join(root, 'ui'));
-  for (const file of files(join(root, 'ui/src')).filter(file => /\.[cm]?[jt]sx?$/.test(file))) checkImports(readFileSync(file, 'utf8'), file, false, options);
+  for (const file of files(join(root, 'ui/src')).filter(file => /\.[cm]?[jt]sx?$/.test(file) && !/\.test\.[jt]sx?$/.test(file))) checkImports(readFileSync(file, 'utf8'), file, false, options);
 
   // A consumer receives only the published entry and build output, with no repo, Node types or aliases.
-  const temporary = mkdtempSync(join(tmpdir(), 'rift-protocol-'));
+  const temporary = realpathSync(mkdtempSync(join(tmpdir(), 'rift-protocol-')));
   try {
     const packageDirectory = join(temporary, 'node_modules/@rift/protocol');
     mkdirSync(packageDirectory, { recursive: true });
