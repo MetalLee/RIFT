@@ -109,7 +109,7 @@ export function App({ initialSession }: { initialSession: Promise<UiSession> }) 
           {actualPage === 'agents' && <Agents key={route.workspaceId} data={current} stale={stale} csrf={session.csrfToken} onSaved={retry} />}
           {actualPage === 'skills' && (current.capabilities.skills.available ? <SkillLibrary key={route.workspaceId} data={current} csrf={session.csrfToken} /> : <Skills />)}
           {actualPage === 'repositories' && (current.capabilities.multipleRepositories.available ? <RepositoryManager key={route.workspaceId} data={current} csrf={session.csrfToken} onChanged={retry} /> : <Repositories data={current} />)}
-          {actualPage === 'tasks' && <Tasks key={route.workspaceId} taskId={route.taskId} workflowId={route.workflowId} data={current} csrf={session.csrfToken} onChanged={retry} />}
+          {actualPage === 'tasks' && <Tasks key={route.workspaceId} taskId={route.taskId} data={current} csrf={session.csrfToken} onChanged={retry} />}
           {actualPage === 'activity' && <Activity key={route.workspaceId} data={current} stale={stale} csrf={session.csrfToken} onChanged={retry} />}
           {actualPage === 'settings' && <Settings tab={route.settingsTab} key={route.workspaceId} data={current} csrf={session.csrfToken} onSaved={retry} onLogout={async () => { try { await api.logout(session.csrfToken); setSession(null); setList(null); setDetail(null); setSessionError('浏览器会话已退出。可以重新连接 RIFT。'); } catch (e) { setError(errorText(e)); fail(e); } }} />}
           {actualPage !== 'chat' && <footer className="data-footer"><span>记录同步于 {time(current.observedAt)}</span><Button variant="ghost" className="text-button" onClick={retry}>刷新记录</Button></footer>}

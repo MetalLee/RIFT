@@ -632,12 +632,12 @@ html { scroll-padding-top: 80px; }
   .task-extra-filters [data-slot=native-select-wrapper] { max-width: 100%; }
 }
 
-/* Scrollbar space stays stable; only the thumb changes while scrolling. */
+/* Scrollbar space stays stable; the thumb appears on hover or keyboard focus. */
 * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
-.is-scrolling, :focus-visible { scrollbar-color: #8a7c6c transparent; }
+:hover, :focus-visible, :focus-within { scrollbar-color: #8a7c6c transparent; }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-thumb { background: transparent; border-radius: 8px; }
-.is-scrolling::-webkit-scrollbar-thumb, :focus-visible::-webkit-scrollbar-thumb { background: #8a7c6c; }
+:hover::-webkit-scrollbar-thumb, :focus-visible::-webkit-scrollbar-thumb, :focus-within::-webkit-scrollbar-thumb { background: #8a7c6c; }
 @media (forced-colors: active) {
   * { scrollbar-color: auto; }
 }
