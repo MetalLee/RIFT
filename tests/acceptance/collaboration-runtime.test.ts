@@ -61,7 +61,7 @@ describe('Run collaboration runtime boundaries',()=>{
     try{
       const input=f.run('local');input.run.providerSnapshot.binding!.runtime='dsh';
       const handle=await new DshActivationBridge(ctx,()=>parent,f.store).start(input);
-      expect(remove).toHaveBeenCalledOnce();expect(definitions.map(tool=>tool.name)).toEqual(['rift_send_message']);
+      expect(remove).toHaveBeenCalledOnce();expect(definitions.map(tool=>tool.name)).toEqual(['rift_send_message','rift_view_image']);
       const args={recipientAgentId:f.lead.id,kind:'progress',content:'DSH local progress',idempotencyKey:'local-progress'};
       await expect(definitions[0]!.execute(args,{agent:parent,signal:new AbortController().signal})).rejects.toMatchObject({code:'UNAUTHORIZED'});
       const receipt=await definitions[0]!.execute(args,{agent:child,signal:new AbortController().signal}) as {messageId:string};

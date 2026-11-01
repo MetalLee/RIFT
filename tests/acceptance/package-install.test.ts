@@ -29,7 +29,7 @@ describe('workspace package tooling',()=>{
   const root=await mkdtemp(path.join(tmpdir(),'rift-readonly-')),child=path.join(root,'child');await mkdir(child);await writeFile(path.join(child,'value'),'ORIGINAL');
   try{
    for(const [writable,readonly] of [[root,child],[child,root]]){
-    const argv=await sandboxCommand([writable!],child,`node -e "const fs=require('fs');if(fs.readFileSync('value','utf8')!=='ORIGINAL')process.exit(1);try{fs.writeFileSync('value','CHANGED');process.exit(2)}catch(e){if(e.code!=='EROFS'&&e.code!=='EACCES')throw e;}console.log('READONLY_OK')"`,[],{readOnlyRoots:[readonly!]});
+    const argv=await sandboxCommand([writable!],child,`node -e "const fs=require('fs');if(fs.readFileSync('value','utf8')!=='ORIGINAL')process.exit(1);try{fs.writeFileSync('value','CHANGED');process.exit(2)}catch(e){if(!['EROFS','EACCES','EPERM'].includes(e.code))throw e;}console.log('READONLY_OK')"`,[],{readOnlyRoots:[readonly!]});
     expect((await exec(argv[0]!,argv.slice(1))).stdout).toBe('READONLY_OK\n');
    }
    expect(await readFile(path.join(child,'value'),'utf8')).toBe('ORIGINAL');

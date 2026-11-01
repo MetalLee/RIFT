@@ -48,7 +48,9 @@ pnpm test:built-cli
 | Developer | Claude Code，`claude-opus-5-5` | 在任务 worktree 中实现变更 |
 | Reviewer | Codex，`gpt-6.1-sol` | 在独立 checkout 中审查精确的候选提交 |
 
-新建工作区默认包含一个 Lead、一个 Developer（内部名称 `developer-a`）和一个 Reviewer，可继续手动添加成员；已有工作区配置保持不变。每个工作区最多一个活跃 Workflow，多个工作区共享 Host 的开发预算。原 profile 的 Host 开发预算默认为 2，Codex 专用 profile 为 4，预算不决定默认成员数；审查和集成仍全局串行。审查可以与其他任务开发重叠，有依赖或同仓库写入路径重叠的任务会等待调度。
+新建工作区默认包含一个 Lead、一个 Developer（内部名称 `developer-a`）和一个 Reviewer，可继续手动添加成员；已有工作区配置保持不变。每个工作区最多一个活跃 Workflow，多个工作区共享 Host 的开发预算。原 profile 的 Host 开发预算默认为 2，Codex 专用 profile 为 4，预算不决定默认成员数；审查和集成仍全局串行。审查可以与其他任务开发重叠，依赖未完成、成员忙碌或预算已满的任务会等待调度。`expectedPaths` 不参与调度或权限控制，公共接口等语义依赖须由 Lead 显式声明。
+
+Lead 默认按可独立验收的功能分工：同一任务覆盖所需前端、后端、协议及测试，不为占满槽位机械拆分。共享前置工作通过 `dependsOn` 声明；两种 Lead 入口共用同一规划规则。任务执行输入附带直接依赖的结果摘要、已接受提交及产物 ID，摘要仅提供上下文。具体说明见[功能拆分与验收](docs/feature-planning.md)。
 
 开发结果通过检查和审查后，RIFT 更新目标仓库中的 `refs/heads/rift/...` 集成分支。你可以在流程完成后查看差异，再自行合并到业务分支。
 
@@ -58,7 +60,7 @@ pnpm test:built-cli
 - 一个已有提交的本地 Git 仓库，以及能解析到提交的基线分支或 ref，例如 `main`。开始前先提交希望 Agent 使用的代码；未提交的工作目录修改不会进入新 worktree 的基线。
 - Lead 可用的 `DEEPSEEK_API_KEY`，以及 Claude Code、Codex 原生运行时可用的认证和模型权限。
 
-当前验收环境为 Windows x64，以下命令使用 PowerShell。含 submodule 或启用 sparse checkout 的目标仓库会被拒绝，嵌套仓库和越界路径也受检查限制。
+当前验收环境为 Windows x64，以下命令使用 PowerShell。支持含 submodule 的目标仓库；启用 sparse checkout 的仓库仍会被拒绝。子模块使用父仓库记录的固定提交，任务、候选、检查与评审 worktree 会从已初始化的本地依赖克隆独立副本（递归支持）。首次运行前在绑定仓库执行 `git submodule update --init --recursive`，更新依赖版本后也需先准备对应提交。Host 不自动访问 `.gitmodules` 中的远端地址；缺失依赖时明确报错。父仓库只采集已提交的子模块版本指针，子模块内部未提交的变更须先在依赖仓库完成。任意嵌套仓库和越界路径仍被拒绝。
 
 DSH 与官方 Provider 随项目依赖安装，不需要再启动另一个 daemon。请保留 `pnpm-lock.yaml` 和 `pnpm-workspace.yaml`：项目将 Codex 锁定为 `0.164.0`、Claude Agent SDK 锁定为 `0.3.310`（内置 Claude Code `2.1.310`）。运行时需要 `dist/`、`migrations/`、`profiles/` 和已安装的依赖，不能只复制 CLI 文件。
 
@@ -298,7 +300,7 @@ node dist/cli/main.js resume --home $RiftHome --workflow $workflowId
 | 找不到 `endpoint.json` / 连接被拒绝 | 确认终端 A 正在运行、两个终端使用相同 home；旧 endpoint 文件不表示服务仍存活 |
 | `doctor` 显示 `not-verified` | 它不做真实模型认证；按需执行上面的真实 Provider 探针 |
 | `unrecognized_model` / 模型不可用 | 使用冻结锁文件安装依赖，核对模型精确名称、认证与访问权限，调整后重启服务 |
-| 第三个开发请求排队 | 开发上限为两个；依赖未接受、写入路径重叠或未知清理占用也会使请求等待 |
+| 第三个开发请求排队 | 检查当前 profile 的开发预算和可用成员数；依赖未接受、成员忙碌或未知清理占用也会使请求等待 |
 | `CHECK_FAILED` / `CHECK_MODIFIED_CANDIDATE` | 查看报告与候选检查记录，修复测试或检查脚本产生的文件，保留现场供核对 |
 | `INTEGRATION_REF_CHECKED_OUT` | 从占用集成分支的工作目录切换到其他分支，再处理受阻任务 |
 | `VERSION_CONFLICT` / `IDEMPOTENCY_CONFLICT` | 重新查询状态与版本；仅对相同输入复用请求键，不盲目重复写入 |

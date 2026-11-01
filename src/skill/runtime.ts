@@ -5,7 +5,7 @@ import type { SkillService, CompiledSkills } from './service.js';
 
 export function workspaceSkillRoot(home:string,workspaceId:string){
   invariant(/^[a-zA-Z0-9_-]+$/.test(workspaceId),'WORKSPACE_MISMATCH','Invalid workspace resource identity.');
-  return path.resolve(home,'workspaces',workspaceId,'skill-resources');
+  return path.resolve(realpathSync(home),'workspaces',workspaceId,'skill-resources');
 }
 /** Publish immutable version bytes, never links to the original installation.
  * The executor mounts this workspace-only tree read-only, including for scripts. */

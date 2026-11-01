@@ -1,3 +1,5 @@
+import { realpath } from 'node:fs/promises';
+import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { devNull } from 'node:os';
 
@@ -68,7 +70,14 @@ export async function git(cwd: string, args: readonly string[], options:{input?:
   // Repository-controlled helpers must never execute in the credential-bearing Host.
   const env:NodeJS.ProcessEnv={...Object.fromEntries(Object.keys(process.env).filter(name=>/^(?:GIT_|NODE_OPTIONS$|LD_|DYLD_)/.test(name)).map(name=>[name,undefined])),GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:process.platform==='win32'?'NUL':devNull,GIT_TERMINAL_PROMPT:'0',GIT_MERGE_AUTOEDIT:'no'};
   const configuration=await execute('git',['config','--no-includes','--list'],cwd,{env});
-  if(configuration.exitCode===0&&configuration.stdout.split('\n').some(line=>/^(?:include(?:if\.[^=]*)?\.|filter\.|credential\.|core\.(?:fsmonitor|sshcommand)|diff\..*\.(?:command|textconv)|merge\..*\.driver|core\.worktree)=?/i.test(line)))throw new Error('UNSAFE_GIT_CONFIG: repository helper/include configuration requires operator removal before Host Git operations.');
+  if(configuration.exitCode===0&&configuration.stdout.split('\n').some(line=>/^(?:include(?:if\.[^=]*)?\.|filter\.|credential\.|core\.(?:fsmonitor|sshcommand)|diff\..*\.(?:command|textconv)|merge\..*\.driver)=?/i.test(line)))throw new Error('UNSAFE_GIT_CONFIG: repository helper/include configuration requires operator removal before Host Git operations.');
+  // Standard submodules use core.worktree relative to their Git directory.
+  // Accept that configuration only when it resolves to the requested checkout.
+  if (configuration.stdout.split('\n').some(line => /^core\.worktree=/i.test(line))) {
+    const worktree = await execute('git', ['config', '--no-includes', '--get', 'core.worktree'], cwd, { env });
+    const directory = await execute('git', ['rev-parse', '--absolute-git-dir'], cwd, { env });
+    if (directory.exitCode !== 0 || await realpath(path.resolve(directory.stdout.trim(), worktree.stdout.trim())) !== await realpath(cwd)) throw new Error('UNSAFE_GIT_CONFIG: core.worktree redirects outside the requested checkout.');
+  }
   const result = await execute('git', ['-c', `core.hooksPath=${devNull}`, '-c', 'commit.gpgSign=false', '-c', 'tag.gpgSign=false', ...args], cwd, { env, maxOutputBytes: 8_388_608, input:options.input });
   if (result.truncated) throw new Error('Git output exceeds evidence limit');
   return result;

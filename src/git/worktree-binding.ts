@@ -1,3 +1,4 @@
+import { gitlinks, initializedModule, assertModuleClean, validateSubmodules, submodulesPresent } from './submodules.js';
 import { lstat, mkdir, realpath, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -34,13 +35,13 @@ export async function inspectRepository(repositoryPath: string, baseRef: string)
   const rootPath = await realpath(await gitOk(repositoryPath, ['rev-parse', '--show-toplevel']));
   const commonGitDir = await realpath(await gitOk(rootPath, ['rev-parse', '--path-format=absolute', '--git-common-dir']));
   if ((await git(rootPath, ['config', '--bool', 'core.sparseCheckout'])).stdout.trim() === 'true') throw new Error('UNSUPPORTED_REPOSITORY: sparse checkout');
-  const entries = await gitOk(rootPath, ['ls-files', '--stage']);
-  if (entries.split('\n').some(line => line.startsWith('160000 '))) throw new Error('UNSUPPORTED_REPOSITORY: submodules');
   const baseCommit = await gitOk(rootPath, ['rev-parse', '--verify', '--end-of-options', `${baseRef}^{commit}`]);
+  await validateSubmodules(rootPath);
   return { rootPath, commonGitDir, baseCommit };
 }
 export async function assertSafeFiles(root: string, files: string[]): Promise<void> {
   const canonicalRoot = await realpath(root);
+  let modules: Set<string> | undefined;
   for (const file of files) {
     if (!file || path.isAbsolute(file) || file.split(/[\\/]/).some(segment => segment === '..' || segment.toLowerCase() === '.git')) throw new Error('UNSAFE_PATH: invalid changed file');
     const resolved = path.resolve(canonicalRoot, file);
@@ -51,7 +52,15 @@ export async function assertSafeFiles(root: string, files: string[]): Promise<vo
       try {
         const stat = await lstat(current);
         if (stat.isSymbolicLink()) { const target = await realpath(current); if (target !== canonicalRoot && !inside(canonicalRoot, target)) throw new Error('UNSAFE_PATH: symlink or junction escapes checkout'); }
-        if (stat.isDirectory()) { const contents = await readdir(current); if (contents.some(name => name.toLowerCase() === '.git')) throw new Error('UNSUPPORTED_REPOSITORY: nested repository'); }
+        if (stat.isDirectory()) { const contents = await readdir(current); if (contents.some(name => name.toLowerCase() === '.git')) {
+          if (!modules) {
+            modules = new Set((await gitlinks(root)).map(link => link.path));
+            const index = await gitOk(root, ['ls-files', '--stage', '-z']);
+            for (const entry of index.split('\0')) if (entry.startsWith('160000 ')) modules.add(entry.slice(entry.indexOf('\t') + 1));
+          }
+          if (current !== resolved || !modules.has(file)) throw new Error('UNSUPPORTED_REPOSITORY: nested repository');
+          await assertModuleClean(await initializedModule(root, file));
+        } }
       } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
     }
   }
@@ -68,14 +77,15 @@ export async function sourceUntrackedFiles(cwd:string,directories=false):Promise
   return result.stdout.split('\0').filter(Boolean);
 }
 export async function sourceCheckoutClean(cwd:string):Promise<boolean> {
-  for(const args of [['diff','--quiet'],['diff','--cached','--quiet']]){
+  await validateSubmodules(cwd);
+  for(const args of [['diff','--quiet','--ignore-submodules=none'],['diff','--cached','--quiet','--ignore-submodules=none']]){
     const result=await git(cwd,args);
     if(result.exitCode===1)return false;
     if(result.exitCode!==0)throw new Error(`SOURCE_STATUS_FAILED: ${result.stderr}`);
   }
-  return (await sourceUntrackedFiles(cwd,true)).length===0;
+  return (await sourceUntrackedFiles(cwd,true)).length===0 && await submodulesPresent(cwd);
 }
-export async function checkoutClean(cwd: string): Promise<boolean> { return (await gitOk(cwd, ['status', '--porcelain=v1', '--untracked-files=normal', '--ignored=matching'])).length === 0; }
+export async function checkoutClean(cwd: string): Promise<boolean> { await validateSubmodules(cwd); return (await gitOk(cwd, ['status', '--porcelain=v1', '--untracked-files=normal', '--ignored=matching', '--ignore-submodules=none'])).length === 0 && await submodulesPresent(cwd, 0, true); }
 const metadataTails = new Map<string, Promise<unknown>>();
 export async function withMetadataLock<T>(commonGitDir: string, operation: () => Promise<T>): Promise<T> {
   const directory=await realpath(commonGitDir);

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { realpath, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
@@ -32,7 +32,7 @@ async function eventually(predicate: () => boolean, label = 'condition'): Promis
 const cleanups: (() => Promise<void>)[] = [];
 afterEach(async () => { for (const cleanup of cleanups.splice(0)) await cleanup(); });
 async function fixture(check = 'process.exit(0)', options: { checkPlan?: CheckPlan; commands?: CheckCommand[] } = {}) {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'rift-core-git-'));
+  const root = await realpath(await mkdtemp(path.join(os.tmpdir(), 'rift-core-git-')));
   const repo = path.join(root, '协作 仓库'); await mkdir(repo);
   await gitOk(repo, ['init', '-b', 'main']); await gitOk(repo, ['config', 'core.autocrlf', 'false']);
   await gitOk(repo, ['-c', 'user.name=Test', '-c', 'user.email=test@localhost', 'commit', '--allow-empty', '-m', 'base']);
@@ -54,7 +54,7 @@ async function fixture(check = 'process.exit(0)', options: { checkPlan?: CheckPl
   let git = new LocalGitService({ managedRoot: path.join(root, '受管 目录'), checkPlan: options.checkPlan, commands: options.commands ?? [{ id: 'unit', executable: process.execPath, args: ['-e', check] }] });
   let coordinator = new TaskCoordinator({ store, bridge, git });
   const workflow = coordinator.createWorkflow({ id: 'workflow', workspaceId: workspace.id, goal: 'Integration proof', integrationRef: 'refs/heads/rift/integration/core', baseCommit });
-  cleanups.push(async () => { await coordinator.shutdown(); store.close(); if (!path.basename(root).startsWith('rift-core-git-') || path.dirname(root) !== path.resolve(os.tmpdir())) throw new Error('Unsafe test cleanup'); await rm(root, { recursive: true, force: true }); });
+  cleanups.push(async () => { await coordinator.shutdown(); store.close(); if (!path.basename(root).startsWith('rift-core-git-') || path.dirname(root) !== await realpath(os.tmpdir())) throw new Error('Unsafe test cleanup'); await rm(root, { recursive: true, force: true }); });
   const plan = (tasks: { id: string; expectedPaths: string[] }[]) => coordinator.submitPlan({ workflowId: workflow.id, expectedRevision: 0, tasks: tasks.map(task => ({ ...task, kind: 'change', title: task.id, instructions: `Implement ${task.id}` } satisfies PlanTask)) });
   const dispatch = (taskId: string, suffix = '') => coordinator.dispatch({ taskId, expectedVersion: store.task(taskId).version, idempotencyKey: `dispatch-${taskId}${suffix}` });
   const started = async (taskId: string, purpose: Run['purpose'], attempt = 1): Promise<Started> => { await eventually(() => bridge.starts.some(s => s.task.id === taskId && s.run.purpose === purpose && s.run.taskAttempt === attempt), `${taskId} ${purpose}`); return bridge.starts.find(s => s.task.id === taskId && s.run.purpose === purpose && s.run.taskAttempt === attempt)!; };

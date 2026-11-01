@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { chmod, lstat, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { execute } from '../../src/git/process.js';
 
@@ -16,4 +16,14 @@ export async function writeOfflineNpmFixture(root: string, repo: string) {
   await writeFile(path.join(repo, 'package.json'), JSON.stringify(manifest));
   await writeFile(path.join(repo, 'package-lock.json'), JSON.stringify({ name: manifest.name, version: manifest.version, lockfileVersion: 3, packages: { '': manifest, 'node_modules/offline-dependency': { version: '1.0.0', resolved: 'file:dependency.tgz', integrity, hasInstallScript: true } } }));
   await writeFile(path.join(repo, '.gitignore'), 'node_modules/\n');
+}
+
+// Test-owned cache snapshots are read-only, including when tests run without root.
+export async function removeReadonlyFixture(root: string): Promise<void> {
+  const stat = await lstat(root);
+  if (stat.isDirectory() && !stat.isSymbolicLink()) {
+    await chmod(root, 0o700);
+    for (const name of await readdir(root)) await removeReadonlyFixture(path.join(root, name));
+  }
+  await rm(root, { recursive: true, force: true });
 }

@@ -1,3 +1,4 @@
+import { macosSandboxCommand } from './macos-sandbox.js';
 import { lstat, readdir, realpath, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
@@ -24,13 +25,18 @@ function transientHome(root:string){
   let home=transientHomes.get(root);if(!home){home=mkdtempSync(path.join(tmpdir(),'rift-shell-home-'));transientHomes.set(root,home);}return home;
 }
 export const privateEntry = (name:string) => /^(?:\.rift|\.runtime-evidence|\.ssh|\.aws|\.azure|\.gnupg|\.env(?:\..*)?|management\.token|endpoint\.json|credentials(?:\..*)?|auth\.json)$/i.test(name);
-/** A mount namespace, not a path-name/command filter. No project parent, user
- * home, Host /proc, Host network, credentials or inherited environment is exposed. Public HTTP(S)
- * egress uses a validating Unix proxy capability; no Host TCP namespace is shared. */
+/** Kernel-enforced filesystem grants (Linux namespaces or macOS Seatbelt).
+ * Credentials and inherited environment are hidden; HTTP(S) egress uses
+ * a Host proxy that permits both public and private destinations. */
 export async function sandboxCommand(roots:readonly string[],cwd:string,cmd:string,protectedPaths:readonly string[]=[],options:{home?:string;resources?:string;signal?:AbortSignal;readOnlyRoots?:readonly string[]}={}):Promise<string[]> {
   options.signal?.throwIfAborted();
-  invariant(process.platform==='linux','FILESYSTEM_ISOLATION_UNAVAILABLE','Repository commands require the verified Linux mount-namespace sandbox.');
-  const binary='/usr/bin/bwrap';await lstat(binary);
+  invariant(['linux','darwin'].includes(process.platform),'FILESYSTEM_ISOLATION_UNAVAILABLE','Repository commands require Linux bubblewrap or macOS Seatbelt.');
+  const binary=process.platform==='darwin'?'/usr/bin/sandbox-exec':'/usr/bin/bwrap';await lstat(binary);
+  roots=await Promise.all(roots.map(root=>realpath(root)));
+  cwd=await realpath(cwd);
+  const resolveExisting=async(value:string):Promise<string>=>{try{return await realpath(value);}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;return path.join(await resolveExisting(path.dirname(value)),path.basename(value));}};
+  protectedPaths=await Promise.all(protectedPaths.map(resolveExisting));
+  options={...options,...options.home?{home:await resolveExisting(options.home)}:{},...options.resources?{resources:await realpath(options.resources)}:{},readOnlyRoots:await Promise.all((options.readOnlyRoots??[]).map(root=>realpath(root)))};
   const sorted=[...new Set(roots)].sort((a,b)=>a.length-b.length);
   const unique=sorted.filter(root=>!sorted.some(parent=>parent!==root&&containsPath(parent,root)) || sorted.some(parent=>parent!==root&&containsPath(parent,root)&&(path.relative(parent,root).split(path.sep).some(privateEntry)||protectedPaths.some(secret=>containsPath(parent,secret)&&containsPath(secret,root)))));
   invariant(unique.length>0,'FILESYSTEM_SCOPE','A workspace root is required.');
@@ -62,7 +68,7 @@ export async function sandboxCommand(roots:readonly string[],cwd:string,cmd:stri
     await inspect(root,root,readOnly);
     mounts.push({root,masks,readOnly});
   }
-  const home=options.home??transientHome(unique[0]!);
+  const home=options.home??await realpath(transientHome(unique[0]!));
   invariant(!(options.readOnlyRoots??[]).some(root=>containsPath(root,home)||containsPath(home,root)),'FILESYSTEM_SCOPE','Shell home must not alias read-only metadata.');
   await mkdir(home,{recursive:true,mode:0o700});
   invariant(path.isAbsolute(home)&&await realpath(home)===home,'FILESYSTEM_SCOPE','Shell home must be a canonical Host-provisioned directory.');
@@ -70,6 +76,7 @@ export async function sandboxCommand(roots:readonly string[],cwd:string,cmd:stri
   options.signal?.throwIfAborted();
   const egress=await sandboxEgress();
   options.signal?.throwIfAborted();
+  if(process.platform==='darwin')return macosSandboxCommand(mounts,home,homeMasks,cwd,cmd,egress.proxyUrl!,options.resources);
   const args=[binary,'--unshare-all','--die-with-parent','--new-session','--cap-drop','ALL','--clearenv'];
   for(const system of ['/usr','/bin','/sbin','/lib','/lib64']){
     try{const info=await lstat(system);if(info.isSymbolicLink())args.push('--symlink',path.relative('/',await realpath(system)),system);else args.push('--ro-bind',system,system);}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}

@@ -1,3 +1,4 @@
+import { leadPlanningPolicy } from '../../src/task/planning-policy.js';
 import { describe, expect, it } from 'vitest';
 import { RiftStore } from '../../src/storage/database.js';
 import { readWorkspaceEvents } from '../../src/events/workspace-events.js';
@@ -195,6 +196,7 @@ describe('Independent C1 acceptance: Host orchestration boundaries',()=>{
     try{
       const initial=host.chat.send(workspace.id,conversation.id,{clientMessageId:'initial-review',content:'Analyze the supplied text and report the result'}).turn;
       await until(()=>calls.length===1);const first=calls[0]!;
+      expect(first.input.instructions).toContain(leadPlanningPolicy);
       expect(first.input.tools.map(tool=>tool.name)).not.toContain('rift_wait');
       const workflow=await invoke<{id:string}>(first.input,'rift_workflow_start',{goal:'Review supplied text',mode:'analysis'});
       await invoke(first.input,'rift_plan_submit',{expectedRevision:0,tasks:[{id:'review-analysis',kind:'analysis',title:'Review text',instructions:'Compare alpha with beta',expectedPaths:[],roleName:'analyst'}]});

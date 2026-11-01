@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {mkdtemp,rm} from 'node:fs/promises';
+import {mkdtemp,rm,realpath} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {execFile} from 'node:child_process';
@@ -12,7 +12,7 @@ describe('registered repository counts',()=>{
   try{
    for(const repo of repos)await exec('git',['init','-q',repo]);
    const roots=await nativeRepositoryRoots(repos[0]!,repos,new AbortController().signal);
-   expect(roots).toHaveLength(130);expect(roots).toEqual(expect.arrayContaining(repos));expect(roots).not.toContain(folder);
+   expect(roots).toHaveLength(130);expect(roots).toEqual(expect.arrayContaining(await Promise.all(repos.map(p=>realpath(p)))));expect(roots).not.toContain(folder);
    expect(workflowSchema.parse({workspaceId:'workspace',goal:'cross-repository task',repositoryIds:repos.map((_,i)=>'repository-'+i)}).repositoryIds).toHaveLength(65);
   }finally{await rm(folder,{recursive:true,force:true});}
  },30000);

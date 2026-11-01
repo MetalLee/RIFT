@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { realpath, mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Context } from '@deepseek-ai/cordis';
@@ -58,7 +58,7 @@ describe('U1–U5 browser domain routes', () => {
       await waitUntil(() => calls.length === 1);
       expect(calls[0]!.input.instructions).toContain('Always explain the acceptance evidence.');
       expect(calls[0]!.input.tools.map(tool => tool.name)).toContain('rift_workflow_start');
-      expect(calls[0]!.input.cwd).toBe(path.join(home, 'workspaces', a.id, 'workspace'));
+      expect(calls[0]!.input.cwd).toBe(await realpath(path.join(home, 'workspaces', a.id, 'workspace')));
       await expect(calls[0]!.input.tools.find(tool => tool.name === 'rift_workflow_start')!.execute({ goal: 'Code without repo' }, new AbortController().signal)).rejects.toMatchObject({ code: 'REPOSITORY_REQUIRED' });
       await expect(host.handle('POST', `/v1/workspaces/${a.id}/archive`, {}, 'archive-busy')).rejects.toMatchObject({ code: 'WORKSPACE_ACTIVE' });
       await host.handleBrowser('POST', messageRoute, body, 'same-client-different-http-key');

@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
-import { writeOfflineNpmFixture } from './npm-fixture.js';
+import { writeOfflineNpmFixture, removeReadonlyFixture } from './npm-fixture.js';
 import { spawn } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -17,7 +17,7 @@ import { registerCredentialRedaction } from '../../src/api/security.js';
 import type { CheckCommand } from '../../src/git/types.js';
 
 const roots: string[] = [];
-afterEach(async () => { for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true }); });
+afterEach(async () => { for (const root of roots.splice(0)) await removeReadonlyFixture(root); });
 const environment: DependencyEnvironment = { kind: 'npm-ci', templateVersion: 'npm-script-free-v1', offline: true };
 const beforeBoot = `v1:${'a'.repeat(64)}:${'1'.repeat(64)}`, afterBoot = `v1:${'a'.repeat(64)}:${'2'.repeat(64)}`;
 async function fixture() {

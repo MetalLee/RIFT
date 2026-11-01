@@ -19,6 +19,7 @@ function boundary(mode:NativeCodexOptions['mode'],repository:boolean,resume=fals
   peer.onRequest(async(method,params)=>{
     requests.push({method,params});
     if(method==='initialize')return{};
+    if(method==='skills/list')return{data:[{cwd:(params.cwds as string[])[0],errors:[],skills:[{name:'local-only',path:'/tmp/local-only/SKILL.md',enabled:true}]}]};
     if(method==='config/read')return{config:{mcp_servers:{desktop_tools:{command:'never-inherit'}}}};
     if(method==='thread/start'||method==='thread/resume'){
       return{cwd:params.cwd,thread:{id:'owned-thread',ephemeral:params.ephemeral??false,status:{type:'idle'}},approvalPolicy:'never',sandbox:params.sandbox==='read-only'?{type:'readOnly',networkAccess:false}:{type:'readOnly',networkAccess:false}};
@@ -63,12 +64,12 @@ describe('Independent native wrapper permission boundary',()=>{
     try{handle=await p.runtime.start(p.input);const request=p.requests.find(row=>row.method==='thread/start')!.params;expect(request.config).toMatchObject({'features.code_mode':false,'features.code_mode_host':false,'features.shell_tool':false});expect(request.sandbox).toBe('read-only');expect((await p.call('exec','functions')).success).toBe(false);expect(p.called).toBe(0);}finally{await p.close(handle);}
   });
 
-  it('does not resume a persisted v2 thread after the wrapper permission contract changes',()=>{
+  it.each(['workspace-repositories-v2','workspace-repositories-v12-macos-seatbelt'])('does not resume a %s thread after the native permission/skill contract changes',permissionVersion=>{
     const store=new RiftStore();try{
       const {workspace,roles}=seedWorkspace(store,'wrapper-version-review'),agent=roles.find(role=>role.purpose==='lead')!;
       const configuration={model:'gpt-6.1-sol',purpose:'chat'},cwd=process.cwd(),runtimeHome=process.cwd();
-      // This is the deployed v2 identity, retained as a historical fixture.
-      const oldKey=createHash('sha256').update(JSON.stringify([configuration,runtimeHome,cwd,'workspace-repositories-v2','codex-0.164.0'])).digest('hex');
+      // Historical identities must rotate without deleting their audit records.
+      const oldKey=createHash('sha256').update(JSON.stringify([configuration,runtimeHome,cwd,permissionVersion,'codex-0.164.0'])).digest('hex');
       store.exec("INSERT INTO native_sessions(id,workspace_id,scope,scope_id,agent_id,configuration_key,thread_id,runtime_home,cwd,created_at) VALUES('v2-session',?,'chat','conversation',?,?,'failed-wrapper-v2-thread',?,?,'before-upgrade')",workspace.id,agent.id,oldKey,runtimeHome,cwd);
       const input={workspaceId:workspace.id,scope:'chat' as const,scopeId:'conversation',agentId:agent.id,configuration,cwd,runtimeHome};
       const next=nativeSession(store,input);expect(next.id).not.toBe('v2-session');expect(next.threadId).toBeNull();expect(nativeSession(store,input).id).toBe(next.id);

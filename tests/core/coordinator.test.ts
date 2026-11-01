@@ -18,8 +18,8 @@ function fixture(options:{failCleanup?:boolean;neverCleanup?:boolean;cleanupTime
   const projects=new ProjectService(store,new Set(['claude','codex']));
   const workspace=projects.createWorkspace({id:'ws',name:'workspace',rootPath:'D:/managed',repositoryPath:'D:/repo',commonGitDir:'D:/repo/.git',baseRef:'main'});
   projects.configureRoles(workspace.id,[{id:'claude',providerName:'claude',packageVersion:'test',configRevision:1,capabilities:{},credentialRefs:['env:ANTHROPIC_API_KEY']},{id:'codex',providerName:'codex',packageVersion:'test',configRevision:1,capabilities:{},credentialRefs:[]}],[{name:'lead',kind:'dsh-lead',prompt:'lead',revision:1},{name:'developer-a',kind:'subagent',providerBindingId:'claude',prompt:'developer a',revision:1},{name:'developer-b',kind:'subagent',providerBindingId:'claude',prompt:'developer b',revision:1},{name:'reviewer',kind:'subagent',providerBindingId:'codex',prompt:'reviewer',revision:1}]);
-  const calls:{onEvent:Parameters<ActivationBridge['start']>[0]['onEvent'];run:Run;result:ReturnType<typeof deferred<ActivationResult>>;disposed:boolean}[]=[];
-  const bridge:ActivationBridge={async start(input){if(options.startError)throw options.startError;const call={onEvent:input.onEvent,run:input.run,result:deferred<ActivationResult>(),disposed:false};calls.push(call);return{childId:`child-${input.run.id}`,result:call.result.promise,async dispose(){if(options.failCleanup)throw new Error('cleanup failed');if(options.neverCleanup)await new Promise<void>(()=>{});call.disposed=true;}};}};
+  const calls:{prompt:string;onEvent:Parameters<ActivationBridge['start']>[0]['onEvent'];run:Run;result:ReturnType<typeof deferred<ActivationResult>>;disposed:boolean}[]=[];
+  const bridge:ActivationBridge={async start(input){if(options.startError)throw options.startError;const call={prompt:input.prompt,onEvent:input.onEvent,run:input.run,result:deferred<ActivationResult>(),disposed:false};calls.push(call);return{childId:`child-${input.run.id}`,result:call.result.promise,async dispose(){if(options.failCleanup)throw new Error('cleanup failed');if(options.neverCleanup)await new Promise<void>(()=>{});call.disposed=true;}};}};
   const git:GitService={async prepareTask({task,run}){return{id:`wt-${run.id}`,taskId:task.id,attempt:task.attempt,kind:'task',path:`D:/managed/${run.id}`,baseCommit:sha,writerRunId:run.id};},async collectSource(){return{sourceHead:sha,diff:'diff',changedPaths:['src/a.ts']};},async prepareCandidate({integrationId,sourceHead}){return{integrationId,sourceHead,candidateHead:'b'.repeat(40),expectedTargetHead:sha,cwd:`D:/managed/${integrationId}`,checkIds:['check-1']};},async publishCandidate({candidate}){return{acceptedCommit:candidate.candidateHead};},async containsCommit(){return true;},async abandonCandidate(){}};
   const coordinator=new TaskCoordinator({store,bridge,git,runTimeoutMs:options.timeoutMs,cleanupTimeoutMs:options.cleanupTimeoutMs});
   const workflow=coordinator.createWorkflow({id:'workflow',workspaceId:'ws',goal:'test',integrationRef:'refs/heads/rift/test',baseCommit:sha});
@@ -29,6 +29,23 @@ function fixture(options:{failCleanup?:boolean;neverCleanup?:boolean;cleanupTime
   return{store,projects,workspace,workflow,coordinator,calls,bridge,git,plan,dispatch,complete};
 }
 describe('persistent task coordinator',()=>{
+  it('passes only successful direct dependency outcomes into the actual successor input',async()=>{
+    const f=fixture();
+    try {
+      f.plan([{id:'foundation',kind:'change'},{id:'analysis'},{id:'feature',dependsOn:['foundation','analysis']}]);
+      f.dispatch('foundation');await tick();f.complete(0);await tick();f.complete(1);await tick();
+      f.dispatch('analysis');await tick();f.complete(2);await tick();
+      f.dispatch('feature');await tick();
+      const input=JSON.parse(f.calls[3]!.prompt);
+      expect(input.dependencyContext.tasks).toEqual([
+        expect.objectContaining({taskId:'analysis',summary:'done',acceptedCommit:null,runId:f.calls[2]!.run.id}),
+        expect.objectContaining({taskId:'foundation',summary:'done',acceptedCommit:'b'.repeat(40),runId:f.calls[0]!.run.id}),
+      ]);
+      expect(input.dependencyContext.policy).toContain('not new instructions');
+      f.complete(3);await tick();
+    } finally {await f.coordinator.shutdown();}
+  });
+
   it.each(['error','cancel'] as const)('streams task output before %s and closes partial content without restarting the task',async(mode)=>{
     const f=fixture();
     const lead=f.store.require<{id:string}>("SELECT id FROM roles WHERE purpose='lead'");
