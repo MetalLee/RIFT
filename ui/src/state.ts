@@ -1,6 +1,6 @@
 export const pages = ['chat', 'workspaces', 'agents', 'skills', 'repositories', 'tasks', 'settings', 'activity'] as const;
 export type Page = typeof pages[number];
-export interface Route { workspaceId: string; page: Page; taskId?: string; settingsTab?: string }
+export interface Route { workspaceId: string; page: Page; taskId?: string; workflowId?: string; settingsTab?: string }
 export function parseRoute(hash: string): Route {
   const [pathname, query = ''] = hash.replace(/^#/, '').split('?');
   const [, segment, encodedId, page] = pathname.split('/');
@@ -8,8 +8,9 @@ export function parseRoute(hash: string): Route {
   try { workspaceId = segment === 'workspace' ? decodeURIComponent(encodedId ?? '') : ''; } catch { /* A malformed link returns to the directory. */ }
   const params = new URLSearchParams(query);
   const taskId = params.get('task');
+  const workflowId = params.get('workflow');
   const tab = params.get('tab');
-  return { workspaceId, page: pages.includes(page as Page) ? page as Page : 'chat', ...(page === 'tasks' && taskId ? {taskId} : {}), ...(page === 'settings' && tab && ['lead','connections','workspace','session'].includes(tab) ? {settingsTab: tab} : {}) };
+  return { workspaceId, page: pages.includes(page as Page) ? page as Page : 'chat', ...(page === 'tasks' && taskId ? {taskId} : {}), ...(page === 'tasks' && workflowId ? {workflowId} : {}), ...(page === 'settings' && tab && ['lead','connections','workspace','session'].includes(tab) ? {settingsTab: tab} : {}) };
 }
 export function routeHref(workspaceId: string, page: Page): string { return `#/workspace/${encodeURIComponent(workspaceId)}/${page}`; }
 export function draftKey(workspaceId: string, conversationId?: string): string { return `rift:draft:${encodeURIComponent(workspaceId)}${conversationId ? `:${encodeURIComponent(conversationId)}` : ''}`; }
@@ -33,4 +34,4 @@ export class LatestRequest {
   cancel() { this.generation++; this.controller?.abort(); }
 }
 
-export function taskHref(workspaceId: string, taskId: string): string { return `${routeHref(workspaceId,'tasks')}?task=${encodeURIComponent(taskId)}`; }
+export function taskHref(workspaceId: string, taskId: string, workflowId?: string): string { return `${routeHref(workspaceId,'tasks')}?task=${encodeURIComponent(taskId)}${workflowId ? `&workflow=${encodeURIComponent(workflowId)}` : ''}`; }

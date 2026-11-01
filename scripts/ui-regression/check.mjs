@@ -57,7 +57,7 @@ else if(p.endsWith('/evidence'))body={taskId:p.split('/').at(-2),acceptedCommit:
 else if(p==='/workspaces/wsp-001') {body=f.detail();body.hostCapacity={limits:{developers:3,reviewers:1,total:4,lead:1},occupied:{developers:1,reviewers:0,total:1,lead:0}};
  body.snapshotCursor=state.revision??1;
  if(state.large)body.tasks=taskFixtures();
- body.capabilities={...body.capabilities,pagination:{available:!!state.pagination}};
+ body.capabilities={...body.capabilities,pagination:{available:!!state.pagination},workflowActions:{available:!!state.workflowActions}};
  body.workflows=[...body.workflows,{...body.workflows[0],id:'workflow-2',goal:'第二工作流'}];
  if(state.stale)body.observedAt='2026-01-01T00:00:00Z';
  if(state.empty)for(const k of ['tasks','roles','repositories','managedWorktrees','presence','workflows'])body[k]=[];
@@ -169,6 +169,82 @@ for (const width of [390,768]) await check(`task-history-${width}`,async()=>{
   await page.goBack();await page.waitForFunction(()=>document.querySelector('[aria-label="任务详情"]').textContent.includes('task-105'));
   await page.goForward();await page.waitForFunction(()=>document.querySelector('[aria-label="任务详情"]').textContent.includes('task-106'));
 });
+await check('task-queue-surfaces-scroll-filters',async()=>{
+ await page.setViewportSize({width:1440,height:900});
+ const surface=async selector=>page.locator(selector).first().evaluate(e=>{
+  const s=getComputedStyle(e),marker=getComputedStyle(e,'::before');
+  return Object.fromEntries(['backgroundColor','borderLeftWidth','borderRadius','boxShadow','padding'].map(k=>[k,s[k]]).concat(['top','bottom','width','borderRadius','backgroundColor'].map(k=>['marker'+k,marker[k]])));
+ });
+ await go('skills');await page.locator('.skill-list-item').first().waitFor();await page.mouse.move(0,0);
+ const skillSelected=await surface('.skill-list-item.is-selected');
+ const skillNormal=await surface('.skill-list-item:not(.is-selected)');
+ await page.locator('.skill-list-item:not(.is-selected)').first().hover();await ready();
+ const skillHover=await surface('.skill-list-item:not(.is-selected)');
+ try {
+  state.large=true;await go('tasks');await page.locator('.task-card').first().waitFor();await page.mouse.move(0,0);
+  eq(await page.getByText('流水线进度',{exact:true}).count(),0);
+  eq(await page.getByRole('button',{name:'筛选',exact:true}).count(),0);
+  eq(await page.getByRole('combobox',{name:'工作流',exact:true}).count(),0);
+  assert.deepEqual(await surface('.task-card.is-selected'),skillSelected);
+  assert.deepEqual(await surface('.task-card:not(.is-selected)'),skillNormal);
+  await page.locator('.task-card:not(.is-selected)').first().hover();await ready();
+  assert.deepEqual(await surface('.task-card:not(.is-selected)'),skillHover);
+  for(const label of ['顺序','仓库','成员'])eq(await page.getByRole('combobox',{name:label,exact:true}).isVisible(),true);
+  const left=page.locator('.list-detail>.task-list'),right=page.locator('.list-detail>.detail-pane');
+  const scroll=async (pane,other)=>{
+   const otherTop=await other.evaluate(e=>e.scrollTop);
+   await pane.evaluate(e=>{e.scrollTop=120;});
+   await page.waitForFunction(e=>e.classList.contains('is-scrolling'),await pane.elementHandle());
+   eq(await pane.evaluate(e=>e.scrollTop),120);eq(await other.evaluate(e=>e.scrollTop),otherTop);
+   assert.match(await pane.evaluate(e=>getComputedStyle(e).scrollbarColor),/138, 124, 108/);
+   await page.waitForFunction(e=>!e.classList.contains('is-scrolling'),await pane.elementHandle());
+   assert.match(await pane.evaluate(e=>getComputedStyle(e).scrollbarColor),/rgba\(0, 0, 0, 0\)/);
+  };
+  await scroll(left,right);await scroll(right,left);
+  eq(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight),true);
+  await left.evaluate(e=>{e.scrollTop=e.scrollHeight;});await right.evaluate(e=>{e.scrollTop=e.scrollHeight;});
+  await snap('task-queue-independent-scroll');
+  await page.getByRole('combobox',{name:'成员',exact:true}).click();await page.getByRole('option',{name:'回归检查',exact:true}).click();
+  await count('.task-card',1);assert.match(await page.locator('.task-card').innerText(),/task-107/);
+  await page.getByRole('combobox',{name:'顺序',exact:true}).click();await page.getByRole('option',{name:'依赖优先',exact:true}).click();
+  await count('.task-card',1);
+  for(const width of [320,375,768,1100]){
+   await page.setViewportSize({width,height:width===768?375:900});await go('tasks');await page.locator('.task-card').first().waitFor();
+   eq(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+   eq(await page.locator('.task-extra-filters label>span').evaluateAll(es=>es.every(e=>getComputedStyle(e).whiteSpace==='nowrap')),true);
+   await snap('task-queue-filters-'+width);
+  }
+  await page.setViewportSize({width:1440,height:900});
+  await page.getByRole('link',{name:'技能扩展',exact:true}).click();await page.locator('.skill-list-item').first().waitFor();
+  await page.locator('.skill-list-item').last().click();
+  await page.getByRole('button',{name:'展开正文',exact:true}).click();
+  await page.evaluate(()=>window.scrollTo(0,200));
+  await page.waitForFunction(()=>scrollY>0&&document.documentElement.classList.contains('is-scrolling'));
+  await page.waitForFunction(()=>!document.documentElement.classList.contains('is-scrolling'));
+  eq(await page.locator('main').evaluate(e=>getComputedStyle(e).overflowY),'visible');
+ } finally {state.large=false;}
+});
+await check('task-workflow-link-context',async()=>{
+ try {
+  state.workflowActions=true;await page.setViewportSize({width:1280,height:900});await go('tasks?workflow=workflow-1');
+  await page.getByRole('heading',{name:'RIFT 前端界面实现与验收',exact:true}).waitFor();
+  eq(await page.getByRole('button',{name:'暂停工作流',exact:true}).isVisible(),true);
+  await page.getByRole('button',{name:'调整依赖与优先级',exact:true}).click();
+  await page.getByRole('heading',{name:'调整未开始的任务',exact:true}).waitFor();
+  eq(await page.evaluate(()=>document.documentElement.scrollHeight<=innerHeight),true);
+  await page.getByRole('button',{name:'取消',exact:true}).click();
+  await page.locator('.task-card').filter({hasText:'task-106'}).click();
+  assert.match(page.url(),/task=task-106&workflow=workflow-1/);
+  await page.reload();await page.locator('.task-card[aria-pressed=true]').filter({hasText:'task-106'}).waitFor();
+  await page.setViewportSize({width:375,height:900});await page.getByRole('button',{name:'返回列表',exact:true}).click();
+  await page.waitForFunction(()=>location.hash.endsWith('?workflow=workflow-1'));
+  await page.getByRole('button',{name:'取消工作流…',exact:true}).click();
+  await page.getByRole('button',{name:'保留工作流',exact:true}).click();
+  await page.evaluate(()=>{location.hash='#/workspace/wsp-001/tasks';});
+  await page.getByRole('heading',{name:'任务队列',exact:true}).waitFor();
+  eq(await page.getByRole('button',{name:'暂停工作流',exact:true}).count(),0);
+ } finally {state.workflowActions=false;}
+});
 await check('task-filter-pagination',async()=>{
  await page.setViewportSize({width:1280,height:900});
  try {
@@ -177,8 +253,8 @@ await check('task-filter-pagination',async()=>{
    for(const filter of ['status','workflow','repository']){
     await go('tasks');await page.getByRole('region',{name:'任务列表'}).locator('.task-card').filter({hasText:'task-106'}).click();
     if(filter==='status')await page.getByRole('button',{name:'进行中',exact:true}).click();
-    if(filter==='workflow'){await page.getByRole('combobox',{name:'工作流',exact:true}).click();await page.getByRole('option',{name:'第二工作流',exact:true}).click();}
-    if(filter==='repository'){await page.getByRole('button',{name:'筛选',exact:true}).click();await page.getByRole('combobox',{name:'仓库',exact:true}).click();await page.getByRole('option',{name:'rift-runtime',exact:true}).click();}
+    if(filter==='workflow')await page.evaluate(()=>{location.hash='#/workspace/wsp-001/tasks?task=task-106&workflow=workflow-2';});
+    if(filter==='repository'){await page.getByRole('combobox',{name:'仓库',exact:true}).click();await page.getByRole('option',{name:'rift-runtime',exact:true}).click();}
     await page.getByRole('region',{name:'链接指定的任务',exact:true}).waitFor();
     const list=page.getByRole('region',{name:'任务列表',exact:true});
     eq(await list.locator('.task-card').filter({hasText:'task-106'}).count(),0);
@@ -194,7 +270,7 @@ await check('task-filter-pagination',async()=>{
    await page.getByRole('button',{name:'上一页',exact:true}).click();
    await page.getByRole('region',{name:'链接指定的任务',exact:true}).waitFor({state:'hidden'});
    await page.locator('.task-card[aria-pressed=true]').filter({hasText:'task-106'}).waitFor();
-   await page.getByRole('button',{name:'筛选',exact:true}).click();
+
    await page.getByRole('combobox',{name:'仓库',exact:true}).click();await page.getByRole('option',{name:'rift-runtime',exact:true}).click();
    await page.getByRole('button',{name:'已通过',exact:true}).click();
    await page.getByText('当前页没有匹配任务，请切换筛选。',{exact:true}).waitFor();

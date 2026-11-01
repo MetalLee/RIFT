@@ -19,8 +19,8 @@ describe('shared selection controls', () => {
     expect(html).toContain('<optgroup label="不可用" disabled="">');
   });
 
-  it('keeps all 15 dropdown fields on the same adapter, with no page-local native selects', () => {
-    const inventory = { 'Configuration.tsx': 3, 'ConnectionCatalogue.tsx': 1, 'RepositoryManager.tsx': 2, 'TaskActions.tsx': 1, 'pages.tsx': 4, 'SkillLibrary.tsx': 4 };
+  it('keeps all 14 dropdown fields on the same adapter, with no page-local native selects', () => {
+    const inventory = { 'Configuration.tsx': 3, 'ConnectionCatalogue.tsx': 1, 'RepositoryManager.tsx': 2, 'TaskActions.tsx': 1, 'pages.tsx': 3, 'SkillLibrary.tsx': 4 };
     for (const [file, count] of Object.entries(inventory)) expect(source(file).match(/<NativeSelect\b/g)?.length, file).toBe(count);
     for (const file of readdirSync(new URL('.', import.meta.url)).filter(f => f.endsWith('.tsx') && !f.includes('.test.'))) {
       expect(source(file), file).not.toMatch(/<select\b/);
